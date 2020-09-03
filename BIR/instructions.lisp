@@ -1,0 +1,100 @@
+(in-package #:cleavir-bir)
+
+(defclass initialize-closure (operation) ())
+
+(defclass enclose (no-input-mixin computation)
+  ((%code :initarg :code :reader code
+          :type function)
+   (%initializer :initarg :initializer :reader initializer
+                 :type initialize-closure)
+   (%rtype :initform :object)))
+
+(defclass unreachable (no-input-mixin terminator0) ())
+
+;;; Abstract. An instruction dealing with a variable.
+;;; It is assumed the variable is passed to make-instance rather
+;;; than set later, and also that the instruction isn't reinitialized.
+(defclass accessvar (instruction)
+  ((%variable :initarg :variable :reader variable :type variable)))
+
+(defclass writevar (one-input-mixin accessvar operation) ())
+
+(defclass readvar (no-input-mixin accessvar computation)
+  ((%rtype :initform :object)))
+
+;;; Abstract. Like a call, but the compiler is expected to deal with it.
+(defclass primop (instruction)
+  ((%primop-info :initarg :primop-info :reader primop-info
+                 :type primop-info)))
+
+;; primop returning no values
+(defclass nvprimop (primop operation) ())
+
+;; primop returning values
+(defclass vprimop (primop computation) ())
+
+(defclass call (computation)
+  ((%rtype :initform :multiple-values :type (eql :multiple-values))))
+
+(defclass returni (one-input-mixin terminator0) ())
+
+(defclass catch (dynamic-environment terminator computation)
+  (;; NOTE: Should be a weak set
+   (%unwinds :initarg :unwinds :accessor unwinds
+             ;; A set of corresponding UNWINDs
+             :type set)
+   (%rtype :initform :continuation :type (eql :continuation))))
+
+;;; Nonlocal control transfer.
+;;; First input is the continuation.
+;;; Remaining inputs are passed to the destination.
+(defclass unwind (terminator0)
+  ((%catch :initarg :catch :reader catch
+           :type catch)
+   (%destination :initarg :destination :reader destination
+                 :type iblock)))
+
+;;; Local control transfer. Inputs are passed to the next block.
+;;; This is essentially just jump, but also indicates that the next block may
+;;; have a distinct dynamic environment.
+(defclass local-unwind (terminator1 operation) ())
+
+;;; Go to the next iblock, passing the inputs as arguments.
+(defclass jump (terminator1 operation) ())
+
+;;; EQ
+(defclass eqi (terminator operation) ())
+
+;;; Convert an aggregate of :objects into a :multiple-values
+(defclass fixed-to-multiple (one-input-mixin computation)
+  ((%rtype :initform :multiple-values :type (eql :multiple-values))))
+
+;;; Reverse of the above
+(defclass multiple-to-fixed (one-input-mixin computation) ())
+
+;;; Extract a value from an aggregate value.
+(defclass extract (one-input-mixin computation)
+  (;; Index of the field to extract.
+   (%index :initarg :index :reader index
+           :type (integer 0))))
+
+(defmethod (setf inputs) :before (nv (inst extract))
+  (assert (= (length nv) 1))
+  (let ((in-rt (rtype (first nv)))
+        (i (index inst)))
+    (assert (and (aggregatep in-rt)
+                 (> (aggregate-length in-rt) i)))))
+
+(defmethod (setf inputs) :after (nv (inst extract))
+  (setf (%rtype inst)
+        (aggregate-elt (rtype (first nv)) (index inst))))
+
+;;; Create an aggregate value from a sequence of values.
+(defclass create (computation) ())
+
+(defmethod (setf inputs) :after (nv (inst create))
+  (setf (%rtype inst) (apply #'aggregate (mapcar #'rtype nv))))
+
+;;; Convert a value from one type to another.
+;;; This may or may not entail an actual operation at runtime.
+(defclass cast (one-input-mixin computation) ())
