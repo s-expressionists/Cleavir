@@ -151,11 +151,6 @@ has use-before-define on inputs ~a!"
             "RTYPES ~a of inputs to a CREATE don't match the output rtype ~a"
             (mapcar #'rtype inputs) rt)))
 
-(defun mapnil-instructions (f start-instruction)
-  (loop for i = start-instruction then (successor i)
-        until (null i)
-        do (funcall f i)))
-
 (defmethod verify progn ((iblock iblock))
   ;; All predecessors truly have this as a successor
   (assert (set-every (lambda (p) (member iblock (next (end p)) :test #'eq))
@@ -182,18 +177,6 @@ has use-before-define on inputs ~a!"
        (verify i)
        (setf *seen-instructions* (nset-adjoin i *seen-instructions*)))
      (start iblock))))
-
-(defun mapnil-blocks (f start)
-  ;; simple depth-first graph traversal
-  (let ((seen (empty-set))
-        (worklist (list start)))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (presentp work seen)
-            do (funcall f work)
-               (setf seen (nset-adjoin work seen))
-               (setf worklist (append (next (end work)) worklist))))
-  (values))
 
 (defmethod verify progn ((function function))
   ;; All inputs are arguments
