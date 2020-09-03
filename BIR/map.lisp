@@ -21,8 +21,25 @@
                (setf worklist (append (next (end work)) worklist))))
   (values))
 
+(defun reachable-iblocks (function)
+  (check-type function function)
+  (let ((set (empty-set))
+        (worklist (list start)))
+    (loop for work = (pop worklist)
+          until (null work)
+          unless (presentp work set)
+            do (funcall f work)
+               (setf set (nset-adjoin work set))
+               (setf worklist (append (next (end work)) worklist)))
+    set))
+
+;;; make the iblocks field match the actually reachable blocks.
+(defun refresh-iblocks (function)
+  (check-type function function)
+  (setf (%iblocks function) (reachable-iblocks function)))
+
 (defun map-iblocks (f function)
-  ;; This function may hit dead blocks if the set hasn't been GC'd.
+  ;; This function may hit dead blocks if the set hasn't been refreshed.
   (check-type function function)
   (mapset f (iblocks function)))
 

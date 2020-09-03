@@ -17,10 +17,6 @@
                   :type instruction)
    (%function :initarg :function :reader function)))
 
-(defun add-iblock-to-function (iblock function)
-  (setf (iblocks function)
-        (nset-adjoin iblock (iblocks function))))
-
 (defun before (inserter instruction)
   (check-type inserter inserter)
   (check-type instruction instruction)
@@ -38,8 +34,7 @@
   (slot-makunbound inserter '%insert-point))
 
 (defun reset (inserter iblock)
-  (setf (iblock inserter) iblock)
-  (add-iblock-to-function iblock (function inserter)))
+  (setf (iblock inserter) iblock))
 
 (defun terminate (inserter terminator)
   (check-type inserter inserter)

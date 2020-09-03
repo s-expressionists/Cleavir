@@ -128,7 +128,7 @@
 
 (defclass function (dynamic-environment)
   (;; NOTE: Should be a weak set
-   (%iblocks :initarg :iblocks :accessor iblocks
+   (%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
             :initform (empty-set)
             :type set)
    (%start :initarg :start :accessor start
