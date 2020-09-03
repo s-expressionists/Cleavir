@@ -455,16 +455,16 @@
   (check-type inserter inserter)
   (assert (one-successor-context-p context))
   (let* ((call (make-instance 'call))
+         (result (figure-values inserter call context))
          (_ (before inserter call))
-         (callee (cleavir-ast:callee-ast ast))
-         (calleev (compile-ast callee inserter :value))
          (args (cleavir-ast:argument-asts ast))
-         (argsvs (compile-arguments args inserter)))
+         (argsvs (compile-arguments args inserter))
+         (callee (cleavir-ast:callee-ast ast))
+         (calleev (compile-ast callee inserter :object)))
     (declare (ignore _))
     (assert (every (lambda (a) (eq (rtype a) :object)) argsvs))
     (setf (inputs call) (list* calleev argsvs))
-    (prog1 (figure-values inserter call context)
-      (before inserter call))))
+    result))
 
 (defmethod compile-ast ((ast cleavir-ast:function-ast)
                         inserter context)
@@ -541,10 +541,10 @@
         (compile-sequence-for-effect arg-asts inserter)
         (let* ((rt (make-aggregate (length arg-asts) :object))
                (create (make-instance 'create :rtype rt))
-               (args (compile-arguments arg-asts inserter)))
-          (setf (inputs create) args)
-          (prog1 (figure-values inserter create context)
-            (before inserter create))))))
+               (result (figure-values inserter create context)))
+          (before inserter create)
+          (setf (inputs create) (compile-arguments arg-asts inserter))
+          result))))
 
 (defmethod compile-ast ((ast cleavir-ast:eq-ast)
                         inserter context)
@@ -571,15 +571,15 @@
                         '(one-successor-context-p context)))
                   (let ((p (make-instance ',(if nv-p 'nvprimop 'vprimop)
                              :primop-info ',info)))
-                    (setf (inputs p)
-                          (compile-arguments
-                           (list ,@(loop for reader in readers
-                                         collect `(,reader ast)))
-                           inserter))
                     (prog1 ,(if nv-p
                                 '(values)
                                 '(figure-values inserter p context))
-                      (before inserter p)))))))
+                      (before inserter p)
+                      (setf (inputs p)
+                            (compile-arguments
+                             (list ,@(loop for reader in readers
+                                           collect `(,reader ast)))
+                             inserter))))))))
   (defprimop cleavir-primop:car cleavir-ast:car-ast cleavir-ast:cons-ast)
   (defprimop cleavir-primop:cdr cleavir-ast:cdr-ast cleavir-ast:cons-ast)
   (defprimop cleavir-primop:rplaca cleavir-ast:rplaca-ast
