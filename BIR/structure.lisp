@@ -74,11 +74,6 @@
             ;; A list of VALUEs
             :type list)))
 
-(defun mapnil-instructions (f start-instruction)
-  (loop for i = start-instruction then (successor i)
-        until (null i)
-        do (funcall f i)))
-
 ;;; An instruction that has no output
 (defclass operation (instruction) ())
 
@@ -130,18 +125,6 @@
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
                          :type dynamic-environment)))
-
-(defun mapnil-blocks (f start)
-  ;; simple depth-first graph traversal
-  (let ((seen (empty-set))
-        (worklist (list start)))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (presentp work seen)
-            do (funcall f work)
-               (setf seen (nset-adjoin work seen))
-               (setf worklist (append (next (end work)) worklist))))
-  (values))
 
 (defclass function (dynamic-environment)
   (;; NOTE: Should be a weak set

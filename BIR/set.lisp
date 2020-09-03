@@ -18,7 +18,7 @@
 (defun mapset (f set)
   (with-hash-table-iterator (it set)
     (loop (multiple-value-bind (itemp item) (it)
-            (unless itemp (return nil))
+            (unless itemp (return (values)))
             (funcall f item)))))
 
 (defun set= (set1 set2)

@@ -173,7 +173,7 @@ has use-before-define on inputs ~a!"
               (presentp (dynamic-environment iblock) *seen-instructions*)))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
-    (mapnil-instructions
+    (map-iblock-instructions
      (lambda (i)
        (verify i)
        (setf *seen-instructions* (nset-adjoin i *seen-instructions*)))
@@ -202,6 +202,6 @@ has use-before-define on inputs ~a!"
                            t
                            (not (typep (end iblock) 'returni))))
                (setf reachable (nset-adjoin iblock reachable))))
-        (mapnil-blocks #'iblock-verifier start)
+        (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
         (assert (set= reachable (iblocks function)))))))

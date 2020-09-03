@@ -9,6 +9,8 @@
    (:file "structure" :depends-on ("set" "packages"))
    (:file "primops" :depends-on ("structure" "packages"))
    (:file "instructions" :depends-on ("primops" "set" "structure" "packages"))
-   (:file "verify" :depends-on ("instructions" "set" "structure" "packages"))
+   (:file "map" :depends-on ("instructions" "set" "structure" "packages"))
+   (:file "verify"
+    :depends-on ("map" "instructions" "set" "structure" "packages"))
    (:file "ast-to-bir"
     :depends-on ("instructions" "set" "structure" "packages"))))
