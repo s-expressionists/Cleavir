@@ -35,7 +35,7 @@
             "Instruction ~a, with inputs ~a,
 has use-before-define on inputs ~a!"
             instruction (inputs instruction)
-            (remove-if-not #'validp (inputs instruction)))))
+            (remove-if #'validp (inputs instruction)))))
 
 (defmethod verify progn ((instruction no-input-mixin))
   ;; No inputs (verify type decl)
