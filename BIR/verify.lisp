@@ -71,7 +71,8 @@ has use-before-define on inputs ~a!"
 (defmethod verify progn ((inst enclose))
   ;; verify type decls
   (assert (typep (code inst) 'function))
-  (assert (typep (initializer inst) 'initialize-closure)))
+  (assert (or (not (slot-boundp inst '%initializer))
+              (typep (initializer inst) 'initialize-closure))))
 
 (defmethod verify progn ((wv writevar))
   ;; match types
