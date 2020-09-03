@@ -569,16 +569,17 @@
                    ,(if nv-p
                         '(effect-context-p context)
                         '(one-successor-context-p context)))
-                  (let ((p (before
-                            inserter
-                            (make-instance ',(if nv-p 'nvprimop 'vprimop)
-                              :primop-info ',info))))
+                  (let ((p (make-instance ',(if nv-p 'nvprimop 'vprimop)
+                             :primop-info ',info)))
                     (setf (inputs p)
                           (compile-arguments
                            (list ,@(loop for reader in readers
                                          collect `(,reader ast)))
                            inserter))
-                    p)))))
+                    (prog1 ,(if nv-p
+                                '(values)
+                                '(figure-values inserter p context))
+                      (before inserter p)))))))
   (defprimop cleavir-primop:car cleavir-ast:car-ast cleavir-ast:cons-ast)
   (defprimop cleavir-primop:cdr cleavir-ast:cdr-ast cleavir-ast:cons-ast)
   (defprimop cleavir-primop:rplaca cleavir-ast:rplaca-ast
