@@ -47,6 +47,10 @@
           (end i) terminator
           (insert-point inserter) terminator)))
 
+(defun adjoin-variable (inserter variable)
+  (nset-adjoinf (variables (function inserter)) variable)
+  (values))
+
 (defun object-aggregate-p (rtype)
   (and (aggregatep rtype)
        (loop for i below (aggregate-length rtype)
@@ -212,7 +216,8 @@
       (translate-lambda-list (cleavir-ast:lambda-list ast))
     (let* ((return (make-instance 'returni))
            (f (make-instance 'function
-                :allow-other-keys t :lambda-list ll :inputs args))
+                :allow-other-keys t :lambda-list ll :inputs args
+                :variables (apply #'make-set vars)))
            (end (make-instance 'iblock :dynamic-environment f))
            (inserter (make-instance 'inserter :function f)))
       (setf (end f) end)
@@ -300,6 +305,7 @@
          (wcont (make-instance 'writevar
                   :variable contvar :inputs (list catch)))
          (lu (make-instance 'local-unwind :next (list next))))
+    (adjoin-variable inserter contvar)
     (setf (block-info ast) (list catch next function contvar context)
           (inputs next) inputs
           (dynamic-environment main) catch)
@@ -338,6 +344,7 @@
           (let ((u (make-instance 'unwind :catch catch :destination next))
                 (rv (make-instance 'readvar
                       :variable contvar :rtype :continuation)))
+            (adjoin-variable inserter contvar)
             (setf (unwinds catch) (nset-adjoin u (unwinds catch)))
             (push new-iblock (entrances next))
             (terminate inserter u)
@@ -394,6 +401,7 @@
            ;; They might be merged later if the tagbody is all local.
            (before (make-instance 'iblock
                      :dynamic-environment (dynamic-environment next))))
+      (adjoin-variable inserter contvar)
       ;; Set up the tag infos
       (loop for (tag-ast) in tags
             for tag-iblock in tag-iblocks
@@ -429,10 +437,13 @@
       (go-info (cleavir-ast:tag-ast ast))
     (let ((function (function inserter)))
       (if (eq function bfunction)
+          ;; local
           (before inserter (make-instance 'local-unwind
                              :inputs () :next (list next)))
+          ;; nonlocal
           (let ((rv (make-instance 'readvar
                       :rtype :continuation :variable contvar)))
+            (adjoin-variable inserter contvar)
             (before inserter (make-instance 'unwind
                                :inputs (list rv)
                                :catch catch :destination (list next)))
@@ -487,6 +498,7 @@
   (assert (eq context :effect))
   (let* ((var (find-or-create-variable (cleavir-ast:lhs-ast ast)))
          (assign (make-instance 'writevar :variable var)))
+    (adjoin-variable inserter var)
     (before inserter assign)
     (let ((v (compile-ast (cleavir-ast:value-ast ast) inserter :object)))
       (setf (inputs assign) (list v))))
@@ -511,6 +523,7 @@
          (rtype (make-aggregate (length lhs-asts) :object))
          (val (compile-ast (cleavir-ast:form-ast ast)
                            inserter rtype)))
+    (loop for lhs in lhs-asts do (adjoin-variable inserter lhs))
     (loop for wv in wvs
           for extract in extracts
           do (setf (inputs extract) (list val)
@@ -565,8 +578,9 @@
                         inserter context)
   (check-type inserter inserter)
   (assert (one-successor-context-p context))
-  (let ((rv (make-instance 'readvar
-              :variable (find-or-create-variable ast))))
+  (let* ((var (find-or-create-variable ast))
+         (rv (make-instance 'readvar :variable var)))
+    (adjoin-variable inserter var)
     (prog1 (figure-values inserter rv context)
       (before inserter rv))))
 

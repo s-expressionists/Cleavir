@@ -21,8 +21,20 @@
 
 (defclass writevar (one-input-mixin accessvar operation) ())
 
+(defmethod initialize-instance :after
+    ((i writevar) &rest initargs &key variable)
+  (declare (ignore initargs))
+  (nset-adjoinf (writers variable) i)
+  i)
+
 (defclass readvar (no-input-mixin accessvar computation)
   ((%rtype :initform :object)))
+
+(defmethod initialize-instance :after
+    ((i readvar) &rest initargs &key variable)
+  (declare (ignore initargs))
+  (nset-adjoinf (readers variable) i)
+  i)
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)

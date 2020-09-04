@@ -1,7 +1,9 @@
 (in-package #:cleavir-bir)
 
-(defun delete-instruction (instruction)
-  (check-type instruction (and instruction (not terminator)))
+;;; Delete an instruction. Must not be a terminator.
+(defgeneric delete-instruction (instruction))
+(defmethod delete-instruction ((instruction instruction))
+  (check-type instruction (not terminator))
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
     (assert (not (null succ)))
@@ -15,6 +17,10 @@
            (setf (predecessor succ) pred
                  (successor pred) succ))))
   (values))
+(defmethod delete-instruction :after ((inst readvar))
+  (nset-removef (readers (variable inst)) inst))
+(defmethod delete-instruction :after ((inst writevar))
+  (nset-removef (writers (variable inst)) inst))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)

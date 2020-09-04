@@ -53,6 +53,13 @@
   (remhash item set)
   set)
 
+(defmacro nset-removef (set item &environment env)
+  (multiple-value-bind (temps values stores write read)
+      (get-setf-expansion set env)
+    `(let* (,@(mapcar #'list temps values))
+       (multiple-value-bind (,@stores) (nset-remove ,item ,read)
+         ,write))))
+
 ;; Return an empty set, possibly destroying an existing set to do it.
 (defun nset-empty (set)
   (clrhash set)

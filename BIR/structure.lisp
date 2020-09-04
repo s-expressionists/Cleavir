@@ -54,7 +54,25 @@
 ;;; A modifiable lexical variable.
 ;;; Has to be read from and written to via instructions.
 (defclass variable ()
-  ((%rtype :initarg :rtype :reader rtype
+  ((%extent :initarg :extent :accessor extent
+            :initform :unanalyzed
+            :type (member :unanalyzed
+                          :local ; only in one function.
+                          ;;:dynamic ; TODO
+                          :indefinite))
+   ;; The MAKEVAR instruction for this variable.
+   ;; Right now it has to be inserted by closure conversion,
+   ;; but with some AST changes, maybe not?
+   (%maker :initarg :maker :accessor maker)
+   ;; Set of writevar instructions for this variable
+   (%writers :initarg :writers :accessor writers
+             :initform (empty-set)
+             :type set)
+   ;; " readvars
+   (%readers :initarg :readers :accessor readers
+             :initform (empty-set)
+             :type set)
+   (%rtype :initarg :rtype :reader rtype
            :initform :object
            :type rtype)))
 
@@ -143,4 +161,9 @@
          :type iblock)
    (%inputs :initarg :inputs :reader inputs
             ;; A list of ARGUMENTs
-            :type list)))
+            :type list)
+   ;; Before closure conversion, the set of variables accessed by this
+   ;; function. After conversion, variables that are made in this function, or
+   ;; are not accessed outside of this function, are removed from the set.
+   (%variables :initarg :variables :accessor variables
+               :type set)))
