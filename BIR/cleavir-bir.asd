@@ -12,5 +12,7 @@
    (:file "map" :depends-on ("instructions" "set" "structure" "packages"))
    (:file "verify"
     :depends-on ("map" "instructions" "set" "structure" "packages"))
+   (:file "disassemble"
+    :depends-on ("map" "instructions" "set" "structure" "packages"))
    (:file "ast-to-bir"
     :depends-on ("instructions" "set" "structure" "packages"))))
