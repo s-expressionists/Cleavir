@@ -72,7 +72,8 @@ has use-before-define on inputs ~a!"
   ;; verify type decls
   (assert (typep (code inst) 'function))
   (assert (or (not (slot-boundp inst '%initializer))
-              (typep (initializer inst) 'initialize-closure))))
+              (typep (initializer inst) 'initialize-closure)))
+  (verify (code inst)))
 
 (defmethod verify progn ((wv writevar))
   ;; match types
@@ -112,7 +113,7 @@ has use-before-define on inputs ~a!"
   ;; ensure there is at least one input (the continuation)
   (assert (> (length (inputs u)) 0))
   ;; ensure the first input is a continuation
-  (assert (rtype= (first (inputs u)) :continuation))
+  (assert (rtype= (rtype (first (inputs u))) :continuation))
   ;; ensure inputs match destination
   (match-jump-types (rest (inputs u)) (list (destination u))))
 
@@ -204,4 +205,5 @@ has use-before-define on inputs ~a!"
                (setf reachable (nset-adjoin iblock reachable))))
         (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
+        #+(or)
         (assert (set= reachable (iblocks function)))))))
