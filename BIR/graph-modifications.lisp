@@ -16,6 +16,26 @@
                  (successor pred) succ))))
   (values))
 
+;;; Internal. Replace one value with another in an input list.
+(defun replace-input (new old instruction)
+  (check-type new value)
+  (check-type old value)
+  (check-type instruction instruction)
+  (setf (inputs instruction)
+        (nsubstitute new old (inputs instruction) :test #'eq)))
+
+;;; Replace a value with another value, keeping USERS sets updated.
+(defun replace-value (value replacement)
+  (check-type value value)
+  (check-type replacement value)
+  (assert (not (eq value replacement)))
+  (mapset (lambda (user)
+            (replace-input replacement value user)
+            (nset-adjoinf (%users replacement) user))
+          (%users value))
+  (setf (%users value) (nset-empty (%users value)))
+  (values))
+
 ;;; Delete a computation, replacing all of its uses with the given VALUE.
 ;;; Maintains the sets of users (except for the deleted computation).
 (defun delete-computation (computation replacement)

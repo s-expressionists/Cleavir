@@ -46,3 +46,14 @@
     `(let* (,@(mapcar #'list temps values))
        (multiple-value-bind (,@stores) (nset-adjoin ,item ,read)
          ,write))))
+
+;; Removes an item from the set, returns the new set. Can be (is) destructive.
+;; could be set-delete, but n is regular, if arbitrary
+(defun nset-remove (item set)
+  (remhash item set)
+  set)
+
+;; Return an empty set, possibly destroying an existing set to do it.
+(defun nset-empty (set)
+  (clrhash set)
+  set)
