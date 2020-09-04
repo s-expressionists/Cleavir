@@ -231,3 +231,6 @@ TODO
   * Handling literals/constants (pretty much the same issues as HIR)
   * Formal definition, or at least a stricter verifier
   * Multiple values might need rethinking
+  * Need to do some more bookkeeping, especially at AST-to-IR time
+    when large swathes of instructions can be deleted without various
+    backpointers being updated or a note being issued
