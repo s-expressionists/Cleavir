@@ -44,6 +44,28 @@
 
 (defclass returni (one-input-mixin terminator0) ())
 
+;;; Allocate some temporary space for an object of the specified rtype.
+;;; Within this dynamic environment, readmem and writemem can be used.
+;;; It is expected that the memory is freed whenever the dynamic environment
+;;; is exited. This can be used to implement dynamic-extent or
+;;; multiple-value-prog1.
+;;; By "freed", I mean that (tagbody 0 (multiple-value-prog1 (f) (go 0))) and
+;;; the like shouldn't eat the entire stack.
+;;; FIXME: Make this a computation and have readtemp and writetemp refer to it
+
+;;; explicitly rather than implicitly thorugh the dynenv.
+(defclass alloca (dynamic-environment no-input-mixin terminator1 operation)
+  ())
+
+;;; Abstract. NOTE: Might have to specify which dynamic environment to access?
+(defclass accesstemp (instruction) ())
+
+;;; Read the object stored in the temporary storage in the dynamic env.
+(defclass readtemp (accesstemp no-input-mixin computation) ())
+
+;;; Write it
+(defclass writetemp (accesstemp one-input-mixin operation) ())
+
 (defclass catch (dynamic-environment no-input-mixin terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
