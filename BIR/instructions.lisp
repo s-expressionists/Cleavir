@@ -42,9 +42,10 @@
 
 (defclass returni (one-input-mixin terminator0) ())
 
-(defclass catch (dynamic-environment terminator computation)
+(defclass catch (dynamic-environment no-input-mixin terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
+             :initform (empty-set)
              ;; A set of corresponding UNWINDs
              :type set)
    (%rtype :initform :continuation :type (eql :continuation))))

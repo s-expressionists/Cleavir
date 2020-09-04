@@ -21,28 +21,17 @@
                (setf worklist (append (next (end work)) worklist))))
   (values))
 
-(defun reachable-iblocks (function)
-  (check-type function function)
-  (let ((set (empty-set))
-        (worklist (list start)))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (presentp work set)
-            do (funcall f work)
-               (setf set (nset-adjoin work set))
-               (setf worklist (append (next (end work)) worklist)))
-    set))
-
-;;; make the iblocks field match the actually reachable blocks.
-(defun refresh-iblocks (function)
-  (check-type function function)
-  (setf (%iblocks function) (reachable-iblocks function)))
-
 (defun map-iblocks (f function)
   ;; This function may hit dead blocks if the set hasn't been refreshed.
   (check-type function function)
   (mapset f (iblocks function)))
 
+;;; Map all instructions owned by the given function
+(defun map-local-instructions (f function)
+  (check-type function function)
+  (map-iblocks (lambda (ib) (map-iblock-instructions f (start ib))) function))
+
+;;; Arbitrary order.
 (defun map-instructions (f function)
   (check-type function function)
   (let ((seen (empty-set))
@@ -51,18 +40,30 @@
           until (null work)
           unless (presentp work seen)
             do (setf seen (nset-adjoin work seen))
-               (map-iblocks
-                (lambda (ib)
-                  (map-iblock-instructions
-                   (lambda (i)
-                     (typecase i
-                       (enclose
-                        (push (code i) worklist)))
-                     (funcall f i))
-                   ib))
+               (map-local-instructions
+                (lambda (i)
+                  (typecase i (enclose (push (code i) worklist)))
+                  (funcall f i))
                 work)))
   (values))
 
+;;; Can be used to save some consing when repeatedly mapping instructions
+;;; with no graph modifications inbetween
+(defun all-functions (top)
+  (check-type top function)
+  (let ((set (empty-set))
+        (worklist (list top)))
+    (loop for work = (pop worklist)
+          until (null work)
+          unless (presentp work set)
+            do (setf set (nset-adjoin work set))
+               (map-local-instructions
+                (lambda (i)
+                  (typecase i (enclose (push (code i) worklist))))
+                work))
+    set))
+
+;;; Arbitrary order
 (defun map-instructions-with-owner (f function)
   (check-type function function)
   (let ((seen (empty-set))
@@ -72,14 +73,18 @@
           until (null work)
           unless (presentp work seen)
             do (setf seen (nset-adjoin work seen))
-               (map-iblocks
-                (lambda (ib)
-                  (map-iblock-instructions
-                   (lambda (i)
-                     (typecase i
-                       (enclose
-                        (push (code i) worklist)))
-                     (funcall f i owner))
-                   ib))
+               (map-local-instructions
+                (lambda (i)
+                  (typecase i (enclose (push (code i) worklist)))
+                  (funcall f i owner))
                 work)))
   (values))
+
+;; Given a set of functions, do m-i-w-o
+(defun map-instructions-with-owner-from-set (f function-set)
+  (check-type function-set set)
+  (mapset (lambda (function)
+            (map-local-instructions
+             (lambda (i) (funcall f i function))
+             function))
+          function-set))

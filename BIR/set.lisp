@@ -6,6 +6,9 @@
   ;; FIXME: should be weak-key
   (make-hash-table :test #'eq))
 
+(defun empty-set-p (set)
+  (zerop (hash-table-count set)))
+
 (defun make-set (&rest elements)
   (loop with r = (empty-set)
         for e in elements
@@ -35,3 +38,11 @@
 (defun nset-adjoin (item set)
   (setf (gethash item set) t)
   set)
+
+;;; define-modify-macro reorders arguments and i don't like it
+(defmacro nset-adjoinf (set item &environment env)
+  (multiple-value-bind (temps values stores write read)
+      (get-setf-expansion set env)
+    `(let* (,@(mapcar #'list temps values))
+       (multiple-value-bind (,@stores) (nset-adjoin ,item ,read)
+         ,write))))

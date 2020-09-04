@@ -42,7 +42,11 @@
 (defclass value ()
   ((%rtype :initarg :rtype :reader rtype
            :writer (setf %rtype)
-           :type rtype)))
+           :type rtype)
+   ;; Set of instructions using this value.
+   (%users :initarg :users :reader users :accessor %users
+           :initform (empty-set)
+           :type set)))
 
 ;;; An argument to a function or iblock.
 (defclass argument (value) ())

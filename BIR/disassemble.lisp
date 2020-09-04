@@ -68,13 +68,15 @@
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
   (let ((insts nil))
-    (mapnil-instructions (lambda (i) (push (disassemble-instruction i) insts))
-                         (start iblock))
+    (map-iblock-instructions
+     (lambda (i) (push (disassemble-instruction i) insts))
+     (start iblock))
     (list* (list* iblock (mapcar #'disassemble-value (inputs iblock)))
            (nreverse insts))))
 
 (defun disassemble-function (function)
   (check-type function function)
+  (refresh-iblocks function)
   (let ((iblocks nil)
         (*disassemble-ids* (make-hash-table :test #'eq))
         (*disassemble-nextn* 0))
