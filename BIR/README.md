@@ -1,4 +1,4 @@
-"Block-based Intermediate Representation". Hopefully just HIR in the future though.
+"Block-based Intermediate Representation". Hopefully just "HIR" in the future though.
 
 This is a new IR format for Cleavir based on my experienced problems with the original HIR format. It is intended to make it much easier to write transformations, while preserving HIR's goals, such as environment-independence.
 
