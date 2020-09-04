@@ -54,12 +54,20 @@
 ;;; A modifiable lexical variable.
 ;;; Has to be read from and written to via instructions.
 (defclass variable ()
-  ((%extent :initarg :extent :accessor extent
+  (;; Indicates the shared-ness of the variable.
+   (%extent :initarg :extent :accessor extent
             :initform :unanalyzed
             :type (member :unanalyzed
                           :local ; only in one function.
                           ;;:dynamic ; TODO
                           :indefinite))
+   ;; The "owner" of the variable is the function that
+   ;; (a) accesses the variable, and
+   ;; (b) encloses, directly or indirectly, all other functions that access
+   ;;     the variable.
+   ;; Until computed by analyze-variables, it's NIL.
+   (%owner :initform nil :accessor owner
+           :type (or null function))
    ;; Set of writevar instructions for this variable
    (%writers :initarg :writers :accessor writers
              :initform (empty-set)
@@ -158,8 +166,6 @@
    (%inputs :initarg :inputs :reader inputs
             ;; A list of ARGUMENTs
             :type list)
-   ;; Before closure conversion, the set of variables accessed by this
-   ;; function. After conversion, variables that are made in this function, or
-   ;; are not accessed outside of this function, are removed from the set.
+   ;; The set of variables accessed by this function.
    (%variables :initarg :variables :accessor variables
                :type set)))

@@ -61,7 +61,7 @@
 
 ;;; Given a function and a DAG, return a set of all functions that enclose
 ;;; the function, directly or not.
-(defun all-parent-functions (function dag)
+(defun ancestor-functions (function dag)
   (let ((result (empty-set)))
     (labels ((aux (node)
                (when (typep node 'interior-node)
@@ -70,39 +70,38 @@
       (mapset #'aux (gethash function (dag-nodes dag)))
       result)))
 
-;;;; Convert closure variables into cells. (TODO)
-;;;; Replace temporary variables, i.e. variables that are only assigned to in
-;;;; a single place and are not closed over, with whatever they're assigned to.
+;;;; Fill out the OWNER and EXTENT of all variables.
 
-(defun segregate-lexicals (all-functions dag)
+(defun analyze-variables (all-functions dag)
   (mapset
    (lambda (funct)
-     (let ((parents (all-parent-functions funct dag))
-           (parent-variables (empty-set)))
-       ;; Fill parent-variables
-       (mapset
-        (lambda (parent)
-          (mapset (lambda (variable)
-                    (nset-adjoinf parent-variables variable))
-                  (variables parent)))
-        parents)
-       ;; See what matches
+     (let (;; A set of all variables accessed by this function's ancestors.
+           (parent-variables
+             (let ((pv (empty-set)))
+               (mapset (lambda (ancestor)
+                         (mapset (lambda (variable)
+                                   (nset-adjoinf pv variable))
+                                 (variables ancestor)))
+                       (ancestor-functions funct dag))
+               pv)))
        (mapset
         (lambda (variable)
           (if (presentp variable parent-variables)
               ;; Present in a parent, so it's definitely shared.
               (setf (extent variable) :indefinite)
               (ecase (extent variable)
-                ;; No other function has had this variable yet, so until we
-                ;; know better, we figure it's local.
-                (:unanalyzed (setf (extent variable) :local))
+                ;; Not in a parent, so it's ours. It could be in a child, in
+                ;; which case the child will set it to :indefinite above.
+                (:unanalyzed
+                 (setf (owner variable) funct
+                       (extent variable) :local))
                 ;; Some other function has this variable, but we're not a
                 ;; parent of that function and it's not a parent of us.
                 ;; This should not be possible. (FIXME: Error message.)
                 (:local (error "???"))
                 ;; Some other function has already noted this variable is
                 ;; indefinite - presumably a child.
-                ;; NOTE: We could skip analysis in this case
+                ;; NOTE: We could skip the presentp in this case
                 (:indefinite))))
         (variables funct))))
    all-functions)
