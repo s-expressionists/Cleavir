@@ -60,10 +60,6 @@
                           :local ; only in one function.
                           ;;:dynamic ; TODO
                           :indefinite))
-   ;; The MAKEVAR instruction for this variable.
-   ;; Right now it has to be inserted by closure conversion,
-   ;; but with some AST changes, maybe not?
-   (%maker :initarg :maker :accessor maker)
    ;; Set of writevar instructions for this variable
    (%writers :initarg :writers :accessor writers
              :initform (empty-set)
