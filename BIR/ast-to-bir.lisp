@@ -222,6 +222,11 @@
         (insert-initial-bindings inserter vars args)
         (finalize inserter)
         (setf (start f) start (inputs start) args))
+      ;; These are optional, but a lot of stuff needs them
+      ;; and it's a bit less confusing to do them immediately.
+      ;; Could be removed for Efficiency Reasons
+      (refresh-local-iblocks f)
+      (refresh-local-users f)
       f)))
 
 (defgeneric compile-ast (ast inserter context))
