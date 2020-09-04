@@ -164,8 +164,8 @@
 
 (defun compile-toplevel (ast)
   (let ((*variables* (make-hash-table :test #'eq))
-        (*block-info* nil)
-        (*go-info* nil)
+        (*block-info* (make-hash-table :test #'eq))
+        (*go-info* (make-hash-table :test #'eq))
         (*function-info* (make-hash-table :test #'eq)))
     (compile-function ast)))
 
@@ -303,7 +303,7 @@
     (before inserter wcont)
     (finalize inserter)
     (reset inserter pre)
-    (terminate pre catch)
+    (terminate inserter catch)
     (if (effect-context-p context)
         (values)
         (first inputs))))
@@ -335,9 +335,9 @@
             (terminate inserter u)
             (before inserter rv)
             (setf (inputs u)
-                  (list* rv
-                         (compile-ast (cleavir-ast:form-ast ast)
-                                      inserter bcontext)))))))
+                  (list rv
+                        (compile-ast (cleavir-ast:form-ast ast)
+                                     inserter bcontext)))))))
   (no-return context))
 
 (defun go-info (tag-ast)
