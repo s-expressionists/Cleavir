@@ -10,6 +10,11 @@
    (:file "primops" :depends-on ("structure" "packages"))
    (:file "instructions" :depends-on ("primops" "set" "structure" "packages"))
    (:file "map" :depends-on ("instructions" "set" "structure" "packages"))
+   (:file "graph-modifications"
+    :depends-on ("map" "instructions" "set" "structure" "packages"))
+   (:file "eliminate-variables"
+    :depends-on ("graph-modifications"
+                 "map" "instructions" "set" "structure" "packages"))
    (:file "verify"
     :depends-on ("map" "instructions" "set" "structure" "packages"))
    (:file "disassemble"

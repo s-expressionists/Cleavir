@@ -11,6 +11,8 @@
 
 (defclass unreachable (no-input-mixin terminator0) ())
 
+(defclass nop (no-input-mixin operation) ())
+
 ;;; Abstract. An instruction dealing with a variable.
 ;;; It is assumed the variable is passed to make-instance rather
 ;;; than set later, and also that the instruction isn't reinitialized.

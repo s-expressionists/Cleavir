@@ -82,7 +82,8 @@
         (*disassemble-nextn* 0))
     (mapset (lambda (b) (push (disassemble-iblock b) iblocks))
             (iblocks function))
-    (list* (list* function (mapcar #'disassemble-value (inputs function)))
+    (list* (list* function (start function)
+                  (mapcar #'disassemble-value (inputs function)))
            iblocks)))
 
 (defun disassemble-ir (ir)
