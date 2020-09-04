@@ -3,7 +3,9 @@
 ;;;; Build a function dag.
 
 (defclass dag-node ()
-  ((%children :initform (empty-set) :reader children :accessor %children)))
+  (;; A set of DAG-NODEs; the NODE-FUNCTION of this node owns an enclose
+   ;; of every child.
+   (%children :initform (empty-set) :reader children :accessor %children)))
 
 (defgeneric node-function (node))
 
@@ -12,15 +14,27 @@
    (%top :initarg :top :reader top)
    ;; A hash table from functions to sets of interior-nodes
    ;; such that each interior-node has that function as its CODE
-   (%dag-nodes :initarg :dag-ndoes :reader dag-nodes)))
+   (%dag-nodes :initarg :dag-nodes :reader dag-nodes)))
 
-(defmethod node-function ((node dag-node)) (top node))
+(defmethod node-function ((node function-dag)) (top node))
 
 (defclass interior-node (dag-node)
-  ((%parents :initarg :parents :reader parents :type set)
+  (;; A set of DAG-NODEs; the NODE-FUNCTION of each parent is
+   ;; the owner of ENCLOSE.
+   (%parents :initarg :parents :reader parents :type set)
    (%enclose :initarg :enclose :reader enclose :type enclose)))
 
 (defmethod node-function ((node dag-node)) (code (enclose node)))
+
+(defmacro ensure-gethash (key table &optional default-form)
+  (let ((skey (gensym)) (stable (gensym))
+        (value (gensym)) (presentp (gensym)))
+    `(let ((,skey ,key) (,stable ,table))
+       (multiple-value-bind (,value ,presentp)
+           (gethash ,skey ,stable)
+         (if ,presentp
+             ,value
+             (setf (gethash ,skey ,stable) ,default-form))))))
 
 (defun build-function-dag-from-set (top set)
   (check-type top function)
@@ -36,16 +50,65 @@
           (let* ((parents (gethash owner dag-nodes))
                  (node (make-instance 'interior-node
                          :parents parents :enclose instruction)))
-            (loop for parent in parents
-                  do (nset-adjoinf (%children parent) node))
-            (nset-adjoinf (gethash (code instruction) dag-nodes) node)))))
+            (mapset (lambda (parent)
+                      (nset-adjoinf (%children parent) node))
+                    parents)
+            (setf (gethash (code instruction) dag-nodes)
+                  (nset-adjoin node (gethash (code instruction) dag-nodes
+                                             (empty-set))))))))
      set)
     root))
+
+;;; Given a function and a DAG, return a set of all functions that enclose
+;;; the function, directly or not.
+(defun all-parent-functions (function dag)
+  (let ((result (empty-set)))
+    (labels ((aux (node)
+               (when (typep node 'interior-node)
+                 (nset-adjoinf result (node-function node))
+                 (mapset #'aux (parents node)))))
+      (mapset #'aux (gethash function (dag-nodes dag)))
+      result)))
 
 ;;;; Convert closure variables into cells. (TODO)
 ;;;; Replace temporary variables, i.e. variables that are only assigned to in
 ;;;; a single place and are not closed over, with whatever they're assigned to.
 
+(defun segregate-lexicals (all-functions dag)
+  (mapset
+   (lambda (funct)
+     (let ((parents (all-parent-functions funct dag))
+           (parent-variables (empty-set)))
+       ;; Fill parent-variables
+       (mapset
+        (lambda (parent)
+          (mapset (lambda (variable)
+                    (nset-adjoinf parent-variables variable))
+                  (variables parent)))
+        parents)
+       ;; See what matches
+       (mapset
+        (lambda (variable)
+          (if (presentp variable parent-variables)
+              ;; Present in a parent, so it's definitely shared.
+              (setf (extent variable) :indefinite)
+              (ecase (extent variable)
+                ;; No other function has had this variable yet, so until we
+                ;; know better, we figure it's local.
+                (:unanalyzed (setf (extent variable) :local))
+                ;; Some other function has this variable, but we're not a
+                ;; parent of that function and it's not a parent of us.
+                ;; This should not be possible. (FIXME: Error message.)
+                (:local (error "???"))
+                ;; Some other function has already noted this variable is
+                ;; indefinite - presumably a child.
+                ;; NOTE: We could skip analysis in this case
+                (:indefinite))))
+        (variables funct))))
+   all-functions)
+  (values))
+
+#+(or)
 (defun segregate-lexicals (all-functions)
   (let* (;; An alist of (variable . info)
          ;; where info is a list of (inst . function)
