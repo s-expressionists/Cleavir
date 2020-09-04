@@ -37,6 +37,12 @@ Every VALUE has an RTYPE. An RTYPE represents the _static_ type of the value. Th
 
 An "aggregate" rtype is an ordered sequence of rtypes. Aggregates can be used in order for a single VALUE to represent multiple Lisp values; e.g. a (currently hypothetical) TRUNCATE-FIXNUM instruction might have an rtype of `#(:fixnum :fixnum)`.
 
+
+Primops
+-------
+
+Many operations that have different instructions in the original HIR are subsumed under two instructions, `vprimop` and `nvprimop`. These represent "function-like" instructions, essentially those that take some inputs and maybe return an output, with no other syntactic foibles. This covers e.g. `car`, `rplaca`, `standard-instance-access`, most arithmetic. I'm hoping this will reduce the proliferation of instruction classes in HIR. Each primop instruction just maintains a link to a structure describing the primop.
+
 Constants, MAKE-LOAD-FORM, etc.
 -------------------------------
 
