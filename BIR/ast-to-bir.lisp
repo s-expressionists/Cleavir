@@ -60,10 +60,11 @@
       (:multiple-values
        (let* ((mtf (make-instance 'multiple-to-fixed
                      :inputs (list value)
-                     :rtype '(:object)))
+                     :rtype (aggregate :object)))
               (ext (make-instance 'extract
                      :index 0
-                     :inputs (list mtf))))
+                     :inputs (list mtf)
+                     :rtype :object)))
          (before inserter ext)
          (before inserter mtf)
          ext))
@@ -72,7 +73,8 @@
        (if (zerop (aggregate-length rt))
            (make-constant nil)
            (before inserter
-                   (make-instance 'extract :index 0 :inputs (list value))))))))
+                   (make-instance 'extract
+                     :index 0 :inputs (list value) :rtype :object)))))))
 
 (defun multiple-values (inserter value)
   (let ((rt (rtype value)))
@@ -114,7 +116,8 @@
                   (extracts
                     (loop for i below shared-len
                           collect (make-instance 'extract
-                                    :index i :inputs (list value))))
+                                    :index i :inputs (list value)
+                                    :rtype :object)))
                   (nils
                     (loop for i from shared-len below target-len
                           collect (make-constant nil)))
@@ -502,7 +505,8 @@
            (loop for lhs in lhs-asts
                  for var = (find-or-create-variable lhs)
                  for i from 0
-                 for extract = (make-instance 'extract :index i)
+                 for extract = (make-instance 'extract
+                                 :index i :rtype :object)
                  collect (before inserter extract)))
          (rtype (make-aggregate (length lhs-asts) :object))
          (val (compile-ast (cleavir-ast:form-ast ast)
