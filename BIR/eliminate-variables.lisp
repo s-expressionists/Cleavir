@@ -100,19 +100,8 @@
        (loop with write = (first writes)
              with val = (first (inputs write))
              for inst in accesses
-             do (delete-instruction inst)
-             unless (eq inst write)
-               do (mapset (lambda (i)
-                            (setf (inputs i)
-                                  (subst val inst (inputs i)
-                                         :test #'eq))
-                            ;; This is important. Without it, further rewrites
-                            ;; during this loop could leave obsolete readvars
-                            ;; as inputs to live instructions.
-                            ;; It also means a full refresh of the users
-                            ;; after this processing is unnecessary, and that's
-                            ;; nice too.
-                            (nset-adjoinf (%users val) i))
-                          (%users inst)))
+             if (eq inst write)
+               do (delete-instruction inst)
+             else do (delete-computation inst val))
        t)
       (otherwise nil)))) ; zonk

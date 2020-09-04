@@ -16,6 +16,21 @@
                  (successor pred) succ))))
   (values))
 
+;;; Delete a computation, replacing all of its uses with the given VALUE.
+;;; Maintains the sets of users (except for the deleted computation).
+(defun delete-computation (computation replacement)
+  (check-type computation computation)
+  (check-type replacement value)
+  (assert (not (eq computation replacement)))
+  (mapset (lambda (user)
+            (setf (inputs user)
+                  (subst replacement computation (inputs user)
+                         :test #'eq))
+            (nset-adjoinf (%users replacement) user))
+          (users computation))
+  (delete-instruction computation)
+  (values))
+
 (defun reachable-iblocks (function)
   (check-type function function)
   (let ((set (empty-set))
