@@ -588,7 +588,7 @@
                         inserter context)
   (check-type inserter inserter)
   (assert (n-next-context-p context 2))
-  (let ((e (make-instance 'eqi :next context)))
+  (let ((e (make-instance 'eqi :next (copy-list context))))
     (terminate inserter e)
     (let ((args (compile-arguments
                  (list (cleavir-ast:arg1-ast ast)

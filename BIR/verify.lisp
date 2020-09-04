@@ -11,6 +11,9 @@
 ;;; order we wouldn't catch it.
 (defvar *seen-instructions*)
 
+(defvar *seen-inputs*)
+(defvar *seen-next*)
+
 ;;; The function currently being verified.
 (defvar *verifying-function*)
 ;;; " iblock
@@ -35,7 +38,13 @@
             "Instruction ~a, with inputs ~a,
 has use-before-define on inputs ~a!"
             instruction (inputs instruction)
-            (remove-if #'validp (inputs instruction)))))
+            (remove-if #'validp (inputs instruction))))
+  ;; Make sure input lists are not shared, so we can destroy them
+  (unless (null (inputs instruction))
+    (assert (not (presentp (inputs instruction) *seen-inputs*))
+            ;; could track the other instruction sharing it
+            () "Inputs list of instruction ~a is shared" instruction)
+    (setf *seen-inputs* (nset-adjoinf *seen-inputs* (inputs instruction)))))
 
 (defmethod verify progn ((instruction no-input-mixin))
   ;; No inputs (verify type decl)
@@ -58,7 +67,12 @@ has use-before-define on inputs ~a!"
   ;; No successor (verify type decl)
   (assert (null (successor instruction)))
   ;; NEXT is a list of iblocks
-  (assert (every (lambda (b) (typep b 'iblock)) (next instruction))))
+  (assert (every (lambda (b) (typep b 'iblock)) (next instruction)))
+  ;; NEXT list is not shared and therefore destructible
+  (unless (null (next instruction))
+    (assert (not (presentp (next instruction) *seen-next*))
+            () "NEXT is shared for instruction: ~a" (next instruction))
+    (setf *seen-next* (nset-adjoinf *seen-next* (next instruction)))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -186,7 +200,9 @@ has use-before-define on inputs ~a!"
   (let ((start (start function))
         (end (end function))
         (*seen-instructions* (empty-set))
-        (*verifying-function* function))
+        (*verifying-function* function)
+        (*seen-inputs* (empty-set))
+        (*seen-next* (empty-set)))
     ;; start is an iblock (verify type decl)
     (assert (typep start 'iblock))
     ;; end is an iblock (verify type decl)
