@@ -224,3 +224,4 @@ TODO
   * Direct interpreter, for testing if nothing else
   * Handling literals/constants (pretty much the same issues as HIR)
   * Formal definition, or at least a stricter verifier
+  * Multiple values might need rethinking
