@@ -38,6 +38,10 @@
 (defmethod disassemble-value ((value argument)) (dis-id value))
 (defmethod disassemble-value ((value constant)) `',(constant-value value))
 (defmethod disassemble-value ((value computation)) (dis-id value))
+(defmethod disassemble-value ((value load-time-value))
+  (if (and (read-only-p value) (constantp (form value)))
+      `',(eval (form value))
+      `(cl:load-time-value ,(form value) ,(read-only-p value))))
 
 (defgeneric disassemble-instruction (instruction))
 
