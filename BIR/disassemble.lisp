@@ -74,6 +74,17 @@
     (list* (list* iblock (mapcar #'disassemble-value (inputs iblock)))
            (nreverse insts))))
 
+(defun disassemble-lambda-list (ll)
+  (loop for item in ll
+        collect (cond ((member item lambda-list-keywords) item)
+                      ((typep item 'argument)
+                       (disassemble-value item))
+                      ((= (length item) 3)
+                       (list (first item)
+                             (disassemble-value (second item))
+                             (disassemble-value (third item))))
+                      (t (mapcar #'disassemble-value item)))))
+
 (defun disassemble-function (function)
   (check-type function function)
   (refresh-iblocks function)
@@ -82,8 +93,8 @@
         (*disassemble-nextn* 0))
     (mapset (lambda (b) (push (disassemble-iblock b) iblocks))
             (iblocks function))
-    (list* (list* function (start function)
-                  (mapcar #'disassemble-value (inputs function)))
+    (list* (list function (start function)
+                 (disassemble-lambda-list (lambda-list function)))
            iblocks)))
 
 (defun disassemble-ir (ir)

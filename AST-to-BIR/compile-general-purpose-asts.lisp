@@ -5,51 +5,55 @@
 ;;; COMPILE-FUNCTION
 
 (defun translate-lambda-list (lambda-list)
-  (loop with ll with vars with args
+  (loop with ll with alist
         for item in lambda-list
         do (cond ((member item lambda-list-keywords)
                   (push item ll))
                  ((consp item)
-                  (push (make-instance 'cleavir-bir:argument :rtype :object)
-                        args)
-                  (push (make-instance 'cleavir-bir:argument :rtype :object)
-                        args)
-                  (if (= (length item) 3)
-                      (let ((keyv (find-or-create-variable
-                                   (second item)))
-                            (predv (find-or-create-variable
-                                    (third item))))
-                        (push (list (first item) keyv predv) ll)
-                        (push keyv vars)
-                        (push predv vars))
-                      (let ((keyv (find-or-create-variable
-                                   (first item)))
-                            (predv (find-or-create-variable
-                                    (second item))))
-                        (push (list keyv predv) ll)
-                        (push keyv vars)
-                        (push predv vars))))
-                 (t (let ((v (find-or-create-variable item)))
-                      (push v ll)
-                      (push v vars)
-                      (push (make-instance 'cleavir-bir:argument
-                              :rtype :object)
-                            args))))
-        finally (return (values (nreverse ll) vars args))))
+                  (let ((valarg (make-instance 'cleavir-bir:argument
+                                  :rtype :object))
+                        (parg (make-instance 'cleavir-bir:argument
+                                :rtype :object)))
+                    (if (= (length item) 3)
+                        (let ((keyv (find-or-create-variable
+                                     (second item)))
+                              (predv (find-or-create-variable
+                                      (third item))))
+                          (push (list (first item) valarg parg) ll)
+                          (setf alist
+                                (list* (cons keyv valarg)
+                                       (cons predv parg)
+                                       alist)))
+                        (let ((keyv (find-or-create-variable
+                                     (first item)))
+                              (predv (find-or-create-variable
+                                      (second item))))
+                          (push (list valarg parg) ll)
+                          (setf alist
+                                (list* (cons keyv valarg)
+                                       (cons predv parg)
+                                       alist))))))
+                 (t (let ((v (find-or-create-variable item))
+                          (a (make-instance 'cleavir-bir:argument
+                               :rtype :object)))
+                      (push a ll)
+                      (push (cons v a) alist))))
+        finally (return (values (nreverse ll) alist))))
 
-(defun insert-initial-bindings (inserter vars args)
-  (loop for var in vars for arg in args
+(defun insert-initial-bindings (inserter map)
+  (loop for (var . arg) in map
         for setq = (make-instance 'cleavir-bir:writevar :variable var
                                   :inputs (list arg))
         do (before inserter setq)))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
-  (multiple-value-bind (ll vars args)
+  (multiple-value-bind (ll alist)
       (translate-lambda-list (cleavir-ast:lambda-list ast))
     (let* ((return (make-instance 'cleavir-bir:returni))
            (f (make-instance 'cleavir-bir:function
-                :allow-other-keys t :lambda-list ll :inputs args
-                :variables (apply #'cleavir-bir:make-set vars)))
+                :lambda-list ll
+                :variables (apply #'cleavir-bir:make-set
+                                  (mapcar #'car alist))))
            (end (make-instance 'cleavir-bir:iblock :dynamic-environment f))
            (inserter (make-instance 'inserter :function f)))
       (setf (cleavir-bir:end f) end)
@@ -59,9 +63,9 @@
             (list (compile-ast (cleavir-ast:body-ast ast)
                                inserter :multiple-values)))
       (let ((start (iblock inserter)))
-        (insert-initial-bindings inserter vars args)
+        (insert-initial-bindings inserter alist)
         (finalize inserter)
-        (setf (cleavir-bir:start f) start (cleavir-bir:inputs start) args))
+        (setf (cleavir-bir:start f) start (cleavir-bir:inputs start) nil))
       ;; These are optional, but a lot of stuff needs them
       ;; and it's a bit less confusing to do them immediately.
       ;; Could be removed for Efficiency Reasons

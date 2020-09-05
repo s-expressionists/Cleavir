@@ -186,9 +186,8 @@
    ;; (for functions that never return)
    (%end :initarg :end :accessor end
          :type iblock)
-   (%inputs :initarg :inputs :reader inputs
-            ;; A list of ARGUMENTs
-            :type list)
+   ;; FIXME: have multiple entry points instead
+   (%lambda-list :initarg :lambda-list :reader lambda-list)
    ;; The set of variables accessed by this function.
    (%variables :initarg :variables :accessor variables
                :type set)))
