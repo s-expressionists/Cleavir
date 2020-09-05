@@ -76,6 +76,9 @@
    (%readers :initarg :readers :accessor readers
              :initform (empty-set)
              :type set)
+   ;; " encloses (empty until closure conversion)
+   (%encloses :initform (empty-set) :accessor encloses
+              :type set)
    (%rtype :initarg :rtype :reader rtype
            :initform :object
            :type rtype)))
