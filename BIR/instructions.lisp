@@ -1,12 +1,8 @@
 (in-package #:cleavir-bir)
 
-(defclass initialize-closure (operation) ())
-
 (defclass enclose (no-input-mixin computation)
   ((%code :initarg :code :reader code
           :type function)
-   (%initializer :initarg :initializer :reader initializer
-                 :type initialize-closure)
    (%rtype :initform :object)))
 
 (defclass unreachable (no-input-mixin terminator0) ())

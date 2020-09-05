@@ -24,6 +24,15 @@
             (unless itemp (return (values)))
             (funcall f item)))))
 
+;;; FIXME: This should be mapset. Names are hard
+(defun map-over-set (f set)
+  (let ((new (empty-set)))
+    (with-hash-table-iterator (it set)
+      (loop (multiple-value-bind (itemp item) (it)
+              (unless itemp (return (values)))
+              (setf (gethash (funcall f item) new) t))))
+    new))
+
 (defun set= (set1 set2)
   (and (= (hash-table-count set1) (hash-table-count set2))
        (block nil

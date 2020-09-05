@@ -154,6 +154,7 @@
 ;;; write instruction to its name rewrite all its reads to use whatever is
 ;;; written to it directly.
 ;;; Returns true if the variable was eliminated.
+#+(or)
 (defun process-local (var accesses)
   (let ((writes (remove-if-not (lambda (x) (typep x 'writevar)) accesses)))
     (case (length writes)

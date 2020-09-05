@@ -27,12 +27,12 @@
   ;; verify type decls
   (assert (typep (predecessor instruction) '(or instruction null)))
   (assert (typep (successor instruction) '(or instruction null)))
-  ;; All inputs are values, and if they're instructions, they dominate this
-  ;; instruction (but see KLUDGE above)
+  ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate
+  ;; this instruction (but see KLUDGE above)
   (flet ((validp (v)
            (etypecase v
              (computation (presentp v *seen-instructions*))
-             (value t))))
+             (linear-datum t))))
     (assert (every #'validp (inputs instruction))
             ()
             "Instruction ~a, with inputs ~a,
@@ -85,8 +85,6 @@ has use-before-define on inputs ~a!"
 (defmethod verify progn ((inst enclose))
   ;; verify type decls
   (assert (typep (code inst) 'function))
-  (assert (or (not (slot-boundp inst '%initializer))
-              (typep (initializer inst) 'initialize-closure)))
   (verify (code inst)))
 
 (defmethod verify progn ((wv writevar))

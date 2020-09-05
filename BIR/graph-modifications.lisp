@@ -30,30 +30,15 @@
   (setf (inputs instruction)
         (nsubstitute new old (inputs instruction) :test #'eq)))
 
-;;; Replace a value with another value, keeping USERS sets updated.
-(defun replace-value (value replacement)
-  (check-type value value)
-  (check-type replacement value)
-  (assert (not (eq value replacement)))
-  (mapset (lambda (user)
-            (replace-input replacement value user)
-            (nset-adjoinf (%users replacement) user))
-          (%users value))
-  (setf (%users value) (nset-empty (%users value)))
-  (values))
-
-;;; Delete a computation, replacing all of its uses with the given VALUE.
-;;; Maintains the sets of users (except for the deleted computation).
+;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
+;;; Computation's user is invalid afterward.
 (defun delete-computation (computation replacement)
   (check-type computation computation)
-  (check-type replacement value)
+  (check-type replacement linear-datum)
   (assert (not (eq computation replacement)))
-  (mapset (lambda (user)
-            (setf (inputs user)
-                  (nsubstitute replacement computation (inputs user)
-                               :test #'eq))
-            (nset-adjoinf (%users replacement) user))
-          (users computation))
+  (assert (not (slot-boundp replacement '%user)))
+  (setf (%user replacement) (%user computation))
+  (replace-input replacement computation (%user computation))
   (delete-instruction computation)
   (values))
 
@@ -82,20 +67,20 @@
 
 (defun refresh-local-users (function)
   (check-type function function)
-  ;;; First zero out existing user sets
-  (flet ((zero (value)
-           (unless (empty-set-p (%users value))
-             (setf (%users value) (empty-set)))))
+  ;;; First zero out existing users
+  (flet ((zero (linear-datum)
+           (slot-makunbound linear-datum '%user)))
     (map-instructions
      (lambda (i)
        (mapc #'zero (inputs i))
-       (when (typep i 'value) (zero i)))
+       (when (typep i 'linear-datum) (zero i)))
      function))
   ;;; Now add em back
   (map-instructions
    (lambda (i)
      (loop for in in (inputs i)
-           do (setf (%users in) (nset-adjoin i (%users in)))))
+           do (assert (not (slot-boundp in '%user)))
+              (setf (%user in) i)))
    function)
   (values))
 

@@ -36,61 +36,30 @@
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment () ())
 
-;;; A value.
-;;; May be a single value, an unknown number of values,
-;;; or a fixed number of values.
-(defclass value ()
+(defclass datum ()
   ((%rtype :initarg :rtype :reader rtype
            :writer (setf %rtype)
-           :type rtype)
-   ;; Set of instructions using this value.
-   (%users :initarg :users :reader users :accessor %users
-           :initform (empty-set)
-           :type set)))
-
-;;; An argument to a function or iblock.
-(defclass argument (value) ())
-
-;;; A modifiable lexical variable.
-;;; Has to be read from and written to via instructions.
-(defclass variable ()
-  (;; Indicates the shared-ness of the variable.
-   (%extent :initarg :extent :accessor extent
-            :initform :unanalyzed
-            :type (member :unanalyzed
-                          :local ; only in one function.
-                          ;;:dynamic ; TODO
-                          :indefinite))
-   ;; The "owner" of the variable is the function that
-   ;; (a) accesses the variable, and
-   ;; (b) encloses, directly or indirectly, all other functions that access
-   ;;     the variable.
-   ;; Until computed by analyze-variables, it's NIL.
-   (%owner :initform nil :accessor owner
-           :type (or null function))
-   ;; Set of writevar instructions for this variable
-   (%writers :initarg :writers :accessor writers
-             :initform (empty-set)
-             :type set)
-   ;; " readvars
-   (%readers :initarg :readers :accessor readers
-             :initform (empty-set)
-             :type set)
-   ;; " encloses (empty until closure conversion)
-   (%encloses :initform (empty-set) :accessor encloses
-              :type set)
-   (%rtype :initarg :rtype :reader rtype
-           :initform :object
            :type rtype)))
+
+(defgeneric definitions (datum))
+(defgeneric uses (datum))
+
+;;; A datum with only one definition - itself.
+(defclass value (datum) ())
+(defmethod definitions ((datum value)) (make-set datum))
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)))
 
-;;; TODO: This will implicate load form bla bla bla stuff.
-(defun make-constant (value)
-  (make-instance 'constant :value value))
+;;; A datum with only one use.
+(defclass linear-datum (datum)
+  ((%user :initarg :user :reader user :accessor %user
+          :type instruction)))
+(defmethod uses ((datum linear-datum)) (make-set (user datum)))
 
-;;; An abstract operation
+;;; A datum with one definition and one use.
+(defclass transform (value linear-datum) ())
+
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
                  :initform nil
@@ -99,15 +68,17 @@
    (%successor :initarg :successor :accessor successor
                ;; NIL indicates this is a terminator.
                :type (or instruction null))
+   ;; A list of LINEAR-DATUM inputs to the instruction.
+   ;; Note that an operation can use other data
+   ;; e.g. a READVAR uses its VARIABLE.
    (%inputs :initarg :inputs :accessor inputs
-            ;; A list of VALUEs
             :type list)))
 
-;;; An instruction that has no output
-(defclass operation (instruction) ())
+;;; An operation that outputs a value.
+(defclass computation (transform instruction) ())
 
-;;; An instruction that outputs
-(defclass computation (instruction value) ())
+;;; An operation that does not output a value.
+(defclass operation (instruction) ())
 
 (defclass no-input-mixin (instruction)
   ((%inputs :initform nil :type null)))
@@ -129,6 +100,47 @@
 ;;; A terminator with exactly one next iblock (abstract)
 (defclass terminator1 (terminator)
   ((%next :type (cons iblock null))))
+
+;;; An argument to an iblock.
+(defclass argument (linear-datum)
+  ((%iblock :initarg :iblock :reader iblock
+            :type iblock)))
+
+;;; A modifiable lexical variable.
+;;; Has to be read from and written to via instructions.
+(defclass variable (datum)
+  (;; Indicates the shared-ness of the variable.
+   (%extent :initarg :extent :accessor extent
+            :initform :unanalyzed
+            :type (member :unanalyzed
+                          :local ; only in one function.
+                          ;;:dynamic ; TODO
+                          :indefinite))
+   ;; The "owner" of the variable is the function that
+   ;; (a) accesses the variable, and
+   ;; (b) encloses, directly or indirectly, all other functions that access
+   ;;     the variable.
+   ;; Until computed by analyze-variables, it's NIL.
+   (%owner :initform nil :accessor owner
+           :type (or null function))
+   ;; Set of writevar instructions for this variable
+   (%writers :initarg :writers :accessor writers :reader definitions
+             :initform (empty-set)
+             :type set)
+   ;; " readvars
+   (%readers :initarg :readers :accessor readers :reader uses
+             :initform (empty-set)
+             :type set)
+   ;; " encloses (empty until closure conversion)
+   (%encloses :initform (empty-set) :accessor encloses
+              :type set)
+   (%rtype :initarg :rtype :reader rtype
+           :initform :object
+           :type rtype)))
+
+;;; TODO: This will implicate load form bla bla bla stuff.
+(defun make-constant (value)
+  (make-instance 'constant :value value))
 
 ;;; A sequence of instructions with no branching.
 (defclass iblock ()
