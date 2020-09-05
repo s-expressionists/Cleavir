@@ -123,6 +123,8 @@
     (setf (cleavir-bir:predecessors iblock)
           (cleavir-bir:make-set tblock eblock))
     (finalize inserter)
+    (finalize tinserter)
+    (finalize einserter)
     (reset inserter cblock)
     (compile-ast (cleavir-ast:test-ast ast)
                  inserter (list tblock eblock))
