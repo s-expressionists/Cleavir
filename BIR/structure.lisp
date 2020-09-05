@@ -66,7 +66,8 @@
   ((%value :initarg :value :reader immediate-value)))
 (defclass load-time-value (transfer)
   ((%form :initarg :form :reader form)
-   (%read-only-p :initarg :read-only-p :reader read-only-p)))
+   (%read-only-p :initarg :read-only-p :reader read-only-p)
+   (%rtype :initform :object)))
 
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
