@@ -1,8 +1,7 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-bir
-  ;; temporary dependence on cleavir-ast for ast-to-bir
-  :depends-on (:cleavir-ast :cleavir-primop)
+  :depends-on (:cleavir-primop)
   :components
   ((:file "packages")
    (:file "set" :depends-on ("packages"))
@@ -18,6 +17,4 @@
    (:file "verify"
     :depends-on ("map" "instructions" "set" "structure" "packages"))
    (:file "disassemble"
-    :depends-on ("map" "instructions" "set" "structure" "packages"))
-   (:file "ast-to-bir"
-    :depends-on ("instructions" "set" "structure" "packages"))))
+    :depends-on ("map" "instructions" "set" "structure" "packages"))))

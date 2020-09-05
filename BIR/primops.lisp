@@ -19,6 +19,10 @@
 
 (defvar *primops* (make-hash-table :test #'eq))
 
+(defun primop-info (name)
+  (or (gethash name *primops*)
+      (error "BUG: No primop: ~a" name)))
+
 (macrolet ((defprimop (name ret &rest in)
              `(setf (gethash ',name *primops*)
                     (make-instance 'primop-info

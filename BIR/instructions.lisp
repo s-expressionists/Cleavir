@@ -34,8 +34,8 @@
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
-  ((%primop-info :initarg :primop-info :reader primop-info
-                 :type primop-info)))
+  ((%info :initarg :info :reader info
+          :type primop-info)))
 
 ;; primop returning no values
 (defclass nvprimop (primop operation) ())
