@@ -48,9 +48,6 @@
 (defclass value (datum) ())
 (defmethod definitions ((datum value)) (make-set datum))
 
-(defclass constant (value)
-  ((%value :initarg :value :reader constant-value)))
-
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%user :initarg :user :reader user :accessor %user
@@ -58,7 +55,18 @@
 (defmethod uses ((datum linear-datum)) (make-set (user datum)))
 
 ;;; A datum with one definition and one use.
-(defclass transform (value linear-datum) ())
+(defclass transfer (value linear-datum) ())
+
+;;; TODO: Using this uniformly will be work.
+(defclass constant (transfer)
+  ((%value :initarg :value :reader constant-value)))
+
+;;; TODO: These are bad, but AST changes will be required to fix it.
+(defclass immediate (transfer)
+  ((%value :initarg :value :reader immediate-value)))
+(defclass load-time-value (transfer)
+  ((%form :initarg :form :reader form)
+   (%read-only-p :initarg :read-only-p :reader read-only-p)))
 
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
@@ -75,7 +83,7 @@
             :type list)))
 
 ;;; An operation that outputs a value.
-(defclass computation (transform instruction) ())
+(defclass computation (transfer instruction) ())
 
 ;;; An operation that does not output a value.
 (defclass operation (instruction) ())

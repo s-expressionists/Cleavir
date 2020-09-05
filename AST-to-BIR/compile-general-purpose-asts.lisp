@@ -1,5 +1,9 @@
 (in-package #:cleavir-ast-to-bir)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; COMPILE-FUNCTION
+
 (defun translate-lambda-list (lambda-list)
   (loop with ll with vars with args
         for item in lambda-list
@@ -65,12 +69,17 @@
       (cleavir-bir:refresh-local-users f)
       f)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; IF-AST
+
 (defmethod compile-ast ((ast cleavir-ast:if-ast) inserter context)
   (check-type inserter inserter)
   (assert (one-successor-context-p context))
-  (let* ((arg (unless (effect-context-p context)
-                (make-instance 'cleavir-bir:argument :rtype context)))
-         (iblock (iblock inserter))
+  (let* ((iblock (iblock inserter))
+         (arg (unless (effect-context-p context)
+                (make-instance 'cleavir-bir:argument
+                  :iblock iblock :rtype context)))
          (tjump (make-instance 'cleavir-bir:jump
                   :next (list iblock)))
          (tblock
@@ -115,6 +124,71 @@
                  inserter (list tblock eblock))
     arg))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; BRANCH-AST
+
+(defmethod compile-ast ((ast cleavir-ast:branch-ast) inserter context)
+  (check-type inserter inserter)
+  (assert (one-successor-context-p context))
+  (let* ((next (iblock inserter))
+         (dynenv (cleavir-bir:dynamic-environment next))
+         (pre (make-instance 'cleavir-bir:iblock :dynamic-environment dynenv))
+         (effectp (effect-context-p context))
+         (arg (unless effectp (make-instance 'cleavir-bir:argument
+                                :iblock next :rtype context)))
+         (branch-asts (cleavir-ast:branch-asts ast))
+         (branch-iblocks (loop repeat (length branch-asts)
+                               collect (make-instance 'cleavir-bir:iblock
+                                         :dynamic-environment dynenv)))
+         (default-ast (cleavir-ast:default-ast ast))
+         (default-iblock (make-instance 'cleavir-bir:iblock
+                           :dynamic-environment dynenv))
+         (jumps (loop repeat (length branch-asts)
+                      collect (make-instance 'cleavir-bir:jump
+                                :next (list next))))
+         (default-jump (make-instance 'cleavir-bir:jump :next (list next))))
+    (setf (cleavir-bir:inputs next) (list arg))
+    (finalize inserter)
+    (reset inserter default-iblock)
+    (terminate inserter default-jump)
+    (setf (cleavir-bir:inputs default-jump)
+          (list (compile-ast default-ast inserter context)))
+    (loop for ast in branch-asts
+          for ib in branch-iblocks
+          for jump in jumps
+          do (reset inserter ib)
+             (terminate inserter jump)
+             (setf (cleavir-bir:inputs jump)
+                   (list (compile-ast ast inserter context)))
+             (finalize inserter))
+    (reset inserter pre)
+    (compile-ast (cleavir-ast:test-ast ast)
+                 inserter (append branch-iblocks (list default-iblock)))
+    arg))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; PROGN-AST
+
+(defun compile-sequence-for-effect (asts inserter)
+  (loop for sub in (reverse asts)
+        do (compile-ast sub inserter :effect)))
+
+(defmethod compile-ast ((ast cleavir-ast:progn-ast) inserter context)
+  (check-type inserter inserter)
+  (assert (one-successor-context-p context))
+  (let ((form-asts (cleavir-ast:form-asts ast)))
+    (assert (not (null form-asts)))
+    (let ((last (first (last form-asts)))
+          (bl (butlast form-asts)))
+      (prog1 (compile-ast last inserter context)
+        (compile-sequence-for-effect bl inserter)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; BLOCK-AST
+
 (defun block-info (block-ast) (gethash block-ast *block-info*))
 (defun (setf block-info) (new-info block-ast)
   (setf (gethash block-ast *block-info*) new-info))
@@ -153,6 +227,10 @@
         (values)
         (first inputs))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; RETURN-FROM-AST
+
 (defmethod compile-ast ((ast cleavir-ast:return-from-ast) inserter context)
   (check-type inserter inserter)
   (let* ((block-ast (cleavir-ast:block-ast ast))
@@ -188,6 +266,10 @@
                                      inserter bcontext)))))))
   (no-return context))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; TAGBODY-AST
+
 (defun go-info (tag-ast)
   (gethash tag-ast *go-info*))
 
@@ -211,10 +293,6 @@
                     (setf prefix (nreverse current))
                     (push (cons state (nreverse current)) tags))
                 (return (values prefix tags))))
-
-(defun compile-sequence-for-effect (asts inserter)
-  (loop for sub in (reverse asts)
-        do (compile-ast sub inserter :effect)))
 
 (defmethod compile-ast ((ast cleavir-ast:tagbody-ast) inserter context)
   (assert (effect-context-p context))
@@ -267,6 +345,10 @@
         (terminate inserter catch))))
   (values))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; GO-AST
+
 (defmethod compile-ast ((ast cleavir-ast:go-ast) inserter context)
   (finalize inserter)
   (destructuring-bind (catch next bfunction contvar)
@@ -286,15 +368,9 @@
             (before inserter rv)))))
   (no-return context))
 
-(defmethod compile-ast ((ast cleavir-ast:progn-ast) inserter context)
-  (check-type inserter inserter)
-  (assert (one-successor-context-p context))
-  (let ((form-asts (cleavir-ast:form-asts ast)))
-    (assert (not (null form-asts)))
-    (let ((last (first (last form-asts)))
-          (bl (butlast form-asts)))
-      (prog1 (compile-ast last inserter context)
-        (compile-sequence-for-effect bl inserter)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; CALL-AST
 
 (defun compile-arguments (arg-asts inserter)
   (loop for arg-ast in (reverse arg-asts)
@@ -316,6 +392,10 @@
     (setf (cleavir-bir:inputs call) (list* calleev argsvs))
     result))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; FUNCTION-AST
+
 (defmethod compile-ast ((ast cleavir-ast:function-ast)
                         inserter context)
   (check-type inserter inserter)
@@ -327,6 +407,10 @@
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
     (prog1 (figure-values inserter enclose context)
       (before inserter enclose))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; SETQ-AST
 
 (defmethod compile-ast ((ast cleavir-ast:setq-ast)
                         inserter context)
@@ -340,6 +424,51 @@
       (setf (cleavir-bir:inputs assign) (list v))))
   (values))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; THE-AST
+
+(defmethod compile-ast ((ast cleavir-ast:the-ast) inserter context)
+  (check-type inserter inserter)
+  (assert (one-successor-context-p context))
+  ;;; Punt. FIXME
+  (compile-ast (cleavir-ast:form-ast ast) inserter context))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; DYNAMIC-ALLOCATION-AST
+
+(defmethod compile-ast ((ast cleavir-ast:dynamic-allocation-ast)
+                        inserter context)
+  (check-type inserter inserter)
+  (assert (one-successor-context-p context))
+  ;;; Punt. FIXME
+  (compile-ast (cleavir-ast:form-ast ast) inserter context))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TODO
+;;; CONSTANT-SYMBOL-VALUE-AST
+;;; SET-CONSTANT-SYMBOL-VALUE-AST
+;;; CONSTANT-FDEFINITION-AST
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; TYPEQ-AST
+
+(defmethod compile-ast ((ast cleavir-ast:typeq-ast) inserter context)
+  (check-type inserter inserter)
+  (assert (n-next-context-p context 2))
+  (let ((tq (make-instance 'cleavir-bir:typeq
+              :type-specifier (cleavir-ast:type-specifier ast))))
+    (terminate inserter tq)
+    (setf (cleavir-bir:inputs tq)
+          (list (compile-ast (cleavir-ast:form-ast ast) inserter context))))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; UNREACHABLE-AST
+
 (defmethod compile-ast ((ast cleavir-ast:unreachable-ast)
                         inserter context)
   (check-type inserter inserter)
@@ -351,6 +480,10 @@
     (terminate inserter (make-instance 'cleavir-bir:unreachable)))
   (no-return context))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; LEXICAL-AST
+
 (defmethod compile-ast ((ast cleavir-ast:lexical-ast)
                         inserter context)
   (check-type inserter inserter)
@@ -361,8 +494,11 @@
     (prog1 (figure-values inserter rv context)
       (before inserter rv))))
 
-(defmethod compile-ast ((ast cleavir-ast:eq-ast)
-                        inserter context)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; EQ-AST
+
+(defmethod compile-ast ((ast cleavir-ast:eq-ast) inserter context)
   (check-type inserter inserter)
   (assert (n-next-context-p context 2))
   (let ((e (make-instance 'cleavir-bir:eqi :next (copy-list context))))
@@ -373,3 +509,53 @@
                  inserter)))
       (setf (cleavir-bir:inputs e) args)))
   (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; NEQ-AST
+
+(defmethod compile-ast ((ast cleavir-ast:neq-ast) inserter context)
+  (check-type inserter inserter)
+  (assert (n-next-context-p context 2))
+  (let ((e (make-instance 'cleavir-bir:eqi :next (reverse context))))
+    (terminate inserter e)
+    (let ((args (compile-arguments
+                 (list (cleavir-ast:arg1-ast ast)
+                       (cleavir-ast:arg2-ast ast))
+                 inserter)))
+      (setf (cleavir-bir:inputs e) args)))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; CASE-AST
+
+(defmethod compile-ast ((ast cleavir-ast:case-ast) inserter context)
+  (check-type inserter inserter)
+  (let* ((arg-ast (cleavir-ast:arg-ast ast))
+         (comparees (cleavir-ast:comparees ast))
+         (case (make-instance 'cleavir-bir:case :comparees comparees)))
+    (assert (n-next-context-p context (1+ (length comparees))))
+    (terminate inserter case)
+    (setf (cleavir-bir:inputs case)
+          (list (compile-ast arg-ast inserter context))))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; LOAD-TIME-VALUE-AST. Needs work.
+
+(defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter context)
+  (declare (ignore inserter))
+  (assert (one-successor-context-p context))
+  (make-instance 'cleavir-bir:load-time-value
+    :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; IMMEDIATE-AST. Needs work.
+
+(defmethod compile-ast ((ast cleavir-ast:immediate-ast) inserter context)
+  (declare (ignore inserter))
+  (assert (one-successor-context-p context))
+  (make-instance 'cleavir-bir:immediate :value (cleavir-ast:value ast)))

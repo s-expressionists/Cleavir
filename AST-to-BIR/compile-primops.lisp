@@ -26,4 +26,10 @@
   (defprimop cleavir-primop:rplaca cleavir-ast:rplaca-ast
     cleavir-ast:cons-ast cleavir-ast:object-ast)
   (defprimop cleavir-primop:rplacd cleavir-ast:rplacd-ast
-    cleavir-ast:cons-ast cleavir-ast:object-ast))
+    cleavir-ast:cons-ast cleavir-ast:object-ast)
+  (defprimop symbol-value cleavir-ast:symbol-value-ast
+    cleavir-ast:symbol-ast)
+  (defprimop (setf symbol-value) cleavir-ast:set-symbol-value-ast
+    cleavir-ast:symbol-ast cleavir-ast:value-ast)
+  (defprimop fdefinition cleavir-ast:fdefinition-ast
+    cleavir-ast:name-ast))

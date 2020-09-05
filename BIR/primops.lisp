@@ -17,7 +17,7 @@
 (defmethod make-load-form ((o primop-info) &optional env)
   (make-load-form-saving-slots o :environment env))
 
-(defvar *primops* (make-hash-table :test #'eq))
+(defvar *primops* (make-hash-table :test #'equal))
 
 (defun primop-info (name)
   (or (gethash name *primops*)
@@ -36,4 +36,7 @@
       (cleavir-primop:car :object :object)
       (cleavir-primop:cdr :object :object)
     (cleavir-primop:rplaca nil :object :object)
-    (cleavir-primop:rplacd nil :object :object)))
+    (cleavir-primop:rplacd nil :object :object)
+    (symbol-value :object :object)
+    ((setf symbol-value) nil :object :object)
+    (fdefinition :object :object)))

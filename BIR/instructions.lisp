@@ -102,6 +102,13 @@
 ;;; EQ
 (defclass eqi (terminator operation) ())
 
+;;; FIXME: Should take a ctype rather than a type specifier.
+(defclass typeq (terminator operation)
+  ((%type-specifier :initarg :type-specifier :reader type-specifier)))
+
+(defclass case (terminator operation)
+  ((%comparees :initarg :comparees :reader comparees)))
+
 ;;; Convert an aggregate of :objects into a :multiple-values
 (defclass fixed-to-multiple (one-input-mixin computation)
   ((%rtype :initform :multiple-values :type (eql :multiple-values))))
