@@ -193,8 +193,6 @@ has use-before-define on inputs ~a!"
      (start iblock))))
 
 (defmethod verify progn ((function function))
-  ;; All inputs are arguments
-  (assert (every (lambda (a) (typep a 'argument)) (inputs function)))
   (let ((start (start function))
         (end (end function))
         (*seen-instructions* (empty-set))
