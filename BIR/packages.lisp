@@ -5,8 +5,9 @@
   (:shadow #:function #:catch #:set #:variable)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables)
   (:export #:iblock #:predecessors #:entrances #:dynamic-environment)
-  (:export #:datum #:value #:linear-datum #:argument)
-  (:export #:variable)
+  (:export #:datum #:value #:linear-datum #:argument
+           #:definitions #:uses)
+  (:export #:variable #:extent #:owner #:writers #:readers #:encloses)
   (:export #:make-constant)
   (:export #:instruction #:operation #:computation
            #:terminator #:terminator0 #:terminator1
@@ -24,4 +25,5 @@
            #:aggregate-length #:aggregate-elt)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
+  (:export #:verify)
   (:export #:make-set #:nset-adjoin #:nset-adjoinf))
