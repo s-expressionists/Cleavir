@@ -28,12 +28,12 @@
            #:aggregate #:make-aggregate #:aggregatep
            #:aggregate-length #:aggregate-elt)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:all-functions)
+           #:all-functions #:delete-computation #:delete-instruction)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
   (:export #:disassemble)
-  (:export #:set #:empty-set #:make-set
+  (:export #:set #:empty-set #:make-set #:arb
            #:nset-adjoin #:nset-adjoinf #:nset-remove #:nset-removef
            #:nset-union #:nset-unionf
            #:presentp #:set-size #:empty-set-p #:copy-set

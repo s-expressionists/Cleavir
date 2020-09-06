@@ -4,6 +4,10 @@
 (defgeneric delete-instruction (instruction))
 (defmethod delete-instruction ((instruction instruction))
   (check-type instruction (not terminator))
+  ;; Delete from inputs.
+  (dolist (in (inputs instruction))
+    (slot-makunbound in '%user))
+  ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
     (assert (not (null succ)))
@@ -17,15 +21,15 @@
            (setf (predecessor succ) pred
                  (successor pred) succ))))
   (values))
-(defmethod delete-instruction :after ((inst readvar))
+(defmethod delete-instruction :before ((inst readvar))
   (nset-removef (readers (variable inst)) inst))
-(defmethod delete-instruction :after ((inst writevar))
+(defmethod delete-instruction :before ((inst writevar))
   (nset-removef (writers (variable inst)) inst))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
-  (check-type new value)
-  (check-type old value)
+  (check-type new linear-datum)
+  (check-type old linear-datum)
   (check-type instruction instruction)
   (setf (inputs instruction)
         (nsubstitute new old (inputs instruction) :test #'eq)))

@@ -48,6 +48,10 @@
     (doset (e set (make-instance 'set :hash result))
       (setf (gethash e result) t))))
 
+;;; Get an arbitrary element of the set, or else no values.
+(defun arb (set)
+  (doset (i set (values)) (return-from arb i)))
+
 (defun set= (set1 set2)
   (and (= (set-size set1) (set-size set2))
        (doset (i set1 t)
