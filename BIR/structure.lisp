@@ -166,12 +166,12 @@
             :initform nil
             ;; A list of ARGUMENTs
             :type list)
-   ;; A list of IBLOCKs that enter this function nonlocally
+   ;; A set of IBLOCKs that enter this function nonlocally
    ;; (i.e. with an UNWIND operation).
    ;; NOTE: Should be a weak set
    (%entrances :initarg :entrances :accessor entrances
-               :initform nil
-               :type list)
+               :initform (cleavir-set:empty-set)
+               :type cleavir-set:set)
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
                          :type dynamic-environment)))

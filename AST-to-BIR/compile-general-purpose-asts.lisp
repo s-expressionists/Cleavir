@@ -263,7 +263,7 @@
                       :variable contvar :rtype :continuation)))
             (adjoin-variable inserter contvar)
             (cleavir-set:nadjoinf (cleavir-bir:unwinds catch) u)
-            (push new-iblock (cleavir-bir:entrances next))
+            (cleavir-set:nadjoinf (cleavir-bir:entrances next) new-iblock)
             (terminate inserter u)
             (before inserter rv)
             (setf (cleavir-bir:inputs u)
