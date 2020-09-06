@@ -353,8 +353,9 @@
 ;;; CALL-AST
 
 (defun compile-arguments (arg-asts inserter)
-  (loop for arg-ast in (reverse arg-asts)
-        collect (first (compile-ast arg-ast inserter '(:object)))))
+  (nreverse
+   (loop for arg-ast in (reverse arg-asts)
+         collect (first (compile-ast arg-ast inserter '(:object))))))
 
 (defmethod compile-ast ((ast cleavir-ast:call-ast)
                         inserter context)
