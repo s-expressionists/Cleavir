@@ -71,7 +71,7 @@
   `(:= ,(disassemble-value inst)
        (,(dis-label inst)
         ,(code inst)
-        ,(variables inst)
+        ,(mapcar #'dis-var (set-to-list (variables inst)))
         ,@(mapcar #'disassemble-value (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst catch))
