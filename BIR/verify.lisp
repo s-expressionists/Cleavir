@@ -44,7 +44,7 @@ has use-before-define on inputs ~a!"
     (assert (not (cleavir-set:presentp (inputs instruction) *seen-inputs*))
             ;; could track the other instruction sharing it
             () "Inputs list of instruction ~a is shared" instruction)
-    (cleavir-set:nset-adjoinf *seen-inputs* (inputs instruction))))
+    (cleavir-set:nadjoinf *seen-inputs* (inputs instruction))))
 
 (defmethod verify progn ((instruction no-input-mixin))
   ;; No inputs (verify type decl)
@@ -72,7 +72,7 @@ has use-before-define on inputs ~a!"
   (unless (null (next instruction))
     (assert (not (presentp (next instruction) *seen-next*))
             () "NEXT is shared for instruction: ~a" (next instruction))
-    (cleavir-set:nset-adjoinf *seen-next* (next instruction))))
+    (cleavir-set:nadjoinf *seen-next* (next instruction))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -105,7 +105,7 @@ has use-before-define on inputs ~a!"
   (assert (typep (unwinds c) 'cleavir-set:set))
   (assert (rtype= (rtype c) :continuation))
   ;; check that all unwinds are unwinds
-  (assert (cleavir-set:set-every (lambda (u) (typep u 'unwind)) (unwinds c)))
+  (assert (cleavir-set:every (lambda (u) (typep u 'unwind)) (unwinds c)))
   ;; check that there's at least one next
   (assert (> (length (next c)) 0))
   ;; Check that the normal next has this dynamic environment
@@ -167,7 +167,7 @@ has use-before-define on inputs ~a!"
 
 (defmethod verify progn ((iblock iblock))
   ;; All predecessors truly have this as a successor
-  (assert (cleavir-set:set-every (lambda (p) (member iblock (next (end p))
+  (assert (cleavir-set:every (lambda (p) (member iblock (next (end p))
                                                      :test #'eq))
                                  (predecessors iblock)))
   ;; All successors have this as a predecessor
@@ -190,7 +190,7 @@ has use-before-define on inputs ~a!"
     (map-iblock-instructions
      (lambda (i)
        (verify i)
-       (cleavir-set:nset-adjoinf *seen-instructions* i))
+       (cleavir-set:nadjoinf *seen-instructions* i))
      (start iblock))))
 
 (defmethod verify progn ((function function))
@@ -215,7 +215,7 @@ has use-before-define on inputs ~a!"
                (assert (if (eq iblock end)
                            t
                            (not (typep (end iblock) 'returni))))
-               (cleavir-set:nset-adjoinf reachable iblock)))
+               (cleavir-set:nadjoinf reachable iblock)))
         (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
         #+(or)

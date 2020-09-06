@@ -17,7 +17,7 @@
           until (null work)
           unless (cleavir-set:presentp work seen)
             do (funcall f work)
-               (setf seen (cleavir-set:nset-adjoin work seen))
+               (setf seen (cleavir-set:nadjoin work seen))
                (setf worklist (append (next (end work)) worklist))))
   (values))
 
@@ -39,7 +39,7 @@
     (loop for work = (pop worklist)
           until (null work)
           unless (cleavir-set:presentp work seen)
-            do (cleavir-set:nset-adjoinf seen work)
+            do (cleavir-set:nadjoinf seen work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist)))
@@ -56,7 +56,7 @@
     (loop for work = (pop worklist)
           until (null work)
           unless (cleavir-set:presentp work set)
-            do (cleavir-set:nset-adjoinf set work)
+            do (cleavir-set:nadjoinf set work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist))))
@@ -72,7 +72,7 @@
           for owner = work
           until (null work)
           unless (cleavir-set:presentp work seen)
-            do (cleavir-set:nset-adjoinf seen work)
+            do (cleavir-set:nadjoinf seen work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist)))

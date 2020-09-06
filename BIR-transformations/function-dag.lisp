@@ -54,9 +54,9 @@ some transformations, especially inlining, can change this.
                  (node (make-instance 'interior-node
                          :parents parents :enclose instruction)))
             (cleavir-set:doset (parent parents)
-              (cleavir-set:nset-adjoinf (%children parent) node))
+              (cleavir-set:nadjoinf (%children parent) node))
             (setf (gethash (cleavir-bir:code instruction) dag-nodes)
-                  (cleavir-set:nset-adjoin
+                  (cleavir-set:nadjoin
                    node (gethash (cleavir-bir:code instruction) dag-nodes
                                  (cleavir-set:empty-set))))))))
      set)
@@ -71,7 +71,7 @@ some transformations, especially inlining, can change this.
   (let ((result (cleavir-set:empty-set)))
     (labels ((aux (node)
                (when (typep node 'interior-node)
-                 (cleavir-set:nset-adjoinf result (node-function node))
+                 (cleavir-set:nadjoinf result (node-function node))
                  (cleavir-set:mapset nil #'aux (parents node)))))
       (cleavir-set:mapset nil #'aux (gethash function (dag-nodes dag)))
       result)))

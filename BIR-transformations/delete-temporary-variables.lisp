@@ -15,8 +15,8 @@
 
 (defun temporary-variable-p (variable)
   (and (eq (cleavir-bir:extent variable) :local)
-       (= (cleavir-set:set-size (cleavir-bir:writers variable)) 1)
-       (= (cleavir-set:set-size (cleavir-bir:readers variable)) 1)))
+       (= (cleavir-set:size (cleavir-bir:writers variable)) 1)
+       (= (cleavir-set:size (cleavir-bir:readers variable)) 1)))
 
 (defun delete-temporary-variables-from-set (fset)
   (cleavir-set:doset (funct fset)

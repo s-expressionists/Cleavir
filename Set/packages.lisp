@@ -2,9 +2,9 @@
 
 (defpackage #:cleavir-set
   (:use #:cl)
-  (:shadow #:set)
+  (:shadow #:set #:nunion #:every)
   (:export #:set #:empty-set #:make-set #:arb #:set=
-           #:nset-adjoin #:nset-adjoinf #:nset-remove #:nset-removef
-           #:nset-union #:nset-unionf
-           #:presentp #:set-size #:empty-set-p #:copy-set
-           #:doset #:mapset #:set-to-list #:set-filter #:set-every))
+           #:nadjoin #:nadjoinf #:nremove #:nremovef
+           #:nunion #:nunionf
+           #:presentp #:size #:empty-set-p #:copy-set
+           #:doset #:mapset #:set-to-list #:filter #:every))

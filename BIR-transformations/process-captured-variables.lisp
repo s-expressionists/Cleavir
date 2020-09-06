@@ -9,7 +9,7 @@
             (let ((pv (cleavir-set:empty-set)))
               (cleavir-set:doset (ancestor (ancestor-functions funct dag))
                 (cleavir-set:doset (variable (cleavir-bir:variables ancestor))
-                  (cleavir-set:nset-adjoinf pv variable)))
+                  (cleavir-set:nadjoinf pv variable)))
               pv)))
       (cleavir-set:doset (variable (cleavir-bir:variables funct))
         (if (cleavir-set:presentp variable parent-variables)
@@ -41,16 +41,16 @@
     (let* ((enclose (enclose node))
            (owner (node-function node))
            (parents (parents node))
-           (nparents (cleavir-set:set-size parents)))
+           (nparents (cleavir-set:size parents)))
       ;; mark the enclose and function
-      (cleavir-set:nset-unionf (cleavir-bir:variables enclose) variables)
-      (cleavir-set:nset-unionf (cleavir-bir:variables owner) variables)
+      (cleavir-set:nunionf (cleavir-bir:variables enclose) variables)
+      (cleavir-set:nunionf (cleavir-bir:variables owner) variables)
       ;; Remove any variables the current function owns
       ;; and while we're at it, update the variables' enclose sets
       (cleavir-set:doset (v variables)
-        (cleavir-set:nset-adjoinf (cleavir-bir:encloses v) enclose)
+        (cleavir-set:nadjoinf (cleavir-bir:encloses v) enclose)
         (when (eq (cleavir-bir:owner v) owner)
-          (cleavir-set:nset-removef variables v)))
+          (cleavir-set:nremovef variables v)))
       (cond (;; no more variables: nothing left to do
              (cleavir-set:empty-set-p variables))
             ((zerop nparents)) ; at the top: nothing left to do
@@ -67,10 +67,10 @@
 ;;; need to be added for the encloses. Precondition: analyze-variables has run.
 (defun transmit-variables (all-functions dag)
   (cleavir-set:doset (funct all-functions (values))
-    (let ((closed (cleavir-set:set-filter
+    (let ((closed (cleavir-set:filter
                    (closed-over-predicate funct) (cleavir-bir:variables funct)))
           (nodes (gethash funct (dag-nodes dag))))
-      (if (= (cleavir-set:set-size nodes) 1)
+      (if (= (cleavir-set:size nodes) 1)
           ;; only one node, so we can destroy the set
           (cleavir-set:doset (node nodes)
             (mark-enclose-recursively closed node))

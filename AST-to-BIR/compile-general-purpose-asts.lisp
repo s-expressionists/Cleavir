@@ -262,7 +262,7 @@
                 (rv (make-instance 'cleavir-bir:readvar
                       :variable contvar :rtype :continuation)))
             (adjoin-variable inserter contvar)
-            (cleavir-set:nset-adjoinf (cleavir-bir:unwinds catch) u)
+            (cleavir-set:nadjoinf (cleavir-bir:unwinds catch) u)
             (push new-iblock (cleavir-bir:entrances next))
             (terminate inserter u)
             (before inserter rv)

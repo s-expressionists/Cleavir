@@ -14,7 +14,7 @@
 (defun empty-set-p (set)
   (zerop (hash-table-count (%hash set))))
 
-(defun set-size (set)
+(defun size (set)
   (hash-table-count (%hash set)))
 
 (defun make-set (&rest elements)
@@ -51,37 +51,37 @@
   (doset (i set (values)) (return-from arb i)))
 
 (defun set= (set1 set2)
-  (and (= (set-size set1) (set-size set2))
+  (and (= (size set1) (size set2))
        (doset (i set1 t)
          (unless (presentp i set2) (return nil)))))
 
-(defun set-every (p set)
+(defun every (p set)
   (doset (i set t)
     (unless (funcall p i) (return nil))))
 
-(defun nset-adjoin (item set)
+(defun nadjoin (item set)
   (setf (gethash item (%hash set)) t)
   set)
 
 ;;; define-modify-macro reorders arguments and i don't like it
-(defmacro nset-adjoinf (set item &environment env)
+(defmacro nadjoinf (set item &environment env)
   (multiple-value-bind (temps values stores write read)
       (get-setf-expansion set env)
     `(let* (,@(mapcar #'list temps values))
-       (multiple-value-bind (,@stores) (nset-adjoin ,item ,read)
+       (multiple-value-bind (,@stores) (nadjoin ,item ,read)
          ,write))))
 
 ;; Removes an item from the set, returns the new set. Can be (is) destructive.
 ;; could be set-delete, but n is regular, if arbitrary
-(defun nset-remove (item set)
+(defun nremove (item set)
   (remhash item (%hash set))
   set)
 
-(defmacro nset-removef (set item &environment env)
+(defmacro nremovef (set item &environment env)
   (multiple-value-bind (temps values stores write read)
       (get-setf-expansion set env)
     `(let* (,@(mapcar #'list temps values))
-       (multiple-value-bind (,@stores) (nset-remove ,item ,read)
+       (multiple-value-bind (,@stores) (nremove ,item ,read)
          ,write))))
 
 ;; Return an empty set, possibly destroying an existing set to do it.
@@ -90,20 +90,20 @@
   set)
 
 ;; Only the first argument is destroyed.
-(defun nset-union (s1 s2)
-  (doset (i s2 s1) (nset-adjoinf s1 i)))
+(defun nunion (s1 s2)
+  (doset (i s2 s1) (nadjoinf s1 i)))
 
-(defmacro nset-unionf (set other &environment env)
+(defmacro nunionf (set other &environment env)
   (multiple-value-bind (temps values stores write read)
       (get-setf-expansion set env)
     `(let* (,@(mapcar #'list temps values))
-       (multiple-value-bind (,@stores) (nset-union ,read ,other)
+       (multiple-value-bind (,@stores) (nunion ,read ,other)
          ,write))))
 
-(defun set-filter (f set)
+(defun filter (f set)
   (let ((result (empty-set)))
     (doset (e set result)
-      (when (funcall f e) (nset-adjoinf result e)))))
+      (when (funcall f e) (nadjoinf result e)))))
 
 (defmethod print-object ((s set) stream)
   (print-unreadable-object (s stream :type t)

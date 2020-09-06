@@ -22,9 +22,9 @@
                  (successor pred) succ))))
   (values))
 (defmethod delete-instruction :before ((inst readvar))
-  (cleavir-set:nset-removef (readers (variable inst)) inst))
+  (cleavir-set:nremovef (readers (variable inst)) inst))
 (defmethod delete-instruction :before ((inst writevar))
-  (cleavir-set:nset-removef (writers (variable inst)) inst))
+  (cleavir-set:nremovef (writers (variable inst)) inst))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
@@ -53,7 +53,7 @@
     (loop for work = (pop worklist)
           until (null work)
           unless (cleavir-set:presentp work set)
-            do (cleavir-set:nset-adjoinf set work)
+            do (cleavir-set:nadjoinf set work)
                (setf worklist (append (next (end work)) worklist)))
     set))
 

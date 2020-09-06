@@ -41,7 +41,7 @@
   (check-type terminator cleavir-bir:terminator)
   (let ((i (iblock inserter)))
     (loop for next in (cleavir-bir:next terminator)
-          do (cleavir-set:nset-adjoinf (cleavir-bir:predecessors next) i))
+          do (cleavir-set:nadjoinf (cleavir-bir:predecessors next) i))
     (setf (cleavir-bir:start i) terminator
           (cleavir-bir:end i) terminator
           (insert-point inserter) terminator)))
@@ -49,7 +49,7 @@
 (defun adjoin-variable (inserter variable)
   (check-type inserter inserter)
   (check-type variable cleavir-bir:variable)
-  (cleavir-set:nset-adjoinf (cleavir-bir:variables (function inserter))
+  (cleavir-set:nadjoinf (cleavir-bir:variables (function inserter))
                             variable)
   (values))
 

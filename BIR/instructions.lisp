@@ -23,7 +23,7 @@
 (defmethod initialize-instance :after
     ((i writevar) &rest initargs &key variable)
   (declare (ignore initargs))
-  (cleavir-set:nset-adjoinf (writers variable) i)
+  (cleavir-set:nadjoinf (writers variable) i)
   i)
 
 (defclass readvar (no-input-mixin accessvar computation)
@@ -32,7 +32,7 @@
 (defmethod initialize-instance :after
     ((i readvar) &rest initargs &key variable)
   (declare (ignore initargs))
-  (cleavir-set:nset-adjoinf (readers variable) i)
+  (cleavir-set:nadjoinf (readers variable) i)
   i)
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
