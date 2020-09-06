@@ -3,6 +3,8 @@
 (defclass enclose (no-input-mixin computation)
   ((%code :initarg :code :reader code
           :type function)
+   ;; The set of variables enclosed
+   (%variables :accessor variables :initform (empty-set))
    (%rtype :initform :object)))
 
 (defclass unreachable (no-input-mixin terminator0) ())
