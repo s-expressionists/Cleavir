@@ -3,4 +3,5 @@
 (defpackage #:cleavir-bir-transformations
   (:use #:cl)
   (:export #:build-function-dag)
-  (:export #:process-captured-variables))
+  (:export #:process-captured-variables)
+  (:export #:delete-temporary-variables))
