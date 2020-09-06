@@ -21,14 +21,20 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
-           #:call #:enclose)
+           #:call #:enclose #:code)
   (:export #:primop-info #:in-rtypes
            #:primop #:vprimop #:nvprimop)
   (:export #:rtype #:rtype=
            #:aggregate #:make-aggregate #:aggregatep
            #:aggregate-length #:aggregate-elt)
+  (:export #:map-instructions #:map-instructions-with-owner-from-set
+           #:all-functions)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
   (:export #:disassemble)
-  (:export #:make-set #:nset-adjoin #:nset-adjoinf))
+  (:export #:set #:empty-set #:make-set
+           #:nset-adjoin #:nset-adjoinf #:nset-remove #:nset-removef
+           #:nset-union #:nset-unionf
+           #:presentp #:set-size #:empty-set-p #:copy-set
+           #:doset #:mapset #:set-filter))
