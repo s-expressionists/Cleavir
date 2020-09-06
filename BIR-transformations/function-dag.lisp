@@ -72,6 +72,6 @@ some transformations, especially inlining, can change this.
     (labels ((aux (node)
                (when (typep node 'interior-node)
                  (cleavir-bir:nset-adjoinf result (node-function node))
-                 (cleavir-bir:mapset #'aux (parents node)))))
-      (cleavir-bir:mapset #'aux (gethash function (dag-nodes dag)))
+                 (cleavir-bir:mapset nil #'aux (parents node)))))
+      (cleavir-bir:mapset nil #'aux (gethash function (dag-nodes dag)))
       result)))

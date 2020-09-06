@@ -31,17 +31,15 @@
          do (tagbody ,@body)
          finally (return ,result)))
 
-(defun mapset (f set)
-  (doset (item set) (funcall f item)))
+(defun mapset (result-type f set)
+  (ecase result-type
+    ((nil) (doset (item set nil) (funcall f item)))
+    ((set) (let ((new (hashset)))
+             (doset (item set (make-instance 'set :hash new))
+               (setf (gethash (funcall f item) new) t))))
+    ((list) (let (r) (doset (item set r) (push (funcall f item) r))))))
 
-;;; FIXME: This should be mapset. Names are hard
-(defun map-over-set (f set)
-  (let ((new (hashset)))
-    (doset (item set (make-instance 'set :hash new))
-      (setf (gethash (funcall f item) new) t))))
-
-(defun set-to-list (set)
-  (let (r) (doset (item set r) (push item r))))
+(defun set-to-list (set) (mapset 'list #'identity set))
 
 (defun copy-set (set)
   (let ((result (hashset)))

@@ -89,4 +89,4 @@
   (values))
 
 (defun refresh-users (top)
-  (mapset #'refresh-local-users (all-functions top)))
+  (mapset nil #'refresh-local-users (all-functions top)))

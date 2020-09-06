@@ -24,7 +24,7 @@
 (defun map-iblocks (f function)
   ;; This function may hit dead blocks if the set hasn't been refreshed.
   (check-type function function)
-  (mapset f (iblocks function)))
+  (mapset nil f (iblocks function)))
 
 ;;; Map all instructions owned by the given function
 (defun map-local-instructions (f function)
@@ -83,8 +83,7 @@
 ;; Given a set of functions, do m-i-w-o
 (defun map-instructions-with-owner-from-set (f function-set)
   (check-type function-set set)
-  (mapset (lambda (function)
-            (map-local-instructions
-             (lambda (i) (funcall f i function))
-             function))
-          function-set))
+  (doset (function function-set)
+    (map-local-instructions
+     (lambda (i) (funcall f i function))
+     function)))
