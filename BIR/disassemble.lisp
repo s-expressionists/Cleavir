@@ -20,6 +20,10 @@
             (prog1 *disassemble-nextn*
               (incf *disassemble-nextn*)))))
 
+(defun dis-iblock (iblock)
+  (or (gethash iblock *disassemble-vars*)
+      (setf (gethash iblock *disassemble-vars*) (gensym "tag"))))
+
 (defun dis-var (variable)
   (or (gethash variable *disassemble-vars*)
       (setf (gethash variable *disassemble-vars*)
@@ -46,28 +50,53 @@
 (defgeneric disassemble-instruction (instruction))
 
 (defmethod disassemble-instruction ((inst operation))
-  (list* (dis-label inst) (mapcar #'disassemble-value (inputs inst))))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))))
 
 (defmethod disassemble-instruction ((inst writevar))
-  (list* (dis-label inst) (disassemble-variable (variable inst))
-         (mapcar #'disassemble-value (inputs inst))))
+  `(,(dis-label inst) ,(disassemble-variable (variable inst))
+    ,@(mapcar #'disassemble-value (inputs inst))))
 
 (defmethod disassemble-instruction ((inst computation))
   `(:= ,(disassemble-value inst)
-       ,(list* (dis-label inst) (mapcar #'disassemble-value (inputs inst)))))
+       (,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst readvar))
   `(:= ,(disassemble-value inst)
-       ,(list* (dis-label inst)
-               (disassemble-variable (variable inst))
-               (mapcar #'disassemble-value (inputs inst)))))
+       (,(dis-label inst)
+        ,(disassemble-variable (variable inst))
+        ,@(mapcar #'disassemble-value (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst enclose))
   (maybe-add-disassemble-work (code inst))
   `(:= ,(disassemble-value inst)
-       ,(list* (dis-label inst)
-               (code inst)
-               (mapcar #'disassemble-value (inputs inst)))))
+       (,(dis-label inst)
+        ,(code inst)
+        ,(variables inst)
+        ,@(mapcar #'disassemble-value (inputs inst)))))
+
+(defmethod disassemble-instruction ((inst catch))
+  `(:= ,(disassemble-value inst)
+       (,(dis-label inst)
+        ,@(mapcar #'disassemble-value (inputs inst))
+        ,@(mapcar #'dis-iblock (next inst)))))
+
+(defmethod disassemble-instruction ((inst unwind))
+  `(,(dis-label inst)
+    ,@(mapcar #'disassemble-value (inputs inst))
+    :->
+    ,(dis-iblock (destination inst))))
+
+(defmethod disassemble-instruction ((inst jump))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
+    ,(dis-iblock (first (next inst)))))
+
+(defmethod disassemble-instruction ((inst local-unwind))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
+    ,(dis-iblock (first (next inst)))))
+
+(defmethod disassemble-instruction ((inst eqi))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
+    ,@(mapcar #'dis-iblock (next inst))))
 
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
@@ -75,7 +104,8 @@
     (map-iblock-instructions
      (lambda (i) (push (disassemble-instruction i) insts))
      (start iblock))
-    (list* (list* iblock (mapcar #'disassemble-value (inputs iblock)))
+    (list* (list* (dis-iblock iblock)
+                  (mapcar #'disassemble-value (inputs iblock)))
            (nreverse insts))))
 
 (defun disassemble-lambda-list (ll)
@@ -97,11 +127,11 @@
         (*disassemble-nextn* 0))
     (mapset (lambda (b) (push (disassemble-iblock b) iblocks))
             (iblocks function))
-    (list* (list function (start function)
+    (list* (list function (dis-iblock (start function))
                  (disassemble-lambda-list (lambda-list function)))
            iblocks)))
 
-(defun disassemble-ir (ir)
+(defun disassemble (ir)
   (check-type ir function)
   (let ((*seen* (make-set ir))
         (*work* (list ir))

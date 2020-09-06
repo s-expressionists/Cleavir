@@ -2,7 +2,8 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:set #:variable #:load-time-value #:case)
+  (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
+           #:disassemble)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables)
   (:export #:iblock #:predecessors #:entrances #:dynamic-environment)
   (:export #:datum #:value #:linear-datum #:argument
@@ -29,4 +30,5 @@
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
+  (:export #:disassemble)
   (:export #:make-set #:nset-adjoin #:nset-adjoinf))
