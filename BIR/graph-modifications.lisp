@@ -22,9 +22,9 @@
                  (successor pred) succ))))
   (values))
 (defmethod delete-instruction :before ((inst readvar))
-  (nset-removef (readers (variable inst)) inst))
+  (cleavir-set:nset-removef (readers (variable inst)) inst))
 (defmethod delete-instruction :before ((inst writevar))
-  (nset-removef (writers (variable inst)) inst))
+  (cleavir-set:nset-removef (writers (variable inst)) inst))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
@@ -48,12 +48,12 @@
 
 (defun reachable-iblocks (function)
   (check-type function function)
-  (let ((set (empty-set))
+  (let ((set (cleavir-set:empty-set))
         (worklist (list (start function))))
     (loop for work = (pop worklist)
           until (null work)
-          unless (presentp work set)
-            do (nset-adjoinf set work)
+          unless (cleavir-set:presentp work set)
+            do (cleavir-set:nset-adjoinf set work)
                (setf worklist (append (next (end work)) worklist)))
     set))
 
@@ -89,4 +89,4 @@
   (values))
 
 (defun refresh-users (top)
-  (mapset nil #'refresh-local-users (all-functions top)))
+  (cleavir-set:mapset nil #'refresh-local-users (all-functions top)))

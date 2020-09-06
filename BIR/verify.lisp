@@ -31,7 +31,7 @@
   ;; this instruction (but see KLUDGE above)
   (flet ((validp (v)
            (etypecase v
-             (computation (presentp v *seen-instructions*))
+             (computation (cleavir-set:presentp v *seen-instructions*))
              (linear-datum t))))
     (assert (every #'validp (inputs instruction))
             ()
@@ -41,10 +41,10 @@ has use-before-define on inputs ~a!"
             (remove-if #'validp (inputs instruction))))
   ;; Make sure input lists are not shared, so we can destroy them
   (unless (null (inputs instruction))
-    (assert (not (presentp (inputs instruction) *seen-inputs*))
+    (assert (not (cleavir-set:presentp (inputs instruction) *seen-inputs*))
             ;; could track the other instruction sharing it
             () "Inputs list of instruction ~a is shared" instruction)
-    (setf *seen-inputs* (nset-adjoinf *seen-inputs* (inputs instruction)))))
+    (cleavir-set:nset-adjoinf *seen-inputs* (inputs instruction))))
 
 (defmethod verify progn ((instruction no-input-mixin))
   ;; No inputs (verify type decl)
@@ -72,7 +72,7 @@ has use-before-define on inputs ~a!"
   (unless (null (next instruction))
     (assert (not (presentp (next instruction) *seen-next*))
             () "NEXT is shared for instruction: ~a" (next instruction))
-    (setf *seen-next* (nset-adjoinf *seen-next* (next instruction)))))
+    (cleavir-set:nset-adjoinf *seen-next* (next instruction))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -102,10 +102,10 @@ has use-before-define on inputs ~a!"
 
 (defmethod verify progn ((c catch))
   ;; verify type decls
-  (assert (typep (unwinds c) 'set))
+  (assert (typep (unwinds c) 'cleavir-set:set))
   (assert (rtype= (rtype c) :continuation))
   ;; check that all unwinds are unwinds
-  (assert (set-every (lambda (u) (typep u 'unwind)) (unwinds c)))
+  (assert (cleavir-set:set-every (lambda (u) (typep u 'unwind)) (unwinds c)))
   ;; check that there's at least one next
   (assert (> (length (next c)) 0))
   ;; Check that the normal next has this dynamic environment
@@ -167,8 +167,9 @@ has use-before-define on inputs ~a!"
 
 (defmethod verify progn ((iblock iblock))
   ;; All predecessors truly have this as a successor
-  (assert (set-every (lambda (p) (member iblock (next (end p)) :test #'eq))
-                     (predecessors iblock)))
+  (assert (cleavir-set:set-every (lambda (p) (member iblock (next (end p))
+                                                     :test #'eq))
+                                 (predecessors iblock)))
   ;; All successors have this as a predecessor
   (assert (every (lambda (n) (presentp iblock (predecessors n)))
                  (next (end iblock))))
@@ -189,16 +190,16 @@ has use-before-define on inputs ~a!"
     (map-iblock-instructions
      (lambda (i)
        (verify i)
-       (setf *seen-instructions* (nset-adjoin i *seen-instructions*)))
+       (cleavir-set:nset-adjoinf *seen-instructions* i))
      (start iblock))))
 
 (defmethod verify progn ((function function))
   (let ((start (start function))
         (end (end function))
-        (*seen-instructions* (empty-set))
+        (*seen-instructions* (cleavir-set:empty-set))
         (*verifying-function* function)
-        (*seen-inputs* (empty-set))
-        (*seen-next* (empty-set)))
+        (*seen-inputs* (cleavir-set:empty-set))
+        (*seen-next* (cleavir-set:empty-set)))
     ;; start is an iblock (verify type decl)
     (assert (typep start 'iblock))
     ;; end is an iblock (verify type decl)
@@ -207,15 +208,15 @@ has use-before-define on inputs ~a!"
     ;; (NOTE: If the end block can be made into a weak reference
     ;;  this would obviously have to change a bit)
     (assert (and (slot-boundp end '%end) (typep (end end) 'returni)))
-    (let ((reachable (empty-set)))
+    (let ((reachable (cleavir-set:empty-set)))
       (flet ((iblock-verifier (iblock)
                (verify iblock)
                ;; A function has only one return instruction
                (assert (if (eq iblock end)
                            t
                            (not (typep (end iblock) 'returni))))
-               (setf reachable (nset-adjoin iblock reachable))))
+               (cleavir-set:nset-adjoinf reachable iblock)))
         (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
         #+(or)
-        (assert (set= reachable (iblocks function)))))))
+        (assert (cleavir-set:set= reachable (iblocks function)))))))

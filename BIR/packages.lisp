@@ -32,9 +32,4 @@
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
-  (:export #:disassemble)
-  (:export #:set #:empty-set #:make-set #:arb
-           #:nset-adjoin #:nset-adjoinf #:nset-remove #:nset-removef
-           #:nset-union #:nset-unionf
-           #:presentp #:set-size #:empty-set-p #:copy-set
-           #:doset #:mapset #:set-filter))
+  (:export #:disassemble))

@@ -3,16 +3,16 @@
 ;;;; Fill out the OWNER and EXTENT of all variables.
 
 (defun analyze-variables (all-functions dag)
-  (cleavir-bir:doset (funct all-functions (values))
+  (cleavir-set:doset (funct all-functions (values))
     (let (;; A set of all variables accessed by this function's ancestors.
           (parent-variables
-            (let ((pv (cleavir-bir:empty-set)))
-              (cleavir-bir:doset (ancestor (ancestor-functions funct dag))
-                (cleavir-bir:doset (variable (cleavir-bir:variables ancestor))
-                  (cleavir-bir:nset-adjoinf pv variable)))
+            (let ((pv (cleavir-set:empty-set)))
+              (cleavir-set:doset (ancestor (ancestor-functions funct dag))
+                (cleavir-set:doset (variable (cleavir-bir:variables ancestor))
+                  (cleavir-set:nset-adjoinf pv variable)))
               pv)))
-      (cleavir-bir:doset (variable (cleavir-bir:variables funct))
-        (if (cleavir-bir:presentp variable parent-variables)
+      (cleavir-set:doset (variable (cleavir-bir:variables funct))
+        (if (cleavir-set:presentp variable parent-variables)
             ;; Present in a parent, so it's definitely shared.
             (setf (cleavir-bir:extent variable) :indefinite)
             (ecase (cleavir-bir:extent variable)
@@ -41,41 +41,41 @@
     (let* ((enclose (enclose node))
            (owner (node-function node))
            (parents (parents node))
-           (nparents (cleavir-bir:set-size parents)))
+           (nparents (cleavir-set:set-size parents)))
       ;; mark the enclose and function
-      (cleavir-bir:nset-unionf (cleavir-bir:variables enclose) variables)
-      (cleavir-bir:nset-unionf (cleavir-bir:variables owner) variables)
+      (cleavir-set:nset-unionf (cleavir-bir:variables enclose) variables)
+      (cleavir-set:nset-unionf (cleavir-bir:variables owner) variables)
       ;; Remove any variables the current function owns
       ;; and while we're at it, update the variables' enclose sets
-      (cleavir-bir:doset (v variables)
-        (cleavir-bir:nset-adjoinf (cleavir-bir:encloses v) enclose)
+      (cleavir-set:doset (v variables)
+        (cleavir-set:nset-adjoinf (cleavir-bir:encloses v) enclose)
         (when (eq (cleavir-bir:owner v) owner)
-          (cleavir-bir:nset-removef variables v)))
+          (cleavir-set:nset-removef variables v)))
       (cond (;; no more variables: nothing left to do
-             (cleavir-bir:empty-set-p variables))
+             (cleavir-set:empty-set-p variables))
             ((zerop nparents)) ; at the top: nothing left to do
             ((= nparents 1) ; only one parent, so the set can be destroyed
-             (cleavir-bir:doset (p parents)
+             (cleavir-set:doset (p parents)
                (mark-enclose-recursively variables p)))
             (t ; have to copy the set. (NOTE: We could skip one copy.)
-             (cleavir-bir:doset (p parents)
+             (cleavir-set:doset (p parents)
                (mark-enclose-recursively
-                (cleavir-bir:copy-set variables) p)))))))
+                (cleavir-set:copy-set variables) p)))))))
 
 ;;; Augment each enclose instruction with the set of variables that need to be
 ;;; closed over. Augment each function's variable set with any variables that
 ;;; need to be added for the encloses. Precondition: analyze-variables has run.
 (defun transmit-variables (all-functions dag)
-  (cleavir-bir:doset (funct all-functions (values))
-    (let ((closed (cleavir-bir:set-filter
+  (cleavir-set:doset (funct all-functions (values))
+    (let ((closed (cleavir-set:set-filter
                    (closed-over-predicate funct) (cleavir-bir:variables funct)))
           (nodes (gethash funct (dag-nodes dag))))
-      (if (= (cleavir-bir:set-size nodes) 1)
+      (if (= (cleavir-set:set-size nodes) 1)
           ;; only one node, so we can destroy the set
-          (cleavir-bir:doset (node nodes)
+          (cleavir-set:doset (node nodes)
             (mark-enclose-recursively closed node))
-          (cleavir-bir:doset (node nodes)
-            (mark-enclose-recursively (cleavir-bir:copy-set closed) node))))))
+          (cleavir-set:doset (node nodes)
+            (mark-enclose-recursively (cleavir-set:copy-set closed) node))))))
 
 (defun process-captured-variables (ir)
   (let* ((af (cleavir-bir:all-functions ir))

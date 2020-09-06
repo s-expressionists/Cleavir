@@ -134,15 +134,15 @@
            :type (or null function))
    ;; Set of writevar instructions for this variable
    (%writers :initarg :writers :accessor writers :reader definitions
-             :initform (empty-set)
-             :type set)
+             :initform (cleavir-set:empty-set)
+             :type cleavir-set:set)
    ;; " readvars
    (%readers :initarg :readers :accessor readers :reader uses
-             :initform (empty-set)
-             :type set)
+             :initform (cleavir-set:empty-set)
+             :type cleavir-set:set)
    ;; " encloses (empty until closure conversion)
-   (%encloses :initform (empty-set) :accessor encloses
-              :type set)
+   (%encloses :initform (cleavir-set:empty-set) :accessor encloses
+              :type cleavir-set:set)
    (%rtype :initarg :rtype :reader rtype
            :initform :object
            :type rtype)))
@@ -159,9 +159,9 @@
          :type terminator)
    ;; NOTE: Should be a weak set
    (%predecessors :initarg :predecessors :accessor predecessors
-                  :initform (empty-set)
+                  :initform (cleavir-set:empty-set)
                   ;; A set of blocks.
-                  :type set)
+                  :type cleavir-set:set)
    (%inputs :initarg :inputs :accessor inputs
             :initform nil
             ;; A list of ARGUMENTs
@@ -179,8 +179,8 @@
 (defclass function (dynamic-environment)
   (;; NOTE: Should be a weak set
    (%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
-            :initform (empty-set)
-            :type set)
+            :initform (cleavir-set:empty-set)
+            :type cleavir-set:set)
    (%start :initarg :start :accessor start
            :type iblock)
    ;; NOTE: Could be a weak reference
@@ -191,4 +191,4 @@
    (%lambda-list :initarg :lambda-list :reader lambda-list)
    ;; The set of variables accessed by this function.
    (%variables :initarg :variables :accessor variables
-               :type set)))
+               :type cleavir-set:set)))

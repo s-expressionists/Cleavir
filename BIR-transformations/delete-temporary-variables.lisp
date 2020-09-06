@@ -7,20 +7,20 @@
 
 (defun delete-variable (variable)
   (declare (optimize debug))
-  (let* ((writer (cleavir-bir:arb (cleavir-bir:writers variable)))
+  (let* ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
          (source (first (cleavir-bir:inputs writer)))
-         (reader (cleavir-bir:arb (cleavir-bir:readers variable))))
+         (reader (cleavir-set:arb (cleavir-bir:readers variable))))
     (cleavir-bir:delete-instruction writer)
     (cleavir-bir:delete-computation reader source)))
 
 (defun temporary-variable-p (variable)
   (and (eq (cleavir-bir:extent variable) :local)
-       (= (cleavir-bir:set-size (cleavir-bir:writers variable)) 1)
-       (= (cleavir-bir:set-size (cleavir-bir:readers variable)) 1)))
+       (= (cleavir-set:set-size (cleavir-bir:writers variable)) 1)
+       (= (cleavir-set:set-size (cleavir-bir:readers variable)) 1)))
 
 (defun delete-temporary-variables-from-set (fset)
-  (cleavir-bir:doset (funct fset)
-    (cleavir-bir:doset (var (cleavir-bir:variables funct))
+  (cleavir-set:doset (funct fset)
+    (cleavir-set:doset (var (cleavir-bir:variables funct))
       (when (temporary-variable-p var)
         (delete-variable var)))))
 

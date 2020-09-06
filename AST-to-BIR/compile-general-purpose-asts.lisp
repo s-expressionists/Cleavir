@@ -52,7 +52,7 @@
     (let* ((return (make-instance 'cleavir-bir:returni))
            (f (make-instance 'cleavir-bir:function
                 :lambda-list ll
-                :variables (apply #'cleavir-bir:make-set
+                :variables (apply #'cleavir-set:make-set
                                   (mapcar #'car alist))))
            (end (make-instance 'cleavir-bir:iblock :dynamic-environment f))
            (inserter (make-instance 'inserter :function f)))
@@ -121,7 +121,7 @@
              (cleavir-bir:inputs ejump) (list evalue)
              (cleavir-bir:inputs iblock) (list arg))))
     (setf (cleavir-bir:predecessors iblock)
-          (cleavir-bir:make-set tblock eblock))
+          (cleavir-set:make-set tblock eblock))
     (finalize inserter)
     (finalize tinserter)
     (finalize einserter)
@@ -262,7 +262,7 @@
                 (rv (make-instance 'cleavir-bir:readvar
                       :variable contvar :rtype :continuation)))
             (adjoin-variable inserter contvar)
-            (cleavir-bir:nset-adjoinf (cleavir-bir:unwinds catch) u)
+            (cleavir-set:nset-adjoinf (cleavir-bir:unwinds catch) u)
             (push new-iblock (cleavir-bir:entrances next))
             (terminate inserter u)
             (before inserter rv)

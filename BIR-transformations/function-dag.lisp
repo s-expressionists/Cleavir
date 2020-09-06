@@ -17,7 +17,7 @@ some transformations, especially inlining, can change this.
 (defclass dag-node ()
   (;; A set of DAG-NODEs; the NODE-FUNCTION of this node owns an enclose
    ;; of every child.
-   (%children :initform (cleavir-bir:empty-set)
+   (%children :initform (cleavir-set:empty-set)
               :reader children :accessor %children)))
 
 (defgeneric node-function (node))
@@ -41,11 +41,11 @@ some transformations, especially inlining, can change this.
 
 (defun build-function-dag-from-set (top set)
   (check-type top cleavir-bir:function)
-  (check-type set cleavir-bir:set)
+  (check-type set cleavir-set:set)
   (let* ((dag-nodes (make-hash-table :test #'eq))
          (root (make-instance 'function-dag
                  :dag-nodes dag-nodes :top top)))
-    (setf (gethash top dag-nodes) (cleavir-bir:make-set root))
+    (setf (gethash top dag-nodes) (cleavir-set:make-set root))
     (cleavir-bir:map-instructions-with-owner-from-set
      (lambda (instruction owner)
        (typecase instruction
@@ -53,12 +53,12 @@ some transformations, especially inlining, can change this.
           (let* ((parents (gethash owner dag-nodes))
                  (node (make-instance 'interior-node
                          :parents parents :enclose instruction)))
-            (cleavir-bir:doset (parent parents)
-              (cleavir-bir:nset-adjoinf (%children parent) node))
+            (cleavir-set:doset (parent parents)
+              (cleavir-set:nset-adjoinf (%children parent) node))
             (setf (gethash (cleavir-bir:code instruction) dag-nodes)
-                  (cleavir-bir:nset-adjoin
+                  (cleavir-set:nset-adjoin
                    node (gethash (cleavir-bir:code instruction) dag-nodes
-                                 (cleavir-bir:empty-set))))))))
+                                 (cleavir-set:empty-set))))))))
      set)
     root))
 
@@ -68,10 +68,10 @@ some transformations, especially inlining, can change this.
 ;;; Given a function and a DAG, return a set of all functions that enclose
 ;;; the function, directly or not.
 (defun ancestor-functions (function dag)
-  (let ((result (cleavir-bir:empty-set)))
+  (let ((result (cleavir-set:empty-set)))
     (labels ((aux (node)
                (when (typep node 'interior-node)
-                 (cleavir-bir:nset-adjoinf result (node-function node))
-                 (cleavir-bir:mapset nil #'aux (parents node)))))
-      (cleavir-bir:mapset nil #'aux (gethash function (dag-nodes dag)))
+                 (cleavir-set:nset-adjoinf result (node-function node))
+                 (cleavir-set:mapset nil #'aux (parents node)))))
+      (cleavir-set:mapset nil #'aux (gethash function (dag-nodes dag)))
       result)))

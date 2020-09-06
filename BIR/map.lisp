@@ -11,20 +11,20 @@
   (check-type start iblock)
   ;; simple depth-first graph traversal
   ;; NOTE: Does not follow unwinds or recurse into functions
-  (let ((seen (empty-set))
+  (let ((seen (cleavir-set:empty-set))
         (worklist (list start)))
     (loop for work = (pop worklist)
           until (null work)
-          unless (presentp work seen)
+          unless (cleavir-set:presentp work seen)
             do (funcall f work)
-               (setf seen (nset-adjoin work seen))
+               (setf seen (cleavir-set:nset-adjoin work seen))
                (setf worklist (append (next (end work)) worklist))))
   (values))
 
 (defun map-iblocks (f function)
   ;; This function may hit dead blocks if the set hasn't been refreshed.
   (check-type function function)
-  (mapset nil f (iblocks function)))
+  (cleavir-set:mapset nil f (iblocks function)))
 
 ;;; Map all instructions owned by the given function
 (defun map-local-instructions (f function)
@@ -34,12 +34,12 @@
 ;;; Arbitrary order.
 (defun map-instructions (f function)
   (check-type function function)
-  (let ((seen (empty-set))
+  (let ((seen (cleavir-set:empty-set))
         (worklist (list function)))
     (loop for work = (pop worklist)
           until (null work)
-          unless (presentp work seen)
-            do (setf seen (nset-adjoin work seen))
+          unless (cleavir-set:presentp work seen)
+            do (cleavir-set:nset-adjoinf seen work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist)))
@@ -51,12 +51,12 @@
 ;;; with no graph modifications inbetween
 (defun all-functions (top)
   (check-type top function)
-  (let ((set (empty-set))
+  (let ((set (cleavir-set:empty-set))
         (worklist (list top)))
     (loop for work = (pop worklist)
           until (null work)
-          unless (presentp work set)
-            do (setf set (nset-adjoin work set))
+          unless (cleavir-set:presentp work set)
+            do (cleavir-set:nset-adjoinf set work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist))))
@@ -66,13 +66,13 @@
 ;;; Arbitrary order
 (defun map-instructions-with-owner (f function)
   (check-type function function)
-  (let ((seen (empty-set))
+  (let ((seen (cleavir-set:empty-set))
         (worklist (list function)))
     (loop for work = (pop worklist)
           for owner = work
           until (null work)
-          unless (presentp work seen)
-            do (setf seen (nset-adjoin work seen))
+          unless (cleavir-set:presentp work seen)
+            do (cleavir-set:nset-adjoinf seen work)
                (map-local-instructions
                 (lambda (i)
                   (typecase i (enclose (push (code i) worklist)))
@@ -82,8 +82,8 @@
 
 ;; Given a set of functions, do m-i-w-o
 (defun map-instructions-with-owner-from-set (f function-set)
-  (check-type function-set set)
-  (doset (function function-set)
+  (check-type function-set cleavir-set:set)
+  (cleavir-set:doset (function function-set)
     (map-local-instructions
      (lambda (i) (funcall f i function))
      function)))

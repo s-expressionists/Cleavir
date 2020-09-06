@@ -4,7 +4,8 @@
   ((%code :initarg :code :reader code
           :type function)
    ;; The set of variables enclosed
-   (%variables :accessor variables :initform (empty-set))
+   (%variables :accessor variables :initform (cleavir-set:empty-set)
+               :type cleavir-set:set)
    (%rtype :initform :object)))
 
 (defclass unreachable (no-input-mixin terminator0) ())
@@ -22,7 +23,7 @@
 (defmethod initialize-instance :after
     ((i writevar) &rest initargs &key variable)
   (declare (ignore initargs))
-  (nset-adjoinf (writers variable) i)
+  (cleavir-set:nset-adjoinf (writers variable) i)
   i)
 
 (defclass readvar (no-input-mixin accessvar computation)
@@ -31,7 +32,7 @@
 (defmethod initialize-instance :after
     ((i readvar) &rest initargs &key variable)
   (declare (ignore initargs))
-  (nset-adjoinf (readers variable) i)
+  (cleavir-set:nset-adjoinf (readers variable) i)
   i)
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
@@ -79,9 +80,9 @@
 (defclass catch (dynamic-environment no-input-mixin terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
-             :initform (empty-set)
+             :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
-             :type set)
+             :type cleavir-set:set)
    (%rtype :initform :continuation :type (eql :continuation))))
 
 ;;; Nonlocal control transfer.
