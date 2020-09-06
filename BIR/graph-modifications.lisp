@@ -6,7 +6,7 @@
   (check-type instruction (not terminator))
   ;; Delete from inputs.
   (dolist (in (inputs instruction))
-    (slot-makunbound in '%user))
+    (slot-makunbound in '%use))
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
@@ -40,9 +40,9 @@
   (check-type computation computation)
   (check-type replacement linear-datum)
   (assert (not (eq computation replacement)))
-  (assert (not (slot-boundp replacement '%user)))
-  (setf (%user replacement) (%user computation))
-  (replace-input replacement computation (%user computation))
+  (assert (not (slot-boundp replacement '%use)))
+  (setf (%use replacement) (%use computation))
+  (replace-input replacement computation (%use computation))
   (delete-instruction computation)
   (values))
 
@@ -71,9 +71,10 @@
 
 (defun refresh-local-users (function)
   (check-type function function)
-  ;;; First zero out existing users
+  ;;; First zero out existing uses
   (flet ((zero (linear-datum)
-           (slot-makunbound linear-datum '%user)))
+           (check-type linear-datum linear-datum)
+           (slot-makunbound linear-datum '%use)))
     (map-instructions
      (lambda (i)
        (mapc #'zero (inputs i))
@@ -83,8 +84,8 @@
   (map-instructions
    (lambda (i)
      (loop for in in (inputs i)
-           do (assert (not (slot-boundp in '%user)))
-              (setf (%user in) i)))
+           do (assert (not (slot-boundp in '%use)))
+              (setf (%use in) i)))
    function)
   (values))
 

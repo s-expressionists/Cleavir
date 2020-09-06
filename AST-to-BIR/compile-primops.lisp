@@ -10,11 +10,11 @@
                   (assert
                    ,(if nv-p
                         '(effect-context-p context)
-                        '(one-successor-context-p context)))
+                        '(context-p context)))
                   (let ((p (make-instance ',cname :info ',info)))
                     (prog1 ,(if nv-p
                                 '(values)
-                                '(figure-values inserter p context))
+                                '(figure-1-value inserter p context))
                       (before inserter p)
                       (setf (cleavir-bir:inputs p)
                             (compile-arguments

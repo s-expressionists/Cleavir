@@ -3,27 +3,18 @@
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast)
                         inserter context)
   (check-type inserter inserter)
-  (assert (eq context :effect))
+  (assert (effect-context-p context))
   (let* ((lhs-asts (cleavir-ast:lhs-asts ast))
          (wvs
            (loop for lhs in lhs-asts
                  for wv = (make-instance 'cleavir-bir:writevar :variable lhs)
                  collect (before inserter wv)))
-         (extracts
-           (loop for lhs in lhs-asts
-                 for var = (find-or-create-variable lhs)
-                 for i from 0
-                 for extract = (make-instance 'cleavir-bir:extract
-                                 :index i :rtype :object)
-                 collect (before inserter extract)))
-         (rtype (cleavir-bir:make-aggregate (length lhs-asts) :object))
-         (val (compile-ast (cleavir-ast:form-ast ast)
-                           inserter rtype)))
+         (vals (compile-ast (cleavir-ast:form-ast ast)
+                            inserter (make-list (length lhs-asts)
+                                                :initial-element :object))))
     (loop for lhs in lhs-asts do (adjoin-variable inserter lhs))
-    (loop for wv in wvs
-          for extract in extracts
-          do (setf (cleavir-bir:inputs extract) (list val)
-                   (cleavir-bir:inputs wv) (list extract))))
+    (loop for wv in wvs for val in vals
+          do (setf (cleavir-bir:inputs wv) (list val))))
   (values))
 
 (defun compile-m-v-p1-save (ast inserter)
@@ -65,14 +56,16 @@
 (defmethod compile-ast ((ast cleavir-ast:values-ast)
                         inserter context)
   (check-type inserter inserter)
-  (assert (one-successor-context-p context))
+  (assert (context-p context))
   (let ((arg-asts (cleavir-ast:argument-asts ast)))
-    (if (effect-context-p context)
-        (compile-sequence-for-effect arg-asts inserter)
-        (let* ((rt (cleavir-bir:make-aggregate (length arg-asts) :object))
-               (create (make-instance 'cleavir-bir:create :rtype rt))
-               (result (figure-values inserter create context)))
-          (before inserter create)
-          (setf (cleavir-bir:inputs create)
-                (compile-arguments arg-asts inserter))
-          result))))
+    (case context
+      (:effect (compile-sequence-for-effect arg-asts inserter))
+      (:multiple-values
+       (let ((ftm (make-instance 'cleavir-bir:fixed-to-multiple)))
+         (before inserter ftm)
+         (setf (cleavir-bir:inputs ftm)
+               (compile-arguments arg-asts inserter))
+         ftm))
+      (t (figure-n-values inserter
+                          (compile-arguments arg-asts inserter)
+                          context)))))

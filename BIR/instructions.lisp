@@ -1,6 +1,6 @@
 (in-package #:cleavir-bir)
 
-(defclass enclose (no-input-mixin computation)
+(defclass enclose (no-input computation)
   ((%code :initarg :code :reader code
           :type function)
    ;; The set of variables enclosed
@@ -8,9 +8,9 @@
                :type cleavir-set:set)
    (%rtype :initform :object)))
 
-(defclass unreachable (no-input-mixin terminator0) ())
+(defclass unreachable (no-input no-output terminator0) ())
 
-(defclass nop (no-input-mixin operation) ())
+(defclass nop (no-input no-output operation) ())
 
 ;;; Abstract. An instruction dealing with a variable.
 ;;; It is assumed the variable is passed to make-instance rather
@@ -18,7 +18,7 @@
 (defclass accessvar (instruction)
   ((%variable :initarg :variable :reader variable :type variable)))
 
-(defclass writevar (one-input-mixin accessvar operation) ())
+(defclass writevar (one-input no-output accessvar operation) ())
 
 (defmethod initialize-instance :after
     ((i writevar) &rest initargs &key variable)
@@ -26,7 +26,7 @@
   (cleavir-set:nadjoinf (writers variable) i)
   i)
 
-(defclass readvar (no-input-mixin accessvar computation)
+(defclass readvar (no-input accessvar computation)
   ((%rtype :initform :object)))
 
 (defmethod initialize-instance :after
@@ -41,7 +41,7 @@
           :type primop-info)))
 
 ;; primop returning no values
-(defclass nvprimop (primop operation) ())
+(defclass nvprimop (primop no-output operation) ())
 
 ;; primop returning values
 (defclass vprimop (primop computation) ())
@@ -53,7 +53,7 @@
 (defclass call (computation)
   ((%rtype :initform :multiple-values :type (eql :multiple-values))))
 
-(defclass returni (one-input-mixin terminator0) ())
+(defclass returni (one-input no-output terminator0) ())
 
 ;;; Allocate some temporary space for an object of the specified rtype.
 ;;; Within this dynamic environment, readmem and writemem can be used.
@@ -65,19 +65,19 @@
 ;;; FIXME: Make this a computation and have readtemp and writetemp refer to it
 
 ;;; explicitly rather than implicitly thorugh the dynenv.
-(defclass alloca (dynamic-environment no-input-mixin terminator1 operation)
+(defclass alloca (dynamic-environment no-input no-output terminator1 operation)
   ())
 
 ;;; Abstract. NOTE: Might have to specify which dynamic environment to access?
 (defclass accesstemp (instruction) ())
 
 ;;; Read the object stored in the temporary storage in the dynamic env.
-(defclass readtemp (accesstemp no-input-mixin computation) ())
+(defclass readtemp (accesstemp no-input computation) ())
 
 ;;; Write it
-(defclass writetemp (accesstemp one-input-mixin operation) ())
+(defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (dynamic-environment no-input-mixin terminator computation)
+(defclass catch (dynamic-environment no-input terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
@@ -94,54 +94,42 @@
    (%destination :initarg :destination :reader destination
                  :type iblock)))
 
-;;; Local control transfer. Inputs are passed to the next block.
-;;; This is essentially just jump, but also indicates that the next block may
-;;; have a distinct dynamic environment.
-(defclass local-unwind (terminator1 operation) ())
-
-;;; Go to the next iblock, passing the inputs as arguments.
-(defclass jump (terminator1 operation) ())
+;;; Unconditional local control transfer. Inputs are passed to the single next
+;;; block.
+(defclass jump (terminator1 operation)
+  (;; T if the dynamic environment of the next iblock is distinct from (a
+   ;; parent of) the jump's iblock's.
+   (%unwindp :initarg :unwindp :initform nil :reader unwindp :type boolean)))
 
 ;;; EQ
-(defclass eqi (terminator operation) ())
+(defclass eqi (no-output terminator operation) ())
 
 ;;; FIXME: Should take a ctype rather than a type specifier.
-(defclass typeq (terminator operation)
+(defclass typeq (one-input no-output terminator operation)
   ((%type-specifier :initarg :type-specifier :reader type-specifier)))
 
-(defclass case (terminator operation)
+(defclass case (one-input no-output terminator operation)
   ((%comparees :initarg :comparees :reader comparees)))
 
 ;;; Convert an aggregate of :objects into a :multiple-values
-(defclass fixed-to-multiple (one-input-mixin computation)
+(defclass fixed-to-multiple (computation)
   ((%rtype :initform :multiple-values :type (eql :multiple-values))))
 
 ;;; Reverse of the above
-(defclass multiple-to-fixed (one-input-mixin computation) ())
+(defclass multiple-to-fixed (one-input operation) ())
 
-;;; Extract a value from an aggregate value.
-(defclass extract (one-input-mixin computation)
-  (;; Index of the field to extract.
-   (%index :initarg :index :reader index
-           :type (integer 0))))
-
-(defmethod (setf inputs) :before (nv (inst extract))
-  (assert (= (length nv) 1))
-  (let ((in-rt (rtype (first nv)))
-        (i (index inst)))
-    (assert (and (aggregatep in-rt)
-                 (> (aggregate-length in-rt) i)))))
-
-(defmethod (setf inputs) :after (nv (inst extract))
-  (setf (%rtype inst)
-        (aggregate-elt (rtype (first nv)) (index inst))))
-
-;;; Create an aggregate value from a sequence of values.
-(defclass create (computation) ())
-
-(defmethod (setf inputs) :after (nv (inst create))
-  (setf (%rtype inst) (apply #'aggregate (mapcar #'rtype nv))))
+;;; Given a linear-datum and a list of rtypes, return two values:
+;;; A new multiple-to-fixed, and and a sequence of its outputs.
+;;; This is necessary because definers and outputs are both immutable.
+(defun make-multiple-to-fixed (input rtypes)
+  (let* ((mtf (make-instance 'multiple-to-fixed :inputs (list input)))
+         (outputs
+           (mapcar (lambda (rt) (make-instance 'output
+                                  :definition mtf :rtype rt))
+                   rtypes)))
+    (setf (%outputs mtf) outputs)
+    (values mtf outputs)))
 
 ;;; Convert a value from one type to another.
 ;;; This may or may not entail an actual operation at runtime.
-(defclass cast (one-input-mixin computation) ())
+(defclass cast (one-input computation) ())

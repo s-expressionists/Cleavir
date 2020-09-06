@@ -5,7 +5,7 @@
 
 (defun maybe-add-disassemble-work (function)
   (check-type function function)
-  (unless (presentp function *seen*)
+  (unless (cleavir-set:presentp function *seen*)
     (push function *work*)))
 
 (defvar *disassemble-nextv*)
@@ -39,9 +39,8 @@
 
 (defgeneric disassemble-value (value))
 
-(defmethod disassemble-value ((value argument)) (dis-id value))
+(defmethod disassemble-value ((value linear-datum)) (dis-id value))
 (defmethod disassemble-value ((value constant)) `',(constant-value value))
-(defmethod disassemble-value ((value computation)) (dis-id value))
 (defmethod disassemble-value ((value load-time-value))
   (if (and (read-only-p value) (constantp (form value)))
       `',(eval (form value))
@@ -87,10 +86,6 @@
     ,(dis-iblock (destination inst))))
 
 (defmethod disassemble-instruction ((inst jump))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
-    ,(dis-iblock (first (next inst)))))
-
-(defmethod disassemble-instruction ((inst local-unwind))
   `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
     ,(dis-iblock (first (next inst)))))
 

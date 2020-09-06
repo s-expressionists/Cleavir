@@ -3,35 +3,13 @@
 ;;; A "representation type", indicating an "underlying" type of an object
 ;;; in broad strokes.
 (deftype rtype ()
-  `(or (member :object ; a general lisp object
-               :single-float ; an unboxed float
-               :double-float ; "
-               :continuation ; client dependent
-               :multiple-values) ; a bit special
-       (vector t))) ; an aggregate
+  `(member :object ; a general lisp object
+           :single-float ; an unboxed float
+           :double-float ; "
+           :continuation ; client dependent
+           :multiple-values)) ; a bit special
 
-(defun aggregatep (rtype)
-  (typep rtype '(vector t)))
-
-(defun aggregate (&rest rtypes)
-  (apply #'vector rtypes))
-
-(defun aggregate-length (aggregate) (length aggregate))
-
-(defun aggregate-elt (aggregate n)
-  (check-type aggregate (vector t))
-  (aref aggregate n))
-
-(defun make-aggregate (n rtype)
-  (check-type n (integer 0))
-  (make-array n :initial-element rtype))
-
-(defun rtype= (rt1 rt2)
-  (if (vectorp rt1)
-      (and (vectorp rt2)
-           (= (length rt1) (length rt2))
-           (every #'rtype= rt1 rt2))
-      (eq rt1 rt2)))
+(defun rtype= (rt1 rt2) (eq rt1 rt2))
 
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment () ())
@@ -44,31 +22,45 @@
 (defgeneric definitions (datum))
 (defgeneric uses (datum))
 
-;;; A datum with only one definition - itself.
-(defclass value (datum) ())
-(defmethod definitions ((datum value)) (make-set datum))
+;;; A datum with only one definition (static single assignment).
+(defclass ssa (datum) ())
+(defgeneric definition (ssa))
+(defmethod definitions ((datum ssa)) (cleavir-set:make-set datum))
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
-  ((%user :initarg :user :reader user :accessor %user
-          :type instruction)))
-(defmethod uses ((datum linear-datum)) (make-set (user datum)))
+  ((%use :initarg :use :reader use :accessor %use
+         :type instruction)))
+(defmethod uses ((datum linear-datum)) (cleavir-set:make-set (use datum)))
 
 ;;; A datum with one definition and one use.
-(defclass transfer (value linear-datum) ())
+(defclass transfer (ssa linear-datum) ())
+
+;;; An SSA datum with only one definition - itself.
+(defclass value (ssa) ())
+(defmethod definition ((datum value)) datum)
 
 ;;; TODO: Using this uniformly will be work.
-(defclass constant (transfer)
+(defclass constant (value transfer)
   ((%value :initarg :value :reader constant-value)))
 
 ;;; TODO: These are bad, but AST changes will be required to fix it.
-(defclass immediate (transfer)
+(defclass immediate (value transfer)
   ((%value :initarg :value :reader immediate-value)))
-(defclass load-time-value (transfer)
+(defclass load-time-value (value transfer)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
    (%rtype :initform :object)))
 
+;;; An instruction is something to be done.
+;;; All instructions have sequences of inputs and outputs.
+;;; Inputs are mutable but outputs are not.
+;;; Every input and output is a LINEAR-DATUM.
+;;; Note that READVAR is special and has a nonlinear datum "input" not in
+;;; this sequence, a variable, and similarly WRITEVAR has a variable "output".
+(defgeneric inputs (instruction))
+(defgeneric (setf inputs) (new-inputs instruction))
+(defgeneric outputs (instruction))
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
                  :initform nil
@@ -77,23 +69,32 @@
    (%successor :initarg :successor :accessor successor
                ;; NIL indicates this is a terminator.
                :type (or instruction null))
-   ;; A list of LINEAR-DATUM inputs to the instruction.
-   ;; Note that an operation can use other data
-   ;; e.g. a READVAR uses its VARIABLE.
    (%inputs :initarg :inputs :accessor inputs
-            :type list)))
+            :type sequence)))
 
-;;; An operation that outputs a value.
-(defclass computation (transfer instruction) ())
+;;; An instruction that outputs a single datum.
+;;; In this case the instruction is identified with the datum.
+(defclass computation (value transfer instruction) ())
+(defmethod outputs ((instruction computation)) (list instruction))
 
-;;; An operation that does not output a value.
-(defclass operation (instruction) ())
+;;; An instruction that outputs a variable number of OUTPUTs
+;;; or a fixed number (that is not one) of them.
+(defclass operation (instruction)
+  ((%outputs :initarg :outputs :reader outputs :accessor %outputs
+             :type sequence)))
 
-(defclass no-input-mixin (instruction)
+;;; Data output by an OPERATION.
+;;; (ARGUMENTs can also be output.)
+(defclass output (transfer)
+  ((%definition :initarg :definition :reader definition)))
+
+;;; some useful mixins
+(defclass no-input (instruction)
   ((%inputs :initform nil :type null)))
-
-(defclass one-input-mixin (instruction)
+(defclass one-input (instruction)
   ((%inputs :type (cons value null))))
+(defclass no-output (operation)
+  ((%outputs :initform nil :type null)))
 
 ;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
@@ -110,12 +111,20 @@
 (defclass terminator1 (terminator)
   ((%next :type (cons iblock null))))
 
+;;; An argument to a function.
+(defclass argument (value transfer) ())
+
 ;;; An argument to an iblock.
-(defclass argument (linear-datum)
+(defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
             :type iblock)))
+(defmethod definitions ((phi phi))
+  (let ((ib (iblock phi)))
+    (cleavir-set:nunion
+     (cleavir-set:mapset 'cleavir-set:set #'end (predecessors ib))
+     (cleavir-set:mapset 'cleavir-set:set #'end (entrances ib)))))
 
-;;; A modifiable lexical variable.
+;;; A mutable lexical variable.
 ;;; Has to be read from and written to via instructions.
 (defclass variable (datum)
   (;; Indicates the shared-ness of the variable.
@@ -132,20 +141,22 @@
    ;; Until computed by analyze-variables, it's NIL.
    (%owner :initform nil :accessor owner
            :type (or null function))
-   ;; Set of writevar instructions for this variable
-   (%writers :initarg :writers :accessor writers :reader definitions
-             :initform (cleavir-set:empty-set)
-             :type cleavir-set:set)
-   ;; " readvars
-   (%readers :initarg :readers :accessor readers :reader uses
-             :initform (cleavir-set:empty-set)
-             :type cleavir-set:set)
-   ;; " encloses (empty until closure conversion)
+   (%definitions :initarg :definitions :reader definitions
+                 :accessor writers
+                 :initform (cleavir-set:empty-set)
+                 ;; All WRITEVAR instructions.
+                 :type cleavir-set:set)
+   (%uses :initarg :uses :accessor readers :reader uses
+          :initform (cleavir-set:empty-set)
+          ;; All READVAR instructions.
+          :type cleavir-set:set)
+   ;; Set of encloses (empty until closure conversion)
+   ;; These are not exactly definitions or uses, since the function
+   ;; being enclosed can do both and conceptually needs the variable
+   ;; itself rather than its value. Thus the slot.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)
-   (%rtype :initarg :rtype :reader rtype
-           :initform :object
-           :type rtype)))
+   (%rtype :initform :object)))
 
 ;;; TODO: This will implicate load form bla bla bla stuff.
 (defun make-constant (value)
@@ -164,8 +175,8 @@
                   :type cleavir-set:set)
    (%inputs :initarg :inputs :accessor inputs
             :initform nil
-            ;; A list of ARGUMENTs
-            :type list)
+            ;; A sequence of PHIs
+            :type sequence)
    ;; A set of IBLOCKs that enter this function nonlocally
    ;; (i.e. with an UNWIND operation).
    ;; NOTE: Should be a weak set

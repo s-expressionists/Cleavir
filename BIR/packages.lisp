@@ -6,17 +6,19 @@
            #:disassemble)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables)
   (:export #:iblock #:predecessors #:entrances #:dynamic-environment)
-  (:export #:datum #:value #:linear-datum #:argument
-           #:definitions #:uses)
+  (:export #:rtype #:rtype=)
+  (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
+           #:output
+           #:definitions #:uses #:definition #:use)
   (:export #:variable #:extent #:owner #:writers #:readers #:encloses)
   (:export #:constant #:make-constant #:immediate #:load-time-value
            #:constant-value #:immediate-value #:form #:read-only-p)
-  (:export #:instruction #:operation #:computation
+  (:export #:instruction #:operation #:computation #:inputs #:outputs
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next)
-  (:export #:multiple-to-fixed #:fixed-to-multiple #:extract #:create
+  (:export #:multiple-to-fixed #:fixed-to-multiple #:make-multiple-to-fixed
            #:accessvar #:writevar #:readvar
-           #:returni #:unreachable #:eqi #:jump #:local-unwind
+           #:returni #:unreachable #:eqi #:jump #:unwindp
            #:typeq #:type-specifier
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
@@ -24,9 +26,6 @@
            #:call #:enclose #:code)
   (:export #:primop-info #:in-rtypes
            #:primop #:vprimop #:nvprimop)
-  (:export #:rtype #:rtype=
-           #:aggregate #:make-aggregate #:aggregatep
-           #:aggregate-length #:aggregate-elt)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
            #:all-functions #:delete-computation #:delete-instruction)
   (:export #:refresh-iblocks #:refresh-local-iblocks

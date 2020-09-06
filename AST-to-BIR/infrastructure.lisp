@@ -50,98 +50,34 @@
   (check-type inserter inserter)
   (check-type variable cleavir-bir:variable)
   (cleavir-set:nadjoinf (cleavir-bir:variables (function inserter))
-                            variable)
+                        variable)
   (values))
 
-(defun object-aggregate-p (rtype)
-  (and (cleavir-bir:aggregatep rtype)
-       (loop for i below (cleavir-bir:aggregate-length rtype)
-             always (cleavir-bir:rtype= (cleavir-bir:aggregate-elt rtype i)
-                                        :object))))
-
-(defun primary-value (inserter value)
-  (let ((rt (cleavir-bir:rtype value)))
-    (case rt
-      (:object value)
-      (:multiple-values
-       (let* ((mtf (make-instance 'cleavir-bir:multiple-to-fixed
-                     :inputs (list value)
-                     :rtype (cleavir-bir:aggregate :object)))
-              (ext (make-instance 'cleavir-bir:extract
-                     :index 0
-                     :inputs (list mtf)
-                     :rtype :object)))
-         (before inserter ext)
-         (before inserter mtf)
-         ext))
-      (t
-       (assert (object-aggregate-p rt))
-       (if (zerop (cleavir-bir:aggregate-length rt))
-           (cleavir-bir:make-constant nil)
-           (before inserter
-                   (make-instance 'cleavir-bir:extract
-                     :index 0 :inputs (list value) :rtype :object)))))))
-
-(defun multiple-values (inserter value)
-  (let ((rt (cleavir-bir:rtype value)))
-    (case rt
-      (:multiple-values value)
-      (:object
-       (let* ((create (make-instance 'cleavir-bir:create
-                        :inputs (list value)
-                        :rtype '#.(cleavir-bir:aggregate :object)))
-              (ftm (make-instance 'cleavir-bir:fixed-to-multiple
-                     :inputs (list create))))
-         (before inserter ftm)
-         (before inserter create)
-         ftm))
-      (t
-       (assert (object-aggregate-p rt))
-       (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
-                          :inputs (list value)))))))
-
-(defun to-object-aggregate (inserter value agg)
-  (let ((rt (cleavir-bir:rtype value)))
-    (case rt
-      (:multiple-values
-       (before inserter (make-instance 'cleavir-bir:multiple-to-fixed
-                          :inputs (list value)
-                          :rtype agg)))
-      (:object
-       (before inserter (make-instance 'cleavir-bir:create
-                          :inputs (list value)
-                          :rtype agg)))
-      (t
-       (assert (object-aggregate-p agg))
-       (let* ((target-len (cleavir-bir:aggregate-length agg))
-              (source-len (cleavir-bir:aggregate-length rt)))
-         (if (= target-len source-len)
-             value
-             (let*
-                 ((shared-len (min target-len source-len))
-                  (extracts
-                    (loop for i below shared-len
-                          collect (make-instance 'cleavir-bir:extract
-                                    :index i :inputs (list value)
-                                    :rtype :object)))
-                  (nils
-                    (loop for i from shared-len below target-len
-                          collect (cleavir-bir:make-constant nil)))
-                  (create
-                    (make-instance 'cleavir-bir:create
-                      :rtype agg :inputs (append extracts nils))))
-               (before inserter create)
-               (loop for e in extracts do (before inserter create))
-               create)))))))
-
-(defun figure-values (inserter value context)
+;; MVALUES is a datum with rtype :multiple-values.
+(defun figure-mvalues (inserter mvalues context)
   (case context
-    (:multiple-values (multiple-values inserter value))
-    (:object (primary-value inserter value))
+    (:multiple-values mvalues)
     (:effect (values))
     (t
-     (assert (object-aggregate-p context))
-     (to-object-aggregate inserter value context))))
+     (before inserter (cleavir-bir:make-multiple-to-fixed mvalues context)))))
+
+;; CONTEXT is a fixed-values context.
+(defun figure-n-values (inserter inputs context)
+  (declare (ignore inserter))
+  (let ((linputs (length inputs)) (lcontext (length context)))
+    (cond ((= lcontext linputs) inputs)
+          ((< lcontext linputs) (subseq inputs 0 lcontext))
+          (t (append inputs
+                     (loop repeat (- lcontext linputs)
+                           collect (cleavir-bir:make-constant 'nil)))))))
+
+(defun figure-1-value (inserter datum context)
+  (case context
+    (:multiple-values
+     (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
+                        :inputs (list datum))))
+    (:effect (values))
+    (t (figure-n-values inserter (list datum) context))))
 
 ;;; This is used internally in ast-to-hir for when a form
 ;;; that was compiled in a value context never returns, e.g. due to an
@@ -154,20 +90,20 @@
       (make-instance 'dummy)))
 
 ;;; A context is either:
-;;; an rtype, indicating a value is to be returned, or
-;;; a list of blocks, indicating a branch is expected, or
-;;; :effect, indicating any value computed will be discarded
+;;; a sequence of rtypes, indicating values to be returned, or
+;;; :multiple-values, or
+;;; :effect, indicating any value computed will be discarded.
+;;; Currently only :object rtypes are allowed.
 
 ;;; A side-effects-only context; value discarded
 (defun effect-context-p (context)
   (eq context :effect))
 
-(defun one-successor-context-p (context)
-  (or (effect-context-p context)
-      (typep context 'cleavir-bir:rtype)))
-
-(defun n-next-context-p (context n)
-  (and (listp context) (eql (length context) n)))
+(defun context-p (object)
+  (or (effect-context-p object)
+      (eq object :multiple-values)
+      (and (typep object 'sequence)
+           (every (lambda (x) (typep x 'cleavir-bir:rtype)) object))))
 
 (defgeneric compile-function (ast))
 
@@ -178,4 +114,6 @@
         (*function-info* (make-hash-table :test #'eq)))
     (compile-function ast)))
 
-(defgeneric compile-ast (ast inserter context))
+(defgeneric compile-ast (ast inserter rtype))
+
+(defgeneric compile-test-ast (ast inserter next))
