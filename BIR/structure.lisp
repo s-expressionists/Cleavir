@@ -70,7 +70,9 @@
                ;; NIL indicates this is a terminator.
                :type (or instruction null))
    (%inputs :initarg :inputs :accessor inputs
-            :type sequence)))
+            :type sequence)
+   ;; The iblock this instruction belongs to.
+   (%iblock :initarg :iblock :accessor iblock :type iblock)))
 
 ;;; An instruction that outputs a single datum.
 ;;; In this case the instruction is identified with the datum.
@@ -185,7 +187,9 @@
                :type cleavir-set:set)
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
-                         :type dynamic-environment)))
+                         :type dynamic-environment)
+   ;; The function this belongs to.
+   (%function :initarg :function :reader function :type function)))
 
 (defclass function (dynamic-environment)
   (;; NOTE: Should be a weak set

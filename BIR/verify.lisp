@@ -27,6 +27,8 @@
   ;; verify type decls
   (assert (typep (predecessor instruction) '(or instruction null)))
   (assert (typep (successor instruction) '(or instruction null)))
+  ;; iblock is correct
+  (assert (eq (iblock instruction) *verifying-iblock*))
   ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate
   ;; this instruction (but see KLUDGE above)
   (flet ((validp (v)
@@ -172,6 +174,8 @@ has use-before-define on inputs ~a!"
   (assert (or (eq (dynamic-environment iblock) *verifying-function*)
               (cleavir-set:presentp
                (dynamic-environment iblock) *seen-instructions*)))
+  ;; Function is the right function
+  (assert (eq (function iblock) *verifying-function*))
   ;; inputs are all phis
   (assert (every (lambda (i) (typep i 'phi)) (inputs iblock)))
   ;; Verify each instruction

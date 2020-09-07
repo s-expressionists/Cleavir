@@ -14,8 +14,9 @@
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)
    (%insert-point :initarg :insert-point :accessor insert-point
-                  :type instruction)
-   (%function :initarg :function :reader function)))
+                  :type instruction)))
+
+(defun function (inserter) (cleavir-bir:function (iblock inserter)))
 
 (defun before (inserter instruction)
   (check-type inserter inserter)
@@ -25,6 +26,7 @@
     (assert (null (cleavir-bir:predecessor ip)))
     (setf (cleavir-bir:predecessor ip) instruction
           (cleavir-bir:successor instruction) ip
+          (cleavir-bir:iblock instruction) (iblock inserter)
           (insert-point inserter) instruction))
   instruction)
 
@@ -44,6 +46,7 @@
           do (cleavir-set:nadjoinf (cleavir-bir:predecessors next) i))
     (setf (cleavir-bir:start i) terminator
           (cleavir-bir:end i) terminator
+          (cleavir-bir:iblock terminator) i
           (insert-point inserter) terminator)))
 
 (defun adjoin-variable (inserter variable)
