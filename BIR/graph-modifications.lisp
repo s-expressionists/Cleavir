@@ -34,15 +34,12 @@
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
     (assert (not (null succ)))
+    (setf (predecessor succ) pred)
     (cond ((null pred)
-           ;; We start a block.
-           ;; There's a KLUDGE here because we don't have a reference to the
-           ;; block, and so can't change where its start points to.
-           ;; So instead of deleting,
-           (change-class instruction 'nop :inputs nil))
+           ;; We start a block, so we need to change the iblock's start.
+           (setf (start (iblock instruction)) succ))
           (t
-           (setf (predecessor succ) pred
-                 (successor pred) succ))))
+           (setf (successor pred) succ))))
   (values))
 
 (defun delete-iblock (iblock)
