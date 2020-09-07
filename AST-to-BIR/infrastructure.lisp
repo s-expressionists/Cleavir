@@ -117,6 +117,9 @@
         (*function-info* (make-hash-table :test #'eq)))
     (compile-function ast)))
 
+;;; Returns a list of data.
+;;; If multiple-values, a one element list with an element that's a datum
+;;; with rtype = :multiple-values.
 (defgeneric compile-ast (ast inserter rtype))
 
 (defgeneric compile-test-ast (ast inserter next))
