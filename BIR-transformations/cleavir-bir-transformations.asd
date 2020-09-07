@@ -4,8 +4,7 @@
   :depends-on (:cleavir-bir :cleavir-set)
   :components
   ((:file "packages")
-   (:file "function-dag" :depends-on ("packages"))
    (:file "process-captured-variables"
-    :depends-on ("function-dag" "packages"))
+    :depends-on ("packages"))
    (:file "delete-temporary-variables"
     :depends-on ("packages"))))

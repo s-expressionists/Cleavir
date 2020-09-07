@@ -393,6 +393,7 @@
                 (setf (gethash ast *function-info*)
                       (compile-function ast))))
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
+    (cleavir-set:nadjoinf (cleavir-bir:encloses f) enclose)
     (prog1 (figure-1-value inserter enclose context)
       (before inserter enclose))))
 

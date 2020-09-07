@@ -47,7 +47,7 @@
 (defun delete-iblock (iblock)
   (assert (cleavir-set:empty-set-p (predecessors iblock)))
   (let ((successors (successors iblock)))
-    (map-iblock-instructions #'cleanup-instruction (start iblock))
+    (map-iblock-instructions #'clean-up-instruction (start iblock))
     (dolist (s successors)
       (cleavir-set:nremovef (predecessors s) iblock))))
 

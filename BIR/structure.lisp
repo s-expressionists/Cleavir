@@ -213,4 +213,7 @@
    (%lambda-list :initarg :lambda-list :reader lambda-list)
    ;; The set of variables accessed by this function.
    (%variables :initarg :variables :accessor variables
-               :type cleavir-set:set)))
+               :type cleavir-set:set)
+   ;; The set of ENCLOSE instructions with this as their CODE.
+   (%encloses :initform (cleavir-set:empty-set) :accessor encloses
+              :type cleavir-set:set)))

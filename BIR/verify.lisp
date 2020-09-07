@@ -91,6 +91,11 @@ has use-before-define on inputs ~a!"
 (defmethod verify progn ((inst enclose))
   ;; verify type decls
   (assert (typep (code inst) 'function))
+  ;; Make sure encloses set is correct
+  (assert (cleavir-set:presentp inst (encloses (code inst))))
+  ;; recurse into the function
+  ;; (FIXME: If more than one enclose for the same code exists,
+  ;;  this will be redundant)
   (verify (code inst)))
 
 (defmethod verify progn ((wv writevar))
