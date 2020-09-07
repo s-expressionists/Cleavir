@@ -74,6 +74,10 @@
    ;; The iblock this instruction belongs to.
    (%iblock :initarg :iblock :accessor iblock :type iblock)))
 
+;;; Shortcut to get an instruction's owner.
+(defmethod function ((instruction instruction))
+  (function (iblock instruction)))
+
 ;;; An instruction that outputs a single datum.
 ;;; In this case the instruction is identified with the datum.
 (defclass computation (value transfer instruction) ())
@@ -190,6 +194,9 @@
                          :type dynamic-environment)
    ;; The function this belongs to.
    (%function :initarg :function :reader function :type function)))
+
+(defun successors (iblock)
+  (next (end iblock)))
 
 (defclass function (dynamic-environment)
   (;; NOTE: Should be a weak set

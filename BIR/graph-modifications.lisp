@@ -6,13 +6,26 @@
     (dolist (in (inputs instruction))
       (slot-makunbound in '%use))))
 
+;;; If a variable is no longer referenced by a function, remove it from the
+;;; function's variable set.
+(defun maybe-clear-variable (variable function)
+  (cleavir-set:doset (r (readers variable))
+    (when (eq (function r) function) (return-from maybe-clear-variable nil)))
+  (cleavir-set:doset (w (writers variable))
+    (when (eq (function w) function) (return-from maybe-clear-variable nil)))
+  (cleavir-set:doset (e (encloses variable))
+    (when (eq (function e) function) (return-from maybe-clear-variable nil)))
+  (cleavir-set:nremovef (variables function) variable)
+  t)
 (defmethod clean-up-instruction ((inst readvar))
-  (cleavir-set:nremovef (readers (variable inst)) inst))
+  (cleavir-set:nremovef (readers (variable inst)) inst)
+  (maybe-clear-variable (variable inst) (function inst)))
 (defmethod clean-up-instruction ((inst writevar))
-  (cleavir-set:nremovef (writers (variable inst)) inst))
+  (cleavir-set:nremovef (writers (variable inst)) inst)
+  (maybe-clear-variable (variable inst) (function inst)))
 
 ;;; Delete an instruction. Must not be a terminator.
-(defun delete-instruction ((instruction instruction))
+(defun delete-instruction (instruction)
   (check-type instruction (not terminator))
   (clean-up-instruction instruction)
   ;; Delete from inputs.
@@ -30,6 +43,13 @@
            (setf (predecessor succ) pred
                  (successor pred) succ))))
   (values))
+
+(defun delete-iblock (iblock)
+  (assert (cleavir-set:empty-set-p (predecessors iblock)))
+  (let ((successors (successors iblock)))
+    (map-iblock-instructions #'cleanup-instruction (start iblock))
+    (dolist (s successors)
+      (cleavir-set:nremovef (predecessors s) iblock))))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
