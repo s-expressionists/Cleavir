@@ -1,12 +1,21 @@
 (in-package #:cleavir-bir)
 
+;;; Remove backpointers to an instruction, etc.
+(defgeneric clean-up-instruction (instruction)
+  (:method ((instruction instruction))
+    (dolist (in (inputs instruction))
+      (slot-makunbound in '%use))))
+
+(defmethod clean-up-instruction ((inst readvar))
+  (cleavir-set:nremovef (readers (variable inst)) inst))
+(defmethod clean-up-instruction ((inst writevar))
+  (cleavir-set:nremovef (writers (variable inst)) inst))
+
 ;;; Delete an instruction. Must not be a terminator.
-(defgeneric delete-instruction (instruction))
-(defmethod delete-instruction ((instruction instruction))
+(defun delete-instruction ((instruction instruction))
   (check-type instruction (not terminator))
+  (clean-up-instruction instruction)
   ;; Delete from inputs.
-  (dolist (in (inputs instruction))
-    (slot-makunbound in '%use))
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
@@ -21,10 +30,6 @@
            (setf (predecessor succ) pred
                  (successor pred) succ))))
   (values))
-(defmethod delete-instruction :before ((inst readvar))
-  (cleavir-set:nremovef (readers (variable inst)) inst))
-(defmethod delete-instruction :before ((inst writevar))
-  (cleavir-set:nremovef (writers (variable inst)) inst))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
