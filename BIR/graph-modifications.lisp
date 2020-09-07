@@ -2,7 +2,8 @@
 
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
-  (:method ((instruction instruction))
+  (:method-combination progn)
+  (:method progn ((instruction instruction))
     (dolist (in (inputs instruction))
       (slot-makunbound in '%use))))
 
@@ -17,10 +18,10 @@
     (when (eq (function e) function) (return-from maybe-clear-variable nil)))
   (cleavir-set:nremovef (variables function) variable)
   t)
-(defmethod clean-up-instruction ((inst readvar))
+(defmethod clean-up-instruction progn ((inst readvar))
   (cleavir-set:nremovef (readers (variable inst)) inst)
   (maybe-clear-variable (variable inst) (function inst)))
-(defmethod clean-up-instruction ((inst writevar))
+(defmethod clean-up-instruction progn ((inst writevar))
   (cleavir-set:nremovef (writers (variable inst)) inst)
   (maybe-clear-variable (variable inst) (function inst)))
 
