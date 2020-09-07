@@ -77,8 +77,9 @@
 (defun figure-1-value (inserter datum context)
   (case context
     (:multiple-values
-     (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
-                        :inputs (list datum))))
+     (list
+      (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
+                         :inputs (list datum)))))
     (:effect (values))
     (t (figure-n-values inserter (list datum) context))))
 
