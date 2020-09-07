@@ -48,7 +48,7 @@
 
 (defmethod initialize-instance :after ((p vprimop) &rest initargs)
   (declare (ignore initargs))
-  (setf (%rtype p) (rtype (primop-info p))))
+  (setf (%rtype p) (rtype (info p))))
 
 (defclass call (computation)
   ((%rtype :initform :multiple-values :type (eql :multiple-values))))

@@ -286,15 +286,21 @@
 
 (defclass fdefinition-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
   (;; This slot contains an AST that produces the function name.
-   (%name-ast :initarg :name-ast :reader name-ast)))
+   (%name-ast :initarg :name-ast :reader name-ast)
+   (%attributes :initarg :attributes :reader attributes
+                :initform (cleavir-attributes:default-attributes))))
 
-(defun make-fdefinition-ast (name-ast &key origin (policy *policy*))
+(defun make-fdefinition-ast (name-ast
+                             &key origin (policy *policy*)
+                               (attributes
+                                (cleavir-attributes:default-attributes)))
   (make-instance 'fdefinition-ast
-    :origin origin :policy policy
+    :origin origin :policy policy :attributes attributes
     :name-ast name-ast))
 
 (cleavir-io:define-save-info fdefinition-ast
-  (:name-ast name-ast))
+  (:name-ast name-ast)
+  (:attributes attributes))
 
 (defmethod children ((ast fdefinition-ast))
   (list (name-ast ast)))

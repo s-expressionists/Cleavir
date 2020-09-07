@@ -61,8 +61,8 @@
       (reset inserter end)
       (terminate inserter return)
       (setf (cleavir-bir:inputs return)
-            (list (compile-ast (cleavir-ast:body-ast ast)
-                               inserter :multiple-values)))
+            (compile-ast (cleavir-ast:body-ast ast)
+                         inserter :multiple-values))
       (let ((start (iblock inserter)))
         (insert-initial-bindings inserter alist)
         (finalize inserter)
@@ -374,11 +374,11 @@
          (args (cleavir-ast:argument-asts ast))
          (argsvs (compile-arguments args inserter))
          (callee (cleavir-ast:callee-ast ast))
-         (calleev (compile-ast callee inserter :object)))
+         (calleev (first (compile-ast callee inserter '(:object)))))
     (declare (ignore _))
     (assert (every (lambda (a) (eq (cleavir-bir:rtype a) :object)) argsvs))
     (setf (cleavir-bir:inputs call) (list* calleev argsvs))
-    result))
+    (list result)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
