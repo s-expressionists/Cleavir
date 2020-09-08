@@ -4,7 +4,8 @@
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble)
-  (:export #:function #:iblocks #:start #:end #:inputs #:variables)
+  (:export #:function #:iblocks #:start #:end #:inputs #:variables
+           #:lambda-list)
   (:export #:iblock #:predecessors #:entrances #:dynamic-environment)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
@@ -27,7 +28,9 @@
   (:export #:primop-info #:in-rtypes
            #:primop #:vprimop #:nvprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:all-functions #:delete-computation #:delete-instruction)
+           #:map-iblocks
+           #:all-functions
+           #:replace-computation #:delete-computation #:delete-instruction)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
