@@ -9,7 +9,8 @@
 
 ;;; structure describing a primop
 (defclass primop-info ()
-  (;; rtype of the return, or NIL if it doesn't return a value
+  ((%name :initarg :name :reader name)
+   ;; rtype of the return, or NIL if it doesn't return a value
    (%rtype :initarg :rtype :reader rtype :type (or rtype null))
    ;; List of rtypes of the inputs
    (%in-rtypes :initarg :in-rtypes :reader in-rtypes :type list)))
@@ -26,6 +27,7 @@
 (macrolet ((defprimop (name ret &rest in)
              `(setf (gethash ',name *primops*)
                     (make-instance 'primop-info
+                      :name ',name
                       :rtype ',ret
                       :in-rtypes ',in)))
            (defprimops (&rest specs)
