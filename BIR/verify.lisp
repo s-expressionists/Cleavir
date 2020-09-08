@@ -41,6 +41,8 @@
 has use-before-define on inputs ~a!"
             instruction (inputs instruction)
             (remove-if #'validp (inputs instruction))))
+  ;; This instruction is the user of all of its inputs
+  (assert (every (lambda (i) (eq (use i) instruction)) (inputs instruction)))
   ;; Make sure input lists are not shared, so we can destroy them
   (unless (null (inputs instruction))
     (assert (not (cleavir-set:presentp (inputs instruction) *seen-inputs*))

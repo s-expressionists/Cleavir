@@ -217,3 +217,16 @@
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)))
+
+;;; The set of blocks in a function that have nonlocal entrances.
+(defmethod entrances ((function function))
+  (cleavir-set:filter
+   (lambda (ib) (not (cleavir-set:empty-set-p (entrances ib))))
+   (iblocks function)))
+
+;;; The set of blocks in a function that nonlocally exit, i.e. are terminated
+;;; by UNWIND instructions.
+(defmethod exits ((function function))
+  (cleavir-set:filter
+   (lambda (ib) (typep (end ib) 'unwind))
+   (iblocks function)))

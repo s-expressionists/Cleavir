@@ -24,10 +24,18 @@
 (defmethod clean-up-instruction progn ((inst writevar))
   (cleavir-set:nremovef (writers (variable inst)) inst)
   (maybe-clear-variable (variable inst) (function inst)))
+(defmethod clean-up-instruction progn ((inst enclose))
+  (cleavir-set:doset (v (variables inst))
+    (cleavir-set:nremovef (encloses v) inst))
+  (cleavir-set:nremovef (encloses (code inst)) inst))
+(defmethod clean-up-instruction ((inst unwind))
+  (cleavir-set:nremovef (entrances (destination inst)) (iblock inst)))
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (not terminator))
+  (assert (or (typep instruction '(not computation))
+              (not (slot-boundp instruction '%use))))
   (clean-up-instruction instruction)
   ;; Delete from inputs.
   ;; Delete from the control flow.
@@ -41,6 +49,23 @@
           (t
            (setf (successor pred) succ))))
   (values))
+
+(defgeneric replace-terminator (new old))
+
+(defmethod replace-terminator ((new terminator) (old terminator))
+  (check-type old terminator)
+  (check-type new terminator)
+  (let ((ib (iblock old))
+        (old-next (next old))
+        (new-next (next new)))
+    (clean-up-instruction old)
+    (setf (end ib) new)
+    (dolist (n old-next) (cleavir-set:nremovef (predecessors n) ib))
+    (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
+  (values))
+
+(defmethod replace-terminator :after ((new unwind) old)
+  (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
 (defun delete-iblock (iblock)
   (assert (cleavir-set:empty-set-p (predecessors iblock)))
@@ -57,17 +82,57 @@
   (setf (inputs instruction)
         (nsubstitute new old (inputs instruction) :test #'eq)))
 
+;;; Mark all the inputs of an instruction as being used by that instruction.
+;;; This is useful when an instruction is deleted but its inputs maintained.
+(defun move-inputs (inst)
+  (check-type inst instruction)
+  (dolist (input (inputs inst))
+    (assert (not (slot-boundp input '%use)))
+    (setf (%use input) inst))
+  (values))
+
+(defun replace-linear-datum (new old)
+  (check-type new linear-datum)
+  (check-type old linear-datum)
+  (assert (not (slot-boundp new '%use)))
+  (setf (%use new) (%use old))
+  (replace-input new old (%use old))
+  (slot-makunbound old '%use)
+  (values))
+
 ;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
-;;; Computation's user is invalid afterward.
-(defun delete-computation (computation replacement)
-  (check-type computation computation)
-  (check-type replacement linear-datum)
-  (assert (not (eq computation replacement)))
-  (assert (not (slot-boundp replacement '%use)))
-  (setf (%use replacement) (%use computation))
-  (replace-input replacement computation (%use computation))
+(defun replace-computation (computation replacement)
+  (replace-linear-datum replacement computation)
   (delete-instruction computation)
   (values))
+
+;;; Delete a computation with unused result.
+(defun delete-computation (computation)
+  (check-type computation computation)
+  (assert (not (slot-boundp computation '%use)))
+  (delete-instruction computation)
+  (values))
+
+;;; Split a iblock into two iblocks.
+(defun split-block-after (inst)
+  (check-type inst (and instruction (not terminator)))
+  ;; the new block is the block after, because there's a little less to update.
+  (let* ((ib (iblock inst))
+         (new (make-instance 'iblock
+                :function (function ib) :inputs nil
+                :dynamic-environment (dynamic-environment ib)))
+         (new-start (successor inst)))
+    ;; Move the later instructions
+    (setf (start new) new-start (end new) (end ib))
+    (loop for i = new-start then (successor i)
+          until (null i)
+          do (setf (iblock i) new))
+    ;; Put a new terminator in the before block
+    (let ((new (make-instance 'jump
+                 :iblock ib :inputs () :predecessor inst :unwindp nil
+                 :next (list new))))
+      (setf (end ib) new))
+    (values ib new)))
 
 (defun reachable-iblocks (function)
   (check-type function function)
