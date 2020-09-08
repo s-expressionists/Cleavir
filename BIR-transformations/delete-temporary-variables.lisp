@@ -11,7 +11,7 @@
          (source (first (cleavir-bir:inputs writer)))
          (reader (cleavir-set:arb (cleavir-bir:readers variable))))
     (cleavir-bir:delete-instruction writer)
-    (cleavir-bir:delete-computation reader source)))
+    (cleavir-bir:replace-computation reader source)))
 
 (defun temporary-variable-p (variable)
   (and (eq (cleavir-bir:extent variable) :local)
