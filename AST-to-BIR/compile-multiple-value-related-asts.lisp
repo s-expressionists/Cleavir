@@ -67,7 +67,7 @@
          (before inserter ftm)
          (setf (cleavir-bir:inputs ftm)
                (compile-arguments arg-asts inserter))
-         ftm))
+         (list ftm)))
       (t (figure-n-values inserter
                           (compile-arguments arg-asts inserter)
                           context)))))
