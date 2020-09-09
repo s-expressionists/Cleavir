@@ -11,7 +11,7 @@
 ;;; order we wouldn't catch it.
 (defvar *seen-instructions*)
 
-(defvar *seen-inputs*)
+(defvar *seen-lists*)
 (defvar *seen-next*)
 
 ;;; The function currently being verified.
@@ -30,25 +30,54 @@
   ;; iblock is correct
   (assert (eq (iblock instruction) *verifying-iblock*))
   ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate
-  ;; this instruction (but see KLUDGE above)
-  (flet ((validp (v)
-           (etypecase v
-             (computation (cleavir-set:presentp v *seen-instructions*))
-             (linear-datum t))))
-    (assert (every #'validp (inputs instruction))
-            ()
-            "Instruction ~a, with inputs ~a,
+  ;; this instruction (but see KLUDGE above). READVAR has a non-linear input.
+  ;; Also check that the uses are hooked up.
+  (let ((inputs (inputs instruction)))
+    (cond
+      ((typep instruction 'readvar)
+       (assert (and (= (length inputs) 1)
+                    (typep (first inputs) 'variable)))
+       (assert (cleavir-set:presentp instruction (uses (first inputs)))))
+      (t (flet ((validp (v)
+                  (etypecase v
+                    (computation (cleavir-set:presentp v *seen-instructions*))
+                    (linear-datum t))))
+           (assert (every #'validp inputs)
+                   ()
+                   "Instruction ~a, with inputs ~a,
 has use-before-define on inputs ~a!"
-            instruction (inputs instruction)
-            (remove-if #'validp (inputs instruction))))
-  ;; This instruction is the user of all of its inputs
-  (assert (every (lambda (i) (eq (use i) instruction)) (inputs instruction)))
-  ;; Make sure input lists are not shared, so we can destroy them
-  (unless (null (inputs instruction))
-    (assert (not (cleavir-set:presentp (inputs instruction) *seen-inputs*))
-            ;; could track the other instruction sharing it
-            () "Inputs list of instruction ~a is shared" instruction)
-    (cleavir-set:nadjoinf *seen-inputs* (inputs instruction))))
+                   instruction inputs
+                   (remove-if #'validp inputs)))
+         (assert (every (lambda (i) (eq (use i) instruction)) inputs))))
+    ;; Make sure input lists are not shared, so we can destroy them
+    (unless (null inputs)
+      (assert (not (cleavir-set:presentp inputs *seen-lists*))
+              ;; could track the other instruction sharing it
+              () "Inputs list of instruction ~a is shared" instruction)
+      (cleavir-set:nadjoinf *seen-lists* inputs))))
+
+(defmethod verify progn ((instruction operation))
+  ;; All outputs are OUTPUTs, unless this is a terminator, in which case
+  ;; they're all PHIs, or unless this is a WRITEVAR.
+  ;; In either case, we're a definer.
+  (let ((outputs (outputs instruction)))
+    (typecase instruction
+      (terminator
+       (assert (every (lambda (o) (typep o 'phi)) outputs))
+       (assert (every (lambda (o)
+                        (cleavir-set:presentp instruction (definitions o)))
+                      outputs)))
+      (writevar
+       (assert (and (= (length outputs) 1) (typep (first outputs) 'variable)))
+       (assert (cleavir-set:presentp instruction
+                                     (definitions (first outputs)))))
+      (t
+       (assert (every (lambda (o) (typep o 'output)) outputs))
+       (assert (every (lambda (o) (eq instruction (definition o))) outputs))))
+    ;; Make sure output lists are not shared.
+    (unless (null outputs)
+      (assert (not (cleavir-set:presentp outputs *seen-lists*))
+              () "Outputs list of instruction ~a is shared" instruction))))
 
 (defmethod verify progn ((instruction no-input))
   ;; No inputs (verify type decl)
@@ -78,9 +107,7 @@ has use-before-define on inputs ~a!"
   (unless (null (next instruction))
     (assert (not (cleavir-set:presentp (next instruction) *seen-next*))
             () "NEXT is shared for instruction: ~a" (next instruction))
-    (cleavir-set:nadjoinf *seen-next* (next instruction)))
-  ;; Outputs are all PHIs
-  (assert (every (lambda (o) (typep o 'phi)) (outputs instruction))))
+    (cleavir-set:nadjoinf *seen-next* (next instruction))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -102,11 +129,12 @@ has use-before-define on inputs ~a!"
 
 (defmethod verify progn ((wv writevar))
   ;; match types
-  (assert (rtype= (rtype (first (inputs wv))) (rtype (variable wv)))))
+  (assert (rtype= (rtype (first (inputs wv)))
+                  (rtype (first (outputs wv))))))
 
 (defmethod verify progn ((rv readvar))
   ;; match types
-  (assert (rtype= (rtype rv) (rtype (variable rv)))))
+  (assert (rtype= (rtype rv) (rtype (first (inputs rv))))))
 
 (defmethod verify progn ((call call))
   (assert (> (length (inputs call)) 0))
@@ -202,7 +230,7 @@ has use-before-define on inputs ~a!"
         (end (end function))
         (*seen-instructions* (cleavir-set:empty-set))
         (*verifying-function* function)
-        (*seen-inputs* (cleavir-set:empty-set))
+        (*seen-lists* (cleavir-set:empty-set))
         (*seen-next* (cleavir-set:empty-set)))
     ;; start is an iblock (verify type decl)
     (assert (typep start 'iblock))

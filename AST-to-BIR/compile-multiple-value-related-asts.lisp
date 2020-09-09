@@ -7,7 +7,8 @@
   (let* ((lhs-asts (cleavir-ast:lhs-asts ast))
          (wvs
            (loop for lhs in lhs-asts
-                 for wv = (make-instance 'cleavir-bir:writevar :variable lhs)
+                 for wv = (make-instance 'cleavir-bir:writevar
+                            :outputs (list lhs))
                  collect (before inserter wv)))
          (vals (compile-ast (cleavir-ast:form-ast ast)
                             inserter (make-list (length lhs-asts)

@@ -34,63 +34,56 @@
 (defmethod dis-label ((instruction instruction))
   (class-name (class-of instruction)))
 
-(defgeneric disassemble-variable (variable))
-(defmethod disassemble-variable ((v variable)) (dis-var v))
+(defgeneric disassemble-datum (value))
 
-(defgeneric disassemble-value (value))
-
-(defmethod disassemble-value ((value linear-datum)) (dis-id value))
-(defmethod disassemble-value ((value constant)) `',(constant-value value))
-(defmethod disassemble-value ((value load-time-value))
+(defmethod disassemble-datum ((value linear-datum)) (dis-id value))
+(defmethod disassemble-datum ((value constant)) `',(constant-value value))
+(defmethod disassemble-datum ((value load-time-value))
   (if (and (read-only-p value) (constantp (form value)))
       `',(eval (form value))
       `(cl:load-time-value ,(form value) ,(read-only-p value))))
+(defmethod disassemble-datum ((value variable)) (dis-var value))
 
 (defgeneric disassemble-instruction (instruction))
 
 (defmethod disassemble-instruction ((inst operation))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))))
-
-(defmethod disassemble-instruction ((inst writevar))
-  `(,(dis-label inst) ,(disassemble-variable (variable inst))
-    ,@(mapcar #'disassemble-value (inputs inst))))
+  (let ((outs (outputs inst))
+        (base
+          `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst)))))
+    (if (null outs)
+        base
+        `(:= ,(mapcar #'disassemble-datum (outputs inst)) ,base))))
 
 (defmethod disassemble-instruction ((inst computation))
-  `(:= ,(disassemble-value inst)
-       (,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst)))))
-
-(defmethod disassemble-instruction ((inst readvar))
-  `(:= ,(disassemble-value inst)
-       (,(dis-label inst)
-        ,(disassemble-variable (variable inst))
-        ,@(mapcar #'disassemble-value (inputs inst)))))
+  `(:= ,(disassemble-datum inst)
+       (,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst enclose))
   (maybe-add-disassemble-work (code inst))
-  `(:= ,(disassemble-value inst)
+  `(:= ,(disassemble-datum inst)
        (,(dis-label inst)
         ,(code inst)
         ,(mapcar #'dis-var (cleavir-set:set-to-list (variables inst)))
-        ,@(mapcar #'disassemble-value (inputs inst)))))
+        ,@(mapcar #'disassemble-datum (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst catch))
-  `(:= ,(disassemble-value inst)
+  `(:= ,(disassemble-datum inst)
        (,(dis-label inst)
-        ,@(mapcar #'disassemble-value (inputs inst))
+        ,@(mapcar #'disassemble-datum (inputs inst))
         ,@(mapcar #'dis-iblock (next inst)))))
 
 (defmethod disassemble-instruction ((inst unwind))
   `(,(dis-label inst)
-    ,@(mapcar #'disassemble-value (inputs inst))
+    ,@(mapcar #'disassemble-datum (inputs inst))
     :->
     ,(dis-iblock (destination inst))))
 
 (defmethod disassemble-instruction ((inst jump))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
     ,(dis-iblock (first (next inst)))))
 
 (defmethod disassemble-instruction ((inst eqi))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-value (inputs inst))
+  `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
     ,@(mapcar #'dis-iblock (next inst))))
 
 (defun disassemble-iblock (iblock)
@@ -100,19 +93,19 @@
      (lambda (i) (push (disassemble-instruction i) insts))
      (start iblock))
     (list* (list* (dis-iblock iblock)
-                  (mapcar #'disassemble-value (inputs iblock)))
+                  (mapcar #'disassemble-datum (inputs iblock)))
            (nreverse insts))))
 
 (defun disassemble-lambda-list (ll)
   (loop for item in ll
         collect (cond ((member item lambda-list-keywords) item)
                       ((typep item 'argument)
-                       (disassemble-value item))
+                       (disassemble-datum item))
                       ((= (length item) 3)
                        (list (first item)
-                             (disassemble-value (second item))
-                             (disassemble-value (third item))))
-                      (t (mapcar #'disassemble-value item)))))
+                             (disassemble-datum (second item))
+                             (disassemble-datum (third item))))
+                      (t (mapcar #'disassemble-datum item)))))
 
 (defun disassemble-function (function)
   (check-type function function)

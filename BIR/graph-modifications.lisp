@@ -1,11 +1,25 @@
 (in-package #:cleavir-bir)
 
+(defgeneric remove-use (datum use))
+(defmethod remove-use ((datum linear-datum) use)
+  (declare (ignore use))
+  (slot-makunbound datum '%use))
+(defmethod remove-use ((datum variable) use)
+  (cleavir-set:nremovef (cleavir-bir:readers datum) use))
+
+(defgeneric add-use (datum use))
+(defmethod add-use ((datum linear-datum) use)
+  (assert (not (slot-boundp datum '%use)))
+  (setf (%use datum) use))
+(defmethod add-use ((datum variable) use)
+  (cleavir-set:nadjoinf (cleavir-bir:readers datum) use))
+
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
   (:method-combination progn)
   (:method progn ((instruction instruction))
     (dolist (in (inputs instruction))
-      (slot-makunbound in '%use))))
+      (remove-use in instruction))))
 
 ;;; If a variable is no longer referenced by a function, remove it from the
 ;;; function's variable set.
@@ -19,16 +33,18 @@
   (cleavir-set:nremovef (variables function) variable)
   t)
 (defmethod clean-up-instruction progn ((inst readvar))
-  (cleavir-set:nremovef (readers (variable inst)) inst)
-  (maybe-clear-variable (variable inst) (function inst)))
+  (let ((variable (first (inputs inst))))
+    (cleavir-set:nremovef (readers variable) inst)
+    (maybe-clear-variable variable (function inst))))
 (defmethod clean-up-instruction progn ((inst writevar))
-  (cleavir-set:nremovef (writers (variable inst)) inst)
-  (maybe-clear-variable (variable inst) (function inst)))
+  (let ((variable (first (outputs inst))))
+    (cleavir-set:nremovef (writers variable) inst)
+    (maybe-clear-variable variable (function inst))))
 (defmethod clean-up-instruction progn ((inst enclose))
   (cleavir-set:doset (v (variables inst))
     (cleavir-set:nremovef (encloses v) inst))
   (cleavir-set:nremovef (encloses (code inst)) inst))
-(defmethod clean-up-instruction ((inst unwind))
+(defmethod clean-up-instruction progn ((inst unwind))
   (cleavir-set:nremovef (entrances (destination inst)) (iblock inst)))
 
 ;;; Delete an instruction. Must not be a terminator.
@@ -160,20 +176,16 @@
 (defun refresh-local-users (function)
   (check-type function function)
   ;;; First zero out existing uses
-  (flet ((zero (linear-datum)
-           (check-type linear-datum linear-datum)
-           (slot-makunbound linear-datum '%use)))
-    (map-instructions
-     (lambda (i)
-       (mapc #'zero (inputs i))
-       (when (typep i 'linear-datum) (zero i)))
-     function))
+  (map-instructions
+   (lambda (inst)
+     (dolist (input (inputs inst))
+       (remove-use input inst)))
+   function)
   ;;; Now add em back
   (map-instructions
-   (lambda (i)
-     (loop for in in (inputs i)
-           do (assert (not (slot-boundp in '%use)))
-              (setf (%use in) i)))
+   (lambda (inst)
+     (dolist (input (inputs inst))
+       (add-use input inst)))
    function)
   (values))
 

@@ -42,8 +42,8 @@
 
 (defun insert-initial-bindings (inserter map)
   (loop for (var . arg) in map
-        for setq = (make-instance 'cleavir-bir:writevar :variable var
-                                  :inputs (list arg))
+        for setq = (make-instance 'cleavir-bir:writevar
+                     :outputs (list var) :inputs (list arg))
         do (before inserter setq)))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
@@ -176,7 +176,7 @@
                 :dynamic-environment (cleavir-bir:dynamic-environment next)))
          (catch (make-instance 'cleavir-bir:catch :next (list main next)))
          (wcont (make-instance 'cleavir-bir:writevar
-                  :variable contvar :inputs (list catch)))
+                  :outputs (list contvar) :inputs (list catch)))
          (lu (make-instance 'cleavir-bir:jump
                :unwindp t :outputs phis :next (list next))))
     (adjoin-variable inserter contvar)
@@ -235,7 +235,7 @@
                      :catch catch :destination next
                      :outputs (cleavir-bir:inputs next)))
                 (rv (make-instance 'cleavir-bir:readvar
-                      :variable contvar :rtype :continuation)))
+                      :inputs (list contvar) :rtype :continuation)))
             (adjoin-variable inserter contvar)
             (cleavir-set:nadjoinf (cleavir-bir:unwinds catch) u)
             (cleavir-set:nadjoinf (cleavir-bir:entrances next) new-iblock)
@@ -282,7 +282,7 @@
     (let* ((catch (make-instance 'cleavir-bir:catch))
            (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
            (wcont (make-instance 'cleavir-bir:writevar
-                    :variable contvar :inputs (list catch)))
+                    :outputs (list contvar) :inputs (list catch)))
            (next (iblock inserter))
            (tag-iblocks
              (loop repeat (length tags)
@@ -342,7 +342,7 @@
                              :next (list next)))
           ;; nonlocal
           (let ((rv (make-instance 'cleavir-bir:readvar
-                      :rtype :continuation :variable contvar)))
+                      :rtype :continuation :inputs (list contvar))))
             (adjoin-variable inserter contvar)
             (before inserter (make-instance 'cleavir-bir:unwind
                                :inputs (list rv) :outputs ()
@@ -401,7 +401,7 @@
   (check-type inserter inserter)
   (assert (eq context :effect))
   (let* ((var (find-or-create-variable (cleavir-ast:lhs-ast ast)))
-         (assign (make-instance 'cleavir-bir:writevar :variable var)))
+         (assign (make-instance 'cleavir-bir:writevar :outputs (list var))))
     (adjoin-variable inserter var)
     (before inserter assign)
     (let ((v (compile-ast (cleavir-ast:value-ast ast) inserter '(:object))))
@@ -475,7 +475,7 @@
   (check-type inserter inserter)
   (assert (context-p context))
   (let* ((var (find-or-create-variable ast))
-         (rv (make-instance 'cleavir-bir:readvar :variable var)))
+         (rv (make-instance 'cleavir-bir:readvar :inputs (list var))))
     (adjoin-variable inserter var)
     (prog1 (figure-1-value inserter rv context)
       (before inserter rv))))

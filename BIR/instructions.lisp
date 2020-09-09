@@ -15,24 +15,23 @@
 ;;; Abstract. An instruction dealing with a variable.
 ;;; It is assumed the variable is passed to make-instance rather
 ;;; than set later, and also that the instruction isn't reinitialized.
-(defclass accessvar (instruction)
-  ((%variable :initarg :variable :reader variable :type variable)))
+(defclass accessvar (instruction) ())
 
-(defclass writevar (one-input no-output accessvar operation) ())
+(defclass writevar (one-input accessvar operation) ())
 
 (defmethod initialize-instance :after
-    ((i writevar) &rest initargs &key variable)
+    ((i writevar) &rest initargs &key outputs)
   (declare (ignore initargs))
-  (cleavir-set:nadjoinf (writers variable) i)
+  (cleavir-set:nadjoinf (writers (first outputs)) i)
   i)
 
-(defclass readvar (no-input accessvar computation)
+(defclass readvar (accessvar computation)
   ((%rtype :initform :object)))
 
 (defmethod initialize-instance :after
-    ((i readvar) &rest initargs &key variable)
+    ((i readvar) &rest initargs &key inputs)
   (declare (ignore initargs))
-  (cleavir-set:nadjoinf (readers variable) i)
+  (cleavir-set:nadjoinf (readers (first inputs)) i)
   i)
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.

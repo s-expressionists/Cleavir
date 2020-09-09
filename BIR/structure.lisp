@@ -55,9 +55,8 @@
 ;;; An instruction is something to be done.
 ;;; All instructions have sequences of inputs and outputs.
 ;;; Inputs are mutable but outputs are not.
-;;; Every input and output is a LINEAR-DATUM.
-;;; Note that READVAR is special and has a nonlinear datum "input" not in
-;;; this sequence, a variable, and similarly WRITEVAR has a variable "output".
+;;; Every input and output is a LINEAR-DATUM, except that READVAR has a VARIABLE
+;;; input and WRITEVAR has one as an output.
 (defgeneric inputs (instruction))
 (defgeneric (setf inputs) (new-inputs instruction))
 (defgeneric outputs (instruction))
@@ -70,6 +69,7 @@
                ;; NIL indicates this is a terminator.
                :type (or instruction null))
    (%inputs :initarg :inputs :accessor inputs
+            ;; Sequence of DATA.
             :type sequence)
    ;; The iblock this instruction belongs to.
    (%iblock :initarg :iblock :accessor iblock :type iblock)))
@@ -83,14 +83,15 @@
 (defclass computation (value transfer instruction) ())
 (defmethod outputs ((instruction computation)) (list instruction))
 
-;;; An instruction that outputs a variable number of OUTPUTs
+;;; An instruction that outputs a variable number of outputs
 ;;; or a fixed number (that is not one) of them.
 (defclass operation (instruction)
-  ((%outputs :initarg :outputs :reader outputs :accessor %outputs
+  (;; Sequence of data.
+   (%outputs :initarg :outputs :reader outputs :accessor %outputs
              :type sequence)))
 
 ;;; Data output by an OPERATION.
-;;; (ARGUMENTs can also be output.)
+;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initarg :definition :reader definition)))
 
