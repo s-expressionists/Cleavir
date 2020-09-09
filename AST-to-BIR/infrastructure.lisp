@@ -76,14 +76,19 @@
                      (loop repeat (- lcontext linputs)
                            collect (cleavir-bir:make-constant 'nil)))))))
 
-(defun figure-1-value (inserter datum context)
-  (case context
-    (:multiple-values
-     (list
-      (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
-                         :inputs (list datum)))))
-    (:effect (values))
-    (t (figure-n-values inserter (list datum) context))))
+;;; Given a datum, which may be a computation, and a compile-ast context,
+;;; insert fixed-to-multiple or whatever else to make it match the context,
+;;; insert the computation if it is a computation, and return the results.
+(defun return-1 (inserter datum context)
+  (prog1
+      (case context
+        (:multiple-values
+         (list (before inserter (make-instance 'cleavir-bir:fixed-to-multiple
+                                  :inputs (list datum)))))
+        (:effect (values))
+        (t (figure-n-values inserter (list datum) context)))
+    (when (typep datum 'cleavir-bir:instruction)
+      (before inserter datum))))
 
 ;;; This is used internally in ast-to-hir for when a form
 ;;; that was compiled in a value context never returns, e.g. due to an

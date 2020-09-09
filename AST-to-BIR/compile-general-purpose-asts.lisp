@@ -394,8 +394,7 @@
                       (compile-function ast))))
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
     (cleavir-set:nadjoinf (cleavir-bir:encloses f) enclose)
-    (prog1 (figure-1-value inserter enclose context)
-      (before inserter enclose))))
+    (return-1 inserter enclose context)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -483,8 +482,7 @@
   (let* ((var (find-or-create-variable ast (function inserter)))
          (rv (make-instance 'cleavir-bir:readvar :inputs (list var))))
     (adjoin-variable inserter var)
-    (prog1 (figure-1-value inserter rv context)
-      (before inserter rv))))
+    (return-1 inserter rv context)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -540,7 +538,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter context)
   (assert (context-p context))
-  (figure-1-value
+  (return-1
    inserter
    (make-instance 'cleavir-bir:load-time-value
      :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))
@@ -552,7 +550,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:immediate-ast) inserter context)
   (assert (context-p context))
-  (figure-1-value
+  (return-1
    inserter
    (make-instance 'cleavir-bir:immediate :value (cleavir-ast:value ast))
    context))
