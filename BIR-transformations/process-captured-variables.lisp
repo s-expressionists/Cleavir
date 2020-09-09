@@ -39,7 +39,7 @@
               ;; Some other function has already noted this variable is
               ;; indefinite - presumably a child.
               ;; NOTE: We could skip the presentp in this case
-              (:indefinite)))))))
+              (:indefinite (setf (cleavir-bir:owner variable) funct))))))))
 
 (defun closed-over-predicate (function)
   (lambda (variable)
