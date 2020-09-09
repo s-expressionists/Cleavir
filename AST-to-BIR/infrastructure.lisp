@@ -5,11 +5,13 @@
 (defvar *go-info*)
 (defvar *function-info*)
 
-(defun find-or-create-variable (lexical-ast)
+(defun find-or-create-variable (lexical-ast binder)
   (check-type lexical-ast cleavir-ast:lexical-ast)
+  (check-type binder cleavir-bir:lexical-bind)
   (or (gethash lexical-ast *variables*)
       (setf (gethash lexical-ast *variables*)
-            (make-instance 'cleavir-bir:variable :rtype :object))))
+            (make-instance 'cleavir-bir:variable
+              :binder binder :rtype :object))))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)

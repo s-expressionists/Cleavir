@@ -4,7 +4,7 @@
 ;;;
 ;;; COMPILE-FUNCTION
 
-(defun translate-lambda-list (lambda-list)
+(defun translate-lambda-list (lambda-list funct)
   (loop with ll with alist
         for item in lambda-list
         do (cond ((member item lambda-list-keywords)
@@ -16,24 +16,28 @@
                                 :rtype :object)))
                     (if (= (length item) 3)
                         (let ((keyv (find-or-create-variable
-                                     (second item)))
+                                     (second item)
+                                     funct))
                               (predv (find-or-create-variable
-                                      (third item))))
+                                      (third item)
+                                      funct)))
                           (push (list (first item) valarg parg) ll)
                           (setf alist
                                 (list* (cons keyv valarg)
                                        (cons predv parg)
                                        alist)))
                         (let ((keyv (find-or-create-variable
-                                     (first item)))
+                                     (first item)
+                                     funct))
                               (predv (find-or-create-variable
-                                      (second item))))
+                                      (second item)
+                                      funct)))
                           (push (list valarg parg) ll)
                           (setf alist
                                 (list* (cons keyv valarg)
                                        (cons predv parg)
                                        alist))))))
-                 (t (let ((v (find-or-create-variable item))
+                 (t (let ((v (find-or-create-variable item funct))
                           (a (make-instance 'cleavir-bir:argument
                                :rtype :object)))
                       (push a ll)
@@ -47,16 +51,16 @@
         do (before inserter setq)))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
-  (multiple-value-bind (ll alist)
-      (translate-lambda-list (cleavir-ast:lambda-list ast))
-    (let* ((return (make-instance 'cleavir-bir:returni))
-           (f (make-instance 'cleavir-bir:function
-                :lambda-list ll
-                :variables (apply #'cleavir-set:make-set
-                                  (mapcar #'car alist))))
-           (end (make-instance 'cleavir-bir:iblock
-                  :function f :dynamic-environment f))
-           (inserter (make-instance 'inserter)))
+  (let* ((return (make-instance 'cleavir-bir:returni))
+         (f (make-instance 'cleavir-bir:function ))
+         (end (make-instance 'cleavir-bir:iblock
+                :function f :dynamic-environment f))
+         (inserter (make-instance 'inserter)))
+    (multiple-value-bind (ll alist)
+        (translate-lambda-list (cleavir-ast:lambda-list ast) f)
+      (setf (cleavir-bir:lambda-list f) ll
+            (cleavir-bir:variables f) (apply #'cleavir-set:make-set
+                                             (mapcar #'car alist)))
       (setf (cleavir-bir:end f) end)
       (reset inserter end)
       (terminate inserter return)
@@ -161,7 +165,6 @@
   (assert (context-p context))
   (let* ((next (iblock inserter))
          (nde (cleavir-bir:dynamic-environment next))
-         (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
          (function (function inserter))
          (phis (case context
                  (:effect nil)
@@ -176,6 +179,8 @@
                 :function function :dynamic-environment nde))
          (catch (make-instance 'cleavir-bir:catch
                   :next (list main next)))
+         (contvar (make-instance 'cleavir-bir:variable
+                    :binder catch :rtype :continuation))
          (wcont (make-instance 'cleavir-bir:writevar
                   :outputs (list contvar) :inputs (list catch)))
          (lu (make-instance 'cleavir-bir:jump
@@ -290,7 +295,8 @@
              (make-instance 'cleavir-bir:iblock :function (function inserter)))
            (catch (make-instance 'cleavir-bir:catch
                     :next (list* prefix-iblock tag-iblocks)))
-           (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
+           (contvar (make-instance 'cleavir-bir:variable
+                      :binder catch :rtype :continuation))
            (wcont (make-instance 'cleavir-bir:writevar
                     :outputs (list contvar) :inputs (list catch)))
            ;; This unconditionally jumps to prefix, but it has a different
@@ -403,7 +409,8 @@
                         inserter context)
   (check-type inserter inserter)
   (assert (eq context :effect))
-  (let* ((var (find-or-create-variable (cleavir-ast:lhs-ast ast)))
+  (let* ((var (find-or-create-variable (cleavir-ast:lhs-ast ast)
+                                       (function inserter)))
          (assign (make-instance 'cleavir-bir:writevar :outputs (list var))))
     (adjoin-variable inserter var)
     (before inserter assign)
@@ -477,7 +484,7 @@
                         inserter context)
   (check-type inserter inserter)
   (assert (context-p context))
-  (let* ((var (find-or-create-variable ast))
+  (let* ((var (find-or-create-variable ast (function inserter)))
          (rv (make-instance 'cleavir-bir:readvar :inputs (list var))))
     (adjoin-variable inserter var)
     (prog1 (figure-1-value inserter rv context)

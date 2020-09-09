@@ -6,12 +6,13 @@
            #:disassemble)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:lambda-list)
-  (:export #:iblock #:predecessors #:entrances #:dynamic-environment)
+  (:export #:dynamic-environment #:lexical-bind #:bindings)
+  (:export #:iblock #:predecessors #:entrances)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output
            #:definitions #:uses #:definition #:use)
-  (:export #:variable #:extent #:owner #:writers #:readers #:encloses)
+  (:export #:variable #:extent #:owner #:writers #:readers #:encloses #:binder)
   (:export #:constant #:make-constant #:immediate #:load-time-value
            #:constant-value #:immediate-value #:form #:read-only-p)
   (:export #:instruction #:operation #:computation #:inputs #:outputs

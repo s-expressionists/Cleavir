@@ -14,6 +14,11 @@
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment () ())
 
+;;; Abstract. Something that can bind lexical variables.
+(defclass lexical-bind (dynamic-environment) ())
+;;; Set of variables it binds.
+(defgeneric bindings (lexical-bind))
+
 (defclass datum ()
   ((%rtype :initarg :rtype :reader rtype
            :writer (setf %rtype)
@@ -148,6 +153,8 @@
    ;; Until computed by analyze-variables, it's NIL.
    (%owner :initform nil :accessor owner
            :type (or null function))
+   ;; The LEXICAL-BIND that binds this.
+   (%binder :initarg :binder :reader binder :type lexical-bind)
    (%definitions :initarg :definitions :reader definitions
                  :accessor writers
                  :initform (cleavir-set:empty-set)
@@ -199,7 +206,7 @@
 (defun successors (iblock)
   (next (end iblock)))
 
-(defclass function (dynamic-environment)
+(defclass function (lexical-bind)
   (;; NOTE: Should be a weak set
    (%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
             :initform (cleavir-set:empty-set)
@@ -211,13 +218,17 @@
    (%end :initarg :end :accessor end
          :type iblock)
    ;; FIXME: have multiple entry points instead
-   (%lambda-list :initarg :lambda-list :reader lambda-list)
+   (%lambda-list :initarg :lambda-list :accessor lambda-list)
    ;; The set of variables accessed by this function.
    (%variables :initarg :variables :accessor variables
                :type cleavir-set:set)
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)))
+
+(defmethod bindings ((function function))
+  (cleavir-set:filter (lambda (v) (eq (owner v) function))
+                      (variables function)))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))

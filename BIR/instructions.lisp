@@ -76,13 +76,16 @@
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (dynamic-environment no-input terminator computation)
+(defclass catch (lexical-bind terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
              :type cleavir-set:set)
    (%rtype :initform :continuation :type (eql :continuation))))
+(defmethod bindings ((lb catch))
+  (check-type (use catch) writevar)
+  (cleavir-set:make-set (first (outputs (use catch)))))
 
 ;;; Nonlocal control transfer.
 ;;; First input is the continuation.
