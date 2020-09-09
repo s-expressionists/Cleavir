@@ -160,6 +160,7 @@
   (check-type inserter inserter)
   (assert (context-p context))
   (let* ((next (iblock inserter))
+         (nde (cleavir-bir:dynamic-environment next))
          (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
          (function (function inserter))
          (phis (case context
@@ -172,9 +173,9 @@
                                     :iblock next :rtype rtype)))))
          (main (make-instance 'cleavir-bir:iblock :function function))
          (pre (make-instance 'cleavir-bir:iblock
-                :function function
-                :dynamic-environment (cleavir-bir:dynamic-environment next)))
-         (catch (make-instance 'cleavir-bir:catch :next (list main next)))
+                :function function :dynamic-environment nde))
+         (catch (make-instance 'cleavir-bir:catch
+                  :next (list main next)))
          (wcont (make-instance 'cleavir-bir:writevar
                   :outputs (list contvar) :inputs (list catch)))
          (lu (make-instance 'cleavir-bir:jump
@@ -279,30 +280,32 @@
   (assert (effect-context-p context))
   (multiple-value-bind (prefix tags)
       (parse-tagbody (cleavir-ast:item-asts ast))
-    (let* ((catch (make-instance 'cleavir-bir:catch))
-           (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
-           (wcont (make-instance 'cleavir-bir:writevar
-                    :outputs (list contvar) :inputs (list catch)))
-           (next (iblock inserter))
+    (let* ((next (iblock inserter))
+           (nde (cleavir-bir:dynamic-environment next))
            (tag-iblocks
              (loop repeat (length tags)
                    collect (make-instance 'cleavir-bir:iblock
-                             :function (function inserter)
-                             :dynamic-environment catch)))
+                             :function (function inserter))))
            (prefix-iblock
-             (make-instance 'cleavir-bir:iblock :dynamic-environment catch))
+             (make-instance 'cleavir-bir:iblock :function (function inserter)))
+           (catch (make-instance 'cleavir-bir:catch
+                    :next (list* prefix-iblock tag-iblocks)))
+           (contvar (make-instance 'cleavir-bir:variable :rtype :continuation))
+           (wcont (make-instance 'cleavir-bir:writevar
+                    :outputs (list contvar) :inputs (list catch)))
            ;; This unconditionally jumps to prefix, but it has a different
            ;; dynamic environment, so it's a different block.
            ;; They might be merged later if the tagbody is all local.
            (before
              (make-instance 'cleavir-bir:iblock
-               :function (function inserter)
-               :dynamic-environment (cleavir-bir:dynamic-environment next))))
+               :function (function inserter) :dynamic-environment nde)))
       (adjoin-variable inserter contvar)
-      ;; Set up the tag infos
+      ;; Set up the tag infos and dynamic environments
+      (setf (cleavir-bir:dynamic-environment prefix-iblock) catch)
       (loop for (tag-ast) in tags
             for tag-iblock in tag-iblocks
-            do (setf (go-info tag-ast)
+            do (setf (cleavir-bir:dynamic-environment tag-iblock) catch)
+               (setf (go-info tag-ast)
                      (list catch tag-iblock (function inserter) contvar)))
       ;; Generate code
       (flet ((gen-body (inserter body nextb iblock)
