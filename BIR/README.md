@@ -219,7 +219,7 @@ TODO
 ====
 
   * Several instructions
-    * fdefinition
+    * fdefinition (done)
     * type stuff (the, typeq, typew)
     * unwind-protect... is probably client-dependent like in HIR
     * data structures other than conses
@@ -230,7 +230,7 @@ TODO
   * Direct interpreter, for testing if nothing else
   * Handling literals/constants (pretty much the same issues as HIR)
   * Formal definition, or at least a stricter verifier
-  * Multiple values might need rethinking
+  * Multiple values might need rethinking (probably done)
   * Need to do some more bookkeeping, especially at AST-to-IR time
     when large swathes of instructions can be deleted without various
     backpointers being updated or a note being issued
