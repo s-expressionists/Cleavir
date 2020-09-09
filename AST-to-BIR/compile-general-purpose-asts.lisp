@@ -104,7 +104,7 @@
                                          :dynamic-environment dynenv)))
          (jumps (loop repeat (length branch-asts)
                       collect (make-instance 'cleavir-bir:jump
-                                :outputs phis :next (list next)))))
+                                :outputs (copy-list phis) :next (list next)))))
     (setf (cleavir-bir:inputs next) phis)
     (finalize inserter)
     (loop for ast in branch-asts
