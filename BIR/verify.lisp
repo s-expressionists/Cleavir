@@ -183,8 +183,12 @@ has use-before-define on inputs ~a!"
                (dynamic-environment iblock) *seen-instructions*)))
   ;; Function is the right function
   (assert (eq (function iblock) *verifying-function*))
-  ;; inputs are all phis
-  (assert (every (lambda (i) (typep i 'phi)) (inputs iblock)))
+  ;; inputs are all phis, and all phis have only terminators as definitions
+  (assert (every (lambda (i) (and (typep i 'phi)
+                                  (cleavir-set:every (lambda (inst)
+                                                       (typep inst 'terminator))
+                                                     (definitions i))))
+                 (inputs iblock)))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
     (map-iblock-instructions
