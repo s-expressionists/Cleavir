@@ -76,6 +76,7 @@
 (defun transmit-variables (all-functions)
   (cleavir-set:doset (funct all-functions (values))
     (let ((closed (cleavir-set:filter
+                   'cleavir-set:set
                    (closed-over-predicate funct)
                    (cleavir-bir:variables funct)))
           (encloses (cleavir-bir:encloses funct)))

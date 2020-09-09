@@ -227,12 +227,14 @@
               :type cleavir-set:set)))
 
 (defmethod bindings ((function function))
-  (cleavir-set:filter (lambda (v) (eq (owner v) function))
+  (cleavir-set:filter 'cleavir-set:set
+                      (lambda (v) (eq (owner v) function))
                       (variables function)))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
   (cleavir-set:filter
+   'cleavir-set:set
    (lambda (ib) (not (cleavir-set:empty-set-p (entrances ib))))
    (iblocks function)))
 
@@ -240,5 +242,6 @@
 ;;; by UNWIND instructions.
 (defmethod exits ((function function))
   (cleavir-set:filter
+   'cleavir-set:set
    (lambda (ib) (typep (end ib) 'unwind))
    (iblocks function)))

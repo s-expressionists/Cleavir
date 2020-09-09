@@ -100,10 +100,16 @@
        (multiple-value-bind (,@stores) (nunion ,read ,other)
          ,write))))
 
-(defun filter (f set)
-  (let ((result (empty-set)))
-    (doset (e set result)
-      (when (funcall f e) (nadjoinf result e)))))
+(defun filter (result-type f set)
+  (ecase result-type
+    (set
+     (let ((result (empty-set)))
+       (doset (e set result)
+         (when (funcall f e) (nadjoinf result e)))))
+    (list
+     (let ((result nil))
+       (doset (e set result)
+         (when (funcall f e) (push e result)))))))
 
 (defmethod print-object ((s set) stream)
   (print-unreadable-object (s stream :type t)
