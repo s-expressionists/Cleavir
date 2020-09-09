@@ -178,7 +178,7 @@
          (pre (make-instance 'cleavir-bir:iblock
                 :function function :dynamic-environment nde))
          (catch (make-instance 'cleavir-bir:catch
-                  :next (list main next)))
+                  :next (list next)))
          (contvar (make-instance 'cleavir-bir:variable
                     :binder catch :rtype :continuation))
          (wcont (make-instance 'cleavir-bir:writevar
@@ -192,14 +192,10 @@
     (finalize inserter)
     (reset inserter main)
     (terminate inserter lu)
-    (let ((compiled
-            (compile-ast (cleavir-ast:body-ast ast) inserter context)))
-      (setf (cleavir-bir:inputs lu)
-            (case context
-              (:effect)
-              (:multiple-values (list compiled))
-              (t compiled))))
+    (setf (cleavir-bir:inputs lu)
+          (compile-ast (cleavir-ast:body-ast ast) inserter context))
     (before inserter wcont)
+    (push (iblock inserter) (cleavir-bir:next catch))
     (finalize inserter)
     (reset inserter pre)
     (terminate inserter catch)

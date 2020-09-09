@@ -111,7 +111,7 @@
 ;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
   ((%successor :initform nil :type null)
-   (%next :initarg :next :reader next
+   (%next :initarg :next :accessor next
           ;; A list of iblocks.
           :type list)))
 
