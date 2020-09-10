@@ -61,10 +61,13 @@
 ;; MVALUES is a datum with rtype :multiple-values.
 (defun figure-mvalues (inserter mvalues context)
   (case context
-    (:multiple-values mvalues)
+    (:multiple-values (list mvalues))
     (:effect (values))
     (t
-     (before inserter (cleavir-bir:make-multiple-to-fixed mvalues context)))))
+     (multiple-value-bind (mtf outputs)
+         (cleavir-bir:make-multiple-to-fixed mvalues context)
+       (before inserter mtf)
+       outputs))))
 
 ;; CONTEXT is a fixed-values context.
 (defun figure-n-values (inserter inputs context)

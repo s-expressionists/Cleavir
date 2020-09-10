@@ -378,7 +378,7 @@
     (declare (ignore _))
     (assert (every (lambda (a) (eq (cleavir-bir:rtype a) :object)) argsvs))
     (setf (cleavir-bir:inputs call) (list* calleev argsvs))
-    (list result)))
+    result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
