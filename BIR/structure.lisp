@@ -13,6 +13,10 @@
 
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment () ())
+(defun parent (dynamic-environment)
+  (if (typep dynamic-environment 'function)
+      nil
+      (dynamic-environment (iblock dynamic-environment))))
 
 ;;; Abstract. Something that can bind lexical variables.
 (defclass lexical-bind (dynamic-environment) ())
