@@ -76,7 +76,7 @@
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (lexical-bind terminator computation)
+(defclass catch (no-input lexical-bind terminator computation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)

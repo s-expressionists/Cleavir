@@ -244,9 +244,9 @@
             (terminate inserter u)
             (before inserter rv)
             (setf (cleavir-bir:inputs u)
-                  (list rv
-                        (compile-ast (cleavir-ast:form-ast ast)
-                                     inserter bcontext)))))))
+                  (list* rv
+                         (compile-ast (cleavir-ast:form-ast ast)
+                                      inserter bcontext)))))))
   (no-return context))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
