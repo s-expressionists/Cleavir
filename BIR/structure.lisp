@@ -83,9 +83,12 @@
    ;; The iblock this instruction belongs to.
    (%iblock :initarg :iblock :accessor iblock :type iblock)))
 
-;;; Shortcut to get an instruction's owner.
+;;; Shortcuts to get an instruction's owner
 (defmethod function ((instruction instruction))
   (function (iblock instruction)))
+;;; and dynamic environment.
+(defmethod dynamic-environment ((instruction instruction))
+  (dynamic-environment (iblock instruction)))
 
 ;;; An instruction that outputs a single datum.
 ;;; In this case the instruction is identified with the datum.
