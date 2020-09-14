@@ -208,7 +208,7 @@
                          :accessor dynamic-environment
                          :type dynamic-environment)
    ;; The function this belongs to.
-   (%function :initarg :function :reader function :type function)))
+   (%function :initarg :function :accessor function :type function)))
 
 (defun successors (iblock)
   (next (end iblock)))

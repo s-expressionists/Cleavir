@@ -82,6 +82,10 @@
   `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
     ,(dis-iblock (first (next inst)))))
 
+(defmethod disassemble-instruction ((inst leti))
+  `(,(dis-label inst) ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))
+    ,(dis-iblock (first (next inst)))))
+
 (defmethod disassemble-instruction ((inst eqi))
   `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
     ,@(mapcar #'dis-iblock (next inst))))

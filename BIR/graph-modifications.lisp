@@ -75,6 +75,8 @@
         (old-next (next old))
         (new-next (next new)))
     (clean-up-instruction old)
+    (let ((pred (predecessor old)))
+      (setf (successor pred) new (predecessor new) pred))
     (setf (end ib) new)
     (dolist (n old-next) (cleavir-set:nremovef (predecessors n) ib))
     (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
@@ -136,8 +138,11 @@
   (let* ((ib (iblock inst))
          (new (make-instance 'iblock
                 :function (function ib) :inputs nil
+                :predecessors (cleavir-set:make-set ib)
                 :dynamic-environment (dynamic-environment ib)))
          (new-start (successor inst)))
+    ;; Set the new start to lose its predecessor
+    (setf (predecessor new-start) nil)
     ;; Move the later instructions
     (setf (start new) new-start (end new) (end ib))
     (loop for i = new-start then (successor i)
@@ -148,6 +153,9 @@
                  :iblock ib :inputs () :predecessor inst :unwindp nil
                  :next (list new))))
       (setf (successor inst) new (end ib) new))
+    ;; If the block happens to be the end of its function, adjust
+    (when (eq (end (function ib)) ib)
+      (setf (end (function ib)) new))
     (values ib new)))
 
 (defun reachable-iblocks (function)
