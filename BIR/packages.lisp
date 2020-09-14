@@ -25,7 +25,7 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
-           #:call #:enclose #:code)
+           #:leti #:call #:enclose #:code)
   (:export #:primop-info #:in-rtypes
            #:primop #:vprimop #:nvprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set

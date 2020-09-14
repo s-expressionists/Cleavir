@@ -87,6 +87,12 @@
   (check-type (use catch) writevar)
   (cleavir-set:make-set (first (outputs (use catch)))))
 
+;;; Mark a lexical binding, so that cell extent is obvious.
+(defclass leti (no-input no-output terminator1 lexical-bind operation)
+  ((%bindings :initarg :bindings :reader bindings
+              :initform (cleavir-set:empty-set)
+              :type cleavir-set:set)))
+
 ;;; Nonlocal control transfer.
 ;;; First input is the continuation.
 ;;; Remaining inputs are passed to the destination.
