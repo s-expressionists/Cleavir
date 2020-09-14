@@ -161,7 +161,7 @@
    (%owner :initform nil :accessor owner
            :type (or null function))
    ;; The LEXICAL-BIND that binds this.
-   (%binder :initarg :binder :reader binder :type lexical-bind)
+   (%binder :initarg :binder :accessor binder :type lexical-bind)
    (%definitions :initarg :definitions :reader definitions
                  :accessor writers
                  :initform (cleavir-set:empty-set)
