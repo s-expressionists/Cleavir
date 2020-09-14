@@ -24,5 +24,6 @@
              (code (cleavir-bir:code i)))
          (when (and (lambda-list-inlinable-p (cleavir-bir:lambda-list code))
                     (= (length inlines) 1))
-           (interpolate-function code (first inlines))))))
+           (interpolate-function code (first inlines))
+           (cleavir-bir:refresh-iblocks ir)))))
    ir))

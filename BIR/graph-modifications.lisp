@@ -21,17 +21,34 @@
     (dolist (in (inputs instruction))
       (remove-use in instruction))))
 
+(defgeneric remove-binding (variable binder)
+  (:method (variable binder) (declare (ignore variable binder))))
+(defmethod remove-binding (variable (binder leti))
+  (cleavir-set:nremovef (bindings binder) variable))
+
 ;;; If a variable is no longer referenced by a function, remove it from the
-;;; function's variable set.
+;;; function's variable set. If it's no longer referenced at all, remove it from
+;;; its function, encloses, and binder if possible.
 (defun maybe-clear-variable (variable function)
-  (cleavir-set:doset (r (readers variable))
-    (when (eq (function r) function) (return-from maybe-clear-variable nil)))
-  (cleavir-set:doset (w (writers variable))
-    (when (eq (function w) function) (return-from maybe-clear-variable nil)))
-  (cleavir-set:doset (e (encloses variable))
-    (when (eq (function e) function) (return-from maybe-clear-variable nil)))
-  (cleavir-set:nremovef (variables function) variable)
-  t)
+  (let ((readers (readers variable)) (writers (writers variable))
+        (encloses (encloses variable)))
+    (cond ((and (zerop (cleavir-set:size readers)) (zerop (cleavir-set:size writers)))
+           ;; remove from encloses and functions
+           (cleavir-set:doset (e encloses)
+             (cleavir-set:nremovef (variables (code e)) variable)
+             (cleavir-set:nremovef (variables e) variable))
+           ;; and owner, in case owner happens to not be enclosed
+           (cleavir-set:nremovef (variables (owner variable)) variable)
+           ;; and maybe binder
+           (remove-binding variable (binder variable))
+           t)
+          ((and (cleavir-set:every (lambda (r) (eq (function r) function)) readers)
+                (cleavir-set:every (lambda (w) (eq (function w) function)) writers)
+                (cleavir-set:every (lambda (e) (eq (function e) function)) encloses))
+           (cleavir-set:nremovef (variables function) variable)
+           t)
+          (t nil))))
+
 (defmethod clean-up-instruction progn ((inst readvar))
   (let ((variable (first (inputs inst))))
     (cleavir-set:nremovef (readers variable) inst)
@@ -153,6 +170,10 @@
                  :iblock ib :inputs () :predecessor inst :unwindp nil
                  :next (list new))))
       (setf (successor inst) new (end ib) new))
+    ;; Update the new block's presence in predecessors
+    (dolist (n (next (end new)))
+      (cleavir-set:nremovef (predecessors n) ib)
+      (cleavir-set:nadjoinf (predecessors n) new))
     ;; If the block happens to be the end of its function, adjust
     (when (eq (end (function ib)) ib)
       (setf (end (function ib)) new))

@@ -35,7 +35,7 @@
         ;; Replace the return instruction with a jump
         (cleavir-bir:replace-terminator
          (cleavir-bir:make-instance 'cleavir-bir:jump :unwindp t :inputs () :outputs ()
-                                                      :iblock (cleavir-bir:iblock returni)
+                                                      :iblock interp-end
                                                       :next (list after))
          returni)
         ;; If the interpolated function unwinds to the call function, change it
