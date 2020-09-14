@@ -15,7 +15,6 @@
                     (prog1 ,(if nv-p
                                 '(values)
                                 '(return-1 inserter p context))
-                      (before inserter p)
                       (setf (cleavir-bir:inputs p)
                             (compile-arguments
                              (list ,@(loop for reader in readers
