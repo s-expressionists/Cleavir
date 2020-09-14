@@ -452,7 +452,7 @@
               :type-specifier (cleavir-ast:type-specifier ast))))
     (terminate inserter tq)
     (setf (cleavir-bir:inputs tq)
-          (list (compile-ast (cleavir-ast:form-ast ast) inserter '(:object)))))
+          (compile-ast (cleavir-ast:form-ast ast) inserter '(:object))))
   (values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
