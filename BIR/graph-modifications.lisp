@@ -147,7 +147,7 @@
     (let ((new (make-instance 'jump
                  :iblock ib :inputs () :predecessor inst :unwindp nil
                  :next (list new))))
-      (setf (end ib) new))
+      (setf (successor inst) new (end ib) new))
     (values ib new)))
 
 (defun reachable-iblocks (function)
