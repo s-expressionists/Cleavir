@@ -7,7 +7,7 @@
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:lambda-list)
   (:export #:dynamic-environment #:parent #:lexical-bind #:bindings)
-  (:export #:iblock #:predecessors #:entrances)
+  (:export #:iblock #:predecessors #:entrances #:exits)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output
@@ -31,7 +31,9 @@
   (:export #:map-instructions #:map-instructions-with-owner-from-set
            #:map-iblocks
            #:all-functions
-           #:replace-computation #:delete-computation #:delete-instruction)
+           #:replace-computation #:delete-computation #:delete-instruction
+           #:replace-linear-datum #:replace-terminator #:split-block-after
+           #:move-inputs)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)

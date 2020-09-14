@@ -89,7 +89,7 @@
 
 ;;; Mark a lexical binding, so that cell extent is obvious.
 (defclass leti (no-input no-output terminator1 lexical-bind operation)
-  ((%bindings :initarg :bindings :reader bindings
+  ((%bindings :initarg :bindings :reader accessor
               :initform (cleavir-set:empty-set)
               :type cleavir-set:set)))
 
