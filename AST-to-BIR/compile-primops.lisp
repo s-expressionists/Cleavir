@@ -14,7 +14,7 @@
                   (let ((p (make-instance ',cname :info ',info)))
                     (prog1 ,(if nv-p
                                 '(values)
-                                '(figure-1-value inserter p context))
+                                '(return-1 inserter p context))
                       (before inserter p)
                       (setf (cleavir-bir:inputs p)
                             (compile-arguments
