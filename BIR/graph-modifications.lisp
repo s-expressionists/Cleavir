@@ -19,6 +19,20 @@
 (defmethod add-use ((datum variable) use)
   (cleavir-set:nadjoinf (cleavir-bir:readers datum) use))
 
+(defmethod shared-initialize :before
+    ((inst instruction) slot-names &rest initargs &key inputs &allow-other-keys)
+  (declare (ignore initargs))
+  ;; Maintain use lists
+  (when (or (eq slot-names 't) (member '%inputs slot-names))
+    (when (slot-boundp inst '%inputs)
+      (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
+    (map nil (lambda (inp) (add-use inp inst)) inputs)))
+
+(defmethod (setf inputs) :before (new-inputs (inst instruction))
+  (when (slot-boundp inst '%inputs)
+    (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
+  (map nil (lambda (inp) (add-use inp inst)) new-inputs))
+
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
   (:method-combination progn)

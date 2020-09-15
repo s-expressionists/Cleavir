@@ -70,10 +70,6 @@
         (insert-initial-bindings inserter alist)
         (finalize inserter)
         (setf (cleavir-bir:start f) start (cleavir-bir:inputs start) nil))
-      ;; This is optional, but a lot of stuff needs them
-      ;; and it's a bit less confusing to do them immediately.
-      ;; Could be removed for Efficiency Reasons
-      (cleavir-bir:refresh-local-users f)
       f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
