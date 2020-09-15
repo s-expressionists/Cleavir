@@ -217,10 +217,9 @@
             :type cleavir-set:set)
    (%start :initarg :start :accessor start
            :type iblock)
-   ;; NOTE: Could be a weak reference
-   ;; (for functions that never return)
-   (%end :initarg :end :accessor end
-         :type iblock)
+   ;; Block of the return instruction.
+   ;; If there isn't one, i.e. the function never returns, this is nil.
+   (%end :initarg :end :accessor end :type (or null iblock))
    ;; FIXME: have multiple entry points instead
    (%lambda-list :initarg :lambda-list :accessor lambda-list)
    ;; The set of variables accessed by this function.

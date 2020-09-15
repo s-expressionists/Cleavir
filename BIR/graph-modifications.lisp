@@ -115,6 +115,8 @@
   ;; deleted. Or perhaps that should be handled at a higher level?
   (assert (cleavir-set:empty-set-p (predecessors iblock)))
   (clean-up-iblock iblock)
+  (when (eq iblock (end (function iblock)))
+    (setf (end (function iblock)) nil))
   (let ((successors (successors iblock)))
     (dolist (s successors)
       (cleavir-set:nremovef (predecessors s) iblock)

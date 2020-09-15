@@ -6,8 +6,8 @@
          (call-block (cleavir-bir:iblock call))
          (call-function (cleavir-bir:function call-block))
          (interp-end (cleavir-bir:end interpolated-function))
-         (returni (cleavir-bir:end interp-end))
-         (return-values (first (cleavir-bir:inputs returni)))
+         (returni (when interp-end (cleavir-bir:end interp-end)))
+         (return-values (when interp-end (first (cleavir-bir:inputs returni))))
          (enclose (first (cleavir-bir:inputs call)))
          (arguments (rest (cleavir-bir:inputs call))))
     (check-type enclose cleavir-bir:enclose)
@@ -32,12 +32,15 @@
                    (cleavir-set:nadjoinf (cleavir-bir:bindings leti) v)
                    t))
                (cleavir-bir:variables interpolated-function)))
-        ;; Replace the return instruction with a jump
-        (cleavir-bir:replace-terminator
-         (cleavir-bir:make-instance 'cleavir-bir:jump :unwindp t :inputs () :outputs ()
-                                                      :iblock interp-end
-                                                      :next (list after))
-         returni)
+        ;; Replace the return instruction with a jump if there is one, or else
+        ;; delete AFTER and any later straight line blocks.
+        (if interp-end
+            (cleavir-bir:replace-terminator
+             (make-instance 'cleavir-bir:jump
+               :unwindp t :inputs () :outputs ()
+               :iblock interp-end :next (list after))
+             returni)
+            (cleavir-bir:delete-block after))
         ;; If the interpolated function unwinds to the call function, change it
         ;; to a local unwind.
         (cleavir-set:doset (ib (cleavir-bir:exits interpolated-function))
@@ -51,8 +54,9 @@
                              :unwindp t :next (list dest))))
                   (cleavir-bir:replace-terminator new u)
                   (cleavir-bir:move-inputs new))))))
-        ;; Replace the call-as-datum with the return-values.
-        (cleavir-bir:replace-computation call return-values)
+        (when return-values
+          ;; Replace the call-as-datum with the return-values.
+          (cleavir-bir:replace-computation call return-values))
         ;; Replace the arguments in the interpolated function body with the
         ;; actual argument values
         (mapc #'cleavir-bir:replace-linear-datum arguments lambda-list)
