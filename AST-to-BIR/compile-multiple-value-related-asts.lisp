@@ -22,11 +22,12 @@
   (let* ((next (iblock inserter))
          (before (make-iblock inserter))
          (during (make-iblock inserter))
-         (alloca (make-instance 'cleavir-bir:alloca :next (list during)))
+         (alloca (make-instance 'cleavir-bir:alloca
+                   :rtype :multiple-values :next (list during)))
          (write (make-instance 'cleavir-bir:writetemp))
          (read (make-instance 'cleavir-bir:readtemp :rtype :multiple-values))
-         (jump
-           (make-instance 'cleavir-bir:jump :inputs nil :next (list next))))
+         (jump (make-instance 'cleavir-bir:jump
+                 :unwindp t :inputs nil :next (list next))))
     (setf (cleavir-bir:dynamic-environment during) alloca)
     (finalize inserter)
     (reset inserter during)
