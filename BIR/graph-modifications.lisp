@@ -1,5 +1,10 @@
 (in-package #:cleavir-bir)
 
+(defmethod (setf dynamic-environment) :before
+    ((nde dynamic-environment) (obj iblock))
+  (cleavir-set:nremovef (scope (dynamic-environment obj)) obj)
+  (cleavir-set:nadjoinf (scope nde) obj))
+
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
   (declare (ignore use))
@@ -25,6 +30,7 @@
   (:method-combination progn)
   (:method progn ((ib iblock))
     (cleavir-set:nremovef (iblocks (function ib)) ib)
+    (cleavir-set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
     (map-iblock-instructions #'clean-up-instruction (start ib))))
 
@@ -175,6 +181,8 @@
          (new-start (successor inst)))
     ;; Add the new block to the function
     (cleavir-set:nadjoinf (iblocks function) new)
+    ;; and scope
+    (cleavir-set:nadjoinf (scope (dynamic-environment ib)) new)
     ;; Set the new start to lose its predecessor
     (setf (predecessor new-start) nil)
     ;; Move the later instructions

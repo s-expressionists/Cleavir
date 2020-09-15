@@ -6,7 +6,7 @@
            #:disassemble)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:lambda-list)
-  (:export #:dynamic-environment #:parent #:lexical-bind #:bindings)
+  (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
   (:export #:iblock #:predecessors #:entrances #:exits)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi

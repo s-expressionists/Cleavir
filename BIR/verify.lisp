@@ -204,6 +204,8 @@ has use-before-define on inputs ~a!"
   (assert (typep (end iblock) 'terminator))
   ;; Dynenv is a dynenv (verify type decl)
   (assert (typep (dynamic-environment iblock) 'dynamic-environment))
+  ;; iblock is in its dynenv's scope set
+  (assert (cleavir-set:presentp iblock (scope (dynamic-environment iblock))))
   ;; dynenv is either the function itself or an instruction that
   ;; dominates this block (but see KLUDGE above)
   (assert (or (eq (dynamic-environment iblock) *verifying-function*)

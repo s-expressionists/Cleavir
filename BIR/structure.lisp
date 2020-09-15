@@ -12,7 +12,10 @@
 (defun rtype= (rt1 rt2) (eq rt1 rt2))
 
 ;;; Abstract. Something that can serve as a dynamic environment.
-(defclass dynamic-environment () ())
+(defclass dynamic-environment ()
+  (;; The set of iblocks that have this as their dynamic environment.
+   (%scope :initarg :scope :accessor scope :initform (cleavir-set:empty-set)
+           :type cleavir-set:set)))
 (defun parent (dynamic-environment)
   (if (typep dynamic-environment 'function)
       nil
