@@ -210,7 +210,7 @@
 ;;; make the iblocks field match the actually reachable blocks.
 (defun refresh-local-iblocks (function)
   (check-type function function)
-  (setf (%iblocks function) (reachable-iblocks function)))
+  (setf (iblocks function) (reachable-iblocks function)))
 
 (defun refresh-iblocks (top)
   (refresh-local-iblocks top)

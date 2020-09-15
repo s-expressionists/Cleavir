@@ -20,12 +20,8 @@
 
 (defun compile-m-v-p1-save (ast inserter)
   (let* ((next (iblock inserter))
-         (before
-           (make-instance 'cleavir-bir:iblock
-             :function (function inserter)
-             :dynamic-environment (cleavir-bir:dynamic-environment next)))
-         (during (make-instance 'cleavir-bir:iblock
-                   :function (function inserter)))
+         (before (make-iblock inserter))
+         (during (make-iblock inserter))
          (alloca (make-instance 'cleavir-bir:alloca :next (list during)))
          (write (make-instance 'cleavir-bir:writetemp))
          (read (make-instance 'cleavir-bir:readtemp :rtype :multiple-values))

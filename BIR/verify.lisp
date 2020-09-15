@@ -250,5 +250,4 @@ has use-before-define on inputs ~a!"
                (cleavir-set:nadjoinf reachable iblock)))
         (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
-        #+(or)
         (assert (cleavir-set:set= reachable (iblocks function)))))))

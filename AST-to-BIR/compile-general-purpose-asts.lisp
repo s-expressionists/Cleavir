@@ -53,9 +53,8 @@
 (defmethod compile-function ((ast cleavir-ast:function-ast))
   (let* ((return (make-instance 'cleavir-bir:returni))
          (f (make-instance 'cleavir-bir:function))
-         (end (make-instance 'cleavir-bir:iblock
-                :function f :dynamic-environment f))
-         (inserter (make-instance 'inserter)))
+         (inserter (make-instance 'inserter))
+         (end (make-iblock inserter :function f :dynamic-environment f)))
     (multiple-value-bind (ll alist)
         (translate-lambda-list (cleavir-ast:lambda-list ast) f)
       (setf (cleavir-bir:lambda-list f) ll
@@ -71,7 +70,7 @@
         (insert-initial-bindings inserter alist)
         (finalize inserter)
         (setf (cleavir-bir:start f) start (cleavir-bir:inputs start) nil))
-      ;; These are optional, but a lot of stuff needs them
+      ;; This is optional, but a lot of stuff needs them
       ;; and it's a bit less confusing to do them immediately.
       ;; Could be removed for Efficiency Reasons
       (cleavir-bir:refresh-local-users f)

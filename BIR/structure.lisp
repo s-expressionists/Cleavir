@@ -212,9 +212,9 @@
   (next (end iblock)))
 
 (defclass function (lexical-bind)
-  ((%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
-            :initform (cleavir-set:empty-set)
-            :type cleavir-set:set)
+  ((%iblocks :initarg :iblocks :accessor iblocks
+             :initform (cleavir-set:empty-set)
+             :type cleavir-set:set)
    (%start :initarg :start :accessor start
            :type iblock)
    ;; Block of the return instruction.

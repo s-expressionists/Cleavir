@@ -82,7 +82,7 @@
   (let ((ib
           (make-instance 'cleavir-bir:iblock
             :function function :dynamic-environment dynamic-environment)))
-    (cleavir-set:nset-adjoinf (cleavir-bir:iblocks function) ib)
+    (cleavir-set:nadjoinf (cleavir-bir:iblocks function) ib)
     ib))
 
 (defun adjoin-variable (inserter variable)
