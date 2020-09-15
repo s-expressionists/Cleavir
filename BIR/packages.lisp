@@ -33,7 +33,7 @@
            #:all-functions
            #:replace-computation #:delete-computation #:delete-instruction
            #:replace-linear-datum #:replace-terminator #:split-block-after
-           #:move-inputs)
+           #:move-inputs #:delete-iblock)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)

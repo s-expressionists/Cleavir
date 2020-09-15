@@ -189,7 +189,6 @@
            :type instruction)
    (%end :initarg :end :accessor end
          :type terminator)
-   ;; NOTE: Should be a weak set
    (%predecessors :initarg :predecessors :accessor predecessors
                   :initform (cleavir-set:empty-set)
                   ;; A set of blocks.
@@ -200,7 +199,6 @@
             :type sequence)
    ;; A set of IBLOCKs that enter this function nonlocally
    ;; (i.e. with an UNWIND operation).
-   ;; NOTE: Should be a weak set
    (%entrances :initarg :entrances :accessor entrances
                :initform (cleavir-set:empty-set)
                :type cleavir-set:set)
@@ -214,8 +212,7 @@
   (next (end iblock)))
 
 (defclass function (lexical-bind)
-  (;; NOTE: Should be a weak set
-   (%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
+  ((%iblocks :initarg :iblocks :reader iblocks :accessor %iblocks
             :initform (cleavir-set:empty-set)
             :type cleavir-set:set)
    (%start :initarg :start :accessor start

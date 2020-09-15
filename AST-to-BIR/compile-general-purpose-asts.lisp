@@ -52,7 +52,7 @@
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
   (let* ((return (make-instance 'cleavir-bir:returni))
-         (f (make-instance 'cleavir-bir:function ))
+         (f (make-instance 'cleavir-bir:function))
          (end (make-instance 'cleavir-bir:iblock
                 :function f :dynamic-environment f))
          (inserter (make-instance 'inserter)))
@@ -74,7 +74,6 @@
       ;; These are optional, but a lot of stuff needs them
       ;; and it's a bit less confusing to do them immediately.
       ;; Could be removed for Efficiency Reasons
-      (cleavir-bir:refresh-local-iblocks f)
       (cleavir-bir:refresh-local-users f)
       f)))
 
@@ -86,9 +85,7 @@
   (check-type inserter inserter)
   (assert (context-p context))
   (let* ((next (iblock inserter))
-         (dynenv (cleavir-bir:dynamic-environment next))
-         (pre (make-instance 'cleavir-bir:iblock
-                :function (function inserter) :dynamic-environment dynenv))
+         (pre (make-iblock inserter))
          (effectp (effect-context-p context))
          (phis (cond (effectp nil)
                      ((eq context :multiple-values)
@@ -98,10 +95,7 @@
                               collect (make-instance 'cleavir-bir:phi
                                         :iblock next :rtype rtype)))))
          (branch-iblocks (loop repeat (length branch-asts)
-                               collect (make-instance 'cleavir-bir:iblock
-                                         :function (function inserter)
-                                         :inputs ()
-                                         :dynamic-environment dynenv)))
+                               collect (make-iblock inserter)))
          (jumps (loop repeat (length branch-asts)
                       collect (make-instance 'cleavir-bir:jump
                                 :outputs (copy-list phis) :next (list next)))))
@@ -174,9 +168,8 @@
                  (t (loop for rtype in context
                           collect (make-instance 'cleavir-bir:phi
                                     :iblock next :rtype rtype)))))
-         (main (make-instance 'cleavir-bir:iblock :function function))
-         (pre (make-instance 'cleavir-bir:iblock
-                :function function :dynamic-environment nde))
+         (main (make-iblock inserter))
+         (pre (make-iblock inserter :dynamic-environment nde))
          (catch (make-instance 'cleavir-bir:catch
                   :next (list next)))
          (contvar (make-instance 'cleavir-bir:variable
@@ -209,11 +202,9 @@
   (check-type inserter inserter)
   (let* ((block-ast (cleavir-ast:block-ast ast))
          (iblock (iblock inserter))
-         (new-iblock
-           (make-instance 'cleavir-bir:iblock
-             :function (function inserter)
-             :dynamic-environment (cleavir-bir:dynamic-environment iblock)))
+         (new-iblock (make-iblock inserter))
          (function (function inserter)))
+    (cleavir-bir:delete-iblock iblock) ; unreachable
     (finalize inserter)
     (reset inserter new-iblock)
     (destructuring-bind (catch next bfunction contvar bcontext)
@@ -285,10 +276,8 @@
            (nde (cleavir-bir:dynamic-environment next))
            (tag-iblocks
              (loop repeat (length tags)
-                   collect (make-instance 'cleavir-bir:iblock
-                             :function (function inserter))))
-           (prefix-iblock
-             (make-instance 'cleavir-bir:iblock :function (function inserter)))
+                   collect (make-iblock inserter)))
+           (prefix-iblock (make-iblock inserter))
            (catch (make-instance 'cleavir-bir:catch
                     :next (list* prefix-iblock tag-iblocks)))
            (contvar (make-instance 'cleavir-bir:variable
@@ -298,9 +287,7 @@
            ;; This unconditionally jumps to prefix, but it has a different
            ;; dynamic environment, so it's a different block.
            ;; They might be merged later if the tagbody is all local.
-           (before
-             (make-instance 'cleavir-bir:iblock
-               :function (function inserter) :dynamic-environment nde)))
+           (before (make-iblock inserter :dynamic-environment nde)))
       (adjoin-variable inserter contvar)
       ;; Set up the tag infos and dynamic environments
       (setf (cleavir-bir:dynamic-environment prefix-iblock) catch)
@@ -336,10 +323,13 @@
 ;;; GO-AST
 
 (defmethod compile-ast ((ast cleavir-ast:go-ast) inserter context)
-  (finalize inserter)
   (destructuring-bind (catch next bfunction contvar)
       (go-info (cleavir-ast:tag-ast ast))
-    (let ((function (function inserter)))
+    (let* ((function (function inserter))
+           (old-iblock (iblock inserter))
+           (new-iblock (make-iblock inserter)))
+      (cleavir-bir:delete-iblock old-iblock) ; unreachable
+      (finalize inserter)
       (if (eq function bfunction)
           ;; local
           (before inserter (make-instance 'cleavir-bir:jump
@@ -464,10 +454,8 @@
   (check-type inserter inserter)
   (finalize inserter)
   (let ((next (iblock inserter)))
-    (reset inserter
-           (make-instance 'cleavir-bir:iblock
-             :function (function inserter)
-             :dynamic-environment (cleavir-bir:dynamic-environment next)))
+    (reset inserter (make-iblock inserter))
+    (cleavir-bir:delete-iblock next)
     (terminate inserter (make-instance 'cleavir-bir:unreachable)))
   (no-return context))
 

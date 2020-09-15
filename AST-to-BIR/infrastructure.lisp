@@ -75,6 +75,16 @@
           (cleavir-bir:iblock terminator) i
           (insert-point inserter) terminator)))
 
+(defun make-iblock (inserter
+                    &key (function (function inserter))
+                      (dynamic-environment
+                       (cleavir-bir:dynamic-environment (iblock inserter))))
+  (let ((ib
+          (make-instance 'cleavir-bir:iblock
+            :function function :dynamic-environment dynamic-environment)))
+    (cleavir-set:nset-adjoinf (cleavir-bir:iblocks function) ib)
+    ib))
+
 (defun adjoin-variable (inserter variable)
   (check-type inserter inserter)
   (check-type variable cleavir-bir:variable)

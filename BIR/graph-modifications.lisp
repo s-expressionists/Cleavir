@@ -21,6 +21,13 @@
     (dolist (in (inputs instruction))
       (remove-use in instruction))))
 
+(defgeneric clean-up-iblock (iblock)
+  (:method-combination progn)
+  (:method progn ((ib iblock))
+    (cleavir-set:nremovef (iblocks (function ib)) ib)
+    ;; NOTE: clean-up on the terminator disconnects predecessors
+    (map-iblock-instructions #'clean-up-instruction (start ib))))
+
 (defgeneric remove-binding (variable binder)
   (:method (variable binder) (declare (ignore variable binder))))
 (defmethod remove-binding (variable (binder leti))
@@ -63,6 +70,9 @@
   (cleavir-set:nremovef (encloses (code inst)) inst))
 (defmethod clean-up-instruction progn ((inst unwind))
   (cleavir-set:nremovef (entrances (destination inst)) (iblock inst)))
+(defmethod clean-up-instruction progn ((inst terminator))
+  (let ((ib (iblock inst)))
+    (dolist (n (next inst)) (cleavir-set:nremovef (predecessors n) ib))))
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
@@ -89,13 +99,11 @@
   (check-type old terminator)
   (check-type new terminator)
   (let ((ib (iblock old))
-        (old-next (next old))
         (new-next (next new)))
     (clean-up-instruction old)
     (let ((pred (predecessor old)))
       (setf (successor pred) new (predecessor new) pred))
     (setf (end ib) new)
-    (dolist (n old-next) (cleavir-set:nremovef (predecessors n) ib))
     (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
   (values))
 
@@ -103,11 +111,15 @@
   (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
 (defun delete-iblock (iblock)
+  ;; FIXME: Should note reasons to the user if nontrivial code is being
+  ;; deleted. Or perhaps that should be handled at a higher level?
   (assert (cleavir-set:empty-set-p (predecessors iblock)))
+  (clean-up-iblock iblock)
   (let ((successors (successors iblock)))
-    (map-iblock-instructions #'clean-up-instruction (start iblock))
     (dolist (s successors)
-      (cleavir-set:nremovef (predecessors s) iblock))))
+      (cleavir-set:nremovef (predecessors s) iblock)
+      (when (cleavir-set:empty-set-p (predecessors s))
+        (delete-iblock s)))))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
@@ -153,11 +165,14 @@
   (check-type inst (and instruction (not terminator)))
   ;; the new block is the block after, because there's a little less to update.
   (let* ((ib (iblock inst))
+         (function (function ib))
          (new (make-instance 'iblock
                 :function (function ib) :inputs nil
                 :predecessors (cleavir-set:make-set ib)
                 :dynamic-environment (dynamic-environment ib)))
          (new-start (successor inst)))
+    ;; Add the new block to the function
+    (cleavir-set:nadjoinf (iblocks function) new)
     ;; Set the new start to lose its predecessor
     (setf (predecessor new-start) nil)
     ;; Move the later instructions
@@ -175,8 +190,8 @@
       (cleavir-set:nremovef (predecessors n) ib)
       (cleavir-set:nadjoinf (predecessors n) new))
     ;; If the block happens to be the end of its function, adjust
-    (when (eq (end (function ib)) ib)
-      (setf (end (function ib)) new))
+    (when (eq (end function) ib)
+      (setf (end function) new))
     (values ib new)))
 
 (defun reachable-iblocks (function)
