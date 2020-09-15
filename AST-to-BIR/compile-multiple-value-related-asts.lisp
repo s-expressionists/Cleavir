@@ -27,7 +27,7 @@
          (write (make-instance 'cleavir-bir:writetemp))
          (read (make-instance 'cleavir-bir:readtemp :rtype :multiple-values))
          (jump (make-instance 'cleavir-bir:jump
-                 :unwindp t :inputs nil :next (list next))))
+                 :unwindp t :inputs nil :outputs nil :next (list next))))
     (setf (cleavir-bir:dynamic-environment during) alloca)
     (finalize inserter)
     (reset inserter during)
@@ -39,9 +39,9 @@
     (reset inserter before)
     (terminate inserter alloca)
     (setf (cleavir-bir:inputs write)
-          (list (compile-ast (cleavir-ast:first-form-ast ast)
-                             inserter :multiple-values)))
-    read))
+          (compile-ast (cleavir-ast:first-form-ast ast)
+                       inserter :multiple-values))
+    (list read)))
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-prog1-ast)
                         inserter context)
