@@ -326,18 +326,19 @@
            (new-iblock (make-iblock inserter)))
       (cleavir-bir:delete-iblock old-iblock) ; unreachable
       (finalize inserter)
+      (reset inserter new-iblock)
       (if (eq function bfunction)
           ;; local
-          (before inserter (make-instance 'cleavir-bir:jump
-                             :unwindp t :inputs () :outputs ()
-                             :next (list next)))
+          (terminate inserter (make-instance 'cleavir-bir:jump
+                                :unwindp t :inputs () :outputs ()
+                                :next (list next)))
           ;; nonlocal
           (let ((rv (make-instance 'cleavir-bir:readvar
                       :rtype :continuation :inputs (list contvar))))
             (adjoin-variable inserter contvar)
-            (before inserter (make-instance 'cleavir-bir:unwind
-                               :inputs (list rv) :outputs ()
-                               :catch catch :destination (list next)))
+            (terminate inserter (make-instance 'cleavir-bir:unwind
+                                  :inputs (list rv) :outputs ()
+                                  :catch catch :destination (list next)))
             (before inserter rv)))))
   (no-return context))
 
