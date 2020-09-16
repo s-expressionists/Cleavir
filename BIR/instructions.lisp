@@ -80,8 +80,8 @@
              ;; A set of corresponding UNWINDs
              :type cleavir-set:set)
    (%rtype :initform :continuation :type (eql :continuation))))
-(defmethod bindings ((lb catch))
-  (check-type (use catch) writevar)
+(defmethod bindings ((catch catch))
+  (assert (typep (use catch) 'writevar))
   (cleavir-set:make-set (first (outputs (use catch)))))
 
 ;;; Mark a lexical binding, so that cell extent is obvious.
