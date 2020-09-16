@@ -223,6 +223,9 @@ has use-before-define on inputs ~a!"
   (let ((*verifying-iblock* iblock))
     (map-iblock-instructions
      (lambda (i)
+       ;; Ensure non-end instructions are non-terminator instructions
+       (unless (eq i (end iblock))
+         (assert (typep i '(and instruction (not terminator)))))
        (verify i)
        (cleavir-set:nadjoinf *seen-instructions* i))
      (start iblock))))
