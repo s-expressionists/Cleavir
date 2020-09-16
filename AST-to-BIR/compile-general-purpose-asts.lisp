@@ -444,6 +444,63 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; TYPEW-AST
+
+(defmethod compile-test-ast ((ast cleavir-ast:typew-ast) inserter successors)
+  (check-type inserter inserter)
+  (assert (= (length successors) 2))
+  (let* ((l-choke (make-iblock inserter))
+         (r-choke (make-iblock inserter))
+         (pre (make-iblock inserter))
+         (real-test (compile-ast (cleavir-ast:test-ast ast)
+                                 inserter (list l-choke r-choke))))
+    (reset inserter l-choke)
+    (terminate inserter (make-instance 'cleavir-bir:choke
+                          :next (list (first successors))))
+    (finalize inserter)
+    (reset inserter r-choke)
+    (terminate inserter (make-instance 'cleavir-bir:choke
+                          :next (list (second successors))))
+    (finalize inserter)
+    (reset inserter pre)
+    (let ((typew (make-instance 'cleavir-bir:typew
+                   :ctype (cleavir-ast:ctype ast)
+                   :next (list (first successors) (second successors)
+                               real-test))))
+      (terminate inserter typew)
+      (setf (cleavir-bir:inputs typew)
+            (compile-ast (cleavir-ast:form-ast ast) inserter '(:object)))))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; THE-TYPEW-AST
+
+(defmethod compile-ast ((ast cleavir-ast:the-typew-ast) inserter context)
+  ;; if the value of the-typew is used again, we'd have to introduce a variable,
+  ;; since the form's value is used twice (as an input to typew, and as the
+  ;; result of the-typew). But this is unlikely with the basic usage of using
+  ;; the-typew in concert with multiple-value-extract. So we punt.
+  (assert (effect-context-p context))
+  (let* ((current (iblock inserter))
+         (final-else-iblock (make-iblock inserter))
+         (else-inserter (make-instance 'inserter :iblock final-else-iblock)))
+    (terminate else-inserter (make-instance 'cleavir-bir:unreachable))
+    (compile-ast (cleavir-ast:else-ast ast) else-inserter :effect)
+    (finalize else-inserter)
+    (let ((typew (make-instance 'cleavir-bir:typew
+                   :ctype (cleavir-ast:ctype ast)
+                   :next (list current (iblock else-inserter) current)))
+          (pre (make-iblock inserter)))
+      (finalize inserter)
+      (reset inserter pre)
+      (terminate inserter typew)
+      (setf (cleavir-bir:inputs typew)
+            (compile-ast (cleavir-ast:form-ast ast) inserter '(:object)))))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; UNREACHABLE-AST
 
 (defmethod compile-ast ((ast cleavir-ast:unreachable-ast)

@@ -113,6 +113,12 @@
 (defclass typeq (one-input no-output terminator operation)
   ((%type-specifier :initarg :type-specifier :reader type-specifier)))
 
+(defclass typew (one-input no-output terminator operation)
+  ((%ctype :initarg :ctype :reader ctype)))
+
+;;; Used to indicate to type inference not to continue along a path.
+(defclass choke (no-input no-output terminator1 operation) ())
+
 (defclass case (one-input no-output terminator operation)
   ((%comparees :initarg :comparees :reader comparees)))
 

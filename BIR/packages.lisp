@@ -22,7 +22,7 @@
   (:export #:multiple-to-fixed #:fixed-to-multiple #:make-multiple-to-fixed
            #:accessvar #:writevar #:readvar
            #:returni #:unreachable #:eqi #:jump #:unwindp
-           #:typeq #:type-specifier
+           #:typeq #:type-specifier #:typew #:ctype #:choke
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
