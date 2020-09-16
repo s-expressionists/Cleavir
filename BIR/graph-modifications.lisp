@@ -119,11 +119,15 @@
   (check-type old terminator)
   (check-type new terminator)
   (let ((ib (iblock old))
-        (new-next (next new)))
+        (new-next (next new))
+        (pred (predecessor old)))
     (clean-up-instruction old)
-    (let ((pred (predecessor old)))
-      (setf (successor pred) new (predecessor new) pred))
-    (setf (end ib) new)
+    (if pred
+        (setf (successor pred) new)
+        ;; this block has only one instruction - the terminator.
+        (setf (start ib) new))
+    (setf (predecessor new) pred
+          (end ib) new)
     (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
   (values))
 
@@ -164,9 +168,10 @@
   (check-type new linear-datum)
   (check-type old linear-datum)
   (assert (not (slot-boundp new '%use)))
-  (setf (%use new) (%use old))
-  (replace-input new old (%use old))
-  (slot-makunbound old '%use)
+  (when (slot-boundp old '%use)
+    (setf (%use new) (%use old))
+    (replace-input new old (%use old))
+    (slot-makunbound old '%use))
   (values))
 
 ;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
