@@ -33,7 +33,7 @@
       (unless (symbolp name)
         (error 'block-name-must-be-a-symbol :cst name-cst))
       (let* ((ast (cleavir-ast:make-block-ast
-                   nil :origin origin))
+                   nil :name name :origin origin))
              (new-env (cleavir-env:add-block env name ast)))
         (setf (cleavir-ast:body-ast ast)
               (process-progn (convert-sequence body-cst new-env system)

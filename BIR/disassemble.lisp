@@ -14,11 +14,12 @@
 (defvar *disassemble-nextn*)
 (defvar *disassemble-ids*)
 
-(defun dis-id (value)
-  (or (gethash value *disassemble-ids*)
-      (setf (gethash value *disassemble-ids*)
-            (prog1 *disassemble-nextn*
-              (incf *disassemble-nextn*)))))
+(defun dis-datum (datum)
+  (or (gethash datum *disassemble-ids*)
+      (setf (gethash datum *disassemble-ids*)
+            (or (name datum)
+                (prog1 *disassemble-nextn*
+                  (incf *disassemble-nextn*))))))
 
 (defun dis-iblock (iblock)
   (or (gethash iblock *disassemble-vars*)
@@ -27,8 +28,9 @@
 (defun dis-var (variable)
   (or (gethash variable *disassemble-vars*)
       (setf (gethash variable *disassemble-vars*)
-            (prog1 (make-symbol (write-to-string *disassemble-nextv*))
-              (incf *disassemble-nextv*)))))
+            (or (name variable)
+                (prog1 (make-symbol (write-to-string *disassemble-nextv*))
+                  (incf *disassemble-nextv*))))))
 
 (defgeneric dis-label (instruction))
 (defmethod dis-label ((instruction instruction))
@@ -36,7 +38,7 @@
 
 (defgeneric disassemble-datum (value))
 
-(defmethod disassemble-datum ((value linear-datum)) (dis-id value))
+(defmethod disassemble-datum ((value linear-datum)) (dis-datum value))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
 (defmethod disassemble-datum ((value load-time-value))
   (if (and (read-only-p value) (constantp (form value)))

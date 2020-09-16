@@ -34,6 +34,7 @@
    (or (gethash lexical-ast *variables*)
        (setf (gethash lexical-ast *variables*)
              (make-instance 'cleavir-bir:variable
+               :name (cleavir-ast:name lexical-ast)
                :binder binder :rtype :object)))
    binder))
 
@@ -166,6 +167,14 @@
 ;;; Returns a list of data.
 ;;; If multiple-values, a one element list with an element that's a datum
 ;;; with rtype = :multiple-values.
-(defgeneric compile-ast (ast inserter rtype))
+(defgeneric compile-ast (ast inserter rtype)
+  (:method ((ast cleavir-ast:ast) inserter rtype) :around
+    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
+          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
+      (call-next-method))))
 
-(defgeneric compile-test-ast (ast inserter next))
+(defgeneric compile-test-ast (ast inserter next)
+  (:method ((ast cleavir-ast:ast) inserter next) :around
+    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
+          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
+      (call-next-method))))

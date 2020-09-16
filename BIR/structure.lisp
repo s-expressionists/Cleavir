@@ -27,7 +27,9 @@
 (defgeneric bindings (lexical-bind))
 
 (defclass datum ()
-  ((%rtype :initarg :rtype :reader rtype
+  (;; A name, for debugging/display/etc. NIL means no name.
+   (%name :initarg :name :initform nil :reader name :type (or symbol null))
+   (%rtype :initarg :rtype :reader rtype
            :writer (setf %rtype)
            :type rtype)))
 
@@ -64,6 +66,14 @@
    (%read-only-p :initarg :read-only-p :reader read-only-p)
    (%rtype :initform :object)))
 
+;;; These variables are used for defaulting the origin and policy.
+;;; If they are not bound it should still be possible to make instructions,
+;;; however; default values are NIL. (TODO: Is that right for policy?)
+(defvar *policy*)
+(defvar *origin*)
+(defun current-policy () (if (boundp '*policy*) *policy* nil))
+(defun current-origin () (if (boundp '*origin*) *origin* nil))
+
 ;;; An instruction is something to be done.
 ;;; All instructions have sequences of inputs and outputs.
 ;;; Inputs are mutable but outputs are not.
@@ -84,7 +94,9 @@
             ;; Sequence of DATA.
             :type sequence)
    ;; The iblock this instruction belongs to.
-   (%iblock :initarg :iblock :accessor iblock :type iblock)))
+   (%iblock :initarg :iblock :accessor iblock :type iblock)
+   (%policy :initform (current-policy) :initarg :policy :reader policy)
+   (%origin :initform (current-origin) :initarg :origin :reader origin)))
 
 ;;; Shortcuts to get an instruction's owner
 (defmethod function ((instruction instruction))

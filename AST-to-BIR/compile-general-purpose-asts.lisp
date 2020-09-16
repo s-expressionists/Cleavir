@@ -168,6 +168,7 @@
          (catch (make-instance 'cleavir-bir:catch
                   :next (list next)))
          (contvar (make-instance 'cleavir-bir:variable
+                    :name (cleavir-ast:name ast)
                     :binder catch :rtype :continuation))
          (wcont (make-instance 'cleavir-bir:writevar
                   :outputs (list contvar) :inputs (list catch)))

@@ -10,7 +10,7 @@
   (:export #:iblock #:predecessors #:entrances #:exits)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
-           #:output
+           #:output #:name
            #:definitions #:uses #:definition #:use)
   (:export #:variable #:extent #:owner #:writers #:readers #:encloses #:binder)
   (:export #:constant #:make-constant #:immediate #:load-time-value
@@ -18,6 +18,7 @@
   (:export #:instruction #:operation #:computation #:inputs #:outputs
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next)
+  (:export #:*origin* #:*policy*)
   (:export #:multiple-to-fixed #:fixed-to-multiple #:make-multiple-to-fixed
            #:accessvar #:writevar #:readvar
            #:returni #:unreachable #:eqi #:jump #:unwindp

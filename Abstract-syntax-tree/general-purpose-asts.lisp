@@ -505,14 +505,17 @@
 ;;; Class BLOCK-AST.
 
 (defclass block-ast (ast)
-  ((%body-ast :initarg :body-ast :accessor body-ast)))
+  ((%body-ast :initarg :body-ast :accessor body-ast)
+   ;; Original name of the block, for debugging etc.
+   (%name :initarg :name :reader name)))
 
-(defun make-block-ast (body-ast &key origin (policy *policy*))
+(defun make-block-ast (body-ast &key name origin (policy *policy*))
   (make-instance 'block-ast
-    :origin origin :policy policy
+    :origin origin :policy policy :name name
     :body-ast body-ast))
   
 (cleavir-io:define-save-info block-ast
+  (:name name)
   (:body-ast body-ast))
 
 (defmethod children ((ast block-ast))
