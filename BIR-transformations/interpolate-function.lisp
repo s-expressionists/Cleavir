@@ -18,7 +18,6 @@
       ;; BEFORE is now a block that jumps with no arguments to AFTER.
       ;; Change it to a leti into the interpolated function's start block.
       (let ((leti (make-instance 'cleavir-bir:leti
-                    :iblock before
                     :next (list (cleavir-bir:start interpolated-function)))))
         (cleavir-bir:replace-terminator
          leti
@@ -38,7 +37,7 @@
             (cleavir-bir:replace-terminator
              (make-instance 'cleavir-bir:jump
                :unwindp t :inputs () :outputs ()
-               :iblock interp-end :next (list after))
+               :next (list after))
              returni)
             (cleavir-bir:delete-iblock after))
         ;; If the interpolated function unwinds to the call function, change it

@@ -65,7 +65,9 @@
              (cleavir-set:nremovef (variables (code e)) variable)
              (cleavir-set:nremovef (variables e) variable))
            ;; and owner, in case owner happens to not be enclosed
-           (cleavir-set:nremovef (variables (owner variable)) variable)
+           (let ((owner (owner variable)))
+             (when owner
+               (cleavir-set:nremovef (variables (owner variable)) variable)))
            ;; and maybe binder
            (remove-binding variable (binder variable))
            t)
@@ -127,7 +129,8 @@
         ;; this block has only one instruction - the terminator.
         (setf (start ib) new))
     (setf (predecessor new) pred
-          (end ib) new)
+          (end ib) new
+          (iblock new) ib)
     (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
   (values))
 

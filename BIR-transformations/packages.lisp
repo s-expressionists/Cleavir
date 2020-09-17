@@ -3,4 +3,6 @@
 (defpackage #:cleavir-bir-transformations
   (:use #:cl)
   (:export #:process-captured-variables)
-  (:export #:delete-temporary-variables))
+  (:export #:delete-temporary-variables)
+  (:export #:inline-functions)
+  (:export #:eliminate-catches))
