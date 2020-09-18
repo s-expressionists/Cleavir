@@ -133,8 +133,11 @@ has use-before-define on inputs ~a!"
                   (rtype (first (outputs wv))))))
 
 (defmethod verify progn ((rv readvar))
-  ;; match types
-  (assert (rtype= (rtype rv) (rtype (first (inputs rv))))))
+  (let ((var (first (inputs rv))))
+    ;; match types
+    (assert (rtype= (rtype rv) (rtype var)))
+    ;; make sure something writes the variable
+    (assert (not (cleavir-set:empty-set-p (definitions var))))))
 
 (defmethod verify progn ((call call))
   (assert (> (length (inputs call)) 0))

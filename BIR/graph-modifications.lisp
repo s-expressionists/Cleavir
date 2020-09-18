@@ -67,7 +67,7 @@
 (defmethod (setf outputs) :before (new-outputs (inst operation))
   (when (slot-boundp inst '%outputs)
     (map nil (lambda (outp) (remove-definition outp inst)) (outputs inst)))
-  (map nil (lambda (outp) (add-definition outp inst)) outputs))
+  (map nil (lambda (outp) (add-definition outp inst)) new-outputs))
 
 ;;; Control flow modification
 
@@ -156,13 +156,14 @@
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))
-  (if (typep instruction 'computation)
-      (assert (unused-p instruction))
-      (assert (cleavir-set:every (lambda (o)
-                                   (or (not (ssa-p o)) (unused-p o)))
-                                 (outputs instruction))))
+  (typecase instruction
+    (computation (assert (unused-p instruction)))
+    (writevar ; special cased because deleting variables is different
+     nil)
+    (operation
+     (assert (every (lambda (o) (or (not (ssa-p o)) (unused-p o)))
+                    (outputs instruction)))))
   (clean-up-instruction instruction)
-  ;; Delete from inputs.
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
