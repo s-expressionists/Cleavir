@@ -33,6 +33,11 @@
            :writer (setf %rtype)
            :type rtype)))
 
+(defmethod print-object ((o datum) stream)
+  (print-unreadable-object (o stream :type t)
+    (let ((name (name o)))
+      (when name (write name :stream stream)))))
+
 (defgeneric definitions (datum))
 (defgeneric uses (datum))
 
@@ -60,7 +65,9 @@
 
 ;;; TODO: These are bad, but AST changes will be required to fix it.
 (defclass immediate (value transfer)
-  ((%value :initarg :value :reader immediate-value)))
+  ((%value :initarg :value :reader immediate-value)
+   ;; dicey
+   (%rtype :initform :object)))
 (defclass load-time-value (value transfer)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
@@ -222,6 +229,9 @@
                          :type dynamic-environment)
    ;; The function this belongs to.
    (%function :initarg :function :accessor function :type function)))
+
+(defun iblock-started-p (iblock)
+  (slot-boundp iblock '%start))
 
 (defun successors (iblock)
   (next (end iblock)))

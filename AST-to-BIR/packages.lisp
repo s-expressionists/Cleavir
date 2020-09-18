@@ -3,5 +3,6 @@
 (defpackage #:cleavir-ast-to-bir
   (:use #:cl)
   (:shadow #:function)
-  (:export #:compile-toplevel #:compile-function #:compile-ast)
+  (:export #:compile-toplevel #:compile-function
+           #:compile-ast #:compile-test-ast)
   (:export #:return-1))

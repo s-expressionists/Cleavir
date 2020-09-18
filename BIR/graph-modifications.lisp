@@ -37,8 +37,9 @@
 (defgeneric clean-up-instruction (instruction)
   (:method-combination progn)
   (:method progn ((instruction instruction))
-    (dolist (in (inputs instruction))
-      (remove-use in instruction))))
+    (when (slot-boundp instruction '%inputs)
+      (dolist (in (inputs instruction))
+        (remove-use in instruction)))))
 
 (defgeneric clean-up-iblock (iblock)
   (:method-combination progn)

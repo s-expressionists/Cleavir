@@ -152,6 +152,7 @@ has use-before-define on inputs ~a!"
   ;; Check that the normal next has this dynamic environment
   (assert (eq (dynamic-environment (first (next c))) c))
   ;; Check that the abnormal nexts have this block's dynenv
+  #+(or) ; only valid for block, not tagbody
   (loop with de = (dynamic-environment *verifying-iblock*)
         for n in (rest (next c))
         do (assert (eq (dynamic-environment n) de))))
@@ -239,16 +240,15 @@ has use-before-define on inputs ~a!"
         (*seen-next* (cleavir-set:empty-set)))
     ;; start is an iblock (verify type decl)
     (assert (typep start 'iblock))
-    ;; end is an iblock (verify type decl)
-    (assert (typep end 'iblock))
+    ;; end is an iblock or nil (verify type decl)
+    (assert (typep end '(or iblock null)))
     ;; End of the end block is a return instruction
-    ;; (NOTE: If the end block can be made into a weak reference
-    ;;  this would obviously have to change a bit)
-    (assert (and (slot-boundp end '%end) (typep (end end) 'returni)))
+    (when end
+      (assert (and (slot-boundp end '%end) (typep (end end) 'returni))))
     (let ((reachable (cleavir-set:empty-set)))
       (flet ((iblock-verifier (iblock)
                (verify iblock)
-               ;; A function has only one return instruction
+               ;; A function has at most one return instruction
                (assert (if (eq iblock end)
                            t
                            (not (typep (end iblock) 'returni))))

@@ -129,15 +129,14 @@
 ;;; Reverse of the above
 (defclass multiple-to-fixed (one-input operation) ())
 
-;;; Given a linear-datum and a list of rtypes, return two values:
-;;; A new multiple-to-fixed, and and a sequence of its outputs.
-;;; This is necessary because definers and outputs are both immutable.
-(defun make-multiple-to-fixed (input rtypes)
+;;; Given a linear-datum and a nonnegative integer, return two values:
+;;; A new multiple-to-fixed, and a sequence of its outputs of the specified
+;;; length. This is necessary because definers and outputs are both immutable.
+(defun make-multiple-to-fixed (input n)
   (let* ((mtf (make-instance 'multiple-to-fixed :inputs (list input)))
-         (outputs
-           (mapcar (lambda (rt) (make-instance 'output
-                                  :definition mtf :rtype rt))
-                   rtypes)))
+         (outputs (loop repeat n
+                        collect (make-instance 'output
+                                  :definition mtf :rtype :object))))
     (setf (%outputs mtf) outputs)
     (values mtf outputs)))
 

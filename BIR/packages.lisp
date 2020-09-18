@@ -7,7 +7,7 @@
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:lambda-list)
   (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
-  (:export #:iblock #:predecessors #:entrances #:exits)
+  (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output #:name
@@ -20,7 +20,7 @@
            #:successor #:predecessor #:next)
   (:export #:*origin* #:*policy*)
   (:export #:multiple-to-fixed #:fixed-to-multiple #:make-multiple-to-fixed
-           #:accessvar #:writevar #:readvar
+           #:accessvar #:writevar #:readvar #:cast
            #:returni #:unreachable #:eqi #:jump #:unwindp
            #:typeq #:type-specifier #:typew #:ctype #:choke
            #:case #:comparees

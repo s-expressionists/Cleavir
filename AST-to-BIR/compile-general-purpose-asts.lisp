@@ -295,12 +295,20 @@
       ;; Generate code
       (flet ((gen-body (inserter body nextb iblock)
                (let ((term (make-instance 'cleavir-bir:jump
-                             :inputs nil :next (list nextb)
-                             :unwindp (eq nextb next))))
+                             :inputs nil :outputs nil :next (list nextb)
+                             :unwindp (eq nextb next)))
+                     (final-iblock (make-iblock inserter)))
                  (finalize inserter)
-                 (reset inserter iblock)
+                 (reset inserter final-iblock)
                  (terminate inserter term)
-                 (compile-sequence-for-effect body inserter))))
+                 (compile-sequence-for-effect body inserter)
+                 (let ((start-iblock (iblock inserter)))
+                   (finalize inserter)
+                   (reset inserter iblock)
+                   (terminate inserter
+                              (make-instance 'cleavir-bir:jump
+                                :inputs nil :outputs nil
+                                :next (list start-iblock) :unwindp nil))))))
         (loop with nextb = next
               for (tag-ast . body) in (reverse tags)
               for tag-iblock in (reverse tag-iblocks)

@@ -132,12 +132,12 @@
 ;;; This is used internally in ast-to-hir for when a form
 ;;; that was compiled in a value context never returns, e.g. due to an
 ;;; unreachable or return-from.
-(defclass dummy (cleavir-bir:datum) ())
+(defclass dummy (cleavir-bir:linear-datum) ())
 
 (defun no-return (context)
   (if (effect-context-p context)
       (values)
-      (make-instance 'dummy)))
+      (list (make-instance 'dummy))))
 
 ;;; A context is either:
 ;;; a sequence of rtypes, indicating values to be returned, or
