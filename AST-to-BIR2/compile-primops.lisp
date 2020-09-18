@@ -2,7 +2,7 @@
 
 (macrolet ((defprimop (primop ast &rest readers)
              (let* ((info (cleavir-bir:primop-info primop))
-                    (nv-p (null (cleavir-bir:rtype info)))
+                    (nv-p (null (cleavir-bir:out-rtypes info)))
                     (cname
                       (if nv-p 'cleavir-bir:nvprimop 'cleavir-bir:vprimop))
                     (form
