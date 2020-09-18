@@ -164,7 +164,8 @@
   ((%next :type (cons iblock null))))
 
 ;;; An argument to a function.
-(defclass argument (value transfer) ())
+(defclass argument (value transfer)
+  ((%rtype :initarg :rtype :initform :object :reader rtype)))
 
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
