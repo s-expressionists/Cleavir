@@ -125,7 +125,7 @@
                  phis)
                ;; Dump everything into multiple-values.
                (let ((phi (make-instance 'cleavir-bir:phi
-                            :iblock mergeb :rtype :object)))
+                            :iblock mergeb :rtype :multiple-values)))
                  (loop for (ins ib rv) in map
                        do (terminate
                            ins
