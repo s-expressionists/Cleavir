@@ -17,7 +17,8 @@
            #:constant-value #:immediate-value #:form #:read-only-p)
   (:export #:instruction #:operation #:computation #:inputs #:outputs
            #:terminator #:terminator0 #:terminator1
-           #:successor #:predecessor #:next)
+           #:successor #:predecessor #:next
+           #:origin #:policy)
   (:export #:*origin* #:*policy*)
   (:export #:multiple-to-fixed #:fixed-to-multiple
            #:accessvar #:writevar #:readvar #:cast
