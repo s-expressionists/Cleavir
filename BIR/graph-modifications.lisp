@@ -5,6 +5,8 @@
   (cleavir-set:nremovef (scope (dynamic-environment obj)) obj)
   (cleavir-set:nadjoinf (scope nde) obj))
 
+;;; Maintaining use and definition sets
+
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
   (declare (ignore use))
@@ -22,7 +24,7 @@
 (defmethod shared-initialize :before
     ((inst instruction) slot-names &rest initargs &key inputs &allow-other-keys)
   (declare (ignore initargs))
-  ;; Maintain use lists
+  ;; Maintain uses
   (when (or (eq slot-names 't) (member '%inputs slot-names))
     (when (slot-boundp inst '%inputs)
       (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
@@ -32,6 +34,60 @@
   (when (slot-boundp inst '%inputs)
     (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
   (map nil (lambda (inp) (add-use inp inst)) new-inputs))
+
+;;; Mark all the inputs of an instruction as being used by that instruction.
+;;; This is useful when an instruction is deleted but its inputs maintained.
+(defun move-inputs (inst)
+  (check-type inst instruction)
+  (dolist (input (inputs inst))
+    (assert (not (slot-boundp input '%use)))
+    (setf (%use input) inst))
+  (values))
+
+(defgeneric remove-definition (datum definition)
+  (:method ((datum datum) (definition instruction))))
+(defmethod remove-definition ((datum output) (definition instruction))
+  (slot-makunbound datum '%definition))
+
+(defgeneric add-definition (datum definition)
+  (:method ((datum datum) (definition instruction))))
+(defmethod add-definition ((datum output) (definition instruction))
+  (assert (not (slot-boundp datum '%definition)))
+  (setf (%definition datum) definition))
+
+(defmethod shared-initialize :before
+    ((inst operation) slot-names &rest initargs &key outputs &allow-other-keys)
+  (declare (ignore initargs))
+  ;; Maintain use lists
+  (when (or (eq slot-names 't) (member '%outputs slot-names))
+    (when (slot-boundp inst '%outputs)
+      (map nil (lambda (outp) (remove-definition outp inst)) (outputs inst)))
+    (map nil (lambda (outp) (add-definition outp inst)) outputs)))
+
+(defmethod (setf outputs) :before (new-outputs (inst operation))
+  (when (slot-boundp inst '%outputs)
+    (map nil (lambda (outp) (remove-definition outp inst)) (outputs inst)))
+  (map nil (lambda (outp) (add-definition outp inst)) outputs))
+
+;;; Control flow modification
+
+(defun insert-instruction-before (new existing)
+  (let ((pred (predecessor existing))
+        (ib (iblock existing)))
+    (setf (predecessor existing) new
+          (successor new) existing (predecessor new) pred
+          (iblock new) ib)
+    (if pred
+        (setf (successor pred) new)
+        (setf (start ib) new)))
+  (values))
+
+(defun insert-instruction-after (new existing)
+  (check-type existing (and instruction (not terminator)))
+  (let ((succ (successor existing)))
+    (setf (predecessor succ) new (successor existing) new
+          (predecessor new) existing (successor new) succ))
+  (values))
 
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
@@ -99,9 +155,12 @@
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
-  (check-type instruction (not terminator))
-  (assert (or (typep instruction '(not computation))
-              (not (slot-boundp instruction '%use))))
+  (check-type instruction (and instruction (not terminator)))
+  (if (typep instruction 'computation)
+      (assert (unused-p instruction))
+      (assert (cleavir-set:every (lambda (o)
+                                   (or (not (ssa-p o)) (unused-p o)))
+                                 (outputs instruction))))
   (clean-up-instruction instruction)
   ;; Delete from inputs.
   ;; Delete from the control flow.
@@ -119,8 +178,6 @@
 (defgeneric replace-terminator (new old))
 
 (defmethod replace-terminator ((new terminator) (old terminator))
-  (check-type old terminator)
-  (check-type new terminator)
   (let ((ib (iblock old))
         (new-next (next new))
         (pred (predecessor old)))
@@ -153,24 +210,15 @@
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)
-  (check-type new linear-datum)
-  (check-type old linear-datum)
   (check-type instruction instruction)
   (setf (inputs instruction)
         (nsubstitute new old (inputs instruction) :test #'eq)))
 
-;;; Mark all the inputs of an instruction as being used by that instruction.
-;;; This is useful when an instruction is deleted but its inputs maintained.
-(defun move-inputs (inst)
-  (check-type inst instruction)
-  (dolist (input (inputs inst))
-    (assert (not (slot-boundp input '%use)))
-    (setf (%use input) inst))
-  (values))
-
-(defun replace-linear-datum (new old)
-  (check-type new linear-datum)
-  (check-type old linear-datum)
+(defgeneric replace-uses (new old))
+(defmethod replace-uses ((new datum) (old datum))
+  (cleavir-set:doset (use (uses old))
+    (replace-input new old use)))
+(defmethod replace-uses ((new linear-datum) (old linear-datum))
   (assert (not (slot-boundp new '%use)))
   (when (slot-boundp old '%use)
     (setf (%use new) (%use old))
@@ -180,14 +228,14 @@
 
 ;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
 (defun replace-computation (computation replacement)
-  (replace-linear-datum replacement computation)
+  (replace-uses replacement computation)
   (delete-instruction computation)
   (values))
 
 ;;; Delete a computation with unused result.
 (defun delete-computation (computation)
   (check-type computation computation)
-  (assert (not (slot-boundp computation '%use)))
+  (assert (unused-p computation))
   (delete-instruction computation)
   (values))
 

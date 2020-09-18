@@ -100,8 +100,11 @@
     (:multiple-values (list mvalues))
     (:effect (values))
     (t
-     (multiple-value-bind (mtf outputs)
-         (cleavir-bir:make-multiple-to-fixed mvalues context)
+     (let* ((outputs
+              (loop for rt in context
+                    collect (make-instance 'cleavir-bir:output :rtype rt)))
+            (mtf
+              (make-instance 'cleavir-bir:multiple-to-fixed :outputs outputs)))
        (before inserter mtf)
        outputs))))
 

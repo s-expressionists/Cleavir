@@ -58,7 +58,7 @@
           (cleavir-bir:replace-computation call return-values))
         ;; Replace the arguments in the interpolated function body with the
         ;; actual argument values
-        (mapc #'cleavir-bir:replace-linear-datum arguments lambda-list)
+        (mapc #'cleavir-bir:replace-uses arguments lambda-list)
         ;; Delete the enclose.
         (cleavir-bir:delete-computation enclose)
         ;; Re-home iblocks (and indirectly, instructions)

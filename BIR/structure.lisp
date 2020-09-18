@@ -41,16 +41,25 @@
 (defgeneric definitions (datum))
 (defgeneric uses (datum))
 
+;; Shortcuts so that consing sets may be avoided.
+(defgeneric unused-p (datum)
+  (:method ((datum datum)) (cleavir-set:empty-set-p (uses datum))))
+(defgeneric ssa-p (datum)
+  (:method ((datum datum)) (= 1 (cleavir-set:size (definitions datum)))))
+
 ;;; A datum with only one definition (static single assignment).
 (defclass ssa (datum) ())
 (defgeneric definition (ssa))
 (defmethod definitions ((datum ssa)) (cleavir-set:make-set datum))
+(defmethod ssa-p ((ssa datum)) t)
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :reader use :accessor %use
          :type instruction)))
 (defmethod uses ((datum linear-datum)) (cleavir-set:make-set (use datum)))
+(defmethod unused-p ((datum linear-datum))
+  (not (slot-boundp datum '%use)))
 
 ;;; A datum with one definition and one use.
 (defclass transfer (ssa linear-datum) ())
@@ -83,12 +92,14 @@
 
 ;;; An instruction is something to be done.
 ;;; All instructions have sequences of inputs and outputs.
-;;; Inputs are mutable but outputs are not.
+;;; Inputs are mutable but outputs may not be (for computations).
 ;;; Every input and output is a LINEAR-DATUM, except that READVAR has a VARIABLE
 ;;; input and WRITEVAR has one as an output.
 (defgeneric inputs (instruction))
 (defgeneric (setf inputs) (new-inputs instruction))
 (defgeneric outputs (instruction))
+(defgeneric (setf outputs) (new-outputs instruction))
+
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
                  :initform nil
@@ -121,13 +132,14 @@
 ;;; or a fixed number (that is not one) of them.
 (defclass operation (instruction)
   (;; Sequence of data.
-   (%outputs :initarg :outputs :reader outputs :accessor %outputs
+   (%outputs :initarg :outputs :accessor outputs
              :type sequence)))
 
 ;;; Data output by an OPERATION.
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
-  ((%definition :initarg :definition :reader definition)))
+  ((%definition :initarg :definition
+                :reader definition :accessor %definition)))
 
 ;;; some useful mixins
 (defclass no-input (instruction)

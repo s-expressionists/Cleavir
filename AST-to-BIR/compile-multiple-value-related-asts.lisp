@@ -98,8 +98,12 @@
          (terminate inserter jump)
          (before inserter read2)
          (compile-sequence-for-effect form-asts inserter)
-         (multiple-value-bind (mtf outs)
-             (cleavir-bir:make-multiple-to-fixed read1 mtf-rtype)
+         (let* ((outputs
+                  (loop for rt in context
+                        collect (make-instance 'cleavir-bir:output :rtype rt)))
+                (mtf
+                  (make-instance 'cleavir-bir:multiple-to-fixed
+                    :outputs outputs)))
            (loop for var in lhs-vars
                  for out in outs
                  do (before inserter (make-instance 'cleavir-bir:writevar

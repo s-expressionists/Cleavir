@@ -19,7 +19,7 @@
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next)
   (:export #:*origin* #:*policy*)
-  (:export #:multiple-to-fixed #:fixed-to-multiple #:make-multiple-to-fixed
+  (:export #:multiple-to-fixed #:fixed-to-multiple
            #:accessvar #:writevar #:readvar #:cast
            #:returni #:unreachable #:eqi #:jump #:unwindp
            #:typeq #:type-specifier #:typew #:ctype #:choke
@@ -30,10 +30,10 @@
   (:export #:primop-info #:in-rtypes
            #:primop #:vprimop #:nvprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:map-iblocks
-           #:all-functions
+           #:map-iblocks #:all-functions
+           #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
-           #:replace-linear-datum #:replace-terminator #:split-block-after
+           #:replace-uses #:replace-terminator #:split-block-after
            #:move-inputs #:delete-iblock)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)

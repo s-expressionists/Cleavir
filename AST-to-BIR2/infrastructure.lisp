@@ -141,10 +141,13 @@
                   (append shared
                           (loop repeat (- ntarget nresults)
                                 collect (cleavir-bir:make-constant 'nil)))))
-            ;; target is a bunch of values and result is multiple-values, so mtf.
-            (multiple-value-bind (mtf outputs)
-                (cleavir-bir:make-multiple-to-fixed results (length target))
-              (insert inserter mtf)
+            ;; target is a bunch of values and result is multiple-values,
+            ;; so mtf.
+            (let ((outputs (loop repeat (length target)
+                                 collect (make-instance 'cleavir-bir:output
+                                           :rtype :object))))
+              (insert inserter (make-instance 'cleavir-bir:multiple-to-fixed
+                                 :outputs outputs))
               (mapcar #'maybe-cast outputs target))))))
 
 (defgeneric compile-function (ast))
