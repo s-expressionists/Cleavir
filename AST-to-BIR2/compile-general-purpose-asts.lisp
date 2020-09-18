@@ -89,21 +89,22 @@
                      do (proceed ins iblock)
                         (let ((rv (compile-ast ast ins)))
                           (unless (eq rv :no-return)
-                            (push (cons iblock rv) r)))
+                            (push (list ins iblock rv) r)))
                      finally (return (nreverse r)))))
       (case (length map)
         ((0) ; no branch returned, so neither do we
          :no-return)
         ((1) ; a single branch returned, so don't bother with a merge
-         (destructuring-bind (block . rv) (first map)
+         (destructuring-bind (_ block rv) (first map)
            (proceed inserter block)
            rv))
         (t ; multiple blocks, so we have to merge their results
          (let ((mergeb (make-iblock inserter)))
-           (if (loop for (_ . rv) in map
+           (if (loop for (_0 _1 rv) in map
                      always (listp rv))
                ;; No multiple values, so we can phi these.
-               (let* ((nrtypes (loop for (_ . rv) in map maximizing (length rv)))
+               (let* ((nrtypes (loop for (_0 _1 rv) in map
+                                     maximizing (length rv)))
                       ;; FIXME: In the future we may have non-:objects.
                       ;; It would be nice to not force everything to be objects
                       ;; in that circumstance.
@@ -112,12 +113,11 @@
                       (phis (loop repeat nrtypes
                                   collect (make-instance 'cleavir-bir:phi
                                             :iblock mergeb :rtype :object))))
-                 (loop for (ib . rv) in map
-                       do (proceed inserter ib)
-                          (terminate
-                           inserter
+                 (loop for (ins ib rv) in map
+                       do (terminate
+                           ins
                            (make-instance 'cleavir-bir:jump
-                             :inputs (adapt inserter rv rtypes)
+                             :inputs (adapt ins rv rtypes)
                              :outputs (copy-list phis) :unwindp nil
                              :next (list mergeb))))
                  (setf (cleavir-bir:inputs mergeb) phis)
@@ -126,12 +126,11 @@
                ;; Dump everything into multiple-values.
                (let ((phi (make-instance 'cleavir-bir:phi
                             :iblock mergeb :rtype :object)))
-                 (loop for (ib . rv) in map
-                       do (proceed inserter ib)
-                          (terminate
-                           inserter
+                 (loop for (ins ib rv) in map
+                       do (terminate
+                           ins
                            (make-instance 'cleavir-bir:jump
-                             :inputs (adapt inserter rv :multiple-values)
+                             :inputs (adapt ins rv :multiple-values)
                              :outputs (list phi) :unwindp nil
                              :next (list mergeb))))
                  (setf (cleavir-bir:inputs mergeb) (list phi))

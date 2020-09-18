@@ -56,9 +56,10 @@
         (if (cleavir-bir:iblock-started-p iblock)
             (loop for inst = (cleavir-bir:start iblock) then succ
                   for succ = (cleavir-bir:successor inst)
+                  when (typep inst 'cleavir-bir:terminator)
+                    do (error "BUG: Tried to PROCEED a terminated block")
                   when (null succ)
-                    return inst
-                  finally (error "BUG: Tried to PROCEED a terminated block?"))
+                    return inst)
             nil)))
 
 ;; PROCEED when the block is new and has no instructions.
