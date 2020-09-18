@@ -147,6 +147,7 @@
                                  collect (make-instance 'cleavir-bir:output
                                            :rtype :object))))
               (insert inserter (make-instance 'cleavir-bir:multiple-to-fixed
+                                 :inputs (list results)
                                  :outputs outputs))
               (mapcar #'maybe-cast outputs target))))))
 
