@@ -1,15 +1,13 @@
 (in-package #:cleavir-bir)
 
-;;; A "representation type", indicating an "underlying" type of an object
-;;; in broad strokes.
-(deftype rtype ()
-  `(member :object ; a general lisp object
-           :single-float ; an unboxed float
-           :double-float ; "
-           :continuation ; client dependent
-           :multiple-values)) ; a bit special
-
-(defun rtype= (rt1 rt2) (eq rt1 rt2))
+;;; An rtype is a "representation type", indicating the "underlying" type of an
+;;; object. This is a static property distinct from its lisp type specifier.
+;;; BIR knows the following rtypes:
+;;; :object, meaning a general lisp object,
+;;; :multiple-values,
+;;; and :continuation. Clients may define and use additional rtypes.
+(defgeneric rtype= (rt1 rt2)
+  (:method (rt1 rt2) (eql rt1 rt2)))
 
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment ()
