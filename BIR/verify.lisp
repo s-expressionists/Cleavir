@@ -19,10 +19,6 @@
 ;;; " iblock
 (defvar *verifying-iblock*)
 
-(defmethod verify progn ((datum datum))
-  ;; rtype is an rtype (verify type decl)
-  (assert (typep (rtype datum) 'rtype)))
-
 (defmethod verify progn ((instruction instruction))
   ;; verify type decls
   (assert (typep (predecessor instruction) '(or instruction null)))
