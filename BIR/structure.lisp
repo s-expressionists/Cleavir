@@ -26,12 +26,11 @@
 ;;; Set of variables it binds.
 (defgeneric bindings (lexical-bind))
 
+(defgeneric rtype (datum))
+
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name :type (or symbol null))
-   (%rtype :initarg :rtype :reader rtype
-           :writer (setf %rtype)
-           :type rtype)))
+   (%name :initarg :name :initform nil :reader name :type (or symbol null))))
 
 (defmethod print-object ((o datum) stream)
   (print-unreadable-object (o stream :type t)
@@ -70,17 +69,18 @@
 
 ;;; TODO: Using this uniformly will be work.
 (defclass constant (value transfer)
-  ((%value :initarg :value :reader constant-value)))
+  ((%value :initarg :value :reader constant-value)
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 ;;; TODO: These are bad, but AST changes will be required to fix it.
 (defclass immediate (value transfer)
   ((%value :initarg :value :reader immediate-value)
    ;; dicey
-   (%rtype :initform :object)))
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 (defclass load-time-value (value transfer)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%rtype :initform :object)))
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -139,7 +139,8 @@
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initarg :definition
-                :reader definition :accessor %definition)))
+                :reader definition :accessor %definition)
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 ;;; some useful mixins
 (defclass no-input (instruction)
@@ -170,7 +171,8 @@
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
-            :type iblock)))
+            :type iblock)
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi)))
     (cleavir-set:nunion
@@ -211,7 +213,7 @@
    ;; itself rather than its value. Thus the slot.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)
-   (%rtype :initform :object)))
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 ;;; TODO: This will implicate load form bla bla bla stuff.
 (defun make-constant (value)

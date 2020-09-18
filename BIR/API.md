@@ -18,7 +18,7 @@ Data
 
 The top class is `datum`, which is abstract, i.e. it is not intended that direct instances are ever instantiated.
 
-All data have a `name`, `rtype`, `definitions`, and `uses`, read (not, in general, written) with generic functions of the same names. The `name` is a symbol (`nil` indicating no name), while `definitions` and `uses` are sets of instructions. The first two properties are slots, but the other two can be stored in other ways, and any new subclass of `datum` itself will need to define them.
+All data have a `name`, `rtype`, `definitions`, and `uses`, read (not, in general, written) with generic functions of the same names. The `name` is a symbol (`nil` indicating no name), while `definitions` and `uses` are sets of instructions. The `name` is a slot, but the others can be stored in other ways, and any new subclass of `datum` itself will need to define methods on the readers.
 
 Definitions are uses are not directly writable by clients: graph modifications will update them appropriately when edits to the graph are made.
 

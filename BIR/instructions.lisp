@@ -5,8 +5,8 @@
           :type function)
    ;; The set of variables enclosed
    (%variables :accessor variables :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)
-   (%rtype :initform :object)))
+               :type cleavir-set:set)))
+(defmethod rtype ((d enclose)) :object)
 
 (defclass unreachable (no-input no-output terminator0) ())
 
@@ -25,8 +25,9 @@
   (cleavir-set:nadjoinf (writers (first outputs)) i)
   i)
 
-(defclass readvar (accessvar computation)
-  ((%rtype :initform :object)))
+(defclass readvar (accessvar computation) ())
+
+(defmethod rtype ((rv readvar)) (rtype (first (inputs rv))))
 
 (defmethod initialize-instance :after
     ((i readvar) &rest initargs &key inputs)
@@ -44,13 +45,10 @@
 
 ;; primop returning values
 (defclass vprimop (primop computation) ())
+(defmethod rtype ((d vprimop)) (first (out-rtypes (info d))))
 
-(defmethod initialize-instance :after ((p vprimop) &rest initargs)
-  (declare (ignore initargs))
-  (setf (%rtype p) (rtype (info p))))
-
-(defclass call (computation)
-  ((%rtype :initform :multiple-values :type (eql :multiple-values))))
+(defclass call (computation) ())
+(defmethod rtype ((d call)) :multiple-values)
 
 (defclass returni (one-input no-output terminator0) ())
 
@@ -69,6 +67,7 @@
 
 ;;; Read the object stored in the temporary storage in the dynamic env.
 (defclass readtemp (accesstemp no-input computation) ())
+(defmethod rtype ((d readtemp)) (rtype (dynamic-environment readtemp)))
 
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
@@ -78,8 +77,8 @@
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
-             :type cleavir-set:set)
-   (%rtype :initform :continuation :type (eql :continuation))))
+             :type cleavir-set:set)))
+(defmethod rtype ((d catch)) :continuation)
 (defmethod bindings ((catch catch))
   (assert (typep (use catch) 'writevar))
   (cleavir-set:make-set (first (outputs (use catch)))))
@@ -123,12 +122,15 @@
   ((%comparees :initarg :comparees :reader comparees)))
 
 ;;; Convert an aggregate of :objects into a :multiple-values
-(defclass fixed-to-multiple (computation)
-  ((%rtype :initform :multiple-values :type (eql :multiple-values))))
+(defclass fixed-to-multiple (computation) ())
+(defmethod rtype ((d fixed-to-multiple)) :multiple-values)
 
 ;;; Reverse of the above
 (defclass multiple-to-fixed (one-input operation) ())
 
-;;; Convert a value from one type to another.
+;;; Convert a value from one rtype to another.
 ;;; This may or may not entail an actual operation at runtime.
-(defclass cast (one-input computation) ())
+(defclass cast (one-input computation)
+  (;; The destination rtype.
+   ;; (The source rtype is the rtype of the input.)
+   (%rtype :initarg :rtype :reader rtype)))

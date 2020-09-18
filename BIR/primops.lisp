@@ -10,8 +10,8 @@
 ;;; structure describing a primop
 (defclass primop-info ()
   ((%name :initarg :name :reader name)
-   ;; rtype of the return, or NIL if it doesn't return a value
-   (%rtype :initarg :rtype :reader rtype :type (or rtype null))
+   ;; List of rtypes of the outputs
+   (%out-rtypes :initarg :out-rtypes :reader out-rtypes :type list)
    ;; List of rtypes of the inputs
    (%in-rtypes :initarg :in-rtypes :reader in-rtypes :type list)))
 
@@ -24,21 +24,21 @@
   (or (gethash name *primops*)
       (error "BUG: No primop: ~a" name)))
 
-(macrolet ((defprimop (name ret &rest in)
+(macrolet ((defprimop (name (&rest in) (&rest out))
              `(setf (gethash ',name *primops*)
                     (make-instance 'primop-info
                       :name ',name
-                      :rtype ',ret
+                      :out-rtypes ',out
                       :in-rtypes ',in)))
            (defprimops (&rest specs)
              `(progn
                 ,@(loop for spec in specs
                         collect `(defprimop ,@spec)))))
   (defprimops
-      (cleavir-primop:car :object :object)
-      (cleavir-primop:cdr :object :object)
-    (cleavir-primop:rplaca nil :object :object)
-    (cleavir-primop:rplacd nil :object :object)
-    (symbol-value :object :object)
-    ((setf symbol-value) nil :object :object)
-    (fdefinition :object :object)))
+      (cleavir-primop:car (:object) (:object))
+      (cleavir-primop:cdr (:object) (:object))
+    (cleavir-primop:rplaca (:object :object) ())
+    (cleavir-primop:rplacd (:object :object) ())
+    (symbol-value (:object) (:object))
+    ((setf symbol-value) (:object :object) ())
+    (fdefinition (:object) (:object))))
