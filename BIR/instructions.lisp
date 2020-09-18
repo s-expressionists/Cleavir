@@ -25,7 +25,7 @@
   (cleavir-set:nadjoinf (writers (first outputs)) i)
   i)
 
-(defclass readvar (accessvar computation) ())
+(defclass readvar (one-input accessvar computation) ())
 
 (defmethod rtype ((rv readvar)) (rtype (first (inputs rv))))
 
