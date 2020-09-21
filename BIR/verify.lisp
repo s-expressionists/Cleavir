@@ -23,6 +23,11 @@
   ;; verify type decls
   (assert (typep (predecessor instruction) '(or instruction null)))
   (assert (typep (successor instruction) '(or instruction null)))
+  ;; We're our predecessor's successor and successor's predecessor
+  (when (predecessor instruction)
+    (assert (eq (successor (predecessor instruction)) instruction)))
+  (when (successor instruction)
+    (assert (eq (predecessor (successor instruction)) instruction)))
   ;; iblock is correct
   (assert (eq (iblock instruction) *verifying-iblock*))
   ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate

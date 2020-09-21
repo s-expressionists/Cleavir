@@ -85,7 +85,8 @@
     (let ((ip (insert-point inserter)))
       (if (null ip)
           (setf (cleavir-bir:start ib) terminator)
-          (setf (cleavir-bir:successor ip) terminator)))
+          (setf (cleavir-bir:successor ip) terminator))
+      (setf (cleavir-bir:predecessor terminator) ip))
     (setf (cleavir-bir:end ib) terminator
           (cleavir-bir:iblock terminator) ib))
   terminator)
