@@ -553,7 +553,7 @@
     (let ((tblock (make-iblock inserter)) (eblock (make-iblock inserter)))
       (terminate inserter (make-instance 'cleavir-bir:eqi
                             :inputs args :next (list eblock tblock)))
-      (list eblock tblock))))
+      (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
