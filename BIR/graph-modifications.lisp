@@ -22,10 +22,13 @@
   (cleavir-set:nadjoinf (cleavir-bir:readers datum) use))
 
 (defmethod shared-initialize :before
-    ((inst instruction) slot-names &rest initargs &key inputs &allow-other-keys)
-  (declare (ignore initargs))
+    ((inst instruction) slot-names &rest initargs
+     &key (inputs nil inputsp) &allow-other-keys)
+  (declare (ignore slot-names initargs))
   ;; Maintain uses
-  (when (or (eq slot-names 't) (member '%inputs slot-names))
+  ;; The initform for inputs is nil, so we don't need to do this updating unless
+  ;; an :inputs was provided.
+  (when inputsp
     (when (slot-boundp inst '%inputs)
       (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
     (map nil (lambda (inp) (add-use inp inst)) inputs)))
