@@ -50,6 +50,9 @@
 (defclass call (computation) ())
 (defmethod rtype ((d call)) :multiple-values)
 
+(defclass mv-call (computation) ())
+(defmethod rtype ((d mv-call)) :multiple-values)
+
 (defclass returni (one-input no-output terminator0) ())
 
 ;;; Allocate some temporary space for an object of the specified rtype.

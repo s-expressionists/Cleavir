@@ -56,5 +56,17 @@
            ;; Multiple values were returned. Save.
            (compile-m-v-p1-save inserter rv (cleavir-ast:form-asts ast))))))
 
+;;; Semantics of mv-call could be rethought. For example if all the argument
+;;; forms produce a fixed number of values we could just make a call?
+(defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast) inserter)
+  (let ((callee (compile-ast (cleavir-ast:function-form-ast ast) inserter)))
+    (when (eq callee :no-return) (return-from compile-ast :no-return))
+    (let ((args (loop for a in (cleavir-ast:form-asts ast)
+                      for rv = (compile-ast a inserter)
+                      if (eq rv :no-return)
+                        do (return-from compile-ast :no-return)
+                      else collect (adapt inserter rv :multiple-values))))
+      (insert inserter (make-instance 'mv-call :inputs (list* callee args))))))
+
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter)
   (compile-arguments (cleavir-ast:argument-asts ast) inserter))
