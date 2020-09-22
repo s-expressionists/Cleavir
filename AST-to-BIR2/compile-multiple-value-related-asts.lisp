@@ -61,12 +61,14 @@
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast) inserter)
   (let ((callee (compile-ast (cleavir-ast:function-form-ast ast) inserter)))
     (when (eq callee :no-return) (return-from compile-ast :no-return))
-    (let ((args (loop for a in (cleavir-ast:form-asts ast)
+    (let ((callee2 (first (adapt inserter callee '(:object))))
+          (args (loop for a in (cleavir-ast:form-asts ast)
                       for rv = (compile-ast a inserter)
                       if (eq rv :no-return)
                         do (return-from compile-ast :no-return)
-                      else collect (adapt inserter rv :multiple-values))))
-      (insert inserter (make-instance 'mv-call :inputs (list* callee args))))))
+                      else append (adapt inserter rv :multiple-values))))
+      (insert inserter (make-instance 'cleavir-bir:mv-call
+                         :inputs (list* callee2 args))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter)
   (compile-arguments (cleavir-ast:argument-asts ast) inserter))
