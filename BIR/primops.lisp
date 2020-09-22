@@ -24,13 +24,14 @@
   (or (gethash name *primops*)
       (error "BUG: No primop: ~a" name)))
 
-(macrolet ((defprimop (name (&rest in) (&rest out))
-             `(setf (gethash ',name *primops*)
-                    (make-instance 'primop-info
-                      :name ',name
-                      :out-rtypes ',out
-                      :in-rtypes ',in)))
-           (defprimops (&rest specs)
+(defmacro defprimop (name (&rest in) (&rest out))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf (gethash ',name *primops*)
+           (make-instance 'primop-info
+             :name ',name
+             :out-rtypes ',out :in-rtypes ',in))))
+
+(macrolet ((defprimops (&rest specs)
              `(progn
                 ,@(loop for spec in specs
                         collect `(defprimop ,@spec)))))

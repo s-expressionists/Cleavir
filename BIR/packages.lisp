@@ -28,7 +28,7 @@
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
            #:leti #:call #:mv-call #:enclose #:code)
-  (:export #:primop-info #:in-rtypes #:out-rtypes
+  (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
            #:map-iblocks #:all-functions
