@@ -11,7 +11,7 @@
       (cleavir-set:mapset nil #'aux (cleavir-bir:encloses function))
       result)))
 
-;;; Fill out the OWNER and EXTENT of all variables.
+;;; Fill out the EXTENT of all variables.
 (defun analyze-variables (all-functions)
   (cleavir-set:doset (funct all-functions (values))
     (let (;; A set of all variables accessed by this function's ancestors.
@@ -29,8 +29,7 @@
               ;; Not in a parent, so it's ours. It could be in a child, in
               ;; which case the child will set it to :indefinite above.
               (:unanalyzed
-               (setf (cleavir-bir:owner variable) funct
-                     (cleavir-bir:extent variable) :local))
+               (setf (cleavir-bir:extent variable) :local))
               ;; Some other function has this variable, but we're not a
               ;; parent of that function and it's not a parent of us.
               ;; This should not be possible. (FIXME: Error message.)
@@ -39,12 +38,12 @@
               ;; Some other function has already noted this variable is
               ;; indefinite - presumably a child.
               ;; NOTE: We could skip the presentp in this case
-              (:indefinite (setf (cleavir-bir:owner variable) funct))))))))
+              (:indefinite)))))))
 
 (defun closed-over-predicate (function)
   (lambda (variable)
     (and (not (eq (cleavir-bir:extent variable) :local))
-         (not (eq (cleavir-bir:owner variable) function)))))
+         (not (eq (cleavir-bir:function variable) function)))))
 
 (defun mark-enclose-recursively (variables enclose)
   (let* ((owner (cleavir-bir:function enclose))
@@ -57,7 +56,7 @@
     ;; and while we're at it, update the variables' enclose sets
     (cleavir-set:doset (v variables)
       (cleavir-set:nadjoinf (cleavir-bir:encloses v) enclose)
-      (when (eq (cleavir-bir:owner v) owner)
+      (when (eq (cleavir-bir:function v) owner)
         (cleavir-set:nremovef variables v)))
     (cond (;; no more variables: nothing left to do
            (cleavir-set:empty-set-p variables))

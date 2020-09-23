@@ -12,7 +12,7 @@
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output #:name
            #:definitions #:uses #:definition #:use)
-  (:export #:variable #:extent #:owner #:writers #:readers #:encloses #:binder)
+  (:export #:variable #:extent #:writers #:readers #:encloses #:binder)
   (:export #:constant #:make-constant #:immediate #:load-time-value
            #:constant-value #:immediate-value #:form #:read-only-p)
   (:export #:instruction #:operation #:computation #:inputs #:outputs

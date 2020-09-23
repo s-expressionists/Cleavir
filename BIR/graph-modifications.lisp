@@ -125,9 +125,7 @@
              (cleavir-set:nremovef (variables (code e)) variable)
              (cleavir-set:nremovef (variables e) variable))
            ;; and owner, in case owner happens to not be enclosed
-           (let ((owner (owner variable)))
-             (when owner
-               (cleavir-set:nremovef (variables (owner variable)) variable)))
+           (cleavir-set:nremovef (variables (function variable)) variable)
            ;; and maybe binder
            (remove-binding variable (binder variable))
            t)

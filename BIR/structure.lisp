@@ -188,13 +188,6 @@
                           :local ; only in one function.
                           ;;:dynamic ; TODO
                           :indefinite))
-   ;; The "owner" of the variable is the function that
-   ;; (a) accesses the variable, and
-   ;; (b) encloses, directly or indirectly, all other functions that access
-   ;;     the variable.
-   ;; Until computed by analyze-variables, it's NIL.
-   (%owner :initform nil :accessor owner
-           :type (or null function))
    ;; The LEXICAL-BIND that binds this.
    (%binder :initarg :binder :accessor binder :type lexical-bind)
    (%definitions :initarg :definitions :reader definitions
@@ -213,6 +206,12 @@
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defmethod function ((v variable))
+  (let ((b (binder v)))
+    (if (typep b 'function)
+        b
+        (function b))))
 
 ;;; TODO: This will implicate load form bla bla bla stuff.
 (defun make-constant (value)
@@ -269,7 +268,7 @@
 
 (defmethod bindings ((function function))
   (cleavir-set:filter 'cleavir-set:set
-                      (lambda (v) (eq (owner v) function))
+                      (lambda (v) (eq (binder v) function))
                       (variables function)))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
