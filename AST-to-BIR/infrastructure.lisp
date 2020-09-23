@@ -1,4 +1,4 @@
-(in-package #:cleavir-ast-to-bir2)
+(in-package #:cleavir-ast-to-bir)
 
 (defvar *variables*)
 (defvar *block-info*)

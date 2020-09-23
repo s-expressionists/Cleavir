@@ -1,4 +1,4 @@
-(in-package #:cleavir-ast-to-bir2)
+(in-package #:cleavir-ast-to-bir)
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast) inserter)
   (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))

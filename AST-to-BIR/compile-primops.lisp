@@ -1,4 +1,4 @@
-(in-package #:cleavir-ast-to-bir2)
+(in-package #:cleavir-ast-to-bir)
 
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-bir:primop-info primop))

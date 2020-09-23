@@ -1,6 +1,6 @@
 (cl:in-package #:asdf-user)
 
-(defsystem :cleavir-ast-to-bir2
+(defsystem :cleavir-ast-to-bir
   :depends-on (:cleavir-ast :cleavir-bir :cleavir-primop)
   :components
   ((:file "packages")
