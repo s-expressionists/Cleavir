@@ -163,13 +163,13 @@
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
 (defgeneric compile-ast (ast inserter)
-  (:method ((ast cleavir-ast:ast) inserter) :around
+  (:method :around ((ast cleavir-ast:ast) inserter)
     (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))
 
 (defgeneric compile-test-ast (ast inserter)
-  (:method ((ast cleavir-ast:ast) inserter) :around
+  (:method :around ((ast cleavir-ast:ast) inserter)
     (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))
