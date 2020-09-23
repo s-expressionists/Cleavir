@@ -264,7 +264,13 @@
                :type cleavir-set:set)
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
-              :type cleavir-set:set)))
+              :type cleavir-set:set)
+   ;; For debug/introspection
+   (%origin :initarg :origin :initform nil :reader origin)
+   (%name :initarg :name :initform nil :reader name)
+   (%docstring :initarg :docstring :initform nil :reader docstring)
+   (%original-lambda-list :initarg :original-lambda-list :initform nil
+                          :reader original-lambda-list)))
 
 (defmethod bindings ((function function))
   (cleavir-set:filter 'cleavir-set:set

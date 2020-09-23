@@ -5,7 +5,7 @@
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
-           #:lambda-list)
+           #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
