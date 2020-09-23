@@ -195,12 +195,27 @@ has use-before-define on inputs ~a!"
 
 (defmethod verify progn ((iblock iblock))
   ;; All predecessors truly have this as a successor
+  (let ((non-successor-predecessors
+          (cleavir-set:filter 'list
+                              (lambda (p) (not (member iblock (next (end p))
+                                                       :test #'eq)))
+                              (predecessors iblock))))
+    (assert (null non-successor-predecessors)
+            ()
+            "Some predecessors to iblock ~a do not list it as a successor:~%~a"
+            iblock non-successor-predecessors))
   (assert (cleavir-set:every (lambda (p) (member iblock (next (end p))
-                                                     :test #'eq))
-                                 (predecessors iblock)))
+                                                 :test #'eq))
+                             (predecessors iblock)))
   ;; All successors have this as a predecessor
-  (assert (every (lambda (n) (cleavir-set:presentp iblock (predecessors n)))
-                 (next (end iblock))))
+  (flet ((has-predecessor-p (next)
+           (cleavir-set:presentp iblock (predecessors next))))
+    (assert (every #'has-predecessor-p (next (end iblock)))
+            ()
+            "Some successors to iblock ~a do not list it as a predecessor:
+~a"
+            iblock
+            (remove-if #'has-predecessor-p (next (end iblock)))))
   ;; Start is an instruction (verify type decl)
   (assert (typep (start iblock) 'instruction))
   ;; Start instruction has no predecessor
