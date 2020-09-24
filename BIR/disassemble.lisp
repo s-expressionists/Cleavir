@@ -3,6 +3,8 @@
 (defvar *seen*)
 (defvar *work*)
 
+(defvar *iblock-num*)
+
 (defun maybe-add-disassemble-work (function)
   (check-type function function)
   (unless (cleavir-set:presentp function *seen*)
@@ -23,7 +25,7 @@
 
 (defun dis-iblock (iblock)
   (or (gethash iblock *disassemble-vars*)
-      (setf (gethash iblock *disassemble-vars*) (gensym "tag"))))
+      (setf (gethash iblock *disassemble-vars*) (incf *iblock-num*))))
 
 (defun dis-var (variable)
   (or (gethash variable *disassemble-vars*)
@@ -81,8 +83,9 @@
     ,(dis-iblock (destination inst))))
 
 (defmethod disassemble-instruction ((inst jump))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
-    ,(dis-iblock (first (next inst)))))
+  `(,(dis-label inst)
+    (iblock ,(dis-iblock (first (next inst))))
+    ,@(mapcar #'disassemble-datum (inputs inst))))
 
 (defmethod disassemble-instruction ((inst leti))
   `(,(dis-label inst) ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))
@@ -90,7 +93,9 @@
 
 (defmethod disassemble-instruction ((inst eqi))
   `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
-    ,@(mapcar #'dis-iblock (next inst))))
+    ,@(mapcar (lambda (x)
+                (list 'iblock (dis-iblock x)))
+              (next inst))))
 
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
@@ -100,6 +105,7 @@
      (start iblock))
     (list* (list* (dis-iblock iblock)
                   (mapcar #'disassemble-datum (inputs iblock)))
+           (dynamic-environment iblock)
            (nreverse insts))))
 
 (defun disassemble-lambda-list (ll)
@@ -129,8 +135,21 @@
   (check-type ir function)
   (let ((*seen* (cleavir-set:make-set ir))
         (*work* (list ir))
+        (*iblock-num* 0)
         (*disassemble-nextv* 0)
         (*disassemble-vars* (make-hash-table :test #'eq)))
     (loop for work = (pop *work*)
           until (null work)
           collect (disassemble-function work))))
+
+(defun print-disasm (ir &key (show-dynenv t))
+  (dolist (fun ir)
+    (destructuring-bind ((name start args) . iblocks)
+        fun
+      (format t "~&function ~a ~:a ~&     with start iblock ~a" name args start)
+      (dolist (iblock iblocks)
+        (format t "~&  iblock ~a ~:a:" (caar iblock) (cdar iblock))
+        (when show-dynenv
+          (format t "~&   dynenv = ~a" (second iblock)))
+        (dolist (inst (cddr iblock))
+          (format t "~&     ~(~a~)" inst))))))
