@@ -9,7 +9,7 @@
 
 (defun map-reachable-iblocks (f start)
   (check-type start iblock)
-  ;; simple depth-first graph traversal
+  ;; pre-order depth-first graph traversal
   ;; NOTE: Does not follow unwinds or recurse into functions
   (let ((seen (cleavir-set:empty-set))
         (worklist (list start)))
@@ -25,6 +25,26 @@
   ;; This function may hit dead blocks if the set hasn't been refreshed.
   (check-type function function)
   (cleavir-set:mapset nil f (iblocks function)))
+
+(defun map-iblocks-postorder (f function)
+  (let ((seen (cleavir-set:make-set)))
+    (labels ((traverse (iblock)
+               (unless (cleavir-set:presentp iblock seen)
+                 (cleavir-set:nadjoinf seen iblock)
+                 (mapc #'traverse (successors iblock))
+                 (funcall f iblock))))
+      (traverse (start function)))
+    (values)))
+
+;;; Forward flow order is the preferred order for forward flow
+;;; dataflow analyses, since predecessors are ordered before
+;;; successors.
+(defun iblocks-forward-flow-order (function)
+  (let ((result '()))
+    (map-iblocks-postorder (lambda (iblocks)
+                             (push iblocks result))
+                           function)
+    result))
 
 ;;; Map all instructions owned by the given function
 (defun map-local-instructions (f function)

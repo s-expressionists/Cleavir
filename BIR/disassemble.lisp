@@ -127,13 +127,10 @@
         (*disassemble-nextn* 0)
         (seen (cleavir-set:make-set)))
     ;; sort blocks in forward flow order.
-    (labels ((iter (block)
-               (unless (cleavir-set:presentp block seen)
-                 (cleavir-set:nadjoinf seen block)
-                 (dolist (succ (successors block))
-                   (iter succ))
-                 (push (disassemble-iblock block) iblocks))))
-      (iter (start function)))
+    (map-iblocks-postorder
+     (lambda (block)
+       (push (disassemble-iblock block) iblocks))
+     function)
     (list* (list function (dis-iblock (start function))
                  (disassemble-lambda-list (lambda-list function)))
            iblocks)))
