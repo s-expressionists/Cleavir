@@ -20,7 +20,7 @@
   (or (gethash datum *disassemble-ids*)
       (setf (gethash datum *disassemble-ids*)
             (or (name datum)
-                (prog1 *disassemble-nextn*
+                (prog1 (make-symbol (format nil "v~a" *disassemble-nextn*))
                   (incf *disassemble-nextn*))))))
 
 (defun dis-iblock (iblock)
