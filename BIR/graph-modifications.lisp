@@ -16,7 +16,10 @@
 
 (defgeneric add-use (datum use))
 (defmethod add-use ((datum linear-datum) use)
-  (assert (not (slot-boundp datum '%use)))
+  (assert (not (slot-boundp datum '%use))
+          ()
+          "Tried to add a use ~a to datum ~a, which is already in use by ~a"
+          use datum (use datum))
   (setf (%use datum) use))
 (defmethod add-use ((datum variable) use)
   (cleavir-set:nadjoinf (cleavir-bir:readers datum) use))
