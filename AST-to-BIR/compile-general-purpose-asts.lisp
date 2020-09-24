@@ -93,7 +93,7 @@
                      do (proceed ins iblock)
                         (let ((rv (compile-ast ast ins)))
                           (unless (eq rv :no-return)
-                            (push (list ins iblock rv) r)))
+                            (push (list ins (iblock ins) rv) r)))
                      finally (return (nreverse r)))))
       (case (length map)
         ((0) ; no branch returned, so neither do we
