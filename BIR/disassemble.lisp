@@ -74,13 +74,15 @@
   `(:= ,(disassemble-datum inst)
        (,(dis-label inst)
         ,@(mapcar #'disassemble-datum (inputs inst))
-        ,@(mapcar #'dis-iblock (next inst)))))
+        ,@(mapcar (lambda (iblock)
+                    (list 'iblock (dis-iblock iblock)))
+                  (next inst)))))
 
 (defmethod disassemble-instruction ((inst unwind))
   `(,(dis-label inst)
     ,@(mapcar #'disassemble-datum (inputs inst))
     :->
-    ,(dis-iblock (destination inst))))
+    (iblock ,(dis-iblock (destination inst)))))
 
 (defmethod disassemble-instruction ((inst jump))
   `(,(dis-label inst)
