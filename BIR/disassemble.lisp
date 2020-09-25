@@ -108,6 +108,9 @@
     (list* (list* (dis-iblock iblock)
                   (mapcar #'disassemble-datum (inputs iblock)))
            (dynamic-environment iblock)
+           (mapcar (lambda (x)
+                     `(iblock ,x))
+                   (cleavir-set:mapset 'list #'dis-iblock (entrances iblock)))
            (nreverse insts))))
 
 (defun disassemble-lambda-list (ll)
@@ -154,8 +157,12 @@
         fun
       (format t "~&function ~a ~:a ~&     with start iblock ~a" name args start)
       (dolist (iblock iblocks)
-        (format t "~&  iblock ~a ~:a:" (caar iblock) (cdar iblock))
-        (when show-dynenv
-          (format t "~&   dynenv = ~a" (second iblock)))
-        (dolist (inst (cddr iblock))
-          (format t "~&     ~(~a~)" inst))))))
+        (destructuring-bind ((label . args) dynenv entrances &rest insts)
+            iblock
+          (format t "~&  iblock ~a ~:a:" label args)
+          (when show-dynenv
+            (format t "~&   dynenv = ~a" dynenv))
+          (when entrances
+            (format t "~&   entrances = ~(~:a~)" entrances))
+          (dolist (inst insts)
+            (format t "~&     ~(~a~)" inst)))))))
