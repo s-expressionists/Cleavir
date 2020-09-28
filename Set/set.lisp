@@ -50,6 +50,10 @@
 (defun arb (set)
   (doset (i set (values)) (return-from arb i)))
 
+(defun set<= (set1 set2)
+  (doset (i set1 t)
+    (unless (presentp i set2) (return nil))))
+
 (defun set= (set1 set2)
   (and (= (size set1) (size set2))
        (doset (i set1 t)
@@ -110,6 +114,17 @@
      (let ((result nil))
        (doset (e set result)
          (when (funcall f e) (push e result)))))))
+
+(defun difference (result-type minuend subtrahend)
+  (ecase result-type
+    (set
+     (let ((result (empty-set)))
+       (doset (e minuend result)
+         (unless (presentp e subtrahend) (nadjoinf result e)))))
+    (list
+     (let ((result nil))
+       (doset (e minuend result)
+         (unless (presentp e subtrahend) (push e result)))))))
 
 (defmethod print-object ((s set) stream)
   (print-unreadable-object (s stream :type t)

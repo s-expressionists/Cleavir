@@ -274,4 +274,14 @@ has use-before-define on inputs ~a!"
                (cleavir-set:nadjoinf reachable iblock)))
         (map-reachable-iblocks #'iblock-verifier start)
         ;; All reachable blocks are in the iblocks set
-        (assert (cleavir-set:set= reachable (iblocks function)))))))
+        (assert (cleavir-set:set<= reachable (iblocks function))
+                ()
+                "Some reachable iblocks ~a are not recorded by the function ~a"
+                (cleavir-set:difference 'list reachable (iblocks function))
+                function)
+        ;; All members of the iblocks set are reachable
+        (assert (cleavir-set:set<= (iblocks function) reachable)
+                ()
+                "Some iblocks recorded by the function ~a are unreachable: ~a"
+                function
+                (cleavir-set:difference 'list (iblocks function) reachable))))))
