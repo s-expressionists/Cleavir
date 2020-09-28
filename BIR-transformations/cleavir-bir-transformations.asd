@@ -7,5 +7,4 @@
    (:file "process-captured-variables" :depends-on ("packages"))
    (:file "delete-temporary-variables" :depends-on ("packages"))
    (:file "interpolate-function" :depends-on ("packages"))
-   (:file "inline" :depends-on ("interpolate-function" "packages"))
-   (:file "eliminate-catches" :depends-on ("packages"))))
+   (:file "inline" :depends-on ("interpolate-function" "packages"))))
