@@ -109,7 +109,8 @@
     (cleavir-set:nremovef (iblocks (function ib)) ib)
     (cleavir-set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
-    (map-iblock-instructions #'clean-up-instruction (start ib))))
+    (when (slot-boundp ib '%start)
+      (map-iblock-instructions #'clean-up-instruction (start ib)))))
 
 (defgeneric remove-binding (variable binder)
   (:method (variable binder) (declare (ignore variable binder))))
@@ -203,15 +204,24 @@
 (defun delete-iblock (iblock)
   ;; FIXME: Should note reasons to the user if nontrivial code is being
   ;; deleted. Or perhaps that should be handled at a higher level?
-  (assert (cleavir-set:empty-set-p (predecessors iblock)))
+  (assert (and (cleavir-set:empty-set-p (predecessors iblock))
+               (cleavir-set:empty-set-p (entrances iblock))))
   (clean-up-iblock iblock)
-  (when (eq iblock (end (function iblock)))
-    (setf (end (function iblock)) nil))
-  (let ((successors (successors iblock)))
-    (dolist (s successors)
-      (cleavir-set:nremovef (predecessors s) iblock)
-      (when (cleavir-set:empty-set-p (predecessors s))
-        (delete-iblock s)))))
+  (let ((f (function iblock)))
+    (when (and (slot-boundp f '%end)
+               (eq iblock (end f)))
+      (setf (end f) nil)))
+  (when (slot-boundp iblock '%end)
+    (let ((successors (successors iblock)))
+      (dolist (s successors)
+        (cleavir-set:nremovef (predecessors s) iblock)
+        (when (cleavir-set:empty-set-p (predecessors s))
+          (delete-iblock s))))))
+
+(defun maybe-delete-iblock (iblock)
+  (when (and (cleavir-set:empty-set-p (predecessors iblock))
+             (cleavir-set:empty-set-p (entrances iblock)))
+    (delete-iblock iblock)))
 
 ;;; Internal. Replace one value with another in an input list.
 (defun replace-input (new old instruction)

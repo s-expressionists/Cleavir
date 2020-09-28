@@ -392,6 +392,8 @@
                      (unless (go-info catch)
                        (delete-catch catch contvar wcont
                                      function old-dynenv prefix-iblock))
+                     ;; Delete any iblocks without predecessors.
+                     (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                      ;; We return no values.
                      (return-from compile-ast ())))
             else
@@ -402,6 +404,8 @@
                    (unless (go-info catch)
                      (delete-catch catch contvar wcont
                                    function old-dynenv prefix-iblock))
+                     ;; Delete any iblocks without predecessors.
+                     (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                    (return-from compile-ast :no-return))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
