@@ -270,7 +270,18 @@
    (%name :initarg :name :initform nil :reader name)
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil
-                          :reader original-lambda-list)))
+                          :reader original-lambda-list)
+   ;; The module containing this function.
+   (%module :initarg :module :reader module :type module)))
+
+;;; A set of functions which are compiled together (as opposed to
+;;; "separate compilation") and can participate in interprocedural
+;;; optimizations such as inlining. For example, lexically nested
+;;; functions are always compiled together.
+(defclass module ()
+  ((%functions :initarg :functions :accessor functions
+               :initform (cleavir-set:empty-set)
+               :type cleavir-set:set)))
 
 (defmethod bindings ((function function))
   (cleavir-set:filter 'cleavir-set:set
