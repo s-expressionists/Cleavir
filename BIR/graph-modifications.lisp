@@ -60,6 +60,8 @@
 (defmethod add-definition ((datum output) (definition instruction))
   (assert (not (slot-boundp datum '%definition)))
   (setf (%definition datum) definition))
+(defmethod add-definition ((datum variable) (definition instruction))
+  (cleavir-set:nadjoinf (writers datum) definition))
 
 (defmethod shared-initialize :before
     ((inst operation) slot-names &rest initargs &key outputs &allow-other-keys)

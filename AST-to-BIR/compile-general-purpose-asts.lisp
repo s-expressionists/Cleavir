@@ -194,11 +194,10 @@
     (cleavir-set:nadjoinf (cleavir-bir:entrances dest) (iblock inserter)))
   (values))
 
-(defun delete-catch (catch contvar wcont function dynenv iblock)
+(defun delete-catch (catch contvar function dynenv iblock)
   ;; Replace the catch with a jump to iblock.
   ;; We could actually replace the block boundary entirely - FIXME
   (cleavir-set:nremovef (cleavir-bir:variables function) contvar)
-  (cleavir-bir:delete-instruction wcont)
   (cleavir-set:doset (sc (cleavir-bir:scope catch))
     (setf (cleavir-bir:dynamic-environment sc) dynenv))
   (cleavir-bir:replace-terminator
@@ -212,14 +211,12 @@
          (catch (make-instance 'cleavir-bir:catch :next (list during)))
          (contvar (make-instance 'cleavir-bir:variable
                     :name (cleavir-ast:name ast)
-                    :binder catch :rtype :continuation))
-         (wcont (make-instance 'cleavir-bir:writevar
-                  :outputs (list contvar) :inputs (list catch))))
+                    :binder catch :rtype :continuation)))
+    (setf (cleavir-bir:outputs catch) (list contvar))
     (adjoin-variable inserter contvar)
     (setf (cleavir-bir:dynamic-environment during) catch)
     (terminate inserter catch)
     (begin inserter during)
-    (insert inserter wcont)
     (setf (block-info ast) nil)
     (let* ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter))
            (entrances (block-info ast))
@@ -229,14 +226,14 @@
                            entrances))))
       (case (length map)
         (0 ; nothing returns here. We can replace the catch with a jump
-         (delete-catch catch contvar wcont function de during)
+         (delete-catch catch contvar function de during)
          :no-return)
         (1 ; only one
          (destructuring-bind (ib jfunct rv) (first map)
            (proceed inserter ib)
            (cond ((eq jfunct function)
                   ;; We can just continue on from wherever that jump would be.
-                  (delete-catch catch contvar wcont function de during)
+                  (delete-catch catch contvar function de during)
                   rv)
                  (t ;; have to unwind.
                   (cleavir-set:nadjoinf (cleavir-bir:variables function)
@@ -289,7 +286,7 @@
                                              (cleavir-bir:iblock catch)))
                       (t
                        ;; catch unneeded, replace with jump
-                       (delete-catch catch contvar wcont function de during))))
+                       (delete-catch catch contvar function de during))))
            (begin inserter mergeb)
            phi))))))
 
@@ -352,9 +349,8 @@
            (catch (make-instance 'cleavir-bir:catch
                     :next (list* prefix-iblock tag-iblocks)))
            (contvar (make-instance 'cleavir-bir:variable
-                      :binder catch :rtype :continuation))
-           (wcont (make-instance 'cleavir-bir:writevar
-                    :outputs (list contvar) :inputs (list catch))))
+                      :binder catch :rtype :continuation)))
+      (setf (cleavir-bir:outputs catch) (list contvar))
       ;; this is used to check whether the catch is actually necessary.
       (setf (go-info catch) nil)
       (adjoin-variable inserter contvar)
@@ -366,7 +362,6 @@
                      (list catch tag-iblock function contvar)))
       (terminate inserter catch)
       (begin inserter prefix-iblock)
-      (insert inserter wcont)
       (when (compile-sequence-for-effect prefix inserter)
         (terminate inserter (make-instance 'cleavir-bir:jump
                               :inputs () :outputs ()
@@ -390,7 +385,7 @@
                      (begin inserter next)
                      ;; If there were no nonlocal unwinds, simplify.
                      (unless (go-info catch)
-                       (delete-catch catch contvar wcont
+                       (delete-catch catch contvar
                                      function old-dynenv prefix-iblock))
                      ;; Delete any iblocks without predecessors.
                      (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
@@ -402,7 +397,7 @@
               do (unless rest
                    ;; If there were no nonlocal unwinds, simplify.
                    (unless (go-info catch)
-                     (delete-catch catch contvar wcont
+                     (delete-catch catch contvar
                                    function old-dynenv prefix-iblock))
                      ;; Delete any iblocks without predecessors.
                      (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)

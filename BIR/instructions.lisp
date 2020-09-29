@@ -75,7 +75,7 @@
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (no-input lexical-bind terminator computation)
+(defclass catch (no-input lexical-bind terminator operation)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
@@ -83,8 +83,7 @@
              :type cleavir-set:set)))
 (defmethod rtype ((d catch)) :continuation)
 (defmethod bindings ((catch catch))
-  (assert (typep (use catch) 'writevar))
-  (cleavir-set:make-set (first (outputs (use catch)))))
+  (cleavir-set:make-set (first (outputs catch))))
 
 ;;; Mark a lexical binding, so that cell extent is obvious.
 (defclass leti (no-input no-output terminator1 lexical-bind operation)
