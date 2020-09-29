@@ -5,8 +5,8 @@
 ;; interpolatability specifically (so e.g. there must be only one call).
 (defun potential-inlines (enclose)
   (check-type enclose cleavir-bir:enclose)
-  (let ((use (cleavir-bir:use enclose))
-        (use-inputs (cleavir-bir:inputs enclose)))
+  (let* ((use (cleavir-bir:use enclose))
+         (use-inputs (cleavir-bir:inputs use)))
     (typecase use
       (cleavir-bir:call
        ;; If it's only used for a call, it must be inlinable, as it must be in
