@@ -70,7 +70,7 @@
 
 ;;; Read the object stored in the temporary storage in the dynamic env.
 (defclass readtemp (accesstemp no-input computation) ())
-(defmethod rtype ((d readtemp)) (rtype (dynamic-environment readtemp)))
+(defmethod rtype ((d readtemp)) (rtype (dynamic-environment d)))
 
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
