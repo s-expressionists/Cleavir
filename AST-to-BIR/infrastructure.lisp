@@ -4,6 +4,7 @@
 (defvar *block-info*)
 (defvar *go-info*)
 (defvar *function-info*)
+(defvar *current-module*)
 
 ;;; KLUDGE: This seems necessary to reconstruct the lexicality information CST-to-AST
 ;;; destroys. Should probably be done more cleanly there.
@@ -101,6 +102,9 @@
     (cleavir-set:nadjoinf (cleavir-bir:scope dynamic-environment) ib)
     ib))
 
+(defun make-module ()
+  (make-instance 'cleavir-bir:module))
+
 (defun adjoin-variable (inserter variable)
   (check-type inserter inserter)
   (check-type variable cleavir-bir:variable)
@@ -158,7 +162,8 @@
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*function-info* (make-hash-table :test #'eq)))
+        (*function-info* (make-hash-table :test #'eq))
+        (*current-module* (make-module)))
     (compile-function ast)))
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).

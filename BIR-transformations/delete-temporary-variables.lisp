@@ -26,4 +26,4 @@
 
 (defun delete-temporary-variables (ir)
   (delete-temporary-variables-from-set
-   (cleavir-bir:all-functions ir)))
+   (cleavir-bir:functions (cleavir-bir:module ir))))

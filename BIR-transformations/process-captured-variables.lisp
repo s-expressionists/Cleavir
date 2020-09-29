@@ -88,6 +88,6 @@
                                       enclose))))))
 
 (defun process-captured-variables (ir)
-  (let ((af (cleavir-bir:all-functions ir)))
+  (let ((af (cleavir-bir:functions (cleavir-bir:module ir))))
     (analyze-variables af)
     (transmit-variables af)))

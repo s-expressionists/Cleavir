@@ -4,6 +4,7 @@
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble)
+  (:export #:module #:functions)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
@@ -31,7 +32,7 @@
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:map-iblocks #:all-functions
+           #:map-iblocks
            #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
            #:replace-uses #:replace-terminator #:split-block-after

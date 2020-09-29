@@ -67,22 +67,6 @@
                 work)))
   (values))
 
-;;; Can be used to save some consing when repeatedly mapping instructions
-;;; with no graph modifications inbetween
-(defun all-functions (top)
-  (check-type top function)
-  (let ((set (cleavir-set:empty-set))
-        (worklist (list top)))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (cleavir-set:presentp work set)
-            do (cleavir-set:nadjoinf set work)
-               (map-local-instructions
-                (lambda (i)
-                  (typecase i (enclose (push (code i) worklist))))
-                work))
-    set))
-
 ;;; Arbitrary order
 (defun map-instructions-with-owner (f function)
   (check-type function function)

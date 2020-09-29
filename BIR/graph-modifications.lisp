@@ -153,7 +153,14 @@
 (defmethod clean-up-instruction progn ((inst enclose))
   (cleavir-set:doset (v (variables inst))
     (cleavir-set:nremovef (encloses v) inst))
-  (cleavir-set:nremovef (encloses (code inst)) inst))
+  (let* ((code (code inst))
+         (code-encloses (encloses code)))
+    (cleavir-set:nremovef code-encloses inst)
+    (when (cleavir-set:empty-set-p code-encloses)
+      (cleavir-set:nremovef (functions (module code)) code)
+      ;; TODO: Emit some kind of a compiler note saying that a function
+      ;; got inlined or deleted.
+      )))
 (defmethod clean-up-instruction progn ((inst unwind))
   (cleavir-set:nremovef (entrances (destination inst)) (iblock inst)))
 (defmethod clean-up-instruction progn ((inst terminator))
@@ -332,4 +339,4 @@
   (values))
 
 (defun refresh-users (top)
-  (cleavir-set:mapset nil #'refresh-local-users (all-functions top)))
+  (cleavir-set:mapset nil #'refresh-local-users (functions (module top))))

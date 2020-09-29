@@ -51,14 +51,17 @@
         do (insert inserter setq)))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
-  (let* ((function (make-instance 'cleavir-bir:function
+  (let* ((module *current-module*)
+         (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
                      :docstring (cleavir-ast:docstring ast)
                      :original-lambda-list (cleavir-ast:original-lambda-list ast)
-                     :origin (cleavir-ast:origin ast)))
+                     :origin (cleavir-ast:origin ast)
+                     :module module))
          (inserter (make-instance 'inserter))
          (start (make-iblock inserter
                              :function function :dynamic-environment function)))
+    (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
     (multiple-value-bind (ll alist)
         (translate-lambda-list (cleavir-ast:lambda-list ast) function)
       (setf (cleavir-bir:lambda-list function) ll
