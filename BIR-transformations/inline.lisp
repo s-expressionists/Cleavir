@@ -12,8 +12,9 @@
        ;; If it's only used for a call, it must be inlinable, as it must be in
        ;; the same function as the enclose i.e. not recursive.
        ;; It does have to be the callee and only the callee, though.
-       (when (and (eq enclose (first use-inputs))
-                  (not (member enclose (rest use-inputs) :test #'eq)))
+       ;; Since enclose is linear, it only has one use, so we only need to
+       ;; check that it's the callee.
+       (when (eq enclose (first use-inputs))
          (list (cleavir-bir:use enclose))))
       (t nil))))
 
