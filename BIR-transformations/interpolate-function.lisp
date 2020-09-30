@@ -47,15 +47,18 @@
             (check-type u cleavir-bir:unwind)
             (let ((dest (cleavir-bir:destination u)))
               (when (eq (cleavir-bir:function dest) call-function)
-                (let ((new (make-instance 'cleavir-bir:jump
-                             :inputs (rest (cleavir-bir:inputs u))
-                             :outputs (cleavir-bir:outputs u)
+                (let ((unwind-inputs (rest (cleavir-bir:inputs u)))
+                      (unwind-outputs (cleavir-bir:outputs u))
+                      (new (make-instance 'cleavir-bir:jump
                              :unwindp t :next (list dest))))
                   (cleavir-bir:replace-terminator new u)
-                  (cleavir-bir:move-inputs new))))))
-        (when return-values
-          ;; Replace the call-as-datum with the return-values.
-          (cleavir-bir:replace-computation call return-values))
+                  (setf (cleavir-bir:inputs new) unwind-inputs
+                        (cleavir-bir:outputs new) unwind-outputs))))))
+        (if return-values
+            ;; Replace the call-as-datum with the return-values.
+            (cleavir-bir:replace-computation call return-values)
+            ;; The call isn't used, so simply delete it.
+            (cleavir-bir:delete-computation call))
         ;; Replace the arguments in the interpolated function body with the
         ;; actual argument values
         (mapc #'cleavir-bir:replace-uses arguments lambda-list)
