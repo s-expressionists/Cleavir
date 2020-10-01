@@ -1,16 +1,5 @@
 (in-package #:cleavir-bir-transformations)
 
-;;; Given a function, return a set of all functions that enclose
-;;; the function, directly or not.
-(defun ancestor-functions (function)
-  (let ((result (cleavir-set:empty-set)))
-    (labels ((aux (enclose)
-               (let ((f (cleavir-bir:function enclose)))
-                 (cleavir-set:nadjoinf result f)
-                 (cleavir-set:mapset nil #'aux (cleavir-bir:encloses f)))))
-      (cleavir-set:mapset nil #'aux (cleavir-bir:encloses function))
-      result)))
-
 (defun closed-over-predicate (function)
   (lambda (variable)
     (and (cleavir-bir:closed-over-p variable)
