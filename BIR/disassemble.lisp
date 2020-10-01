@@ -71,12 +71,12 @@
         ,@(mapcar #'disassemble-datum (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst catch))
-  `(:= ,(disassemble-datum inst)
-       (,(dis-label inst)
-        ,@(mapcar #'disassemble-datum (inputs inst))
-        ,@(mapcar (lambda (iblock)
-                    (list 'iblock (dis-iblock iblock)))
-                  (next inst)))))
+  `(,(dis-label inst)
+    ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))
+    ,@(mapcar #'disassemble-datum (inputs inst))
+    ,@(mapcar (lambda (iblock)
+                (list 'iblock (dis-iblock iblock)))
+              (next inst))))
 
 (defmethod disassemble-instruction ((inst unwind))
   `(,(dis-label inst)
