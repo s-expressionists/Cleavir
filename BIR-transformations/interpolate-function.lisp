@@ -70,19 +70,5 @@
            (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
              (setf (cleavir-bir:dynamic-environment ib) leti))
            (setf (cleavir-bir:function ib) call-function))
-         interpolated-function)))
-    ;; Re-home variables
-    (cleavir-set:doset (v (cleavir-bir:variables interpolated-function))
-      (when (eq (cleavir-bir:function v) call-function)
-        ;; If the variable is owned by the function being interpolated
-        ;; into, it's possible that it was only shared between these two
-        ;; functions, and so is now local.
-        (flet ((owned-by-call-function-p (inst)
-                 (eq (cleavir-bir:function inst) call-function)))
-          (when (and (cleavir-set:empty-set-p (cleavir-bir:encloses v))
-                     (cleavir-set:every #'owned-by-call-function-p
-                                        (cleavir-bir:readers v))
-                     (cleavir-set:every #'owned-by-call-function-p
-                                        (cleavir-bir:writers v)))
-            (setf (cleavir-bir:extent v) :local))))))
+         interpolated-function))))
   (values))

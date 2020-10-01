@@ -181,12 +181,12 @@
 ;;; A mutable lexical variable.
 ;;; Has to be read from and written to via instructions.
 (defclass variable (datum)
-  (;; Indicates the shared-ness of the variable.
+  (;; Indicates the extent of a closed over variable. Filled in by
+   ;; dynamic extent analysis.
    (%extent :initarg :extent :accessor extent
             :initform :unanalyzed
             :type (member :unanalyzed
-                          :local ; only in one function.
-                          ;;:dynamic ; TODO
+                          :dynamic
                           :indefinite))
    ;; The LEXICAL-BIND that binds this.
    (%binder :initarg :binder :accessor binder :type lexical-bind)
@@ -212,6 +212,18 @@
     (if (typep b 'function)
         b
         (function b))))
+
+(defun immutablep (variable)
+  (= (cleavir-set:size (writers variable)) 1))
+
+(defun closed-over-p (variable)
+  (let ((owner (function variable)))
+    (cleavir-set:doset (reader (readers variable))
+      (unless (eq owner (function reader))
+        (return-from closed-over-p t)))
+    (cleavir-set:doset (writer (writers variable))
+      (unless (eq owner (function writer))
+        (return-from closed-over-p t)))))
 
 ;;; TODO: This will implicate load form bla bla bla stuff.
 (defun make-constant (value)

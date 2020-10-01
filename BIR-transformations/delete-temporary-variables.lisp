@@ -14,7 +14,7 @@
     (cleavir-bir:replace-computation reader source)))
 
 (defun temporary-variable-p (variable)
-  (and (eq (cleavir-bir:extent variable) :local)
+  (and (not (cleavir-bir:closed-over-p variable))
        (= (cleavir-set:size (cleavir-bir:writers variable)) 1)
        (= (cleavir-set:size (cleavir-bir:readers variable)) 1)))
 
