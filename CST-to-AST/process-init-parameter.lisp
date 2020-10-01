@@ -5,9 +5,9 @@
 ;;; what arguments were given.  VALUE-AST is an AST that computes the
 ;;; initialization for the variable to be used when no explicit value
 ;;; is supplied by the caller.  This function generates the code for
-;;; testing whether SUPPLIED-P-AST computes NIL or T, and for
-;;; assigning the value computed by VALUE-AST to VAR-AST if
-;;; SUPPLIED-P-AST computes NIL.
+;;; testing whether SUPPLIED-P-AST computes NIL or T, and returning
+;;; the value computed by VALUE-AST to VAR-AST if SUPPLIED-P-AST
+;;; computes NIL.
 (defun make-initialization-ast (var-ast supplied-p-ast value-ast origin env system)
   (let ((nil-cst (make-atom-cst nil origin)))
     (cleavir-ast:make-if-ast
@@ -15,8 +15,8 @@
       supplied-p-ast
       (convert-constant nil-cst env system)
       :origin origin)
-     (cleavir-ast:make-setq-ast var-ast value-ast :origin origin)
-     (convert-constant nil-cst env system)
+     value-ast
+     var-ast
      :origin origin)))
 
 ;;; VAR-CST and SUPPLIED-P-CST are CSTs representing a parameter
@@ -42,16 +42,13 @@
 (defun process-init-parameter
     (var-cst var-ast supplied-p-cst supplied-p-ast init-ast env next-thunk system)
   (let ((origin (cst:source var-cst)))
-    (process-progn
-     (list (make-initialization-ast var-ast supplied-p-ast init-ast
-                                    origin env system)
+    (set-or-bind-variable
+     var-cst (make-initialization-ast var-ast supplied-p-ast init-ast
+                                      origin env system)
+     (if (null supplied-p-cst)
+         next-thunk
+         (lambda ()
            (set-or-bind-variable
-            var-cst var-ast
-            (if (null supplied-p-cst)
-                next-thunk
-                (lambda ()
-                  (set-or-bind-variable
-                   supplied-p-cst supplied-p-ast
-                   next-thunk env system)))
-            env system))
-     origin)))
+            supplied-p-cst supplied-p-ast
+            next-thunk env system)))
+     env system)))
