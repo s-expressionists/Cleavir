@@ -162,7 +162,8 @@
       ;; got inlined or deleted.
       )))
 (defmethod clean-up-instruction progn ((inst unwind))
-  (cleavir-set:nremovef (entrances (destination inst)) (iblock inst)))
+  (cleavir-set:nremovef (entrances (destination inst)) (iblock inst))
+  (cleavir-set:nremovef (unwinds (catch inst)) inst))
 (defmethod clean-up-instruction progn ((inst terminator))
   (let ((ib (iblock inst)))
     (dolist (n (next inst)) (cleavir-set:nremovef (predecessors n) ib))))

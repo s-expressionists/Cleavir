@@ -47,11 +47,13 @@
             (check-type u cleavir-bir:unwind)
             (let ((dest (cleavir-bir:destination u)))
               (when (eq (cleavir-bir:function dest) call-function)
-                (let ((unwind-inputs (rest (cleavir-bir:inputs u)))
+                (let ((contread (first (cleavir-bir:inputs u)))
+                      (unwind-inputs (rest (cleavir-bir:inputs u)))
                       (unwind-outputs (cleavir-bir:outputs u))
                       (new (make-instance 'cleavir-bir:jump
                              :unwindp t :next (list dest))))
                   (cleavir-bir:replace-terminator new u)
+                  (cleavir-bir:delete-computation contread)
                   (setf (cleavir-bir:inputs new) unwind-inputs
                         (cleavir-bir:outputs new) unwind-outputs))))))
         (if return-values
