@@ -31,6 +31,8 @@
                    (cleavir-set:nadjoinf (cleavir-bir:bindings leti) v)
                    t))
                (cleavir-bir:variables interpolated-function)))
+        (cleavir-set:nunionf (cleavir-bir:variables call-function)
+                             (cleavir-bir:variables interpolated-function))
         ;; Replace the return instruction with a jump if there is one, or else
         ;; delete AFTER and any later straight line blocks.
         (if interp-end
