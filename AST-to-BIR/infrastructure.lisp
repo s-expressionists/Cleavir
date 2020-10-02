@@ -6,42 +6,17 @@
 (defvar *function-info*)
 (defvar *current-module*)
 
-;;; KLUDGE: This seems necessary to reconstruct the lexicality information CST-to-AST
-;;; destroys. Should probably be done more cleanly there.
-;;; Essentially we make sure that any variables whose binders were set in an inner
-;;; function get reset to this outer function.
-(defun fix-binder (variable new-binder)
-  (check-type new-binder cleavir-bir:function)
-  (let ((binder (cleavir-bir:binder variable)))
-    (when (and (typep binder 'cleavir-bir:function)
-               (typep new-binder 'cleavir-bir:function))
-      (loop with function
-            for encloses = (cleavir-bir:encloses binder)
-              then (cleavir-bir:encloses function)
-            for nencloses = (cleavir-set:size encloses)
-            when (zerop nencloses)
-              do (loop-finish)
-            do (assert (= 1 nencloses))
-               (setf function (cleavir-bir:function (cleavir-set:arb encloses)))
-            when (eq function new-binder)
-              do (setf (cleavir-bir:binder variable) new-binder)
-                 (loop-finish))))
-  variable)
+(defun bind-variable (lexical-ast binder)
+  (assert (not (nth-value 1 (gethash lexical-ast *variables*))))
+  (setf (gethash lexical-ast *variables*)
+        (make-instance 'cleavir-bir:variable
+                       :name (cleavir-ast:name lexical-ast)
+                       :binder binder :rtype :object)))
 
-(defun find-or-create-variable (lexical-ast binder)
+(defun find-variable (lexical-ast)
   (check-type lexical-ast cleavir-ast:lexical-ast)
-  (check-type binder cleavir-bir:lexical-bind)
-  ;; FIXME: This would be clear if we distinguished between lexical
-  ;; variables and function arguments in the AST.
-  (let ((thing
-          (or (gethash lexical-ast *variables*)
-              (setf (gethash lexical-ast *variables*)
-                    (make-instance 'cleavir-bir:variable
-                                   :name (cleavir-ast:name lexical-ast)
-                                   :binder binder :rtype :object)))))
-    (if (typep thing 'cleavir-bir:argument)
-        thing
-        (fix-binder thing binder))))
+  (or (gethash lexical-ast *variables*)
+      (error "BUG: No BIR variable found for lexical ast!")))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)
