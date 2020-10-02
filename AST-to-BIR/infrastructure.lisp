@@ -7,16 +7,24 @@
 (defvar *current-module*)
 
 (defun bind-variable (lexical-ast binder)
-  (assert (not (nth-value 1 (gethash lexical-ast *variables*))))
-  (setf (gethash lexical-ast *variables*)
-        (make-instance 'cleavir-bir:variable
-                       :name (cleavir-ast:name lexical-ast)
-                       :binder binder :rtype :object)))
+  (let ((variable (gethash lexical-ast *variables*)))
+    (cond (variable
+           ;; Tie the knot for mutually recurisve functions.
+           (assert (null (cleavir-bir:binder variable)))
+           (setf (cleavir-bir:binder variable) binder)
+           variable)
+          (t
+           (setf (gethash lexical-ast *variables*)
+                 (make-instance 'cleavir-bir:variable
+                                :name (cleavir-ast:name lexical-ast)
+                                :binder binder :rtype :object))))))
 
 (defun find-variable (lexical-ast)
   (check-type lexical-ast cleavir-ast:lexical-ast)
   (or (gethash lexical-ast *variables*)
-      (error "BUG: No BIR variable found for lexical ast!")))
+      ;; Normally this should never happen but mutually recursive
+      ;; functions create a circularity we must tie.
+      (bind-variable lexical-ast nil)))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)
