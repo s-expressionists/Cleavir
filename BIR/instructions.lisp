@@ -54,10 +54,10 @@
 (defmethod rtype ((d abstract-call)) :multiple-values)
 
 (defclass call (abstract-call) ())
-(defmethod callee ((i call)) (first (inputs call)))
+(defmethod callee ((i call)) (first (inputs i)))
 
 (defclass mv-call (abstract-call) ())
-(defmethod callee ((i mv-call)) (first (inputs call)))
+(defmethod callee ((i mv-call)) (first (inputs i)))
 
 (defclass returni (one-input no-output terminator0) ())
 
