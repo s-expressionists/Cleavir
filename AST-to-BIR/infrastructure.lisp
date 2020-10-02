@@ -31,13 +31,17 @@
 (defun find-or-create-variable (lexical-ast binder)
   (check-type lexical-ast cleavir-ast:lexical-ast)
   (check-type binder cleavir-bir:lexical-bind)
-  (fix-binder
-   (or (gethash lexical-ast *variables*)
-       (setf (gethash lexical-ast *variables*)
-             (make-instance 'cleavir-bir:variable
-               :name (cleavir-ast:name lexical-ast)
-               :binder binder :rtype :object)))
-   binder))
+  ;; FIXME: This would be clear if we distinguished between lexical
+  ;; variables and function arguments in the AST.
+  (let ((thing
+          (or (gethash lexical-ast *variables*)
+              (setf (gethash lexical-ast *variables*)
+                    (make-instance 'cleavir-bir:variable
+                                   :name (cleavir-ast:name lexical-ast)
+                                   :binder binder :rtype :object)))))
+    (if (typep thing 'cleavir-bir:argument)
+        thing
+        (fix-binder thing binder))))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)

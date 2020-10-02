@@ -4,51 +4,25 @@
 ;;;
 ;;; COMPILE-FUNCTION
 
-(defun translate-lambda-list (lambda-list funct)
-  (loop with ll with alist
-        for item in lambda-list
-        do (cond ((member item lambda-list-keywords)
-                  (push item ll))
-                 ((consp item)
-                  (let ((valarg (make-instance 'cleavir-bir:argument
-                                  :rtype :object))
-                        (parg (make-instance 'cleavir-bir:argument
-                                :rtype :object)))
-                    (if (= (length item) 3)
-                        (let ((keyv (find-or-create-variable
-                                     (second item)
-                                     funct))
-                              (predv (find-or-create-variable
-                                      (third item)
-                                      funct)))
-                          (push (list (first item) valarg parg) ll)
-                          (setf alist
-                                (list* (cons keyv valarg)
-                                       (cons predv parg)
-                                       alist)))
-                        (let ((keyv (find-or-create-variable
-                                     (first item)
-                                     funct))
-                              (predv (find-or-create-variable
-                                      (second item)
-                                      funct)))
-                          (push (list valarg parg) ll)
-                          (setf alist
-                                (list* (cons keyv valarg)
-                                       (cons predv parg)
-                                       alist))))))
-                 (t (let ((v (find-or-create-variable item funct))
-                          (a (make-instance 'cleavir-bir:argument
-                               :rtype :object)))
-                      (push a ll)
-                      (push (cons v a) alist))))
-        finally (return (values (nreverse ll) alist))))
+(defun bind-lexical-ast-as-argument (lexical-ast)
+  (assert (not (nth-value 1 (gethash lexical-ast *variables*))))
+  (setf (gethash lexical-ast *variables*)
+        (make-instance 'cleavir-bir:argument
+                       :name (cleavir-ast:name lexical-ast)
+                       :rtype :object)))
 
-(defun insert-initial-bindings (inserter map)
-  (loop for (var . arg) in map
-        for setq = (make-instance 'cleavir-bir:writevar
-                     :outputs (list var) :inputs (list arg))
-        do (insert inserter setq)))
+(defun bind-lambda-list-arguments (lambda-list)
+  (loop for item in lambda-list
+        collect (cond ((member item lambda-list-keywords)
+                       item)
+                      ((consp item)
+                       (if (= (length item) 3)
+                           (list (first item)
+                                 (bind-lexical-ast-as-argument (second item))
+                                 (bind-lexical-ast-as-argument (third item)))
+                           (list (bind-lexical-ast-as-argument (first item))
+                                 (bind-lexical-ast-as-argument (second item)))))
+                      (t (bind-lexical-ast-as-argument item)))))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast))
   (let* ((module *current-module*)
@@ -62,14 +36,11 @@
          (start (make-iblock inserter
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
-    (multiple-value-bind (ll alist)
-        (translate-lambda-list (cleavir-ast:lambda-list ast) function)
-      (setf (cleavir-bir:lambda-list function) ll
-            (cleavir-bir:variables function) (apply #'cleavir-set:make-set
-                                                    (mapcar #'car alist))
+    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast))))
+      (setf (cleavir-bir:lambda-list function) lambda-list
+            (cleavir-bir:variables function) (cleavir-set:empty-set)
             (cleavir-bir:start function) start)
       (begin inserter start)
-      (insert-initial-bindings inserter alist)
       (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter)))
         (cond
           ((eq rv :no-return)
@@ -583,9 +554,15 @@
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-ast) inserter)
   (let ((var (find-or-create-variable ast (function inserter))))
-    (adjoin-variable inserter var)
-    (list (insert inserter
-                  (make-instance 'cleavir-bir:readvar :inputs (list var))))))
+    ;; FIXME: We probably want to make a new AST class to distinguish between
+    ;; these two cases more cleanly.
+    (typecase var
+      (cleavir-bir:argument
+       (list var))
+      (t
+       (adjoin-variable inserter var)
+       (list (insert inserter
+                     (make-instance 'cleavir-bir:readvar :inputs (list var))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
