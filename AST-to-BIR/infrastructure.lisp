@@ -6,10 +6,13 @@
 (defvar *function-info*)
 (defvar *current-module*)
 
+;;; KLUDGE: We need to write the following two functions this way
+;;; because mutually referential functions can cause lexical-binds to
+;;; occur after the name they bind is referenced.
 (defun bind-variable (lexical-ast binder)
   (let ((variable (gethash lexical-ast *variables*)))
     (cond (variable
-           ;; Tie the knot for mutually recurisve functions.
+           ;; Tie the knot for mutually referential functions.
            (assert (null (cleavir-bir:binder variable)))
            (setf (cleavir-bir:binder variable) binder)
            variable)
@@ -22,7 +25,7 @@
 (defun find-variable (lexical-ast)
   (check-type lexical-ast cleavir-ast:lexical-ast)
   (or (gethash lexical-ast *variables*)
-      ;; Normally this should never happen but mutually recursive
+      ;; Normally this should never happen but mutually referential
       ;; functions create a circularity we must tie.
       (bind-variable lexical-ast nil)))
 
