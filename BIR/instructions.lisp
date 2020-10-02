@@ -47,7 +47,9 @@
 (defclass vprimop (primop computation) ())
 (defmethod rtype ((d vprimop)) (first (out-rtypes (info d))))
 
-(defclass abstract-call (computation) ())
+(defclass abstract-call (computation)
+  ((%attributes :initarg :attributes :reader attributes
+                :initform (cleavir-attributes:default-attributes))))
 (defgeneric callee (instruction))
 (defmethod rtype ((d abstract-call)) :multiple-values)
 

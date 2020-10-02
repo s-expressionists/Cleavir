@@ -417,6 +417,7 @@
     (if (eq args :no-return)
         args
         (insert inserter (make-instance 'cleavir-bir:call
+                           :attributes (cleavir-ast:attributes ast)
                            :inputs (list* callee2 args))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
