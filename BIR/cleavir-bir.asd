@@ -1,7 +1,7 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-bir
-  :depends-on (:cleavir-primop :cleavir-set)
+  :depends-on (:cleavir-primop :cleavir-set :cleavir-attributes)
   :components
   ((:file "packages")
    (:file "structure" :depends-on ("packages"))
