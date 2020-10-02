@@ -47,11 +47,15 @@
 (defclass vprimop (primop computation) ())
 (defmethod rtype ((d vprimop)) (first (out-rtypes (info d))))
 
-(defclass call (computation) ())
-(defmethod rtype ((d call)) :multiple-values)
+(defclass abstract-call (computation) ())
+(defgeneric callee (instruction))
+(defmethod rtype ((d abstract-call)) :multiple-values)
 
-(defclass mv-call (computation) ())
-(defmethod rtype ((d mv-call)) :multiple-values)
+(defclass call (abstract-call) ())
+(defmethod callee ((i call)) (first (inputs call)))
+
+(defclass mv-call (abstract-call) ())
+(defmethod callee ((i mv-call)) (first (inputs call)))
 
 (defclass returni (one-input no-output terminator0) ())
 
