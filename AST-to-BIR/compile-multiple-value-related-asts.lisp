@@ -4,7 +4,7 @@
   (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
     (when (eq rv :no-return) (return-from compile-ast rv))
     (let* ((vars (loop for as in (cleavir-ast:lhs-asts ast)
-                       collect (find-or-create-variable as (function inserter))))
+                       collect (find-variable as)))
            (vals (adapt inserter rv (make-list (length vars)
                                                :initial-element :object))))
       (loop for var in vars

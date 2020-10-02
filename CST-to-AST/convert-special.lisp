@@ -260,7 +260,7 @@
 ;;; has a function name in its CAR and an AST in its CDR.
 (defun compute-function-init-asts (functions env)
   (loop for (name . fun-ast) in functions
-        collect (cleavir-ast:make-setq-ast
+        collect (cleavir-ast:make-lexical-bind-ast
                  (function-lexical env name)
                  fun-ast)))
 

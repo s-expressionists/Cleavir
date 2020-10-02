@@ -1,7 +1,7 @@
 (in-package #:cleavir-bir-transformations)
 
 ;;;; Here a "temporary variable" is one with one writer and one reader, and
-;;;; which is local. This  can obviously be replaced. E.g. "v := f(x); g(v)"
+;;;; which is local. This can obviously be replaced. E.g. "v := f(x); g(v)"
 ;;;; can obviously be transformed into "g(f(x))".
 ;;;; That is what this transform does.
 
