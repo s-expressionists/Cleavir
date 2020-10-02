@@ -1,24 +1,5 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-;;; VAR-AST and SUPPLIED-P-AST are LEXICAL-ASTs that will be set by
-;;; the implementation-specific argument-parsing code, according to
-;;; what arguments were given.  VALUE-AST is an AST that computes the
-;;; initialization for the variable to be used when no explicit value
-;;; is supplied by the caller.  This function generates the code for
-;;; testing whether SUPPLIED-P-AST computes NIL or T, and returning
-;;; the value computed by VALUE-AST to VAR-AST if SUPPLIED-P-AST
-;;; computes NIL.
-(defun make-initialization-ast (var-ast supplied-p-ast value-ast origin env system)
-  (let ((nil-cst (make-atom-cst nil origin)))
-    (cleavir-ast:make-if-ast
-     (cleavir-ast:make-eq-ast
-      supplied-p-ast
-      (convert-constant nil-cst env system)
-      :origin origin)
-     value-ast
-     var-ast
-     :origin origin)))
-
 ;;; VAR-CST and SUPPLIED-P-CST are CSTs representing a parameter
 ;;; variable and its associated SUPPLIED-P variable. If no associated
 ;;; SUPPLIED-P variable is present in the lambda list then
