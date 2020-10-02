@@ -4,4 +4,5 @@
   (:use #:cl)
   (:export #:process-captured-variables)
   (:export #:delete-temporary-variables)
-  (:export #:inline-functions))
+  (:export #:inline-functions)
+  (:export #:simple-unwinding-p))
