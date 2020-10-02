@@ -431,29 +431,13 @@
     (cleavir-set:nadjoinf (cleavir-bir:encloses f) enclose)
     (list (insert inserter enclose))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; LEXICAL-BIND-AST
-
-(defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter)
-  (let ((var (bind-variable (cleavir-ast:lhs-ast ast) (function inserter)))
-        (rv (compile-ast (cleavir-ast:value-ast ast) inserter)))
-    (adjoin-variable inserter var)
-    (cond ((eq rv :no-return) rv)
-          (t
-           (insert inserter
-                   (make-instance 'cleavir-bir:writevar
-                     :inputs (adapt inserter rv '(:object))
-                     :outputs (list var)))
-           ;; return no values
-           ()))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; SETQ-AST
 
 (defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter)
-  (let ((var (find-variable (cleavir-ast:lhs-ast ast)))
+  (let ((var (find-or-create-variable (cleavir-ast:lhs-ast ast)
+                                      (function inserter)))
         (rv (compile-ast (cleavir-ast:value-ast ast) inserter)))
     (adjoin-variable inserter var)
     (cond ((eq rv :no-return) rv)
@@ -569,7 +553,7 @@
 ;;; LEXICAL-AST
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-ast) inserter)
-  (let ((var (find-variable ast)))
+  (let ((var (find-or-create-variable ast (function inserter))))
     ;; FIXME: We probably want to make a new AST class to distinguish between
     ;; these two cases more cleanly.
     (typecase var

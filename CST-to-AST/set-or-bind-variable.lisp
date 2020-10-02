@@ -17,7 +17,7 @@
         (convert-special-binding
          variable-cst value-ast next-thunk env system)
 	(cleavir-ast:make-progn-ast
-	 (list (cleavir-ast:make-lexical-bind-ast
+	 (list (cleavir-ast:make-setq-ast
 		(cleavir-env:identity info)
 		value-ast
                 :origin (cst:source variable-cst))
