@@ -58,11 +58,20 @@
                   (cleavir-bir:delete-computation contread)
                   (setf (cleavir-bir:inputs new) unwind-inputs
                         (cleavir-bir:outputs new) unwind-outputs))))))
-        (if return-values
-            ;; Replace the call-as-datum with the return-values.
-            (cleavir-bir:replace-computation call return-values)
-            ;; The call isn't used, so simply delete it.
-            (cleavir-bir:delete-computation call))
+        (cond
+          (return-values
+           (let ((call-use (unless (cleavir-bir:unused-p call)
+                             (cleavir-bir:use call))))
+             ;; Replace the call-as-datum with the return-values.
+             (cleavir-bir:replace-computation call return-values)
+             ;; If we have a FTM->MTF sequence, clear it out.
+             (when (and call-use
+                        (typep return-values 'cleavir-bir:fixed-to-multiple)
+                        (typep call-use 'cleavir-bir:multiple-to-fixed))
+               (cleavir-bir:delete-transmission return-values call-use))))
+          (t
+           ;; The call isn't used, so simply delete it.
+           (cleavir-bir:delete-computation call)))
         ;; Replace the arguments in the interpolated function body with the
         ;; actual argument values
         (mapc #'cleavir-bir:replace-uses arguments lambda-list)

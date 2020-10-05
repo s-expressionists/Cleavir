@@ -12,7 +12,7 @@
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output #:name
-           #:definitions #:uses #:definition #:use)
+           #:definitions #:uses #:definition #:use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
            #:immutablep #:closed-over-p)
   (:export #:constant #:make-constant #:immediate #:load-time-value
