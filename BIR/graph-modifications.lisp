@@ -41,15 +41,6 @@
     (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
   (map nil (lambda (inp) (add-use inp inst)) new-inputs))
 
-;;; Mark all the inputs of an instruction as being used by that instruction.
-;;; This is useful when an instruction is deleted but its inputs maintained.
-(defun move-inputs (inst)
-  (check-type inst instruction)
-  (dolist (input (inputs inst))
-    (assert (not (slot-boundp input '%use)))
-    (setf (%use input) inst))
-  (values))
-
 (defgeneric remove-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
 (defmethod remove-definition ((datum output) (definition instruction))
@@ -173,8 +164,6 @@
   (check-type instruction (and instruction (not terminator)))
   (typecase instruction
     (computation (assert (unused-p instruction)))
-    (writevar ; special cased because deleting variables is different
-     nil)
     (operation
      (assert (every (lambda (o) (or (not (ssa-p o)) (unused-p o)))
                     (outputs instruction)))))
@@ -263,6 +252,27 @@
   (assert (unused-p computation))
   (delete-instruction computation)
   (values))
+
+;;; Deletes a pair of instructions that pass values along.
+;;; That is, given inputs -> in-inst ... out-inst -> outputs,
+;;; we replace the outputs with the inputs and delete both instructions.
+;;; This is a separate function because for one thing it's reasonably common,
+;;; and for two it internally messes with several invariants of the IR, which
+;;; would be tricky to deal with outside of the BIR system.
+(defun delete-transmission (in-inst out-inst)
+  (let ((outputs (outputs out-inst))
+        (inputs (inputs in-inst)))
+    (assert (every #'ssa-p outputs))
+    (assert (>= (length inputs) (length outputs)))
+    ;; Prevent it from cleaning up its inputs when it's deleted.
+    (slot-makunbound in-inst '%inputs)
+    ;; Clean up its inputs.
+    ;; (This is a separate loop in case inputs is longer than outputs.)
+    (loop for inp in inputs do (remove-use inp in-inst))
+    ;; Replace.
+    (mapc #'replace-uses inputs outputs))
+  (delete-instruction out-inst)
+  (delete-instruction in-inst))
 
 ;;; Split a iblock into two iblocks.
 (defun split-block-after (inst)

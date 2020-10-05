@@ -37,8 +37,8 @@
            #:map-iblocks
            #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
-           #:replace-uses #:replace-terminator #:split-block-after
-           #:move-inputs #:delete-iblock #:maybe-delete-iblock)
+           #:delete-transmission #:replace-uses #:replace-terminator
+           #:split-block-after #:delete-iblock #:maybe-delete-iblock)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)

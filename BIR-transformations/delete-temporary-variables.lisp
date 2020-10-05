@@ -8,10 +8,8 @@
 (defun delete-variable (variable)
   (declare (optimize debug))
   (let* ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
-         (source (first (cleavir-bir:inputs writer)))
          (reader (cleavir-set:arb (cleavir-bir:readers variable))))
-    (cleavir-bir:delete-instruction writer)
-    (cleavir-bir:replace-computation reader source)))
+    (cleavir-bir:delete-transmission writer reader)))
 
 (defun temporary-variable-p (variable)
   (and (not (cleavir-bir:closed-over-p variable))
