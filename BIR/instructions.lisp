@@ -47,6 +47,9 @@
 (defclass vprimop (primop computation) ())
 (defmethod rtype ((d vprimop)) (first (out-rtypes (info d))))
 
+;; primop that tests in a branch
+(defclass tprimop (primop no-output terminator operation) ())
+
 (defclass abstract-call (computation)
   ((%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes))))

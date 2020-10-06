@@ -10,8 +10,10 @@
 ;;; structure describing a primop
 (defclass primop-info ()
   ((%name :initarg :name :reader name)
-   ;; List of rtypes of the outputs
-   (%out-rtypes :initarg :out-rtypes :reader out-rtypes :type list)
+   ;; List of rtypes of the outputs, or an integer.
+   ;; If the latter, indicates that this is a test with that many branches.
+   (%out-rtypes :initarg :out-rtypes :reader out-rtypes
+                :type (or list (integer 2)))
    ;; List of rtypes of the inputs
    (%in-rtypes :initarg :in-rtypes :reader in-rtypes :type list)))
 
@@ -24,7 +26,7 @@
   (or (gethash name *primops*)
       (error "BUG: No primop: ~a" name)))
 
-(defmacro defprimop (name (&rest in) (&rest out))
+(defmacro defprimop (name (&rest in) out)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (gethash ',name *primops*)
            (make-instance 'primop-info
@@ -42,4 +44,8 @@
     (cleavir-primop:rplacd (:object :object) ())
     (symbol-value (:object) (:object))
     ((setf symbol-value) (:object :object) ())
-    (fdefinition (:object) (:object))))
+    (fdefinition (:object) (:object))
+
+    (cleavir-primop:fixnum-less (:object :object) 2)
+    (cleavir-primop:fixnum-not-greater (:object :object) 2)
+    (cleavir-primop:fixnum-equal (:object :object) 2)))

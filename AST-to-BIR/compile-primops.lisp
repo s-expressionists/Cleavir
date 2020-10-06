@@ -2,20 +2,33 @@
 
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-bir:primop-info primop))
-         (nv-p (null (cleavir-bir:out-rtypes info)))
-         (cname
-           (if nv-p 'cleavir-bir:nvprimop 'cleavir-bir:vprimop))
-         (form
-           `(make-instance ',cname :info ',info :inputs rv)))
-    `(defmethod compile-ast ((ast ,ast) inserter)
-       (let ((rv (compile-arguments
-                  (list ,@(loop for reader in readers
-                                collect `(,reader ast)))
-                  inserter)))
-         (when (eq rv :no-return) (return-from compile-ast rv))
-         ,(if nv-p
-              `(insert inserter ,form)
-              `(list (insert inserter ,form)))))))
+         (out (cleavir-bir:out-rtypes info))
+         (kind
+           (cond ((null out) 'cleavir-bir:nvprimop)
+                 ((integerp out) 'cleavir-bir:tprimop)
+                 (t 'cleavir-bir:vprimop)))
+         (ca
+           `(compile-arguments (list ,@(loop for reader in readers
+                                             collect `(,reader ast)))
+                               inserter)))
+    (if (eq kind 'cleavir-bir:tprimop)
+        `(defmethod compile-test-ast ((ast ,ast) inserter)
+           (let ((rv ,ca))
+             (when (eq rv :no-return) (return-from compile-test-ast rv))
+             (let ((ibs
+                     (list ,@(loop repeat out
+                                   collect `(make-iblock inserter)))))
+               (terminate
+                inserter
+                (make-instance ',kind :info ',info :inputs rv :next ibs))
+               (copy-list ibs))))
+        (let ((form
+                `(insert inserter
+                         (make-instance ',kind :info ',info :inputs rv))))
+          `(defmethod compile-ast ((ast ,ast) inserter)
+             (let ((rv ,ca))
+               (when (eq rv :no-return) (return-from compile-ast rv))
+               ,(if (eq kind 'cleavir-bir:nvprimop) form `(list ,form))))))))
 
 (defprimop cleavir-primop:car cleavir-ast:car-ast cleavir-ast:cons-ast)
 (defprimop cleavir-primop:cdr cleavir-ast:cdr-ast cleavir-ast:cons-ast)
