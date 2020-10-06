@@ -56,9 +56,7 @@
                    env system)))
       (cleavir-ast:make-the-ast
        (convert form-cst env system)
-       (cleavir-ctype:required vctype system)
-       (cleavir-ctype:optional vctype system)
-       (cleavir-ctype:rest vctype system)
+       vctype
        :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

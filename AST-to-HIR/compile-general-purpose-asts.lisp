@@ -717,6 +717,7 @@
 (defun make-type-check (type-specifier var successor)
   (cleavir-ir:make-the-instruction var successor type-specifier))
 
+#+(or)
 (defmethod compile-ast ((ast cleavir-ast:the-ast) context)
   (with-accessors ((results results)
 		   (successors successors))

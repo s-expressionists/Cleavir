@@ -49,10 +49,9 @@
    #:multiple-value-setq-ast #:make-multiple-value-setq-ast #:lhs-asts
    #:tagbody-ast #:make-tagbody-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
-   #:the-ast #:make-the-ast
-   #:required-types #:optional-types #:rest-type
+   #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:type-specifier
-   #:typew-ast #:make-typew-ast #:ctype
+   #:typew-ast #:make-typew-ast
    #:the-typew-ast #:make-the-typew-ast
    #:bind-ast #:make-bind-ast
    #:eq-ast #:make-eq-ast #:neq-ast #:make-neq-ast

@@ -137,6 +137,7 @@
           (id ast)
           (label ast)))
 
+#+(or)
 (defmethod label ((ast the-ast))
   (format nil "the (values ~{~s ~}~@[&optional ~{~s ~}~]&rest ~s)"
           (cleavir-ast:required-types ast)
