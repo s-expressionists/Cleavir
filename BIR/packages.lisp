@@ -38,7 +38,8 @@
            #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
            #:delete-transmission #:replace-uses #:replace-terminator
-           #:split-block-after #:delete-iblock #:maybe-delete-iblock)
+           #:split-block-after #:delete-iblock #:maybe-delete-iblock
+           #:merge-iblocks)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)

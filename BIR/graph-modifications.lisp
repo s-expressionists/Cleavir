@@ -277,6 +277,52 @@
   (delete-instruction out-inst)
   (delete-instruction in-inst))
 
+(defun iblocks-mergable-p (iblock1 iblock2)
+  (let ((predecessors (predecessors iblock2)))
+    (and (typep (cleavir-bir:end iblock1)
+                'cleavir-bir:jump)
+         (eq (first (successors iblock1)) iblock2)
+         (print (= (cleavir-set:size predecessors) 1))
+         (or (eq (cleavir-set:arb predecessors) iblock1)
+             (error "~a" (cleavir-set:arb predecessors)))
+         (eq (function iblock1) (function iblock2))
+         (eq (dynamic-environment iblock1)
+             (dynamic-environment iblock2))
+         ;; Infinite loop.
+         (not (eq iblock1 iblock2)))))
+
+;;; Merge two iblocks, the first of which must end in a jump.
+(defun merge-iblocks (iblock1 iblock2)
+  (check-type iblock1 iblock)
+  (check-type iblock2 iblock)
+  (assert (iblocks-mergable-p iblock1 iblock2))
+  (let ((end-predecessor (predecessor (end iblock1)))
+        (start (start iblock2))
+        (function (function iblock2)))
+    (cond (end-predecessor
+           (setf (successor end-predecessor) start)
+           (setf (predecessor start) end-predecessor))
+          (t
+           (setf (start iblock1) start)))
+    (setf (end iblock1) (end iblock2))
+    (map-iblock-instructions
+     (lambda (instruction)
+       (setf (cleavir-bir:iblock instruction)
+             iblock1))
+     start)
+    ;; Update the predecessors of the successors.
+    (dolist (succ (successors iblock2))
+      (cleavir-set:nremovef (predecessors succ) iblock2)
+      (cleavir-set:nadjoinf (predecessors succ) iblock1))
+    ;; If the block happens to be the end of its function, adjust
+    (when (eq (end function) iblock2)
+      (setf (end function) iblock1))
+    ;; Remove iblock2 from the function.
+    (cleavir-set:nremovef (iblocks function) iblock1)
+    ;; and scope
+    (cleavir-set:nadjoinf (scope (dynamic-environment iblock2)) iblock2)
+    start))
+
 ;;; Split a iblock into two iblocks.
 (defun split-block-after (inst)
   (check-type inst (and instruction (not terminator)))
