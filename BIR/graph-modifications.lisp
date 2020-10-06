@@ -194,7 +194,10 @@
     (setf (predecessor new) pred
           (end ib) new
           (iblock new) ib)
-    (dolist (n new-next) (cleavir-set:nadjoinf (predecessors n) ib)))
+    (dolist (n (next old))
+      (cleavir-set:nremovef (predecessors n) ib))
+    (dolist (n new-next)
+      (cleavir-set:nadjoinf (predecessors n) ib)))
   (values))
 
 (defmethod replace-terminator :after ((new unwind) old)
