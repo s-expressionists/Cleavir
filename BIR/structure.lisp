@@ -28,7 +28,10 @@
 
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name :type (or symbol null))))
+   (%name :initarg :name :initform nil :reader name :type (or symbol null))
+   (%ctype :initarg :ctype :accessor ctype)))
+
+(defun ctyped-p (datum) (slot-boundp datum '%ctype))
 
 (defmethod print-object ((o datum) stream)
   (print-unreadable-object (o stream :type t)

@@ -11,7 +11,7 @@
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
-           #:output #:name
+           #:output #:name #:ctype #:ctyped-p
            #:definitions #:uses #:definition #:use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
            #:immutablep #:closed-over-p)
