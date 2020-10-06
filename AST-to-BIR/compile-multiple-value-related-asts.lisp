@@ -1,7 +1,8 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
+(defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast)
+                        inserter system)
+  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (when (eq rv :no-return) (return-from compile-ast rv))
     (let* ((vars (loop for as in (cleavir-ast:lhs-asts ast)
                        collect (find-variable as)))
@@ -14,7 +15,7 @@
             do (insert inserter wv))))
   ())
 
-(defun compile-m-v-p1-save (inserter mv form-asts)
+(defun compile-m-v-p1-save (inserter system mv form-asts)
   ;; Note that there are further situations we don't need to save.
   ;; If the user of the m-v-p1 only needs fixed values, those could just be
   ;; extracted early and no saving done. We don't have that information at this
@@ -30,7 +31,7 @@
     (terminate inserter alloca)
     (begin inserter during)
     (insert inserter write)
-    (cond ((compile-sequence-for-effect form-asts inserter)
+    (cond ((compile-sequence-for-effect form-asts inserter system)
            (insert inserter read)
            (let ((after (make-iblock inserter :dynamic-environment de)))
              (terminate inserter (make-instance 'cleavir-bir:jump
@@ -44,31 +45,36 @@
            ;; and change that stuff.
            :no-return))))
 
-(defmethod compile-ast ((ast cleavir-ast:multiple-value-prog1-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:first-form-ast ast) inserter)))
+(defmethod compile-ast ((ast cleavir-ast:multiple-value-prog1-ast)
+                        inserter system)
+  (let ((rv (compile-ast (cleavir-ast:first-form-ast ast) inserter system)))
     (cond ((eq rv :no-return) rv)
           ((listp rv)
            ;; A bunch of values are returned, so we don't need to save.
-           (if (compile-sequence-for-effect (cleavir-ast:form-asts ast) inserter)
+           (if (compile-sequence-for-effect (cleavir-ast:form-asts ast)
+                                            inserter system)
                rv
                :no-return))
           (t
            ;; Multiple values were returned. Save.
-           (compile-m-v-p1-save inserter rv (cleavir-ast:form-asts ast))))))
+           (compile-m-v-p1-save inserter system
+                                rv (cleavir-ast:form-asts ast))))))
 
 ;;; Semantics of mv-call could be rethought. For example if all the argument
 ;;; forms produce a fixed number of values we could just make a call?
-(defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast) inserter)
-  (let ((callee (compile-ast (cleavir-ast:function-form-ast ast) inserter)))
+(defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast)
+                        inserter system)
+  (let ((callee (compile-ast (cleavir-ast:function-form-ast ast)
+                             inserter system)))
     (when (eq callee :no-return) (return-from compile-ast :no-return))
     (let ((callee2 (first (adapt inserter callee '(:object))))
           (args (loop for a in (cleavir-ast:form-asts ast)
-                      for rv = (compile-ast a inserter)
+                      for rv = (compile-ast a inserter system)
                       if (eq rv :no-return)
                         do (return-from compile-ast :no-return)
                       else append (adapt inserter rv :multiple-values))))
       (insert inserter (make-instance 'cleavir-bir:mv-call
                          :inputs (list* callee2 args))))))
 
-(defmethod compile-ast ((ast cleavir-ast:values-ast) inserter)
-  (compile-arguments (cleavir-ast:argument-asts ast) inserter))
+(defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
+  (compile-arguments (cleavir-ast:argument-asts ast) inserter system))

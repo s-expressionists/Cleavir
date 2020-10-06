@@ -7,10 +7,11 @@
 (defprimop cleavir-primop:fixnum-equal cleavir-ast:fixnum-equal-ast
   cleavir-ast:arg1-ast cleavir-ast:arg2-ast)
 
-(defmethod compile-test-ast ((ast cleavir-ast:fixnum-greater-ast) inserter)
+(defmethod compile-test-ast ((ast cleavir-ast:fixnum-greater-ast)
+                             inserter system)
   (let ((rv (compile-arguments (list (cleavir-ast:arg1-ast ast)
                                      (cleavir-ast:arg2-ast ast))
-                               inserter)))
+                               inserter system)))
     (when (eq rv :no-return) (return-from compile-test-ast :no-return))
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop
@@ -20,10 +21,11 @@
                             :next (reverse ibs)))
       ibs)))
 
-(defmethod compile-test-ast ((ast cleavir-ast:fixnum-not-less-ast) inserter)
+(defmethod compile-test-ast ((ast cleavir-ast:fixnum-not-less-ast)
+                             inserter system)
   (let ((rv (compile-arguments (list (cleavir-ast:arg1-ast ast)
                                      (cleavir-ast:arg2-ast ast))
-                               inserter)))
+                               inserter system)))
     (when (eq rv :no-return) (return-from compile-test-ast :no-return))
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop

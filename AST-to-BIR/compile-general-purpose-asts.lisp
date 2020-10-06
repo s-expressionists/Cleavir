@@ -24,7 +24,7 @@
                                  (bind-lexical-ast-as-argument (second item)))))
                       (t (bind-lexical-ast-as-argument item)))))
 
-(defmethod compile-function ((ast cleavir-ast:function-ast))
+(defmethod compile-function ((ast cleavir-ast:function-ast) system)
   (let* ((module *current-module*)
          (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
@@ -41,7 +41,7 @@
             (cleavir-bir:variables function) (cleavir-set:empty-set)
             (cleavir-bir:start function) start)
       (begin inserter start)
-      (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter)))
+      (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
         (cond
           ((eq rv :no-return)
            (setf (cleavir-bir:end function) nil))
@@ -56,8 +56,8 @@
 ;;;
 ;;; IF-AST
 
-(defun compile-branch (inserter test-ast branch-asts)
-  (let ((iblocks (compile-test-ast test-ast inserter)))
+(defun compile-branch (inserter system test-ast branch-asts)
+  (let ((iblocks (compile-test-ast test-ast inserter system)))
     (when (eq iblocks :no-return) (return-from compile-branch iblocks))
     (assert (= (length iblocks) (length branch-asts)))
     (let ((map (loop with r = nil
@@ -65,7 +65,7 @@
                      for ast in branch-asts
                      for ins = (make-instance 'inserter)
                      do (proceed ins iblock)
-                        (let ((rv (compile-ast ast ins)))
+                        (let ((rv (compile-ast ast ins system)))
                           (unless (eq rv :no-return)
                             (push (list ins (iblock ins) rv) r)))
                      finally (return (nreverse r)))))
@@ -115,16 +115,16 @@
                  (begin inserter mergeb)
                  phi))))))))
 
-(defmethod compile-ast ((ast cleavir-ast:if-ast) inserter)
-  (compile-branch inserter (cleavir-ast:test-ast ast)
+(defmethod compile-ast ((ast cleavir-ast:if-ast) inserter system)
+  (compile-branch inserter system (cleavir-ast:test-ast ast)
                   (list (cleavir-ast:then-ast ast) (cleavir-ast:else-ast ast))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; BRANCH-AST
 
-(defmethod compile-ast ((ast cleavir-ast:branch-ast) inserter)
-  (compile-branch inserter (cleavir-ast:test-ast ast)
+(defmethod compile-ast ((ast cleavir-ast:branch-ast) inserter system)
+  (compile-branch inserter system (cleavir-ast:test-ast ast)
                   (append (cleavir-ast:branch-asts ast)
                           (list (cleavir-ast:default-ast ast)))))
 
@@ -132,20 +132,20 @@
 ;;;
 ;;; PROGN-AST
 
-(defun compile-sequence-for-effect (asts inserter)
+(defun compile-sequence-for-effect (asts inserter system)
   (loop for sub in asts
-        for rv = (compile-ast sub inserter)
+        for rv = (compile-ast sub inserter system)
         when (eq rv :no-return)
           return nil
         finally (return t)))
 
-(defmethod compile-ast ((ast cleavir-ast:progn-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:progn-ast) inserter system)
   (let ((form-asts (cleavir-ast:form-asts ast)))
     (assert (not (null form-asts)))
     (let ((last (first (last form-asts)))
           (bl (butlast form-asts)))
-      (if (compile-sequence-for-effect bl inserter)
-          (compile-ast last inserter)
+      (if (compile-sequence-for-effect bl inserter system)
+          (compile-ast last inserter system)
           :no-return))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -178,7 +178,7 @@
    (make-instance 'cleavir-bir:jump :inputs () :outputs () :next (list iblock))
    catch))
 
-(defmethod compile-ast ((ast cleavir-ast:block-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:block-ast) inserter system)
   (let* ((function (function inserter))
          (de (dynamic-environment inserter))
          (during (make-iblock inserter))
@@ -192,7 +192,7 @@
     (terminate inserter catch)
     (begin inserter during)
     (setf (block-info ast) nil)
-    (let* ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter))
+    (let* ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter system))
            (entrances (block-info ast))
            (map (if (eq normal-rv :no-return)
                     entrances
@@ -268,8 +268,8 @@
 ;;;
 ;;; RETURN-FROM-AST
 
-(defmethod compile-ast ((ast cleavir-ast:return-from-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
+(defmethod compile-ast ((ast cleavir-ast:return-from-ast) inserter system)
+  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (unless (eq rv :no-return)
       (push (list (iblock inserter) (function inserter) rv)
             (block-info (cleavir-ast:block-ast ast)))))
@@ -305,13 +305,13 @@
                     (push (cons state (nreverse current)) tags))
                 (return (values prefix (nreverse tags)))))
 
-(defmethod compile-ast ((ast cleavir-ast:tagbody-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:tagbody-ast) inserter system)
   (multiple-value-bind (prefix tags)
       (parse-tagbody (cleavir-ast:item-asts ast))
     ;; Special case: there are no tags.
     (when (null tags)
       (return-from compile-ast
-        (if (compile-sequence-for-effect prefix inserter)
+        (if (compile-sequence-for-effect prefix inserter system)
             ()
             :no-return)))
     ;; General case
@@ -336,14 +336,14 @@
                      (list catch tag-iblock function contvar)))
       (terminate inserter catch)
       (begin inserter prefix-iblock)
-      (when (compile-sequence-for-effect prefix inserter)
+      (when (compile-sequence-for-effect prefix inserter system)
         (terminate inserter (make-instance 'cleavir-bir:jump
                               :inputs () :outputs ()
                               :next (list (first tag-iblocks)))))
       (loop for (tag . body) in tags
             for (ib . rest) on tag-iblocks
             do (begin inserter ib)
-            if (compile-sequence-for-effect body inserter)
+            if (compile-sequence-for-effect body inserter system)
               ;; Code continues onto the next tag, or out of the tagbody.
               do (let ((next
                          (if rest
@@ -381,7 +381,8 @@
 ;;;
 ;;; GO-AST
 
-(defmethod compile-ast ((ast cleavir-ast:go-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:go-ast) inserter system)
+  (declare (ignore system))
   (destructuring-bind (catch iblock cfunction cvar)
       (go-info (cleavir-ast:tag-ast ast))
     (let ((function (function inserter)))
@@ -401,19 +402,20 @@
 ;;;
 ;;; CALL-AST
 
-(defun compile-arguments (arg-asts inserter)
+(defun compile-arguments (arg-asts inserter system)
   (loop for arg-ast in arg-asts
-        for rv = (compile-ast arg-ast inserter)
+        for rv = (compile-ast arg-ast inserter system)
         if (eq rv :no-return)
           return rv
         else collect (first (adapt inserter rv '(:object)))))
 
-(defmethod compile-ast ((ast cleavir-ast:call-ast) inserter)
-  (let* ((callee1 (compile-ast (cleavir-ast:callee-ast ast) inserter))
+(defmethod compile-ast ((ast cleavir-ast:call-ast) inserter system)
+  (let* ((callee1 (compile-ast (cleavir-ast:callee-ast ast) inserter system))
          (callee2 (if (eq callee1 :no-return)
                       (return-from compile-ast :no-return)
                       (first (adapt inserter callee1 '(:object)))))
-         (args (compile-arguments (cleavir-ast:argument-asts ast) inserter)))
+         (args (compile-arguments (cleavir-ast:argument-asts ast)
+                                  inserter system)))
     (if (eq args :no-return)
         args
         (insert inserter (make-instance 'cleavir-bir:call
@@ -424,10 +426,10 @@
 ;;;
 ;;; FUNCTION-AST
 
-(defmethod compile-ast ((ast cleavir-ast:function-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:function-ast) inserter system)
   (let* ((f (or (gethash ast *function-info*)
                 (setf (gethash ast *function-info*)
-                      (compile-function ast))))
+                      (compile-function ast system))))
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
     (cleavir-set:nadjoinf (cleavir-bir:encloses f) enclose)
     (list (insert inserter enclose))))
@@ -436,9 +438,9 @@
 ;;;
 ;;; LEXICAL-BIND-AST
 
-(defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter system)
   (let ((var (bind-variable (cleavir-ast:lhs-ast ast) (function inserter)))
-        (rv (compile-ast (cleavir-ast:value-ast ast) inserter)))
+        (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (adjoin-variable inserter var)
     (cond ((eq rv :no-return) rv)
           (t
@@ -453,9 +455,9 @@
 ;;;
 ;;; SETQ-AST
 
-(defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter system)
   (let ((var (find-variable (cleavir-ast:lhs-ast ast)))
-        (rv (compile-ast (cleavir-ast:value-ast ast) inserter)))
+        (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (adjoin-variable inserter var)
     (cond ((eq rv :no-return) rv)
           (t
@@ -470,15 +472,16 @@
 ;;;
 ;;; THE-AST
 
-(defmethod compile-ast ((ast cleavir-ast:the-ast) inserter)
-  (compile-ast (cleavir-ast:form-ast ast) inserter))
+(defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
+  (compile-ast (cleavir-ast:form-ast ast) inserter system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; DYNAMIC-ALLOCATION-AST
 
-(defmethod compile-ast ((ast cleavir-ast:dynamic-allocation-ast) inserter)
-  (compile-ast (cleavir-ast:form-ast ast) inserter))
+(defmethod compile-ast ((ast cleavir-ast:dynamic-allocation-ast)
+                        inserter system)
+  (compile-ast (cleavir-ast:form-ast ast) inserter system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TODO
@@ -490,8 +493,8 @@
 ;;;
 ;;; TYPEQ-AST
 
-(defmethod compile-test-ast ((ast cleavir-ast:typeq-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
+(defmethod compile-test-ast ((ast cleavir-ast:typeq-ast) inserter system)
+  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (when (eq rv :no-return) (return-from compile-test-ast rv))
     (let* ((obj (adapt inserter rv '(:object)))
            (tblock (make-iblock inserter)) (eblock (make-iblock inserter))
@@ -505,15 +508,16 @@
 ;;;
 ;;; TYPEW-AST
 
-(defmethod compile-test-ast ((ast cleavir-ast:typew-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
+(defmethod compile-test-ast ((ast cleavir-ast:typew-ast) inserter system)
+  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (when (eq rv :no-return) (return-from compile-test-ast rv))
     (let ((old-iblock (iblock inserter))
           (tblock (make-iblock inserter))
           (eblock (make-iblock inserter))
           (test-iblock (make-iblock inserter)))
       (begin inserter test-iblock)
-      (let ((testrv (compile-test-ast (cleavir-ast:test-ast ast) inserter)))
+      (let ((testrv (compile-test-ast (cleavir-ast:test-ast ast)
+                                      inserter system)))
         (proceed inserter old-iblock)
         (cond ((eq testrv :no-return)
                (terminate inserter (make-instance 'cleavir-bir:jump
@@ -538,8 +542,8 @@
 ;;;
 ;;; THE-TYPEW-AST
 
-(defmethod compile-ast ((ast cleavir-ast:the-typew-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter)))
+(defmethod compile-ast ((ast cleavir-ast:the-typew-ast) inserter system)
+  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (when (eq rv :no-return) (return-from compile-ast rv))
     (let ((then-iblock (make-iblock inserter))
           (else-iblock (make-iblock inserter)))
@@ -548,7 +552,7 @@
                             :ctype (cleavir-ast:ctype ast)
                             :next (list then-iblock else-iblock then-iblock)))
       (begin inserter else-iblock)
-      (compile-ast (cleavir-ast:else-ast ast) inserter)
+      (compile-ast (cleavir-ast:else-ast ast) inserter system)
       (begin inserter then-iblock)))
   ;; if the value of the-typew is used, we'd have to introduce a variable,
   ;; since the form's value is used twice (as an input to typew, and as the
@@ -561,7 +565,8 @@
 ;;;
 ;;; UNREACHABLE-AST
 
-(defmethod compile-ast ((ast cleavir-ast:unreachable-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:unreachable-ast) inserter system)
+  (declare (ignore system))
   (terminate inserter (make-instance 'cleavir-bir:unreachable))
   :no-return)
 
@@ -569,7 +574,8 @@
 ;;;
 ;;; LEXICAL-AST
 
-(defmethod compile-ast ((ast cleavir-ast:lexical-ast) inserter)
+(defmethod compile-ast ((ast cleavir-ast:lexical-ast) inserter system)
+  (declare (ignore system))
   (let ((var (find-variable ast)))
     ;; FIXME: We probably want to make a new AST class to distinguish between
     ;; these two cases more cleanly.
@@ -585,11 +591,11 @@
 ;;;
 ;;; EQ-AST
 
-(defmethod compile-test-ast ((ast cleavir-ast:eq-ast) inserter)
+(defmethod compile-test-ast ((ast cleavir-ast:eq-ast) inserter system)
   (let ((args (compile-arguments
                (list (cleavir-ast:arg1-ast ast)
                      (cleavir-ast:arg2-ast ast))
-               inserter)))
+               inserter system)))
     (when (eq args :no-return) (return-from compile-test-ast args))
     (let ((tblock (make-iblock inserter)) (eblock (make-iblock inserter)))
       (terminate inserter (make-instance 'cleavir-bir:eqi
@@ -600,11 +606,11 @@
 ;;;
 ;;; NEQ-AST
 
-(defmethod compile-test-ast ((ast cleavir-ast:neq-ast) inserter)
+(defmethod compile-test-ast ((ast cleavir-ast:neq-ast) inserter system)
   (let ((args (compile-arguments
                (list (cleavir-ast:arg1-ast ast)
                      (cleavir-ast:arg2-ast ast))
-               inserter)))
+               inserter system)))
     (when (eq args :no-return) (return-from compile-test-ast args))
     (let ((tblock (make-iblock inserter)) (eblock (make-iblock inserter)))
       (terminate inserter (make-instance 'cleavir-bir:eqi
@@ -615,8 +621,8 @@
 ;;;
 ;;; CASE-AST
 
-(defmethod compile-test-ast ((ast cleavir-ast:case-ast) inserter)
-  (let ((rv (compile-ast (cleavir-ast:arg-ast ast) inserter))
+(defmethod compile-test-ast ((ast cleavir-ast:case-ast) inserter system)
+  (let ((rv (compile-ast (cleavir-ast:arg-ast ast) inserter system))
         (comparees (cleavir-ast:comparees ast)))
     (when (eq rv :no-return) (return-from compile-test-ast rv))
     (let ((iblocks (loop repeat (1+ (length comparees))
@@ -630,8 +636,8 @@
 ;;;
 ;;; LOAD-TIME-VALUE-AST. Needs work.
 
-(defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter)
-  (declare (ignore inserter))
+(defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)
+  (declare (ignore inserter system))
   (list
    (make-instance 'cleavir-bir:load-time-value
      :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))))
@@ -640,7 +646,7 @@
 ;;;
 ;;; IMMEDIATE-AST. Needs work.
 
-(defmethod compile-ast ((ast cleavir-ast:immediate-ast) inserter)
-  (declare (ignore inserter))
+(defmethod compile-ast ((ast cleavir-ast:immediate-ast) inserter system)
+  (declare (ignore inserter system))
   (list
    (make-instance 'cleavir-bir:immediate :value (cleavir-ast:value ast))))

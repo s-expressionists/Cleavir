@@ -10,9 +10,9 @@
          (ca
            `(compile-arguments (list ,@(loop for reader in readers
                                              collect `(,reader ast)))
-                               inserter)))
+                               inserter system)))
     (if (eq kind 'cleavir-bir:tprimop)
-        `(defmethod compile-test-ast ((ast ,ast) inserter)
+        `(defmethod compile-test-ast ((ast ,ast) inserter system)
            (let ((rv ,ca))
              (when (eq rv :no-return) (return-from compile-test-ast rv))
              (let ((ibs
@@ -25,7 +25,7 @@
         (let ((form
                 `(insert inserter
                          (make-instance ',kind :info ',info :inputs rv))))
-          `(defmethod compile-ast ((ast ,ast) inserter)
+          `(defmethod compile-ast ((ast ,ast) inserter system)
              (let ((rv ,ca))
                (when (eq rv :no-return) (return-from compile-ast rv))
                ,(if (eq kind 'cleavir-bir:nvprimop) form `(list ,form))))))))
