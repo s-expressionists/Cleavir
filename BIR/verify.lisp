@@ -243,6 +243,8 @@ has use-before-define on inputs ~a!"
   (let ((*verifying-iblock* iblock))
     (map-iblock-instructions
      (lambda (i)
+       ;; Ensure each instruction is only in the graph once
+       (assert (not (cleavir-set:presentp i *seen-instructions*)))
        ;; Ensure non-end instructions are non-terminator instructions
        (unless (eq i (end iblock))
          (assert (typep i '(and instruction (not terminator)))))
