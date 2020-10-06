@@ -20,7 +20,7 @@
       (dynamic-environment (iblock dynamic-environment))))
 
 ;;; Abstract. Something that can bind lexical variables.
-(defclass lexical-bind (dynamic-environment) ())
+(defclass lexical-bind () ())
 ;;; Set of variables it binds.
 (defgeneric bindings (lexical-bind))
 
@@ -260,7 +260,7 @@
 (defun successors (iblock)
   (next (end iblock)))
 
-(defclass function (lexical-bind)
+(defclass function (lexical-bind dynamic-environment)
   ((%iblocks :initarg :iblocks :accessor iblocks
              :initform (cleavir-set:empty-set)
              :type cleavir-set:set)

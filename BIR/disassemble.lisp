@@ -90,8 +90,7 @@
     ,@(mapcar #'disassemble-datum (inputs inst))))
 
 (defmethod disassemble-instruction ((inst leti))
-  `(,(dis-label inst) ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))
-    ,(dis-iblock (first (next inst)))))
+  `(,(dis-label inst) ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))))
 
 (defmethod disassemble-instruction ((inst eqi))
   `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))

@@ -15,12 +15,17 @@
     ;; Rewire control
     (multiple-value-bind (before after)
         (cleavir-bir:split-block-after call)
-      ;; BEFORE is now a block that jumps with no arguments to AFTER.
-      ;; Change it to a leti into the interpolated function's start block.
-      (let ((leti (make-instance 'cleavir-bir:leti
-                    :next (list (cleavir-bir:start interpolated-function)))))
-        (cleavir-bir:replace-terminator
+      ;; BEFORE is now a block that jumps with no arguments to
+      ;; AFTER. Insert a leti into the interpolated function's start
+      ;; block to represent the binding action of the function.
+      (let ((leti (make-instance 'cleavir-bir:leti)))
+        (cleavir-bir:insert-instruction-before
          leti
+         (cleavir-bir:start (cleavir-bir:start interpolated-function)))
+        (cleavir-bir:replace-terminator
+         (make-instance 'cleavir-bir:jump
+                        :next (list (cleavir-bir:start interpolated-function))
+                        :inputs () :outputs ())
          (cleavir-bir:end before))
         (setf (cleavir-bir:bindings leti)
               (cleavir-set:filter
@@ -81,7 +86,8 @@
         (cleavir-bir:map-iblocks
          (lambda (ib)
            (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
-             (setf (cleavir-bir:dynamic-environment ib) leti))
+             (setf (cleavir-bir:dynamic-environment ib)
+                   (cleavir-bir:dynamic-environment before)))
            (setf (cleavir-bir:function ib) call-function))
          interpolated-function))))
   (values))

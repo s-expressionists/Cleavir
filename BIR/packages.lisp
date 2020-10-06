@@ -30,7 +30,7 @@
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
            #:abstract-call #:callee #:call #:mv-call #:attributes
-           #:leti #:enclose #:code)
+           #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop #:tprimop)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
