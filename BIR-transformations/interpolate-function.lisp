@@ -92,7 +92,15 @@
          interpolated-function)
         ;; Merge the blocks. Merge the tail first since the
         ;; interpolated function might just be one block.
-        (when interp-end
+        (when (and interp-end
+                   ;; FIXME: because tagbody is a little funky right
+                   ;; now, we workaround the fact that sometimes
+                   ;; interp-end exists but is sitll unreachable by
+                   ;; its functions, meaning its function block never
+                   ;; gets updated. Remove this clause ASAP as soon as
+                   ;; AST-to-BIR is fixed.
+                   (eq (cleavir-bir:function interp-end)
+                       (cleavir-bir:function after)))
           (cleavir-bir:merge-iblocks interp-end after))
         (cleavir-bir:merge-iblocks before (cleavir-bir:start interpolated-function)))))
   (values))
