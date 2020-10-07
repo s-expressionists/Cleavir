@@ -40,8 +40,7 @@
    #:ignore
    #:ast
    #:dynamic-extent
-   #:attributes #:make-attributes #:default-attributes
-   #:has-attribute-p
+   #:attributes
    #:value
    #:expansion
    #:expander
