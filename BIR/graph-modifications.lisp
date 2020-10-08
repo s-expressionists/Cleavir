@@ -13,6 +13,8 @@
   (slot-makunbound datum '%use))
 (defmethod remove-use ((datum variable) use)
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
+(defmethod remove-use ((datum function) use)
+  (cleavir-set:nremovef (local-calls datum) use))
 
 (defgeneric add-use (datum use))
 (defmethod add-use ((datum linear-datum) use)
@@ -23,6 +25,8 @@
   (setf (%use datum) use))
 (defmethod add-use ((datum variable) use)
   (cleavir-set:nadjoinf (cleavir-bir:readers datum) use))
+(defmethod add-use ((datum function) use)
+  (cleavir-set:nadjoinf (local-calls datum) use))
 
 (defmethod shared-initialize :before
     ((inst instruction) slot-names &rest initargs
@@ -239,9 +243,11 @@
   (assert (not (slot-boundp new '%use)))
   (when (slot-boundp old '%use)
     (setf (%use new) (%use old))
-    (replace-input new old (%use old))
-    (slot-makunbound old '%use))
+    (replace-input new old (%use old)))
   (values))
+(defmethod replace-uses :after ((new datum) (old linear-datum))
+  (when (slot-boundp old '%use)
+    (slot-makunbound old '%use)))
 
 ;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
 (defun replace-computation (computation replacement)

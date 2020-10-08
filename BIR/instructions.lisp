@@ -64,6 +64,14 @@
 (defclass mv-call (abstract-call) ())
 (defmethod callee ((i mv-call)) (first (inputs i)))
 
+;; A local call is a call to a function within the same
+;; module. Therefore, the first input is actually a FUNCTION..
+(defclass local-call (abstract-call) ())
+(defmethod callee ((i abstract-call))
+  (let ((function (first (inputs i))))
+    (check-type function function)
+    function))
+
 (defclass returni (one-input no-output terminator0) ())
 
 ;;; Allocate some temporary space for an object of the specified rtype.

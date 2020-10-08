@@ -263,7 +263,7 @@
 (defun successors (iblock)
   (next (end iblock)))
 
-(defclass function (lexical-bind dynamic-environment)
+(defclass function (lexical-bind dynamic-environment value)
   ((%iblocks :initarg :iblocks :accessor iblocks
              :initform (cleavir-set:empty-set)
              :type cleavir-set:set)
@@ -280,6 +280,9 @@
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)
+   ;; The set of local calls for this function.
+   (%local-calls :initform (cleavir-set:empty-set) :accessor local-calls
+                 :type cleavir-set:set)
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%name :initarg :name :initform nil :reader name)

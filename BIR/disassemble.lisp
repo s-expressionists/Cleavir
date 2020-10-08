@@ -62,6 +62,10 @@
   `(:= ,(disassemble-datum inst)
        (,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst)))))
 
+(defmethod disassemble-instruction ((inst local-call))
+  `(:= ,(disassemble-datum inst)
+       (,(dis-label inst) ,(callee inst) ,@(mapcar #'disassemble-datum (rest (inputs inst))))))
+
 (defmethod disassemble-instruction ((inst enclose))
   (maybe-add-disassemble-work (code inst))
   `(:= ,(disassemble-datum inst)

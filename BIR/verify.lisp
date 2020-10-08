@@ -62,8 +62,8 @@
   ;; this instruction (but see KLUDGE above). READVAR has a non-linear input.
   ;; Also check that the uses are hooked up.
   (let ((inputs (inputs instruction)))
-    (cond
-      ((typep instruction 'readvar)
+    (typecase instruction
+      (readvar
        (test (and (= (length inputs) 1)
                   (typep (first inputs) 'variable))
              "Readvar ~a has non-variable input ~a"
@@ -71,6 +71,9 @@
        (test (cleavir-set:presentp instruction (uses (first inputs)))
              "Readvar ~a is not in the uses of its input variable ~a"
              instruction (first inputs)))
+      (local-call
+       (assert (typep (first inputs) 'function))
+       (assert (every (lambda (i) (eq (use i) instruction)) (rest inputs))))
       (t (flet ((validp (v)
                   (etypecase v
                     (computation (cleavir-set:presentp v *seen-instructions*))
