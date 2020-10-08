@@ -183,16 +183,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions VALUES-RQEUIRED, VALUES-OPTIONAL, VALUES-REST.
+;;; Read components of a values type.
+
+(defgeneric values-required (ctype system))
+(defgeneric values-optional (ctype system))
+(defgeneric values-rest (ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic functions REQUIRED, OPTIONAL, REST, KEYSP, KEYS, ALLOW-OTHER-KEYS-P,
 ;;; and RETURNS.
 ;;;
 ;;; These are readers for function and values ctypes. Only the first three work
 ;;; with values ctypes; the rest are exclusive to function ctypes.
 
-(defgeneric required (ctype system))
-(defgeneric optional (ctype system))
-(defgeneric rest (ctype system))
-(defgeneric keysp (ctype system))
-(defgeneric keys (ctype system))
-(defgeneric allow-other-keys-p (ctype system))
-(defgeneric returns (ctype system))
+(defgeneric function-required (ctype system))
+(defgeneric function-optional (ctype system))
+(defgeneric function-rest (ctype system))
+(defgeneric function-keysp (ctype system))
+(defgeneric function-keys (ctype system))
+(defgeneric function-allow-other-keys-p (ctype system))
+(defgeneric function-returns (ctype system))

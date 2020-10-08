@@ -46,28 +46,128 @@
   ;; We assume that NIL is not a class.
   (eql ctype 'nil))
 
+(defun values-conjoin (vct1 vct2 sys)
+  (loop with required1 = (values-required vct1 sys)
+        with optional1 = (values-optional vct1 sys)
+        with rest1 = (values-rest vct1 sys)
+        with required2 = (values-required vct2 sys)
+        with optional2 = (values-optional vct2 sys)
+        with rest2 = (values-rest vct2 sys)
+        with required with optional with rest
+        with donep = nil
+        do (if (null required1)
+               (if (null optional1)
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; rest v rest
+                           (setf rest (conjoin/2 rest1 rest2 sys)
+                                 donep t)
+                           ;; rest v opt
+                           (push (conjoin/2 rest1 (pop optional2) sys)
+                                 optional))
+                       ;; rest v req
+                       (push (conjoin/2 rest1 (pop required2) sys)
+                             required))
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; optional v rest
+                           (push (conjoin/2 (pop optional1) rest2 sys)
+                                 optional)
+                           ;; optional v optional
+                           (push (conjoin/2 (pop optional1) (pop optional2) sys)
+                                 optional))
+                       ;; optional v req
+                       (push (conjoin/2 (pop optional1) (pop required2) sys)
+                             required)))
+               (if (null required2)
+                   (if (null optional2)
+                       ;; required v rest
+                       (push (conjoin/2 (pop required1) rest2 sys)
+                             required)
+                       ;; required v optional
+                       (push (conjoin/2 (pop required1) (pop optional2) sys)
+                             required))
+                   ;; required v required
+                   (push (conjoin/2 (pop required1) (pop required2) sys)
+                         required)))
+        when donep
+          return (values (nreverse required) (nreverse optional) rest sys)))
+
 (defmethod conjoin/2 (ct1 ct2 sys)
-  ;;; Pick off some very basic cases.
-  (cond ((or (bottom-p ct1 sys) (bottom-p ct2 sys)) 'nil)
-        ((top-p ct1 sys) ct2)
-        ((top-p ct2 sys) ct1)
-        ((cl:subtypep ct1 ct2) ct1)
-        ((cl:subtypep ct2 ct1) ct2)
-        (t (let ((ty `(and ,ct1 ,ct2)))
-             ;; Checking for bottom-ness is a very basic
-             ;; canonicalization we can perform with the
-             ;; limited tools CL gives us.
-             (if (cl:subtypep ty nil)
-                 nil
-                 ty)))))
+  (cond
+    ((and (values-ctype-p ct1) (values-ctype-p ct2))
+     (values-conjoin ct1 ct2 sys))
+    ;; Pick off some very basic cases.
+    ((or (bottom-p ct1 sys) (bottom-p ct2 sys)) 'nil)
+    ((top-p ct1 sys) ct2)
+    ((top-p ct2 sys) ct1)
+    ((cl:subtypep ct1 ct2) ct1)
+    ((cl:subtypep ct2 ct1) ct2)
+    (t (let ((ty `(and ,ct1 ,ct2)))
+         ;; Checking for bottom-ness is a very basic
+         ;; canonicalization we can perform with the
+         ;; limited tools CL gives us.
+         (if (cl:subtypep ty nil)
+             nil
+             ty)))))
+
+(defun values-disjoin (vct1 vct2 sys)
+  (loop with required1 = (values-required vct1 sys)
+        with optional1 = (values-optional vct1 sys)
+        with rest1 = (values-rest vct1 sys)
+        with required2 = (values-required vct2 sys)
+        with optional2 = (values-optional vct2 sys)
+        with rest2 = (values-rest vct2 sys)
+        with required with optional with rest
+        with donep = nil
+        do (if (null required1)
+               (if (null optional1)
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; rest v rest
+                           (setf rest (disjoin/2 rest1 rest2 sys)
+                                 donep t)
+                           ;; rest v opt
+                           (push (disjoin/2 rest1 (pop optional2) sys)
+                                 optional))
+                       ;; rest v req
+                       (push (disjoin/2 rest1 (pop required2) sys)
+                             optional))
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; optional v rest
+                           (push (disjoin/2 (pop optional1) rest2 sys)
+                                 optional)
+                           ;; optional v optional
+                           (push (disjoin/2 (pop optional1) (pop optional2) sys)
+                                 optional))
+                       ;; optional v req
+                       (push (disjoin/2 (pop optional1) (pop required2) sys)
+                             optional)))
+               (if (null required2)
+                   (if (null optional2)
+                       ;; required v rest
+                       (push (disjoin/2 (pop required1) rest2 sys)
+                             optional)
+                       ;; required v optional
+                       (push (disjoin/2 (pop required1) (pop optional2) sys)
+                             optional))
+                   ;; required v required
+                   (push (disjoin/2 (pop required1) (pop required2) sys)
+                         required)))
+        when donep
+          return (values (nreverse required) (nreverse optional) rest sys)))
 
 (defmethod disjoin/2 (ct1 ct2 sys)
-  (cond ((or (top-p ct1 sys) (top-p ct2 sys)) 't)
-        ((bottom-p ct1 sys) ct2)
-        ((bottom-p ct2 sys) ct1)
-        ((cl:subtypep ct1 ct2) ct2)
-        ((cl:subtypep ct2 ct1) ct1)
-        (t `(or ,ct1 ,ct2))))
+  (cond
+    ((and (values-ctype-p ct1) (values-ctype-p ct2))
+     (values-disjoin ct1 ct2 sys))
+    ((or (top-p ct1 sys) (top-p ct2 sys)) 't)
+    ((bottom-p ct1 sys) ct2)
+    ((bottom-p ct2 sys) ct1)
+    ((cl:subtypep ct1 ct2) ct2)
+    ((cl:subtypep ct2 ct1) ct1)
+    (t `(or ,ct1 ,ct2))))
 
 (defmethod negate (ct sys)
   (cond ((top-p ct sys) 'nil)
@@ -118,49 +218,68 @@
   `(cl:values ,@req &optional ,@opt &rest ,rest))
 
 ;;; These readers work on the premise that these type specifiers
-;;; are normalized by the above functions, so they always have
+;;; are normalized by the other methods, so they always have
 ;;; certain lambda list keywords.
-(defmethod required (ctype system)
-  (declare (ignore system))
-  (let ((to-search
-          (ecase (first ctype)
-            ((cl:values) (cl:rest ctype))
-            ((cl:function) (second ctype)))))
-    (ldiff to-search (cl:member '&optional to-search))))
 
-(defmethod optional (ctype system)
-  (declare (ignore system))
-  (let ((to-search
-          (ecase (first ctype)
-            ((cl:values) (cl:rest ctype))
-            ((cl:function) (second ctype)))))
-    (ldiff (cl:member '&optional to-search)
-           (cl:member '&rest to-search))))
+(defun ll-required (lambda-list)
+  (ldiff lambda-list (cl:member '&optional lambda-list)))
 
-(defmethod rest (ctype system)
-  (declare (ignore system))
-  (let ((to-search
-          (ecase (first ctype)
-            ((cl:values) (cl:rest ctype))
-            ((cl:function) (second ctype)))))
-    (second (cl:member '&rest to-search))))
+(defun ll-optional (lambda-list)
+  (ldiff (cl:rest (cl:member '&optional lambda-list))
+         (cl:member '&rest lambda-list)))
 
-;;; Again, these below are only valid for function ctypes.
-(defmethod keysp (ctype system)
-  (declare (ignore system))
-  (cl:member '&key (second ctype)))
+(defun ll-rest (lambda-list)
+  (second (cl:member '&rest lambda-list)))
 
-(defmethod keys (ctype system)
-  (declare (ignore system))
-  (let ((res (cl:member '&key (second ctype))))
+(defun ll-keysp (lambda-list)
+  (cl:member '&key lambda-list))
+
+(defun ll-keys (lambda-list)
+  (let ((res (cl:member '&key lambda-list)))
     (if res
         (ldiff res (cl:member '&allow-other-keys res))
         nil)))
 
-(defmethod allow-other-keys-p (ctype system)
-  (declare (ignore system))
-  (cl:member '&allow-other-keys (second ctype)))
+(defun ll-aokp (lambda-list)
+  (cl:member '&allow-other-keys lambda-list))
 
-(defmethod returns (ctype system)
+(defmethod values-required (ctype system)
+  (declare (ignore system))
+  (ll-required (cl:rest ctype)))
+
+(defmethod values-optional (ctype system)
+  (declare (ignore system))
+  (ll-optional (cl:rest ctype)))
+
+(defmethod values-rest (ctype system)
+  (declare (ignore system))
+  (ll-rest (cl:rest ctype)))
+
+(defmethod function-required (ctype system)
+  (declare (ignore system))
+  (ll-required (second ctype)))
+
+(defmethod function-optional (ctype system)
+  (declare (ignore system))
+  (ll-optional (second ctype)))
+
+(defmethod function-rest (ctype system)
+  (declare (ignore system))
+  (ll-rest (second ctype)))
+
+;;; Again, these below are only valid for function ctypes.
+(defmethod function-keysp (ctype system)
+  (declare (ignore system))
+  (ll-keysp (second ctype)))
+
+(defmethod function-keys (ctype system)
+  (declare (ignore system))
+  (ll-keys (second ctype)))
+
+(defmethod function-allow-other-keys-p (ctype system)
+  (declare (ignore system))
+  (ll-aokp (second ctype)))
+
+(defmethod function-returns (ctype system)
   (declare (ignore system))
   (third ctype))

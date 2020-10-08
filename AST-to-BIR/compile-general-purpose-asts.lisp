@@ -480,9 +480,9 @@
 (defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
   (let* ((inner (cleavir-ast:form-ast ast))
          (ctype (cleavir-ast:ctype ast))
-         (required (cleavir-ctype:required ctype system))
-         (optional (cleavir-ctype:optional ctype system))
-         (rest (cleavir-ctype:rest ctype system))
+         (required (cleavir-ctype:values-required ctype system))
+         (optional (cleavir-ctype:values-optional ctype system))
+         (rest (cleavir-ctype:values-rest ctype system))
          (rv (compile-ast inner inserter system)))
     (cond ((eq rv :no-return) rv)
           ((listp rv) ; several single values
