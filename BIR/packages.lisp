@@ -29,7 +29,7 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
-           #:abstract-call #:callee #:call #:mv-call #:attributes
+           #:abstract-call #:callee #:call #:mv-call #:attributes #:transforms
            #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop #:tprimop)

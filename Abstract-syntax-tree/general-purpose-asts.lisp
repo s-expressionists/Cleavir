@@ -339,10 +339,12 @@
    (%argument-asts :initarg :argument-asts :reader argument-asts)
    (%inline :initarg :inline :initform nil :reader inline-declaration)
    (%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
+                :initform (cleavir-attributes:default-attributes))
+   (%transforms :initarg :transforms :reader transforms
+                :initform nil)))
 
 (defun make-call-ast (callee-ast argument-asts
-                      &key origin inline (policy *policy*)
+                      &key origin inline (policy *policy*) transforms
                         (attributes
                          (cleavir-attributes:default-attributes)))
   (make-instance 'call-ast
@@ -350,6 +352,7 @@
     :callee-ast callee-ast
     :inline inline
     :argument-asts argument-asts
+    :transforms transforms
     :attributes attributes))
 
 (cleavir-io:define-save-info call-ast

@@ -52,7 +52,9 @@
 
 (defclass abstract-call (computation)
   ((%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
+                :initform (cleavir-attributes:default-attributes))
+   (%transforms :initarg :transforms :reader transforms
+                :initform nil)))
 (defgeneric callee (instruction))
 (defmethod rtype ((d abstract-call)) :multiple-values)
 

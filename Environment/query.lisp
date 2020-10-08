@@ -146,8 +146,13 @@
    ;; Miscellaneous attributes.
    (%attributes :initform (cleavir-attributes:default-attributes)
                 :initarg :attributes
-                :reader attributes)))
-  
+                :reader attributes)
+   (%transforms :initform nil
+                :initarg :transforms
+                :reader transforms
+                ;; A list of functions
+                :type list)))
+
 (defclass global-function-info ()
   (;; The name of the global function.  It can be different from the
    ;; function name supplied in the query as a result of errors and
@@ -185,7 +190,12 @@
    ;; Miscellaneous attributes.
    (%attributes :initform (cleavir-attributes:default-attributes)
                 :initarg :attributes
-                :reader attributes)))
+                :reader attributes)
+   (%transforms :initform nil
+                :initarg :transforms
+                :reader transforms
+                ;; A list of functions
+                :type list)))
 
 (defclass local-macro-info ()
   (;; The name of the local macro.  It can be different from the

@@ -717,6 +717,7 @@
     :dynamic-extent
     (let ((entry (function-dynamic-extent environment defining-info)))
       (if (null entry) (dynamic-extent defining-info) t))
+    :transforms (transforms defining-info)
     :attributes (attributes defining-info)))
 
 (defmethod make-info
@@ -737,6 +738,7 @@
     :ast (ast defining-info)
     :compiler-macro (compiler-macro defining-info)
     :attributes (attributes defining-info)
+    :transforms (transforms defining-info)
     :dynamic-extent
     (let ((entry (function-dynamic-extent environment defining-info)))
       (if (null entry) (dynamic-extent defining-info) t))))

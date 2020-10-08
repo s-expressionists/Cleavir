@@ -41,6 +41,7 @@
    #:ast
    #:dynamic-extent
    #:attributes
+   #:transforms
    #:value
    #:expansion
    #:expander
