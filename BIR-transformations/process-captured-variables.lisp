@@ -54,5 +54,5 @@
         (unless external-reference-p
           (cleavir-bir:delete-computation enclose))))))
 
-(defun local-call-analyze (ir)
-  (cleavir-set:mapset nil #'find-local-calls (cleavir-bir:functions (cleavir-bir:module ir))))
+(defun local-call-analyze-module (module)
+  (cleavir-set:mapset nil #'find-local-calls (cleavir-bir:functions module)))
