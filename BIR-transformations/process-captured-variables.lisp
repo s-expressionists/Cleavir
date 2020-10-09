@@ -35,8 +35,11 @@
       (when (cleavir-set:empty-set-p (cleavir-bir:environment function))
         (typecase use
           (cleavir-bir:call
-           (change-class use 'cleavir-bir:local-call)
-           (cleavir-bir:replace-computation enclose function))
+           (cond ((eq use (cleavir-bir:callee use))
+                  (change-class use 'cleavir-bir:local-call)
+                  (cleavir-bir:replace-computation enclose function))
+                 (t
+                  (setq external-reference-p t))))
           (cleavir-bir:writevar
            (let ((variable (first (cleavir-bir:outputs use))))
              (when (cleavir-bir:immutablep variable)
