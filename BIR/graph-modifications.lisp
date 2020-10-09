@@ -137,12 +137,7 @@
 (defmethod clean-up-instruction progn ((inst enclose))
   (let* ((code (code inst))
          (code-encloses (encloses code)))
-    (cleavir-set:nremovef code-encloses inst)
-    (when (cleavir-set:empty-set-p code-encloses)
-      (cleavir-set:nremovef (functions (module code)) code)
-      ;; TODO: Emit some kind of a compiler note saying that a function
-      ;; got inlined or deleted.
-      )))
+    (cleavir-set:nremovef code-encloses inst)))
 (defmethod clean-up-instruction progn ((inst unwind))
   (cleavir-set:nremovef (entrances (destination inst)) (iblock inst))
   (cleavir-set:nremovef (unwinds (catch inst)) inst))

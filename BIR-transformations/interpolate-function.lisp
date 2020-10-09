@@ -82,6 +82,9 @@
         (mapc #'cleavir-bir:replace-uses arguments lambda-list)
         ;; Delete the enclose.
         (cleavir-bir:delete-computation enclose)
+        ;; Remove the function from the module.
+        (cleavir-set:nremovef (cleavir-bir:functions (cleavir-bir:module call-function))
+                              interpolated-function)
         ;; Re-home iblocks (and indirectly, instructions)
         (cleavir-bir:map-iblocks
          (lambda (ib)
