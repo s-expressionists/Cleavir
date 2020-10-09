@@ -10,11 +10,13 @@
 ;;; Add VARIABLE onto the environment of ACCESS-FUNCTION and do so
 ;;; recursively.
 (defun close-over-variable (function access-function variable)
-  (unless (eq function access-function)
-    (cleavir-set:nadjoinf (cleavir-bir:environment access-function) variable)
-    (cleavir-set:doset (use (owners (cleavir-bir:encloses access-function)
-                                    (cleavir-bir:local-calls access-function)))
-      (close-over-variable function use variable))))
+  (let ((environment (cleavir-bir:environment access-function)))
+    (unless (or (eq function access-function)
+                (cleavir-set:presentp variable environment))
+      (cleavir-set:nadjoinf environment variable)
+      (cleavir-set:doset (use (owners (cleavir-bir:encloses access-function)
+                                      (cleavir-bir:local-calls access-function)))
+        (close-over-variable function use variable)))))
 
 ;;; Fill in the environments of every function.
 (defun process-captured-variables (ir)
