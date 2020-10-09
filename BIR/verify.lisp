@@ -201,6 +201,11 @@ has use-before-define on inputs ~a"
   ;;  this will be redundant)
   (verify (code inst)))
 
+(defmethod verify progn ((inst local-call))
+  ;; FIXME we are looking at the same function a lot! To fix this,
+  ;; make the verifier work on the IR module instead.
+  (verify (callee inst)))
+
 (defmethod verify progn ((wv writevar))
   ;; match types
   (test (rtype= (rtype (first (inputs wv)))
@@ -358,6 +363,8 @@ has use-before-define on inputs ~a"
           (*verifying-function* function)
           (*seen-lists* (cleavir-set:empty-set))
           (*seen-next* (cleavir-set:empty-set)))
+      ;; make sure the function is actually in its module.
+      (test (cleavir-set:presentp function (functions (module function))))
       ;; start is an iblock (verify type decl)
       (test (typep start 'iblock)
             "Function start ~a is not an iblock" start)
