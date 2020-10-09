@@ -202,12 +202,6 @@
           :initform (cleavir-set:empty-set)
           ;; All READVAR instructions.
           :type cleavir-set:set)
-   ;; Set of encloses (empty until closure conversion)
-   ;; These are not exactly definitions or uses, since the function
-   ;; being enclosed can do both and conceptually needs the variable
-   ;; itself rather than its value. Thus the slot.
-   (%encloses :initform (cleavir-set:empty-set) :accessor encloses
-              :type cleavir-set:set)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 (defmethod function ((v variable))
@@ -274,9 +268,13 @@
    (%end :initarg :end :accessor end :type (or null iblock))
    ;; FIXME: have multiple entry points instead
    (%lambda-list :initarg :lambda-list :accessor lambda-list)
-   ;; The set of variables accessed by this function.
+   ;; The set of variables bound by this function.
    (%variables :initarg :variables :accessor variables
                :type cleavir-set:set)
+   ;; The set of variables closed over in this environment. Currently
+   ;; filled in by process-captured-variables.
+   (%environment :initform (cleavir-set:empty-set) :accessor environment
+                 :type cleavir-set:set)
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)

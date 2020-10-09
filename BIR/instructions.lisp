@@ -2,10 +2,7 @@
 
 (defclass enclose (no-input computation)
   ((%code :initarg :code :reader code
-          :type function)
-   ;; The set of variables enclosed
-   (%variables :accessor variables :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)))
+          :type function)))
 (defmethod rtype ((d enclose)) :object)
 
 (defclass unreachable (no-input no-output terminator0) ())

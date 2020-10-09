@@ -71,7 +71,6 @@
   `(:= ,(disassemble-datum inst)
        (,(dis-label inst)
         ,(code inst)
-        ,(mapcar #'dis-var (cleavir-set:set-to-list (variables inst)))
         ,@(mapcar #'disassemble-datum (inputs inst)))))
 
 (defmethod disassemble-instruction ((inst catch))
@@ -140,7 +139,8 @@
        (push (disassemble-iblock block) iblocks))
      function)
     (list* (list function (dis-iblock (start function))
-                 (disassemble-lambda-list (lambda-list function)))
+                 (disassemble-lambda-list (lambda-list function))
+                 (cleavir-set:mapset 'list #'dis-var (environment function)))
            iblocks)))
 
 (defun disassemble (ir)
@@ -156,9 +156,10 @@
 
 (defun print-disasm (ir &key (show-dynenv t))
   (dolist (fun ir)
-    (destructuring-bind ((name start args) . iblocks)
+    (destructuring-bind ((name start args env) . iblocks)
         fun
-      (format t "~&function ~a ~:a ~&     with start iblock ~a" name args start)
+      (format t "~&function ~a ~:a ~&     with environment ~(~a~) ~&     with start iblock ~a"
+              name args env start)
       (dolist (iblock iblocks)
         (destructuring-bind ((label . args) dynenv entrances &rest insts)
             iblock

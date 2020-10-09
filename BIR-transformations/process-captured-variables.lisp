@@ -1,56 +1,24 @@
 (in-package #:cleavir-bir-transformations)
 
-(defun closed-over-predicate (function)
-  (lambda (variable)
-    (and (cleavir-bir:closed-over-p variable)
-         (not (eq (cleavir-bir:function variable) function)))))
+;;; Add VARIABLE onto the environment of ACCESS-FUNCTION and do so
+;;; recursively.
+(defun close-over-variable (function access-function variable)
+  (unless (eq function access-function)
+    (cleavir-set:nadjoinf (cleavir-bir:environment access-function) variable)
+    (cleavir-set:doset (enclose (cleavir-bir:encloses access-function))
+      (close-over-variable function (cleavir-bir:function enclose) variable))))
 
-(defun mark-enclose-recursively (variables enclose)
-  (let* ((owner (cleavir-bir:function enclose))
-         (parents (cleavir-bir:encloses owner))
-         (nparents (cleavir-set:size parents)))
-    ;; mark the enclose and function
-    (cleavir-set:nunionf (cleavir-bir:variables enclose) variables)
-    (cleavir-set:nunionf (cleavir-bir:variables owner) variables)
-    ;; Remove any variables the current function owns
-    ;; and while we're at it, update the variables' enclose sets
-    (cleavir-set:doset (v variables)
-      (cleavir-set:nadjoinf (cleavir-bir:encloses v) enclose)
-      (when (eq (cleavir-bir:function v) owner)
-        (cleavir-set:nremovef variables v)))
-    (cond (;; no more variables: nothing left to do
-           (cleavir-set:empty-set-p variables))
-          ((zerop nparents)) ; at the top: nothing left to do
-          ((= nparents 1) ; only one parent, so the set can be destroyed
-           (cleavir-set:doset (p parents)
-             (mark-enclose-recursively variables p)))
-          (t ; have to copy the set. (NOTE: We could skip one copy.)
-           (cleavir-set:doset (p parents)
-             (mark-enclose-recursively
-              (cleavir-set:copy-set variables) p))))))
-
-;;; Augment each enclose instruction with the set of variables that need to be
-;;; closed over. Augment each function's variable set with any variables that
-;;; need to be added for the encloses.
-(defun transmit-variables (all-functions)
-  (cleavir-set:doset (funct all-functions (values))
-    (let ((closed (cleavir-set:filter
-                   'cleavir-set:set
-                   (closed-over-predicate funct)
-                   (cleavir-bir:variables funct)))
-          (encloses (cleavir-bir:encloses funct)))
-      (if (= (cleavir-set:size encloses) 1)
-          ;; only one node, so we can destroy the set
-          (cleavir-set:doset (enclose encloses)
-            (mark-enclose-recursively closed enclose))
-          (cleavir-set:doset (enclose encloses)
-            (mark-enclose-recursively (cleavir-set:copy-set closed)
-                                      enclose))))))
-
+;;; Fill in the environments of every function.
 (defun process-captured-variables (ir)
-  (let ((af (cleavir-bir:functions (cleavir-bir:module ir))))
-    (transmit-variables af)))
-
+  (cleavir-set:doset (function (cleavir-bir:functions (cleavir-bir:module ir)) (values))
+    (cleavir-set:doset (variable (cleavir-bir:variables function))
+      (let ((access-functions (cleavir-set:empty-set)))
+        (cleavir-set:doset (reader (cleavir-bir:readers variable))
+          (cleavir-set:nadjoinf access-functions (cleavir-bir:function reader)))
+        (cleavir-set:doset (writer (cleavir-bir:writers variable))
+          (cleavir-set:nadjoinf access-functions (cleavir-bir:function writer)))
+        (cleavir-set:doset (access-function access-functions)
+          (close-over-variable function access-function variable))))))
 
 ;; Find all calls to a function and mark them as local calls.
 
@@ -63,7 +31,7 @@
   (cleavir-set:doset (enclose (cleavir-bir:encloses function))
     (let ((use (cleavir-bir:use enclose))
           (external-reference-p nil))
-      (when (cleavir-set:empty-set-p (cleavir-bir:variables enclose))
+      (when (cleavir-set:empty-set-p (cleavir-bir:environment function))
         (typecase use
           (cleavir-bir:call
            (change-class use 'cleavir-bir::local-call)

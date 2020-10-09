@@ -162,7 +162,6 @@
          (uw (make-instance 'cleavir-bir:unwind
                :inputs (list* read inputs) :outputs outputs :catch catch
                :destination dest)))
-    (adjoin-variable inserter contvar)
     (terminate inserter uw)
     (cleavir-set:nadjoinf (cleavir-bir:unwinds catch) uw)
     (cleavir-set:nadjoinf (cleavir-bir:entrances dest) (iblock inserter)))
@@ -210,8 +209,6 @@
                   (delete-catch catch contvar function de during)
                   rv)
                  (t ;; have to unwind.
-                  (cleavir-set:nadjoinf (cleavir-bir:variables function)
-                                        contvar)
                   (let* ((after (make-iblock inserter
                                              :function function
                                              :dynamic-environment de))
@@ -459,7 +456,6 @@
 (defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter system)
   (let ((var (find-variable (cleavir-ast:lhs-ast ast)))
         (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
-    (adjoin-variable inserter var)
     (cond ((eq rv :no-return) rv)
           (t
            (insert inserter
@@ -619,7 +615,6 @@
       (cleavir-bir:argument
        (list var))
       (t
-       (adjoin-variable inserter var)
        (list (insert inserter
                      (make-instance 'cleavir-bir:readvar :inputs (list var))))))))
 

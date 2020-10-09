@@ -112,42 +112,29 @@
 (defgeneric remove-binding (variable binder)
   (:method (variable binder) (declare (ignore variable binder))))
 (defmethod remove-binding (variable (binder leti))
-  (cleavir-set:nremovef (bindings binder) variable))
+  (let ((bindings (bindings binder)))
+    (cleavir-set:nremovef bindings variable)
+    (when (cleavir-set:empty-set-p (bindings binder))
+      (cleavir-bir:delete-instruction binder))))
 
-;;; If a variable is no longer referenced by a function, remove it from the
-;;; function's variable set. If it's no longer referenced at all, remove it from
-;;; its function, encloses, and binder if possible.
-(defun maybe-clear-variable (variable function)
-  (let ((readers (readers variable)) (writers (writers variable))
-        (encloses (encloses variable)))
-    (cond ((and (zerop (cleavir-set:size readers)) (zerop (cleavir-set:size writers)))
-           ;; remove from encloses and functions
-           (cleavir-set:doset (e encloses)
-             (cleavir-set:nremovef (variables (code e)) variable)
-             (cleavir-set:nremovef (variables e) variable))
-           ;; and owner, in case owner happens to not be enclosed
-           (cleavir-set:nremovef (variables (function variable)) variable)
-           ;; and maybe binder
-           (remove-binding variable (binder variable))
-           t)
-          ((and (cleavir-set:every (lambda (r) (eq (function r) function)) readers)
-                (cleavir-set:every (lambda (w) (eq (function w) function)) writers)
-                (cleavir-set:every (lambda (e) (eq (function e) function)) encloses))
-           (cleavir-set:nremovef (variables function) variable)
-           t)
-          (t nil))))
+;;; If a variable is no longer referenced, remove it from its function
+;;; and binder if possible.
+(defun maybe-clear-variable (variable)
+  (when (and (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+             (cleavir-set:empty-set-p (cleavir-bir:writers variable)))
+    (cleavir-set:nremovef (cleavir-bir:variables (function variable)) variable)
+    (remove-binding variable (binder variable))
+    t))
 
 (defmethod clean-up-instruction progn ((inst readvar))
   (let ((variable (first (inputs inst))))
     (cleavir-set:nremovef (readers variable) inst)
-    (maybe-clear-variable variable (function inst))))
+    (maybe-clear-variable variable)))
 (defmethod clean-up-instruction progn ((inst writevar))
   (let ((variable (first (outputs inst))))
     (cleavir-set:nremovef (writers variable) inst)
-    (maybe-clear-variable variable (function inst))))
+    (maybe-clear-variable variable)))
 (defmethod clean-up-instruction progn ((inst enclose))
-  (cleavir-set:doset (v (variables inst))
-    (cleavir-set:nremovef (encloses v) inst))
   (let* ((code (code inst))
          (code-encloses (encloses code)))
     (cleavir-set:nremovef code-encloses inst)
