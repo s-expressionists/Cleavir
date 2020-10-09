@@ -97,6 +97,12 @@
 (defun nunion (s1 s2)
   (doset (i s2 s1) (nadjoinf s1 i)))
 
+(defun union (s1 s2)
+  (let ((result (empty-set)))
+    (doset (i s1) (nadjoinf result i))
+    (doset (i s2) (nadjoinf result i))
+    result))
+
 (defmacro nunionf (set other &environment env)
   (multiple-value-bind (temps values stores write read)
       (get-setf-expansion set env)
