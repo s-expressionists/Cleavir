@@ -6,7 +6,7 @@
            #:disassemble)
   (:export #:module #:functions)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:environment
-           #:lambda-list #:name #:docstring #:original-lambda-list)
+           #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
