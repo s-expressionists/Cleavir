@@ -1,14 +1,7 @@
 (in-package #:cleavir-bir)
 
 (defvar *seen*)
-(defvar *work*)
-
 (defvar *iblock-num*)
-
-(defun maybe-add-disassemble-work (function)
-  (check-type function function)
-  (unless (cleavir-set:presentp function *seen*)
-    (push function *work*)))
 
 (defvar *disassemble-nextv*)
 (defvar *disassemble-vars*)
@@ -67,7 +60,6 @@
        (,(dis-label inst) ,(callee inst) ,@(mapcar #'disassemble-datum (rest (inputs inst))))))
 
 (defmethod disassemble-instruction ((inst enclose))
-  (maybe-add-disassemble-work (code inst))
   `(:= ,(disassemble-datum inst)
        (,(dis-label inst)
         ,(code inst)
@@ -145,14 +137,12 @@
 
 (defun disassemble (ir)
   (check-type ir function)
-  (let ((*seen* (cleavir-set:make-set ir))
-        (*work* (list ir))
+  (let ((module (cleavir-bir:module ir))
+        (*seen* (cleavir-set:make-set ir))
         (*iblock-num* 0)
         (*disassemble-nextv* 0)
         (*disassemble-vars* (make-hash-table :test #'eq)))
-    (loop for work = (pop *work*)
-          until (null work)
-          collect (disassemble-function work))))
+    (cleavir-set:mapset 'list #'disassemble-function (cleavir-bir:functions module))))
 
 (defun print-disasm (ir &key (show-dynenv t))
   (dolist (fun ir)
