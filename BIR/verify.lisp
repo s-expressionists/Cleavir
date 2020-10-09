@@ -364,7 +364,9 @@ has use-before-define on inputs ~a"
           (*seen-lists* (cleavir-set:empty-set))
           (*seen-next* (cleavir-set:empty-set)))
       ;; make sure the function is actually in its module.
-      (test (cleavir-set:presentp function (functions (module function))))
+      (test (cleavir-set:presentp function (functions (module function)))
+            "Locally referenced or called function ~a not present in its module."
+            function)
       ;; start is an iblock (verify type decl)
       (test (typep start 'iblock)
             "Function start ~a is not an iblock" start)
