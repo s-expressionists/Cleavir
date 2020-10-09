@@ -14,7 +14,7 @@
     (cleavir-set:nadjoinf (cleavir-bir:environment access-function) variable)
     (cleavir-set:doset (use (owners (cleavir-bir:encloses access-function)
                                     (cleavir-bir:local-calls access-function)))
-      (close-over-variable function (cleavir-bir:function use) variable))))
+      (close-over-variable function use variable))))
 
 ;;; Fill in the environments of every function.
 (defun process-captured-variables (ir)
@@ -38,7 +38,7 @@
       (when (cleavir-set:empty-set-p (cleavir-bir:environment function))
         (typecase use
           (cleavir-bir:call
-           (change-class use 'cleavir-bir::local-call)
+           (change-class use 'cleavir-bir:local-call)
            (cleavir-bir:replace-computation enclose function))
           (cleavir-bir:writevar
            (let ((variable (first (cleavir-bir:outputs use))))
@@ -49,7 +49,7 @@
                      (cleavir-bir:call
                       (when (or (eq use (cleavir-bir:callee use))
                                 (not (member reader (rest (cleavir-bir:inputs use)))))
-                        (change-class use 'cleavir-bir::local-call)
+                        (change-class use 'cleavir-bir:local-call)
                         (cleavir-bir:replace-computation reader function)))
                      (t
                       (setq external-reference-p t)))))))
