@@ -305,10 +305,10 @@
     (when (eq (end function) iblock2)
       (setf (end function) iblock1))
     ;; Remove iblock2 from the function.
-    (cleavir-set:nremovef (iblocks function) iblock1)
+    (cleavir-set:nremovef (iblocks function) iblock2)
     ;; and scope
     (cleavir-set:nadjoinf (scope (dynamic-environment iblock2)) iblock2)
-    start))
+    iblock1))
 
 ;;; Split a iblock into two iblocks.
 (defun split-block-after (inst)
