@@ -36,11 +36,14 @@
          (start (make-iblock inserter
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
-    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast))))
+    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast)))
+          (leti (make-instance 'cleavir-bir:leti
+                               :bindings (cleavir-set:empty-set))))
       (setf (cleavir-bir:lambda-list function) lambda-list
             (cleavir-bir:variables function) (cleavir-set:empty-set)
             (cleavir-bir:start function) start)
       (begin inserter start)
+      (insert inserter leti)
       (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
         (cond
           ((eq rv :no-return)
@@ -49,7 +52,9 @@
            (setf (cleavir-bir:end function) (iblock inserter))
            (terminate inserter
                       (make-instance 'cleavir-bir:returni
-                        :inputs (adapt inserter rv :multiple-values)))))))
+                        :inputs (adapt inserter rv :multiple-values))))))
+      (when (cleavir-set:empty-set-p (cleavir-bir:bindings leti))
+        (cleavir-bir:delete-instruction leti)))
     function))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -437,8 +442,11 @@
 ;;; LEXICAL-BIND-AST
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter system)
-  (let ((var (bind-variable (cleavir-ast:lhs-ast ast) (function inserter)))
-        (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
+  (let* (;; Assumption: LETI begins the function's start block.
+         (leti (cleavir-bir:start (cleavir-bir:start (function inserter))))
+         (var (bind-variable (cleavir-ast:lhs-ast ast) leti))
+         (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
+    (cleavir-set:nadjoinf (cleavir-bir:bindings leti) var)
     (adjoin-variable inserter var)
     (cond ((eq rv :no-return) rv)
           (t

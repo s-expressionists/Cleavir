@@ -257,7 +257,7 @@
 (defun successors (iblock)
   (next (end iblock)))
 
-(defclass function (lexical-bind dynamic-environment value)
+(defclass function (dynamic-environment value)
   ((%iblocks :initarg :iblocks :accessor iblocks
              :initform (cleavir-set:empty-set)
              :type cleavir-set:set)
