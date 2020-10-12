@@ -82,11 +82,23 @@
           (cleavir-bir:iblock terminator) ib))
   terminator)
 
+;;; internal helper
+(defun symbolicate (&rest components)
+  (let* ((strings (mapcar #'string components))
+         (length (reduce #'+ strings :key #'length))
+         (name (make-array length :element-type 'character)))
+    (let ((index 0))
+      (dolist (string strings (make-symbol name))
+        (replace name string :start1 index)
+        (incf index (length string))))))
+
 (defun make-iblock (inserter
                     &key (function (function inserter))
                       (dynamic-environment
-                       (cleavir-bir:dynamic-environment (iblock inserter))))
+                       (cleavir-bir:dynamic-environment (iblock inserter)))
+                      name)
   (let ((ib (make-instance 'cleavir-bir:iblock
+              :name name
               :function function :dynamic-environment dynamic-environment)))
     (cleavir-set:nadjoinf (cleavir-bir:iblocks function) ib)
     (cleavir-set:nadjoinf (cleavir-bir:scope dynamic-environment) ib)

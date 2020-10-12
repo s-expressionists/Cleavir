@@ -34,6 +34,9 @@
                      :module module))
          (inserter (make-instance 'inserter))
          (start (make-iblock inserter
+                             :name (symbolicate (write-to-string
+                                                 (cleavir-ast:name ast))
+                                                '#:-start)
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
     (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast)))
@@ -82,7 +85,7 @@
            (proceed inserter block)
            rv))
         (t ; multiple blocks, so we have to merge their results
-         (let ((mergeb (make-iblock inserter)))
+         (let ((mergeb (make-iblock inserter :name '#:merge)))
            (if (loop for (_0 _1 rv) in map
                      always (listp rv))
                ;; No multiple values, so we can phi these.
@@ -178,7 +181,9 @@
 (defmethod compile-ast ((ast cleavir-ast:block-ast) inserter system)
   (let* ((function (function inserter))
          (de (dynamic-environment inserter))
-         (during (make-iblock inserter))
+         (during (make-iblock inserter
+                              :name (symbolicate '#:block-
+                                                 (cleavir-ast:name ast))))
          (catch (make-instance 'cleavir-bir:catch :next (list during)))
          (contvar (make-instance 'cleavir-bir:variable
                     :name (cleavir-ast:name ast)
@@ -208,6 +213,10 @@
                   rv)
                  (t ;; have to unwind.
                   (let* ((after (make-iblock inserter
+                                             :name (symbolicate
+                                                    '#:block-
+                                                    (cleavir-ast:name ast)
+                                                    '#:-resume)
                                              :function function
                                              :dynamic-environment de))
                          (phi (make-instance 'cleavir-bir:phi
@@ -225,8 +234,12 @@
          ;; not be able to nonlocal-return in other formats.
          ;; Should be customizable.
          (let* ((mergeb (make-iblock inserter
-                                       :function function
-                                       :dynamic-environment de))
+                                     :name (symbolicate
+                                            '#:block-
+                                            (cleavir-ast:name ast)
+                                            '#:-merge)
+                                     :function function
+                                     :dynamic-environment de))
                 (phi (make-instance 'cleavir-bir:phi :rtype :multiple-values
                                     :iblock mergeb)))
            (setf (cleavir-bir:inputs mergeb) (list phi))
@@ -312,9 +325,13 @@
     ;; General case
     (let* ((old-dynenv (dynamic-environment inserter))
            (function (function inserter))
-           (prefix-iblock (make-iblock inserter))
+           (prefix-iblock (make-iblock inserter :name '#:tagbody))
            (tag-iblocks
-             (loop repeat (length tags) collecting (make-iblock inserter)))
+             (loop for (tag-ast) in tags
+                   ;; name could be an integer, so write it out
+                   for tagname = (write-to-string (cleavir-ast:name tag-ast))
+                   for bname = (symbolicate '#:tag- tagname)
+                   collecting (make-iblock inserter :name bname)))
            (catch (make-instance 'cleavir-bir:catch
                     :next (list* prefix-iblock tag-iblocks)))
            (contvar (make-instance 'cleavir-bir:variable
@@ -344,6 +361,7 @@
                          (if rest
                              (first rest)
                              (make-iblock inserter
+                                          :name '#:tagbody-resume
                                           :dynamic-environment old-dynenv))))
                    (terminate inserter
                               (make-instance 'cleavir-bir:jump
@@ -515,10 +533,17 @@
 
 (defmethod compile-test-ast ((ast cleavir-ast:typeq-ast) inserter system)
   (with-compiled-ast (obj (cleavir-ast:form-ast ast) inserter system)
-    (let* ((tblock (make-iblock inserter)) (eblock (make-iblock inserter))
+    (let* ((tspec (cleavir-ast:type-specifier ast))
+           (tspec-str (write-to-string tspec))
+           (tblock (make-iblock inserter
+                                :name (symbolicate
+                                       '#:typeq- tspec-str '#:-then)))
+           (eblock (make-iblock inserter
+                                :name (symbolicate
+                                       '#:typeq- tspec-str '#:-else)))
            (tq (make-instance 'cleavir-bir:typeq
                  :inputs obj :next (list tblock eblock)
-                 :type-specifier (cleavir-ast:type-specifier ast))))
+                 :type-specifier tspec)))
       (terminate inserter tq)
       (list tblock eblock))))
 
@@ -530,9 +555,9 @@
   (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (when (eq rv :no-return) (return-from compile-test-ast rv))
     (let ((old-iblock (iblock inserter))
-          (tblock (make-iblock inserter))
-          (eblock (make-iblock inserter))
-          (test-iblock (make-iblock inserter)))
+          (tblock (make-iblock inserter :name '#:typew-then))
+          (eblock (make-iblock inserter :name '#:typew-else))
+          (test-iblock (make-iblock inserter :name '#:typew-test)))
       (begin inserter test-iblock)
       (let ((testrv (compile-test-ast (cleavir-ast:test-ast ast)
                                       inserter system)))
@@ -562,8 +587,8 @@
 
 (defmethod compile-ast ((ast cleavir-ast:the-typew-ast) inserter system)
   (with-compiled-ast (rv (cleavir-ast:form-ast ast) inserter system)
-    (let ((then-iblock (make-iblock inserter))
-          (else-iblock (make-iblock inserter)))
+    (let ((then-iblock (make-iblock inserter :name '#:the-typew-then))
+          (else-iblock (make-iblock inserter :name '#:the-typew-else)))
       (terminate inserter (make-instance 'cleavir-bir:typew
                             :inputs rv
                             :ctype (cleavir-ast:ctype ast)
@@ -612,7 +637,8 @@
   (with-compiled-asts (args ((cleavir-ast:arg1-ast ast)
                              (cleavir-ast:arg2-ast ast))
                             inserter system (:object :object))
-    (let ((tblock (make-iblock inserter)) (eblock (make-iblock inserter)))
+    (let ((tblock (make-iblock inserter :name '#:eq-then))
+          (eblock (make-iblock inserter :name '#:eq-else)))
       (terminate inserter (make-instance 'cleavir-bir:eqi
                             :inputs args :next (list tblock eblock)))
       (list tblock eblock))))
@@ -625,7 +651,8 @@
   (with-compiled-asts (args ((cleavir-ast:arg1-ast ast)
                              (cleavir-ast:arg2-ast ast))
                             inserter system (:object :object))
-    (let ((tblock (make-iblock inserter)) (eblock (make-iblock inserter)))
+    (let ((tblock (make-iblock inserter :name '#:neq-then))
+          (eblock (make-iblock inserter :name '#:neq-else)))
       (terminate inserter (make-instance 'cleavir-bir:eqi
                             :inputs args :next (list eblock tblock)))
       (list tblock eblock))))

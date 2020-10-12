@@ -249,7 +249,13 @@
                          :accessor dynamic-environment
                          :type dynamic-environment)
    ;; The function this belongs to.
-   (%function :initarg :function :accessor function :type function)))
+   (%function :initarg :function :accessor function :type function)
+   ;; For debug/introspection
+   (%name :initarg :name :reader name :initform nil)))
+
+(defmethod print-object ((o iblock) s)
+  (print-unreadable-object (o s :type t)
+    (write (name o) :stream s)))
 
 (defun iblock-started-p (iblock)
   (slot-boundp iblock '%start))
@@ -289,6 +295,10 @@
                           :reader original-lambda-list)
    ;; The module containing this function.
    (%module :initarg :module :reader module :type module)))
+
+(defmethod print-object ((o function) s)
+  (print-unreadable-object (o s :type t)
+    (write (name o) :stream s)))
 
 ;;; A set of functions which are compiled together (as opposed to
 ;;; "separate compilation") and can participate in interprocedural
