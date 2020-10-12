@@ -97,7 +97,6 @@
              :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
              :type cleavir-set:set)))
-(defmethod rtype ((d catch)) :continuation)
 (defmethod bindings ((catch catch))
   (cleavir-set:make-set (first (outputs catch))))
 
