@@ -357,10 +357,7 @@ has use-before-define on inputs ~a"
   (with-problems (function)
     (let ((start (start function))
           (end (end function))
-          (*seen-instructions* (cleavir-set:empty-set))
-          (*verifying-function* function)
-          (*seen-lists* (cleavir-set:empty-set))
-          (*seen-next* (cleavir-set:empty-set)))
+          (*verifying-function* function))
       ;; make sure the function is actually in its module.
       (test (cleavir-set:presentp function (functions (module function)))
             "Locally referenced or called function ~a not present in its module."
@@ -402,5 +399,8 @@ has use-before-define on inputs ~a"
                 (cleavir-set:difference 'list (iblocks function) reachable)))))))
 
 (defmethod verify progn ((module module))
-  (let ((*verifying-module* module))
+  (let ((*seen-instructions* (cleavir-set:empty-set))
+        (*seen-lists* (cleavir-set:empty-set))
+        (*seen-next* (cleavir-set:empty-set))
+        (*verifying-module* module))
     (cleavir-set:mapset nil #'verify (functions module))))
