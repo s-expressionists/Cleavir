@@ -32,7 +32,7 @@
            #:abstract-call #:callee #:call #:local-call #:mv-call #:attributes #:transforms
            #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
-           #:primop #:vprimop #:nvprimop #:tprimop)
+           #:primop #:vprimop #:nvprimop #:tprimop #:info)
   (:export #:map-instructions #:map-instructions-with-owner-from-set
            #:map-iblocks
            #:insert-instruction-before #:insert-instruction-after
