@@ -33,7 +33,9 @@
 (defvar *seen-lists*)
 (defvar *seen-next*)
 
-;;; The function currently being verified.
+;;; The module currently being verified.
+(defvar *verifying-module*)
+;;; " function
 (defvar *verifying-function*)
 ;;; " iblock
 (defvar *verifying-iblock*)
@@ -373,6 +375,10 @@ has use-before-define on inputs ~a"
       (when end
         (test (and (slot-boundp end '%end) (typep (end end) 'returni))
               "Final instruction ~a is not a returni" (end end)))
+      ;; Module is correct
+      (test (eq (module function) *verifying-module*)
+            "Function ~a is in the wrong module" function)
+      ;; Reachability etc
       (let ((reachable (cleavir-set:empty-set)))
         (flet ((iblock-verifier (iblock)
                  (verify iblock)
@@ -396,4 +402,5 @@ has use-before-define on inputs ~a"
                 (cleavir-set:difference 'list (iblocks function) reachable)))))))
 
 (defmethod verify progn ((module module))
-  (cleavir-set:mapset nil #'verify (functions module)))
+  (let ((*verifying-module* module))
+    (cleavir-set:mapset nil #'verify (functions module))))
