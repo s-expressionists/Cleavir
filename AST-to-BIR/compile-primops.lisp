@@ -3,31 +3,27 @@
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-bir:primop-info primop))
          (out (cleavir-bir:out-rtypes info))
+         (in (cleavir-bir:in-rtypes info))
          (kind
            (cond ((null out) 'cleavir-bir:nvprimop)
                  ((integerp out) 'cleavir-bir:tprimop)
                  (t 'cleavir-bir:vprimop)))
-         (ca
-           `(compile-arguments (list ,@(loop for reader in readers
-                                             collect `(,reader ast)))
-                               inserter system)))
+         (ca `(,@(loop for reader in readers collect `(,reader ast)))))
     (if (eq kind 'cleavir-bir:tprimop)
         `(defmethod compile-test-ast ((ast ,ast) inserter system)
-           (let ((rv ,ca))
-             (when (eq rv :no-return) (return-from compile-test-ast rv))
+           (with-compiled-asts (rv ,ca inserter system (,@in))
              (let ((ibs
                      (list ,@(loop repeat out
                                    collect `(make-iblock inserter)))))
                (terminate
                 inserter
-                (make-instance ',kind :info ',info :inputs rv :next ibs))
+                (make-instance ',kind :info ',info :next ibs :inputs rv))
                (copy-list ibs))))
         (let ((form
                 `(insert inserter
                          (make-instance ',kind :info ',info :inputs rv))))
           `(defmethod compile-ast ((ast ,ast) inserter system)
-             (let ((rv ,ca))
-               (when (eq rv :no-return) (return-from compile-ast rv))
+             (with-compiled-asts (rv ,ca inserter system (,@in))
                ,(if (eq kind 'cleavir-bir:nvprimop) form `(list ,form))))))))
 
 (defprimop cleavir-primop:car cleavir-ast:car-ast cleavir-ast:cons-ast)

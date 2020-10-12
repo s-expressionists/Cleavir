@@ -170,3 +170,65 @@
     (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))
+
+(defmacro with-compiled-ast ((name ast inserter system
+                              &optional (target ''(:object)))
+                             &body body)
+  (let ((gast (gensym "AST")) (gtarget (gensym "TARGET"))
+        (ginserter (gensym "INSERTER")) (gsystem (gensym "SYSTEM")))
+    `(let ((,gast ,ast) (,ginserter ,inserter) (,gsystem ,system)
+           (,gtarget ,target))
+       (let ((,name (compile-ast ,gast ,ginserter ,gsystem)))
+         (if (eq ,name :no-return)
+             ,name
+             (let ((,name (adapt ,ginserter ,name ,gtarget)))
+               ,@body))))))
+
+(defmacro with-compiled-asts ((name (&rest asts) inserter system
+                               (&rest targets))
+                              &body body)
+  (let ((gasts (loop repeat (length asts) collect (gensym "AST")))
+        (bname (gensym "WITH-COMPILED-ASTS"))
+        (ginserter (gensym "INSERTER")) (gsystem (gensym "SYSTEM")))
+    `(block ,bname
+       (let (,@(mapcar #'list gasts asts)
+             (,ginserter ,inserter) (,gsystem ,system))
+         (let ((,name
+                 (list
+                  ,@(loop for gast in gasts
+                          for target in targets
+                          for c = `(compile-ast ,gast ,ginserter ,gsystem)
+                          collect `(let ((temp ,c))
+                                     (if (eq temp :no-return)
+                                         (return-from ,bname temp)
+                                         (first
+                                          (adapt ,ginserter temp
+                                                 '(,target)))))))))
+           ,@body)))))
+
+(defun compile-arguments (arg-asts inserter system
+                          &optional (target '(:object)))
+  (loop for arg-ast in arg-asts
+        for rv = (compile-ast arg-ast inserter system)
+        if (eq rv :no-return)
+          return rv
+        else collect (adapt inserter rv target)))
+
+(defmacro with-compiled-arguments ((name asts inserter system
+                                    &optional (target ''(:object)))
+                                   &body body)
+  (let ((gasts (gensym "ASTS")) (ginserter (gensym "INSERTER"))
+        (gsystem (gensym "SYSTEM")) (gtarget (gensym "TARGET")))
+    `(let ((,gasts ,asts) (,ginserter ,inserter)
+           (,gsystem ,system) (,gtarget ,target))
+       (let ((,name (compile-arguments ,gasts ,ginserter ,gsystem ,gtarget)))
+         (if (eq ,name :no-return)
+             ,name
+             (progn ,@body))))))
+
+(defun compile-sequence-for-effect (asts inserter system)
+  (loop for sub in asts
+        for rv = (compile-ast sub inserter system)
+        when (eq rv :no-return)
+          return nil
+        finally (return t)))

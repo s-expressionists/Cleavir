@@ -2,18 +2,17 @@
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast)
                         inserter system)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
-    (when (eq rv :no-return) (return-from compile-ast rv))
-    (let* ((vars (loop for as in (cleavir-ast:lhs-asts ast)
-                       collect (find-variable as)))
-           (vals (adapt inserter rv (make-list (length vars)
-                                               :initial-element :object))))
+  (let ((vars (loop for as in (cleavir-ast:lhs-asts ast)
+                    collect (find-variable as))))
+    (with-compiled-ast (vals (cleavir-ast:form-ast ast) inserter system
+                             (make-list (length vars)
+                                        :initial-element :object))
       (loop for var in vars
             for val in vals
             for wv = (make-instance 'cleavir-bir:writevar
                        :inputs (list val) :outputs (list var))
-            do (insert inserter wv))))
-  ())
+            do (insert inserter wv))
+      ())))
 
 (defun compile-m-v-p1-save (inserter system mv form-asts)
   ;; Note that there are further situations we don't need to save.
@@ -64,17 +63,14 @@
 ;;; forms produce a fixed number of values we could just make a call?
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast)
                         inserter system)
-  (let ((callee (compile-ast (cleavir-ast:function-form-ast ast)
-                             inserter system)))
-    (when (eq callee :no-return) (return-from compile-ast :no-return))
-    (let ((callee2 (first (adapt inserter callee '(:object))))
-          (args (loop for a in (cleavir-ast:form-asts ast)
-                      for rv = (compile-ast a inserter system)
-                      if (eq rv :no-return)
-                        do (return-from compile-ast :no-return)
-                      else append (adapt inserter rv :multiple-values))))
+  (with-compiled-ast (callee (cleavir-ast:function-form-ast ast)
+                             inserter system)
+    (with-compiled-arguments (args (cleavir-ast:form-asts ast) inserter system
+                                   :multiple-values)
       (insert inserter (make-instance 'cleavir-bir:mv-call
-                         :inputs (list* callee2 args))))))
+                         :inputs (list* (first callee)
+                                        (mapcar #'first args)))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
-  (compile-arguments (cleavir-ast:argument-asts ast) inserter system))
+  (mapcar #'first
+          (compile-arguments (cleavir-ast:argument-asts ast) inserter system)))
