@@ -195,11 +195,7 @@ has use-before-define on inputs ~a"
   ;; Make sure encloses set is correct
   (test (cleavir-set:presentp inst (encloses (code inst)))
         "Enclose ~a is not present in its CODE ~a's encloses"
-        inst (code inst) (encloses (code inst)))
-  ;; recurse into the function
-  ;; (FIXME: If more than one enclose for the same code exists,
-  ;;  this will be redundant)
-  (verify (code inst)))
+        inst (code inst) (encloses (code inst))))
 
 (defmethod verify progn ((inst local-call))
   ;; FIXME we are looking at the same function a lot! To fix this,
@@ -398,3 +394,6 @@ has use-before-define on inputs ~a"
                 "Some iblocks recorded by the function ~a are unreachable: ~a"
                 function
                 (cleavir-set:difference 'list (iblocks function) reachable)))))))
+
+(defmethod verify progn ((module module))
+  (cleavir-set:mapset nil #'verify (functions module)))
