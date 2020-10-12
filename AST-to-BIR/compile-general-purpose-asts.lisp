@@ -96,7 +96,7 @@
                            ins
                            (make-instance 'cleavir-bir:jump
                              :inputs (adapt ins rv rtypes)
-                             :outputs (copy-list phis) :unwindp nil
+                             :outputs (copy-list phis)
                              :next (list mergeb))))
                  (setf (cleavir-bir:inputs mergeb) phis)
                  (begin inserter mergeb)
@@ -109,7 +109,7 @@
                            ins
                            (make-instance 'cleavir-bir:jump
                              :inputs (adapt ins rv :multiple-values)
-                             :outputs (list phi) :unwindp nil
+                             :outputs (list phi)
                              :next (list mergeb))))
                  (setf (cleavir-bir:inputs mergeb) (list phi))
                  (begin inserter mergeb)
@@ -241,7 +241,7 @@
                         inserter
                         (make-instance 'cleavir-bir:jump
                           :inputs (adapt inserter rv :multiple-values)
-                          :outputs (list phi) :unwindp t
+                          :outputs (list phi)
                           :next (list mergeb))))
                       (t
                        (setf catchp t)
@@ -349,7 +349,7 @@
                                           :dynamic-environment old-dynenv))))
                    (terminate inserter
                               (make-instance 'cleavir-bir:jump
-                                :inputs () :outputs () :unwindp (not rest)
+                                :inputs () :outputs ()
                                 :next (list next)))
                    (unless rest
                      ;; Start on the block after the tagbody.
@@ -387,7 +387,7 @@
         ((eq function cfunction)
          ;; local
          (terminate inserter (make-instance 'cleavir-bir:jump
-                               :unwindp t :inputs () :outputs ()
+                               :inputs () :outputs ()
                                :next (list iblock))))
         (t
          (setf (go-info catch) t)
@@ -553,7 +553,7 @@
         (proceed inserter old-iblock)
         (cond ((eq testrv :no-return)
                (terminate inserter (make-instance 'cleavir-bir:jump
-                                     :inputs () :outputs () :unwindp nil
+                                     :inputs () :outputs ()
                                      :next (list test-iblock)))
                (return-from compile-test-ast testrv))
               (t

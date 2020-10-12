@@ -125,10 +125,13 @@
 
 ;;; Unconditional local control transfer. Inputs are passed to the single next
 ;;; block.
-(defclass jump (terminator1 operation)
-  (;; T if the dynamic environment of the next iblock is distinct from (a
-   ;; parent of) the jump's iblock's.
-   (%unwindp :initarg :unwindp :initform nil :reader unwindp :type boolean)))
+(defclass jump (terminator1 operation) ())
+
+;; Is the dynamic environment of the jump's iblock distinct from the
+;; dynamic environment the jump is transferring control to?
+(defmethod unwindp ((instruction jump))
+  (not (eq (dynamic-environment (iblock instruction))
+           (dynamic-environment (first (next instruction))))))
 
 ;;; EQ
 (defclass eqi (no-output terminator operation) ())

@@ -43,7 +43,7 @@
         (if interp-end
             (cleavir-bir:replace-terminator
              (make-instance 'cleavir-bir:jump
-               :unwindp t :inputs () :outputs ()
+               :inputs () :outputs ()
                :next (list after))
              returni)
             (cleavir-bir:delete-iblock after))
@@ -58,7 +58,7 @@
                       (unwind-inputs (rest (cleavir-bir:inputs u)))
                       (unwind-outputs (cleavir-bir:outputs u))
                       (new (make-instance 'cleavir-bir:jump
-                             :unwindp t :next (list dest))))
+                             :next (list dest))))
                   (cleavir-bir:replace-terminator new u)
                   (cleavir-bir:delete-computation contread)
                   (setf (cleavir-bir:inputs new) unwind-inputs

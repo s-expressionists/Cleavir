@@ -218,8 +218,7 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:jump) stack map)
-  (declare (ignore stack map))
-  (list :unwindp (cleavir-bir:unwindp instruction)))
+  (declare (ignore stack map)))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:typeq) stack map)

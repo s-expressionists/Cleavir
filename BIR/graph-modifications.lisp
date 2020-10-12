@@ -334,7 +334,7 @@
           do (setf (iblock i) new))
     ;; Put a new terminator in the before block
     (let ((new (make-instance 'jump
-                 :iblock ib :inputs () :predecessor inst :unwindp nil
+                 :iblock ib :inputs () :predecessor inst
                  :next (list new))))
       (setf (successor inst) new (end ib) new))
     ;; Update the new block's presence in predecessors

@@ -35,7 +35,7 @@
            (insert inserter read)
            (let ((after (make-iblock inserter :dynamic-environment de)))
              (terminate inserter (make-instance 'cleavir-bir:jump
-                                   :inputs () :outputs () :unwindp t
+                                   :inputs () :outputs ()
                                    :next (list after)))
              (begin inserter after))
            read)
