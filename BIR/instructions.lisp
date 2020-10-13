@@ -81,12 +81,16 @@
 (defclass alloca (dynamic-environment no-input no-output terminator1 operation)
   ((%rtype :initarg :rtype :reader rtype)))
 
-;;; Abstract. NOTE: Might have to specify which dynamic environment to access?
-(defclass accesstemp (instruction) ())
+;;; Abstract.
+(defclass accesstemp (instruction)
+  (;; The storage this instruction is accessing.
+   ;; Must be the instruction's dynamic environment,
+   ;; or that environment's ancestor.
+   (%alloca :initarg :alloca :reader alloca :type alloca)))
 
-;;; Read the object stored in the temporary storage in the dynamic env.
+;;; Read the object stored in the temporary storage in the alloca.
 (defclass readtemp (accesstemp no-input computation) ())
-(defmethod rtype ((d readtemp)) (rtype (dynamic-environment d)))
+(defmethod rtype ((d readtemp)) (rtype (alloca d)))
 
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())

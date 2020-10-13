@@ -199,10 +199,25 @@ has use-before-define on inputs ~a"
         "Enclose ~a is not present in its CODE ~a's encloses"
         inst (code inst) (encloses (code inst))))
 
+(defun dynenvs (d)
+  (loop for dyn = d then (parent dyn)
+        collect dyn
+        until (typep dyn 'function)))
+
 (defmethod verify progn ((at accesstemp))
-  (test (typep (dynamic-environment at) 'alloca)
-        "Accesstemp ~a does not have an alloca dynamic environment, but ~a"
-        at (dynamic-environment at)))
+  ;; verify type decl
+  (test (typep (alloca at) 'alloca)
+        "Accesstemp ~a has non-alloca ALLOCA slot: ~a"
+        at (alloca at))
+  ;; Check that the alloca is an ancestor of the dynenv
+  (test (loop with alloca = (alloca at)
+              for dyn = (dynamic-environment at)
+                then (parent dyn)
+              when (eq dyn alloca)
+                return t
+              finally (return nil))
+        "Accesstemp ~a's alloca is not an ancestor of its dynamic environment: ~a"
+        at (dynenvs (dynamic-environment at))))
 
 (defmethod verify progn ((wv writevar))
   ;; match types

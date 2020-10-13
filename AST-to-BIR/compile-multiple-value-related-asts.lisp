@@ -24,8 +24,10 @@
          (de (dynamic-environment inserter))
          (alloca (make-instance 'cleavir-bir:alloca
                    :rtype :multiple-values :next (list during)))
-         (write (make-instance 'cleavir-bir:writetemp :inputs (list mv)))
-         (read (make-instance 'cleavir-bir:readtemp :rtype :multiple-values)))
+         (write (make-instance 'cleavir-bir:writetemp
+                  :alloca alloca :inputs (list mv)))
+         (read (make-instance 'cleavir-bir:readtemp
+                 :alloca alloca :rtype :multiple-values)))
     (setf (cleavir-bir:dynamic-environment during) alloca)
     (terminate inserter alloca)
     (begin inserter during)
