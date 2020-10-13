@@ -89,7 +89,8 @@
                  ;; gets updated. Remove this clause ASAP as soon as
                  ;; AST-to-BIR is fixed.
                  (eq (cleavir-bir:function interp-end)
-                     (cleavir-bir:function after)))
+                     (cleavir-bir:function after))
+                 (cleavir-bir:iblocks-mergable-p interp-end after))
         (cleavir-bir:merge-iblocks interp-end after))
       (cleavir-bir:merge-iblocks before (cleavir-bir:start interpolated-function))))
   (values))
