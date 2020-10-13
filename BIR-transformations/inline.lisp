@@ -28,5 +28,7 @@
       (let ((inlines (potential-inlines enclose)))
         (when (and (lambda-list-inlinable-p (cleavir-bir:lambda-list function))
                    (= (length inlines) 1))
-          (interpolate-function function (first inlines))
-          (cleavir-bir:refresh-iblocks ir))))))
+          (interpolate-function function (first inlines))))))
+  ;; FIXME: This will no longer be necessary once AST-to-BIR tagbody
+  ;; translation is fixed.
+  (cleavir-bir:refresh-iblocks (cleavir-bir:module ir)))

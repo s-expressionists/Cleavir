@@ -362,12 +362,8 @@
   (check-type function function)
   (setf (iblocks function) (reachable-iblocks function)))
 
-(defun refresh-iblocks (top)
-  (refresh-local-iblocks top)
-  (map-local-instructions
-   (lambda (i)
-     (typecase i (enclose (refresh-iblocks (code i)))))
-   top))
+(defun refresh-iblocks (module)
+  (cleavir-set:mapset nil #'refresh-local-iblocks (functions module)))
 
 (defun refresh-local-users (function)
   (check-type function function)

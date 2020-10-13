@@ -120,7 +120,6 @@
 
 (defun disassemble-function (function)
   (check-type function function)
-  (refresh-iblocks function)
   (let ((iblocks nil)
         (*disassemble-ids* (make-hash-table :test #'eq))
         (*disassemble-nextn* 0)

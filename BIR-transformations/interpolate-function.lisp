@@ -76,7 +76,8 @@
          (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
            (setf (cleavir-bir:dynamic-environment ib)
                  (cleavir-bir:dynamic-environment before)))
-         (setf (cleavir-bir:function ib) call-function))
+         (setf (cleavir-bir:function ib) call-function)
+         (cleavir-set:nadjoinf (cleavir-bir:iblocks call-function) ib))
        interpolated-function)
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
