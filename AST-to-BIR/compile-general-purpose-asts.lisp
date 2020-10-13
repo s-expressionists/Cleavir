@@ -168,109 +168,45 @@
     (cleavir-set:nadjoinf (cleavir-bir:entrances dest) (iblock inserter)))
   (values))
 
-(defun delete-catch (catch contvar function dynenv iblock)
-  ;; Replace the catch with a jump to iblock.
-  ;; We could actually replace the block boundary entirely - FIXME
-  (cleavir-set:nremovef (cleavir-bir:variables function) contvar)
-  (cleavir-set:doset (sc (cleavir-bir:scope catch))
-    (setf (cleavir-bir:dynamic-environment sc) dynenv))
-  (cleavir-bir:replace-terminator
-   (make-instance 'cleavir-bir:jump :inputs () :outputs () :next (list iblock))
-   catch))
-
 (defmethod compile-ast ((ast cleavir-ast:block-ast) inserter system)
   (let* ((function (function inserter))
          (de (dynamic-environment inserter))
          (during (make-iblock inserter
                               :name (symbolicate '#:block-
                                                  (cleavir-ast:name ast))))
-         (catch (make-instance 'cleavir-bir:catch :next (list during)))
+         (mergeb (make-iblock inserter
+                              :name (symbolicate
+                                     '#:block-
+                                     (cleavir-ast:name ast)
+                                     '#:-merge)
+                              :function function
+                              :dynamic-environment de))
+         ;; KLUDGE: We force everything into multiple values as clients may
+         ;; not be able to nonlocal-return in other formats.
+         ;; Should be customizable.
+         (phi (make-instance 'cleavir-bir:phi :rtype :multiple-values
+                             :iblock mergeb))
+         (catch (make-instance 'cleavir-bir:catch
+                  :next (list during mergeb)))
          (contvar (make-instance 'cleavir-bir:variable
                     :name (cleavir-ast:name ast)
                     :binder catch :rtype :continuation)))
     (setf (cleavir-bir:outputs catch) (list contvar))
+    (setf (cleavir-bir:inputs mergeb) (list phi))
     (adjoin-variable inserter contvar)
     (setf (cleavir-bir:dynamic-environment during) catch)
     (terminate inserter catch)
     (begin inserter during)
-    (setf (block-info ast) nil)
-    (let* ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter system))
-           (entrances (block-info ast))
-           (map (if (eq normal-rv :no-return)
-                    entrances
-                    (list* (list (iblock inserter) function normal-rv)
-                           entrances))))
-      (case (length map)
-        (0 ; nothing returns here. We can replace the catch with a jump
-         (delete-catch catch contvar function de during)
-         :no-return)
-        (1 ; only one
-         (destructuring-bind (ib jfunct rv) (first map)
-           (proceed inserter ib)
-           (cond ((eq jfunct function)
-                  ;; We can just continue on from wherever that jump would be.
-                  (delete-catch catch contvar function de during)
-                  rv)
-                 (t ;; have to unwind.
-                  (let* ((after (make-iblock inserter
-                                             :name (symbolicate
-                                                    '#:block-
-                                                    (cleavir-ast:name ast)
-                                                    '#:-resume)
-                                             :function function
-                                             :dynamic-environment de))
-                         (phi (make-instance 'cleavir-bir:phi
-                                :rtype :multiple-values :iblock after)))
-                    (insert-unwind inserter catch contvar after
-                                   (adapt inserter rv :multiple-values)
-                                   (list phi))
-                    (push after (cdr (cleavir-bir:next catch)))
-                    (cleavir-set:nadjoinf (cleavir-bir:predecessors after)
-                                          (cleavir-bir:iblock catch))
-                    (begin inserter after)
-                    phi)))))
-        (t
-         ;; KLUDGE: We force everything into multiple values as clients may
-         ;; not be able to nonlocal-return in other formats.
-         ;; Should be customizable.
-         (let* ((mergeb (make-iblock inserter
-                                     :name (symbolicate
-                                            '#:block-
-                                            (cleavir-ast:name ast)
-                                            '#:-merge)
-                                     :function function
-                                     :dynamic-environment de))
-                (phi (make-instance 'cleavir-bir:phi :rtype :multiple-values
-                                    :iblock mergeb)))
-           (setf (cleavir-bir:inputs mergeb) (list phi))
-           (loop with catchp = nil
-                 for (ib jfunct rv) in map
-                 do (proceed inserter ib)
-                    (cond
-                      ((eq jfunct function)
-                       (terminate
-                        inserter
-                        (make-instance 'cleavir-bir:jump
-                          :inputs (adapt inserter rv :multiple-values)
-                          :outputs (list phi)
-                          :next (list mergeb))))
-                      (t
-                       (setf catchp t)
-                       (insert-unwind inserter catch contvar mergeb
-                                      (adapt inserter rv :multiple-values)
-                                      (list phi))))
-                 finally
-                    (cond
-                      (catchp
-                       ;; we still need the catch, so note the merge block
-                       (push mergeb (cdr (cleavir-bir:next catch)))
-                       (cleavir-set:nadjoinf (cleavir-bir:predecessors mergeb)
-                                             (cleavir-bir:iblock catch)))
-                      (t
-                       ;; catch unneeded, replace with jump
-                       (delete-catch catch contvar function de during))))
-           (begin inserter mergeb)
-           phi))))))
+    (setf (block-info ast) (list function catch contvar mergeb))
+    (let ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
+      (unless (eq normal-rv :no-return)
+        (terminate inserter
+                   (make-instance 'cleavir-bir:jump
+                     :inputs (adapt inserter normal-rv :multiple-values)
+                     :outputs (cleavir-bir:inputs mergeb)
+                     :next (list mergeb)))))
+    (begin inserter mergeb)
+    phi))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -279,9 +215,20 @@
 (defmethod compile-ast ((ast cleavir-ast:return-from-ast) inserter system)
   (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (unless (eq rv :no-return)
-      (push (list (iblock inserter) (function inserter) rv)
-            (block-info (cleavir-ast:block-ast ast)))))
-  ;; terminator is actually generated by block-ast compilation
+      (destructuring-bind (function catch contvar mergeb)
+          (block-info (cleavir-ast:block-ast ast))
+        (if (eq function (function inserter))
+            ;; local
+            (terminate
+             inserter
+             (make-instance 'cleavir-bir:jump
+               :inputs (adapt inserter rv :multiple-values)
+               :outputs (cleavir-bir:inputs mergeb)
+               :next (list mergeb)))
+            ;; nonlocal
+            (insert-unwind inserter catch contvar mergeb
+                           (adapt inserter rv :multiple-values)
+                           (cleavir-bir:inputs mergeb))))))
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -370,10 +317,6 @@
                    (unless rest
                      ;; Start on the block after the tagbody.
                      (begin inserter next)
-                     ;; If there were no nonlocal unwinds, simplify.
-                     (unless (go-info catch)
-                       (delete-catch catch contvar
-                                     function old-dynenv prefix-iblock))
                      ;; Delete any iblocks without predecessors.
                      (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                      ;; We return no values.
@@ -382,12 +325,8 @@
               ;; Code doesn't return. If this is the last tag, that means the
               ;; tagbody doesn't either.
               do (unless rest
-                   ;; If there were no nonlocal unwinds, simplify.
-                   (unless (go-info catch)
-                     (delete-catch catch contvar
-                                   function old-dynenv prefix-iblock))
-                     ;; Delete any iblocks without predecessors.
-                     (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
+                   ;; Delete any iblocks without predecessors.
+                   (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                    (return-from compile-ast :no-return))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
