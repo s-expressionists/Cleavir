@@ -199,10 +199,10 @@ has use-before-define on inputs ~a"
         "Enclose ~a is not present in its CODE ~a's encloses"
         inst (code inst) (encloses (code inst))))
 
-(defmethod verify progn ((inst local-call))
-  ;; FIXME we are looking at the same function a lot! To fix this,
-  ;; make the verifier work on the IR module instead.
-  (verify (callee inst)))
+(defmethod verify progn ((at accesstemp))
+  (test (typep (dynamic-environment at) 'alloca)
+        "Accesstemp ~a does not have an alloca dynamic environment, but ~a"
+        at (dynamic-environment at)))
 
 (defmethod verify progn ((wv writevar))
   ;; match types
