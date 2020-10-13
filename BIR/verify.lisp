@@ -411,7 +411,16 @@ has use-before-define on inputs ~a"
           (test (cleavir-set:set<= (iblocks function) reachable)
                 "Some iblocks recorded by the function ~a are unreachable: ~a"
                 function
-                (cleavir-set:difference 'list (iblocks function) reachable)))))))
+                (cleavir-set:difference 'list (iblocks function) reachable)))
+        ;; The end block, if it exists, is reachable and in the iblocks set.
+        (let ((end (end function)))
+          (when end
+            (test (cleavir-set:presentp end reachable)
+                  "The end block of function ~a is not reachable."
+                  function)
+            (test (cleavir-set:presentp end (iblocks function))
+                  "The end block of function ~a is not recorded."
+                  function)))))))
 
 (defmethod verify progn ((module module))
   (let ((*seen-instructions* (cleavir-set:empty-set))

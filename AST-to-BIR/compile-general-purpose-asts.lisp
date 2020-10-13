@@ -26,6 +26,7 @@
 
 (defmethod compile-function ((ast cleavir-ast:function-ast) system)
   (let* ((module *current-module*)
+         (*iblocks* (cleavir-set:empty-set))
          (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
                      :docstring (cleavir-ast:docstring ast)
@@ -58,6 +59,13 @@
                         :inputs (adapt inserter rv :multiple-values))))))
       (when (cleavir-set:empty-set-p (cleavir-bir:bindings leti))
         (cleavir-bir:delete-instruction leti)))
+    (cleavir-bir:refresh-local-iblocks function)
+    (let ((reachable (cleavir-bir:iblocks function))
+          (end (cleavir-bir:end function)))
+      (cleavir-set:doset (ib *iblocks*)
+        (unless (cleavir-set:presentp ib reachable)
+          (when (eq ib end) (setf (cleavir-bir:end function) nil))
+          (cleavir-bir:clean-up-iblock ib))))
     function))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -317,16 +325,12 @@
                    (unless rest
                      ;; Start on the block after the tagbody.
                      (begin inserter next)
-                     ;; Delete any iblocks without predecessors.
-                     (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                      ;; We return no values.
                      (return-from compile-ast ())))
             else
               ;; Code doesn't return. If this is the last tag, that means the
               ;; tagbody doesn't either.
               do (unless rest
-                   ;; Delete any iblocks without predecessors.
-                   (mapc #'cleavir-bir:maybe-delete-iblock tag-iblocks)
                    (return-from compile-ast :no-return))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
