@@ -309,11 +309,6 @@
                :initform (cleavir-set:empty-set)
                :type cleavir-set:set)))
 
-(defmethod bindings ((function function))
-  (cleavir-set:filter 'cleavir-set:set
-                      (lambda (v) (eq (binder v) function))
-                      (variables function)))
-
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
   (cleavir-set:filter
