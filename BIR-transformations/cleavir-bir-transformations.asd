@@ -5,6 +5,7 @@
                :cleavir-attributes) ; for simple-unwind
   :components
   ((:file "packages")
+   (:file "eliminate-catches" :depends-on ("packages"))
    (:file "process-captured-variables" :depends-on ("packages"))
    (:file "delete-temporary-variables" :depends-on ("packages"))
    (:file "interpolate-function" :depends-on ("packages"))
