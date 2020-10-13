@@ -6,9 +6,8 @@
 ;;;; That is what this transform does.
 
 (defun delete-variable (variable)
-  (declare (optimize debug))
-  (let* ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
-         (reader (cleavir-set:arb (cleavir-bir:readers variable))))
+  (let ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
+        (reader (cleavir-set:arb (cleavir-bir:readers variable))))
     (cleavir-bir:delete-transmission writer reader)))
 
 (defun temporary-variable-p (variable)
@@ -16,12 +15,8 @@
        (= (cleavir-set:size (cleavir-bir:writers variable)) 1)
        (= (cleavir-set:size (cleavir-bir:readers variable)) 1)))
 
-(defun delete-temporary-variables-from-set (fset)
-  (cleavir-set:doset (funct fset)
-    (cleavir-set:doset (var (cleavir-bir:variables funct))
+(defun delete-temporary-variables (ir)
+  (cleavir-set:doset (function (cleavir-bir:functions (cleavir-bir:module ir)))
+    (cleavir-set:doset (var (cleavir-bir:variables function))
       (when (temporary-variable-p var)
         (delete-variable var)))))
-
-(defun delete-temporary-variables (ir)
-  (delete-temporary-variables-from-set
-   (cleavir-bir:functions (cleavir-bir:module ir))))
