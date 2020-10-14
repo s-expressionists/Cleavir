@@ -8,6 +8,7 @@
    (:file "eliminate-catches" :depends-on ("packages"))
    (:file "process-captured-variables" :depends-on ("packages"))
    (:file "delete-temporary-variables" :depends-on ("packages"))
-   (:file "interpolate-function" :depends-on ("packages"))
+   (:file "interpolate-function" :depends-on ("eliminate-catches"
+                                              "packages"))
    (:file "inline" :depends-on ("interpolate-function" "packages"))
    (:file "simple-unwind" :depends-on ("packages"))))

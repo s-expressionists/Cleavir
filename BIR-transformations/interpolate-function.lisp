@@ -38,7 +38,8 @@
       (cleavir-set:doset (ib (cleavir-bir:exits interpolated-function))
         (let ((u (cleavir-bir:end ib)))
           (check-type u cleavir-bir:unwind)
-          (let ((dest (cleavir-bir:destination u)))
+          (let ((dest (cleavir-bir:destination u))
+                (catch (cleavir-bir:catch u)))
             (when (eq (cleavir-bir:function dest) call-function)
               (let ((contread (first (cleavir-bir:inputs u)))
                     (unwind-inputs (rest (cleavir-bir:inputs u)))
@@ -48,7 +49,9 @@
                 (cleavir-bir:replace-terminator new u)
                 (cleavir-bir:delete-computation contread)
                 (setf (cleavir-bir:inputs new) unwind-inputs
-                      (cleavir-bir:outputs new) unwind-outputs))))))
+                      (cleavir-bir:outputs new) unwind-outputs))
+              (when (catch-eliminable-p catch)
+                (eliminate-catch catch))))))
       (cond (return-values
              (let ((call-use (unless (cleavir-bir:unused-p call)
                                (cleavir-bir:use call))))
@@ -84,5 +87,7 @@
       (when (and interp-end
                  (cleavir-bir:iblocks-mergable-p interp-end after))
         (cleavir-bir:merge-iblocks interp-end after))
-      (cleavir-bir:merge-iblocks before (cleavir-bir:start interpolated-function))))
+      (let ((fstart (cleavir-bir:start interpolated-function)))
+        (when (cleavir-bir:iblocks-mergable-p before fstart)
+          (cleavir-bir:merge-iblocks before fstart)))))
   (values))
