@@ -387,3 +387,7 @@
 
 (defun refresh-users (top)
   (cleavir-set:mapset nil #'refresh-local-users (functions (module top))))
+
+(defun remove-function-from-module (function)
+  (cleavir-set:nremovef (cleavir-bir:functions (cleavir-bir:module function))
+                        function))
