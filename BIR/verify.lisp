@@ -197,7 +197,18 @@ has use-before-define on inputs ~a"
   ;; Make sure encloses set is correct
   (test (cleavir-set:presentp inst (encloses (code inst)))
         "Enclose ~a is not present in its CODE ~a's encloses"
-        inst (code inst) (encloses (code inst))))
+        inst (code inst) (encloses (code inst)))
+  ;; Make sure the function we are enclosing is in the module.
+  (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
+        "The function ~a being enclosed by ~a is not present in the module ~a."
+        (code inst) inst *verifying-module*))
+
+(defmethod verify progn ((inst local-call))
+  ;; Make sure the function we are calling is in the module.
+  (let ((function (first (inputs inst))))
+    (test (cleavir-set:presentp function (functions *verifying-module*))
+          "The function ~a being called by ~a is not present in the module ~a."
+          function inst *verifying-module*)))
 
 (defun dynenvs (d)
   (loop for dyn = d then (parent dyn)
