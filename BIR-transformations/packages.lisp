@@ -5,6 +5,5 @@
   (:export #:module-eliminate-catches #:eliminate-catches)
   (:export #:process-captured-variables)
   (:export #:delete-temporary-variables)
-  (:export #:inline-functions)
   (:export #:simple-unwinding-p)
   (:export #:find-module-local-calls))
