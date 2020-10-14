@@ -275,6 +275,7 @@
                 'cleavir-bir:jump)
          (eq (first (successors iblock1)) iblock2)
          (= (cleavir-set:size predecessors) 1)
+         (cleavir-set:empty-set-p (entrances iblock2))
          (eq (cleavir-set:arb predecessors) iblock1)
          (eq (function iblock1) (function iblock2))
          (eq (dynamic-environment iblock1)
