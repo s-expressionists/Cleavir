@@ -22,9 +22,8 @@
          (interp-end (cleavir-bir:end interpolated-function))
          (returni (when interp-end (cleavir-bir:end interp-end)))
          (return-values (when interp-end (first (cleavir-bir:inputs returni))))
-         (enclose (first (cleavir-bir:inputs call)))
          (arguments (rest (cleavir-bir:inputs call))))
-    (check-type enclose cleavir-bir:enclose)
+    (check-type call cleavir-bir:local-call)
     (assert (every (lambda (a) (typep a 'cleavir-bir:argument)) lambda-list))
     ;; Rewire control
     (multiple-value-bind (before after)
@@ -72,11 +71,7 @@
       ;; Replace the arguments in the interpolated function body with the
       ;; actual argument values
       (mapc #'cleavir-bir:replace-uses arguments lambda-list)
-      ;; Delete the enclose.
-      (cleavir-bir:delete-computation enclose)
-      ;; Remove the function from the module.
-      (cleavir-set:nremovef (cleavir-bir:functions (cleavir-bir:module call-function))
-                            interpolated-function)
+      (cleavir-bir:remove-function-from-module interpolated-function)
       ;; Re-home iblocks (and indirectly, instructions)
       (cleavir-bir:map-iblocks
        (lambda (ib)

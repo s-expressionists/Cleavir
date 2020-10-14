@@ -7,4 +7,4 @@
   (:export #:delete-temporary-variables)
   (:export #:inline-functions)
   (:export #:simple-unwinding-p)
-  (:export #:local-call-analyze-module))
+  (:export #:find-module-local-calls))

@@ -62,7 +62,9 @@
             do (cleavir-set:nadjoinf seen work)
                (map-local-instructions
                 (lambda (i)
-                  (typecase i (enclose (push (code i) worklist)))
+                  (typecase i
+                    (enclose (push (code i) worklist))
+                    (local-call (push (callee i) worklist)))
                   (funcall f i))
                 work)))
   (values))
@@ -79,7 +81,9 @@
             do (cleavir-set:nadjoinf seen work)
                (map-local-instructions
                 (lambda (i)
-                  (typecase i (enclose (push (code i) worklist)))
+                  (typecase i
+                    (enclose (push (code i) worklist))
+                    (local-call (push (callee i) worklist)))
                   (funcall f i owner))
                 work)))
   (values))
