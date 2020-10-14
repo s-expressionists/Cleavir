@@ -68,30 +68,3 @@
                   (funcall f i))
                 work)))
   (values))
-
-;;; Arbitrary order
-(defun map-instructions-with-owner (f function)
-  (check-type function function)
-  (let ((seen (cleavir-set:empty-set))
-        (worklist (list function)))
-    (loop for work = (pop worklist)
-          for owner = work
-          until (null work)
-          unless (cleavir-set:presentp work seen)
-            do (cleavir-set:nadjoinf seen work)
-               (map-local-instructions
-                (lambda (i)
-                  (typecase i
-                    (enclose (push (code i) worklist))
-                    (local-call (push (callee i) worklist)))
-                  (funcall f i owner))
-                work)))
-  (values))
-
-;; Given a set of functions, do m-i-w-o
-(defun map-instructions-with-owner-from-set (f function-set)
-  (check-type function-set cleavir-set:set)
-  (cleavir-set:doset (function function-set)
-    (map-local-instructions
-     (lambda (i) (funcall f i function))
-     function)))
