@@ -342,10 +342,16 @@
                  :iblock ib :inputs () :predecessor inst
                  :next (list new))))
       (setf (successor inst) new (end ib) new))
-    ;; Update the new block's presence in predecessors
-    (dolist (n (next (end new)))
-      (cleavir-set:nremovef (predecessors n) ib)
-      (cleavir-set:nadjoinf (predecessors n) new))
+    (let ((end (end new)))
+      (if (typep end 'unwind)
+          ;; Update the new block's presence in entrances
+          (let ((dest (destination end)))
+            (cleavir-set:nremovef (entrances dest) ib)
+            (cleavir-set:nadjoinf (entrances dest) new))
+          ;; or predecessors
+          (dolist (n (next (end new)))
+            (cleavir-set:nremovef (predecessors n) ib)
+            (cleavir-set:nadjoinf (predecessors n) new))))
     ;; If the block happens to be the end of its function, adjust
     (when (eq (end function) ib)
       (setf (end function) new))
