@@ -1,5 +1,19 @@
 (in-package #:cleavir-bir-transformations)
 
+(defun replace-unwind (u)
+  (let ((contread (first (cleavir-bir:inputs u)))
+        (unwind-inputs (rest (cleavir-bir:inputs u)))
+        (unwind-outputs (cleavir-bir:outputs u))
+        (new (make-instance 'cleavir-bir:jump
+               :next (list (cleavir-bir:destination u)))))
+    (cleavir-bir:replace-terminator new u)
+    (cleavir-bir:delete-computation contread)
+    (setf (cleavir-bir:inputs new) unwind-inputs
+          (cleavir-bir:outputs new) unwind-outputs))
+  (let ((catch (cleavir-bir:catch u)))
+    (when (catch-eliminable-p catch)
+      (eliminate-catch catch))))
+
 ;;; interpolated-function must have only required parameters
 (defun interpolate-function (interpolated-function call)
   (let* ((lambda-list (cleavir-bir:lambda-list interpolated-function))
@@ -41,17 +55,7 @@
           (let ((dest (cleavir-bir:destination u))
                 (catch (cleavir-bir:catch u)))
             (when (eq (cleavir-bir:function dest) call-function)
-              (let ((contread (first (cleavir-bir:inputs u)))
-                    (unwind-inputs (rest (cleavir-bir:inputs u)))
-                    (unwind-outputs (cleavir-bir:outputs u))
-                    (new (make-instance 'cleavir-bir:jump
-                           :next (list dest))))
-                (cleavir-bir:replace-terminator new u)
-                (cleavir-bir:delete-computation contread)
-                (setf (cleavir-bir:inputs new) unwind-inputs
-                      (cleavir-bir:outputs new) unwind-outputs))
-              (when (catch-eliminable-p catch)
-                (eliminate-catch catch))))))
+              (replace-unwind u)))))
       (cond (return-values
              (let ((call-use (unless (cleavir-bir:unused-p call)
                                (cleavir-bir:use call))))
