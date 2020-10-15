@@ -125,19 +125,24 @@
     (cleavir-set:mapset 'list #'disassemble-function
                         (cleavir-bir:functions module))))
 
+(defun print-iblock-disasm (iblock-disasm &key (show-dynenv t))
+  (destructuring-bind ((label . args) dynenv entrances &rest insts)
+      iblock-disasm
+    (format t "~&  iblock ~a ~:a:" label args)
+    (when show-dynenv
+      (format t "~&   dynenv = ~a" dynenv))
+    (when entrances
+      (format t "~&   entrances = ~(~:a~)" entrances))
+    (dolist (inst insts)
+      (format t "~&     ~(~a~)" inst))))
+
+(defun print-function-disasm (function-disasm &key (show-dynenv t))
+  (destructuring-bind ((name start args env) . iblocks)
+      function-disasm
+    (format t "~&function ~a ~:a ~&     with environment ~(~a~) ~&     with start iblock ~a"
+            name args env start)
+    (dolist (iblock iblocks)
+      (print-iblock-disasm iblock :show-dynenv show-dynenv))))
+
 (defun print-disasm (disasm &key (show-dynenv t))
-  (dolist (fun disasm)
-    (destructuring-bind ((name start args env) . iblocks)
-        fun
-      (format t "~&function ~a ~:a ~&     with environment ~(~a~) ~&     with start iblock ~a"
-              name args env start)
-      (dolist (iblock iblocks)
-        (destructuring-bind ((label . args) dynenv entrances &rest insts)
-            iblock
-          (format t "~&  iblock ~a ~:a:" label args)
-          (when show-dynenv
-            (format t "~&   dynenv = ~a" dynenv))
-          (when entrances
-            (format t "~&   entrances = ~(~:a~)" entrances))
-          (dolist (inst insts)
-            (format t "~&     ~(~a~)" inst)))))))
+  (dolist (fun disasm) (print-function-disasm fun :show-dynenv show-dynenv)))
