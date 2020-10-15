@@ -50,21 +50,3 @@
 (defun map-local-instructions (f function)
   (check-type function function)
   (map-iblocks (lambda (ib) (map-iblock-instructions f (start ib))) function))
-
-;;; Arbitrary order.
-(defun map-instructions (f function)
-  (check-type function function)
-  (let ((seen (cleavir-set:empty-set))
-        (worklist (list function)))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (cleavir-set:presentp work seen)
-            do (cleavir-set:nadjoinf seen work)
-               (map-local-instructions
-                (lambda (i)
-                  (typecase i
-                    (enclose (push (code i) worklist))
-                    (local-call (push (callee i) worklist)))
-                  (funcall f i))
-                work)))
-  (values))

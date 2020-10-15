@@ -34,8 +34,7 @@
            #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop #:tprimop #:info)
-  (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:map-iblocks
+  (:export #:map-iblocks
            #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
            #:delete-transmission #:replace-uses #:replace-terminator
