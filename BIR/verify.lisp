@@ -252,6 +252,9 @@ has use-before-define on inputs ~a"
   ;; verify type decls
   (test (typep (unwinds c) 'cleavir-set:set)
         "Catch ~a has non-set for unwinds: ~a" c (unwinds c))
+  ;; check that it is recorded by its function
+  (test (cleavir-set:presentp c (catches (function c)))
+        "Catch ~a not in its function ~a's catch set." c (function c))
   ;; check that all unwinds are unwinds
   (test (cleavir-set:every (lambda (u) (typep u 'unwind)) (unwinds c))
         "Catch ~a has non-unwinds ~a in its unwind set"
@@ -423,6 +426,11 @@ has use-before-define on inputs ~a"
                 "Some iblocks recorded by the function ~a are unreachable: ~a"
                 function
                 (cleavir-set:difference 'list (iblocks function) reachable)))
+        ;; Check that the catch instructions of this function were in
+        ;; fact seen.
+        (cleavir-set:doset (catch (catches function))
+          (test (cleavir-set:presentp catch *seen-instructions*)
+                "The catch ~a is recorded by the function ~a but not reachable." catch function))
         ;; The end block, if it exists, is reachable and in the iblocks set.
         (let ((end (end function)))
           (when end

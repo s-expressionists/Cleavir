@@ -51,8 +51,7 @@
       (cleavir-set:doset (ib (cleavir-bir:exits interpolated-function))
         (let ((u (cleavir-bir:end ib)))
           (check-type u cleavir-bir:unwind)
-          (let ((dest (cleavir-bir:destination u))
-                (catch (cleavir-bir:catch u)))
+          (let ((dest (cleavir-bir:destination u)))
             (when (eq (cleavir-bir:function dest) call-function)
               (replace-unwind u)))))
       (cond (return-values

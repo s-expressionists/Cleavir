@@ -29,6 +29,8 @@
          (*iblocks* (cleavir-set:empty-set))
          (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
+                     :variables (cleavir-set:empty-set)
+                     :catches (cleavir-set:empty-set)
                      :docstring (cleavir-ast:docstring ast)
                      :original-lambda-list (cleavir-ast:original-lambda-list ast)
                      :origin (cleavir-ast:origin ast)
@@ -45,7 +47,6 @@
           (leti (make-instance 'cleavir-bir:leti
                                :bindings (cleavir-set:empty-set))))
       (setf (cleavir-bir:lambda-list function) lambda-list
-            (cleavir-bir:variables function) (cleavir-set:empty-set)
             (cleavir-bir:start function) start)
       (begin inserter start)
       (insert inserter leti)
@@ -200,6 +201,7 @@
          (contvar (make-instance 'cleavir-bir:variable
                     :name (cleavir-ast:name ast)
                     :binder catch :rtype :continuation)))
+    (cleavir-set:nadjoinf (cleavir-bir:catches function) catch)
     (setf (cleavir-bir:outputs catch) (list contvar))
     (setf (cleavir-bir:inputs mergeb) (list phi))
     (adjoin-variable inserter contvar)
@@ -292,6 +294,7 @@
                     :next (list* prefix-iblock tag-iblocks)))
            (contvar (make-instance 'cleavir-bir:variable
                       :binder catch :rtype :continuation)))
+      (cleavir-set:nadjoinf (cleavir-bir:catches function) catch)
       (setf (cleavir-bir:outputs catch) (list contvar))
       ;; this is used to check whether the catch is actually necessary.
       (setf (go-info catch) nil)

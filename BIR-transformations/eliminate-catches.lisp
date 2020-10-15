@@ -23,13 +23,9 @@
       (cleavir-bir:merge-iblocks fore normal-next))))
 
 (defun eliminate-catches (function)
-  (cleavir-bir:map-iblocks
-   (lambda (ib)
-     (let ((end (cleavir-bir:end ib)))
-       (when (and (typep end 'cleavir-bir:catch)
-                  (catch-eliminable-p end))
-         (eliminate-catch end))))
-   function))
+  (cleavir-set:doset (catch (cleavir-bir:catches function))
+    (when (catch-eliminable-p catch)
+      (eliminate-catch catch))))
 
 (defun module-eliminate-catches (module)
   (cleavir-set:mapset nil #'eliminate-catches

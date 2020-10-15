@@ -277,7 +277,10 @@
    ;; The set of variables bound by this function.
    (%variables :initarg :variables :accessor variables
                :type cleavir-set:set)
-   ;; The set of variables closed over in this environment. Currently
+   ;; The set of catches in this function.
+   (%catches :initarg :catches :accessor catches
+             :type cleavir-set:set)
+   ;; The set of lexicals closed over in this environment. Currently
    ;; filled in by process-captured-variables.
    (%environment :initform (cleavir-set:empty-set) :accessor environment
                  :type cleavir-set:set)
