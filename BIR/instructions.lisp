@@ -95,14 +95,12 @@
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (no-input lexical-bind dynamic-environment terminator operation)
+(defclass catch (no-input lexical ssa dynamic-environment terminator)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
              :type cleavir-set:set)))
-(defmethod bindings ((catch catch))
-  (cleavir-set:make-set (first (outputs catch))))
 
 ;;; Mark a lexical binding.
 (defclass leti (no-input no-output operation)
@@ -112,14 +110,11 @@
 
 ;;; Mark an explicit dynamic-extent lexical binding, so that extent is
 ;;; explicitly represented.
-(defclass dynamic-leti (leti terminator1 lexical-bind)
-  ((%bindings :initarg :bindings :accessor bindings
-              :initform (cleavir-set:empty-set)
-              :type cleavir-set:set)))
+(defclass dynamic-leti (leti terminator1 dynamic-environment)
+  ())
 
 ;;; Nonlocal control transfer.
-;;; First input is the continuation.
-;;; Remaining inputs are passed to the destination.
+;;; Inputs are passed to the destination.
 (defclass unwind (terminator0)
   ((%catch :initarg :catch :reader catch
            :type catch)

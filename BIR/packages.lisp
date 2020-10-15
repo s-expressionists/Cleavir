@@ -8,7 +8,7 @@
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
-  (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
+  (:export #:dynamic-environment #:scope #:parent #:bindings)
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi

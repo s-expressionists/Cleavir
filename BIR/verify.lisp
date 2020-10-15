@@ -279,15 +279,8 @@ has use-before-define on inputs ~a"
   (test (cleavir-set:presentp u (unwinds (catch u)))
         "Unwind ~a is not present in its catch's ~a unwinds ~a"
         u (catch u) (unwinds (catch u)))
-  ;; ensure there is at least one input (the continuation)
-  (test (> (length (inputs u)) 0)
-        "Unwind ~a is missing inputs" u)
-  ;; ensure the first input is a continuation
-  (test (rtype= (rtype (first (inputs u))) :continuation)
-        "Unwind ~a's first input ~a is not a continuation"
-        u (first (inputs u)))
   ;; ensure inputs match destination
-  (match-jump-types u (rest (inputs u)) (outputs u)))
+  (match-jump-types u (inputs u) (outputs u)))
 
 (defmethod verify progn ((j jump))
   (match-jump-types j (inputs j) (outputs j))

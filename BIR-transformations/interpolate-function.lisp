@@ -1,13 +1,11 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun replace-unwind (u)
-  (let ((contread (first (cleavir-bir:inputs u)))
-        (unwind-inputs (rest (cleavir-bir:inputs u)))
+  (let ((unwind-inputs (cleavir-bir:inputs u))
         (unwind-outputs (cleavir-bir:outputs u))
         (new (make-instance 'cleavir-bir:jump
                :next (list (cleavir-bir:destination u)))))
     (cleavir-bir:replace-terminator new u)
-    (cleavir-bir:delete-computation contread)
     (setf (cleavir-bir:inputs new) unwind-inputs
           (cleavir-bir:outputs new) unwind-outputs))
   (let ((catch (cleavir-bir:catch u)))
@@ -37,6 +35,8 @@
        (cleavir-bir:end before))
       (cleavir-set:nunionf (cleavir-bir:variables call-function)
                            (cleavir-bir:variables interpolated-function))
+      (cleavir-set:nunionf (cleavir-bir:catches call-function)
+                           (cleavir-bir:catches interpolated-function))
       ;; Replace the return instruction with a jump if there is one, or else
       ;; delete AFTER and any later straight line blocks.
       (if interp-end

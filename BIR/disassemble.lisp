@@ -71,8 +71,7 @@
 (defmethod disassemble-instruction-extra append ((inst enclose))
   (list (disassemble-datum (code inst))))
 
-(defmethod disassemble-instruction-extra append ((inst catch))
-  (list (cleavir-set:mapset 'list #'disassemble-datum (bindings inst))))
+(defmethod disassemble-instruction-extra append ((inst catch)))
 
 (defmethod disassemble-instruction-extra append ((inst unwind))
   (list (iblock-id (destination inst))))
