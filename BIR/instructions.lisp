@@ -95,7 +95,7 @@
 ;;; Write it
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
-(defclass catch (no-input lexical ssa dynamic-environment terminator)
+(defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   (;; NOTE: Should be a weak set
    (%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)

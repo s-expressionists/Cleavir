@@ -104,7 +104,7 @@ has use-before-define on inputs ~a"
   ;; In either case, we're a definer.
   (let ((outputs (outputs instruction)))
     (typecase instruction
-      ((or catch writevar)
+      (writevar
        (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
              "Writevar ~a has bad outputs ~a" instruction outputs)
        (test (cleavir-set:presentp instruction
