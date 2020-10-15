@@ -1,111 +1,97 @@
 (in-package #:cleavir-bir)
 
-(defvar *seen*)
-(defvar *iblock-num*)
+(defvar *ids*)
+(defvar *name-ids*)
 
-(defvar *disassemble-nextv*)
-(defvar *disassemble-vars*)
+(defvar *in-disassembly* nil)
+(defmacro with-disassembly ((&key override) &body body)
+  (let ((bodyf (gensym "BODY")))
+    `(flet ((,bodyf () ,@body))
+       (if (or ,override (not *in-disassembly*))
+           (let ((*in-disassembly* t)
+                 (*name-ids* (make-hash-table :test #'equal))
+                 (*ids* (make-hash-table :test #'eq)))
+             (,bodyf))
+           (,bodyf)))))
 
-(defvar *disassemble-nextn*)
-(defvar *disassemble-ids*)
+;; Prevents collisions by adding -## at the end.
+(defun name-id (name)
+  (multiple-value-bind (value presentp) (gethash name *name-ids*)
+    (cond ((null name)
+           (setf (gethash name *name-ids*) (if presentp (1+ value) 1))
+           (make-symbol (write-to-string (if presentp value 0))))
+          (presentp
+           (setf (gethash name *name-ids*) (1+ value))
+           (make-symbol (concatenate 'string
+                                     (write-to-string name :escape nil)
+                                     "-"
+                                     (write-to-string value :escape nil))))
+          (t
+           (setf (gethash name *name-ids*) 0)
+           (make-symbol (write-to-string name :escape nil))))))
 
-(defun dis-datum (datum)
-  (or (gethash datum *disassemble-ids*)
-      (setf (gethash datum *disassemble-ids*)
-            (or (name datum)
-                (prog1 (make-symbol (format nil "v~a" *disassemble-nextn*))
-                  (incf *disassemble-nextn*))))))
-
-(defun dis-iblock (iblock)
-  (or (gethash iblock *disassemble-vars*)
-      (setf (gethash iblock *disassemble-vars*) (incf *iblock-num*))))
-
-(defun dis-var (variable)
-  (or (gethash variable *disassemble-vars*)
-      (setf (gethash variable *disassemble-vars*)
-            (or (name variable)
-                (prog1 (make-symbol (write-to-string *disassemble-nextv*))
-                  (incf *disassemble-nextv*))))))
-
-(defgeneric dis-label (instruction))
-(defmethod dis-label ((instruction instruction))
-  (class-name (class-of instruction)))
-
-(defgeneric disassemble-datum (value))
-
-(defmethod disassemble-datum ((value linear-datum)) (dis-datum value))
+(defgeneric disassemble-datum (datum))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
 (defmethod disassemble-datum ((value load-time-value))
   (if (and (read-only-p value) (constantp (form value)))
       `',(eval (form value))
       `(cl:load-time-value ,(form value) ,(read-only-p value))))
-(defmethod disassemble-datum ((value variable)) (dis-var value))
+(defmethod disassemble-datum ((value datum))
+  (or (gethash value *ids*)
+      (setf (gethash value *ids*)
+            (name-id (name value)))))
 
-(defgeneric disassemble-instruction (instruction))
+(defun label (instruction)
+  (class-name (class-of instruction)))
 
-(defmethod disassemble-instruction ((inst operation))
-  (let ((outs (outputs inst))
-        (base
-          `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst)))))
+(defgeneric disassemble-instruction-extra (instruction)
+  (:method-combination append)
+  (:method append ((instruction instruction)) ()))
+
+(defun disassemble-instruction (instruction)
+  (let ((outs (mapcar #'disassemble-datum (outputs instruction)))
+        (dis `(,(label instruction)
+               ,@(mapcar #'disassemble-datum (inputs instruction))
+               ,@(disassemble-instruction-extra instruction))))
     (if (null outs)
-        base
-        `(:= ,(mapcar #'disassemble-datum (outputs inst)) ,base))))
+        dis
+        `(:= (,@outs) ,dis))))
 
-(defmethod disassemble-instruction ((inst computation))
-  `(:= ,(disassemble-datum inst)
-       (,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst)))))
+(defun iblock-id (iblock)
+  (or (gethash iblock *ids*)
+      (setf (gethash iblock *ids*)
+            (name-id (name iblock)))))
 
-(defmethod disassemble-instruction ((inst local-call))
-  `(:= ,(disassemble-datum inst)
-       (,(dis-label inst) ,(callee inst) ,@(mapcar #'disassemble-datum (rest (inputs inst))))))
+(defmethod disassemble-instruction-extra append ((inst terminator))
+  (let ((n (mapcar #'iblock-id (next inst))))
+    (if (null n)
+        nil
+        (list (mapcar #'iblock-id (next inst))))))
 
-(defmethod disassemble-instruction ((inst enclose))
-  `(:= ,(disassemble-datum inst)
-       (,(dis-label inst)
-        ,(code inst)
-        ,@(mapcar #'disassemble-datum (inputs inst)))))
+(defmethod disassemble-instruction-extra append ((inst enclose))
+  (list (disassemble-datum (code inst))))
 
-(defmethod disassemble-instruction ((inst catch))
-  `(,(dis-label inst)
-    ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))
-    ,@(mapcar #'disassemble-datum (inputs inst))
-    ,@(mapcar (lambda (iblock)
-                (list 'iblock (dis-iblock iblock)))
-              (next inst))))
+(defmethod disassemble-instruction-extra append ((inst catch))
+  (list (cleavir-set:mapset 'list #'disassemble-datum (bindings inst))))
 
-(defmethod disassemble-instruction ((inst unwind))
-  `(,(dis-label inst)
-    ,@(mapcar #'disassemble-datum (inputs inst))
-    :->
-    (iblock ,(dis-iblock (destination inst)))))
+(defmethod disassemble-instruction-extra append ((inst unwind))
+  (list (iblock-id (destination inst))))
 
-(defmethod disassemble-instruction ((inst jump))
-  `(,(dis-label inst)
-    (iblock ,(dis-iblock (first (next inst))))
-    ,@(mapcar #'disassemble-datum (inputs inst))))
-
-(defmethod disassemble-instruction ((inst leti))
-  `(,(dis-label inst) ,(mapcar #'dis-var (cleavir-set:set-to-list (bindings inst)))))
-
-(defmethod disassemble-instruction ((inst eqi))
-  `(,(dis-label inst) ,@(mapcar #'disassemble-datum (inputs inst))
-    ,@(mapcar (lambda (x)
-                (list 'iblock (dis-iblock x)))
-              (next inst))))
+(defmethod disassemble-instruction-extra append ((inst leti))
+  (list (cleavir-set:mapset 'list #'disassemble-datum (bindings inst))))
 
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
-  (let ((insts nil))
-    (map-iblock-instructions
-     (lambda (i) (push (disassemble-instruction i) insts))
-     (start iblock))
-    (list* (list* (dis-iblock iblock)
-                  (mapcar #'disassemble-datum (inputs iblock)))
-           (dynamic-environment iblock)
-           (mapcar (lambda (x)
-                     `(iblock ,x))
-                   (cleavir-set:mapset 'list #'dis-iblock (entrances iblock)))
-           (nreverse insts))))
+  (with-disassembly ()
+    (let ((insts nil))
+      (map-iblock-instructions
+       (lambda (i) (push (disassemble-instruction i) insts))
+       (start iblock))
+      (list* (list* (iblock-id iblock)
+                    (mapcar #'disassemble-datum (inputs iblock)))
+             (dynamic-environment iblock)
+             (cleavir-set:mapset 'list #'iblock-id (entrances iblock))
+             (nreverse insts)))))
 
 (defun disassemble-lambda-list (ll)
   (loop for item in ll
@@ -120,31 +106,27 @@
 
 (defun disassemble-function (function)
   (check-type function function)
-  (let ((iblocks nil)
-        (*disassemble-ids* (make-hash-table :test #'eq))
-        (*disassemble-nextn* 0)
-        (seen (cleavir-set:make-set)))
-    ;; sort blocks in forward flow order.
-    (map-iblocks-postorder
-     (lambda (block)
-       (push (disassemble-iblock block) iblocks))
-     function)
-    (list* (list function (dis-iblock (start function))
+  (with-disassembly ()
+    (let ((iblocks nil))
+      ;; sort blocks in forward flow order.
+      (map-iblocks-postorder
+       (lambda (block)
+         (push (disassemble-iblock block) iblocks))
+       function)
+    (list* (list (disassemble-datum function) (iblock-id (start function))
                  (disassemble-lambda-list (lambda-list function))
-                 (cleavir-set:mapset 'list #'dis-var (environment function)))
-           iblocks)))
+                 (cleavir-set:mapset 'list #'disassemble-datum
+                                     (environment function)))
+           iblocks))))
 
-(defun disassemble (ir)
-  (check-type ir function)
-  (let ((module (cleavir-bir:module ir))
-        (*seen* (cleavir-set:make-set ir))
-        (*iblock-num* 0)
-        (*disassemble-nextv* 0)
-        (*disassemble-vars* (make-hash-table :test #'eq)))
-    (cleavir-set:mapset 'list #'disassemble-function (cleavir-bir:functions module))))
+(defun disassemble (module)
+  (check-type module module)
+  (with-disassembly ()
+    (cleavir-set:mapset 'list #'disassemble-function
+                        (cleavir-bir:functions module))))
 
-(defun print-disasm (ir &key (show-dynenv t))
-  (dolist (fun ir)
+(defun print-disasm (disasm &key (show-dynenv t))
+  (dolist (fun disasm)
     (destructuring-bind ((name start args env) . iblocks)
         fun
       (format t "~&function ~a ~:a ~&     with environment ~(~a~) ~&     with start iblock ~a"
