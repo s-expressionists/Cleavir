@@ -289,6 +289,7 @@
                  :type cleavir-set:set)
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
+   (%policy :initarg :policy :initform nil :reader policy)
    (%name :initarg :name :initform nil :reader name)
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil

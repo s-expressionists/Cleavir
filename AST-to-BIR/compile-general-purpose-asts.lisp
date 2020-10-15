@@ -32,6 +32,7 @@
                      :docstring (cleavir-ast:docstring ast)
                      :original-lambda-list (cleavir-ast:original-lambda-list ast)
                      :origin (cleavir-ast:origin ast)
+                     :policy (cleavir-ast:policy ast)
                      :module module))
          (inserter (make-instance 'inserter))
          (start (make-iblock inserter
