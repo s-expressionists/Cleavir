@@ -64,18 +64,37 @@
          (eq (cleavir-bir:callee user) fn)))
     (t nil)))
 
+;;; Detect whether a function is ever called or closed over in an
+;;; intermediate dynamic environment. If the function escapes, check
+;;; if it is passed into a "good" call.
+(defun find-intermediate-dynenv (catch function seen)
+  (when (cleavir-set:presentp function seen)
+    (return-from find-intermediate-dynenv nil))
+  (cleavir-set:nadjoinf seen function)
+  (cleavir-set:doset (enclose (cleavir-bir:encloses function))
+    (let* ((user (cleavir-bir:use enclose))
+           (user-dynenv (cleavir-bir:dynamic-environment user)))
+      (unless (and (eq user-dynenv catch)
+                   (simplifiable-user-p user enclose))
+        (return-from find-intermediate-dynenv t))))
+  (cleavir-set:doset (call (cleavir-bir:local-calls function))
+    (let ((dynamic-environment (cleavir-bir:dynamic-environment call))
+          (function (cleavir-bir:function call)))
+      (cond ((eq catch dynamic-environment))
+            ((eq function dynamic-environment)
+             (find-intermediate-dynenv catch function seen))
+            (t
+             (return-from find-intermediate-dynenv t))))))
+
 (defgeneric simple-unwinding-p (instruction))
 (defmethod simple-unwinding-p ((unwind cleavir-bir:unwind))
-  (let ((de (cleavir-bir:dynamic-environment unwind))
+  (let ((function (cleavir-bir:function unwind))
         (catch (cleavir-bir:catch unwind)))
-    (unless (typep de 'cleavir-bir:function)
-      (return-from simple-unwinding-p nil))
-    (cleavir-set:doset (enclose (cleavir-bir:encloses de) t)
-      (let* ((user (cleavir-bir:use enclose))
-             (user-de (cleavir-bir:dynamic-environment user)))
-        (unless (and (eq user-de catch)
-                     (simplifiable-user-p user enclose))
-          (return nil))))))
+    (and (eq (cleavir-bir:dynamic-environment unwind) function)
+         (not (find-intermediate-dynenv
+               catch
+               function
+               (cleavir-set:empty-set))))))
 
 (defmethod simple-unwinding-p ((inst cleavir-bir:catch))
   (cleavir-set:every #'simple-unwinding-p (cleavir-bir:unwinds inst)))
