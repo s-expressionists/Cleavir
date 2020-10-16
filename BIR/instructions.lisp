@@ -64,7 +64,7 @@
 ;; A local call is a call to a function within the same
 ;; module. Therefore, the first input is actually a FUNCTION..
 (defclass local-call (abstract-call) ())
-(defmethod callee ((i abstract-call))
+(defmethod callee ((i local-call))
   (let ((function (first (inputs i))))
     (check-type function function)
     function))
