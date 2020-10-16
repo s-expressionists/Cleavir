@@ -123,21 +123,28 @@
     (cond ((eq rv :no-return) rv)
           ((listp rv)
            ;; Write the variables.
-           (let ((vars (mapcar #'find-variable (cleavir-ast:lhs-asts ast))))
+           (let ((vars (mapcar #'find-variable (cleavir-ast:lhs-asts ast)))
+                 (nvals (length rv)))
              (loop for var in vars
-                   for r in rv
+                   ;; If there are more variables than values, compensate
+                   for r = (or (pop rv)
+                               (cleavir-bir:make-constant 'nil))
                    for wv = (make-instance 'cleavir-bir:writevar
                               :inputs (list r) :outputs (list var))
                    do (insert inserter wv))
              ;; A bunch of values are returned, so we don't need to save.
              (if (compile-sequence-for-effect (cleavir-ast:form-asts ast)
                                               inserter system)
-                 ;; Return readvars.
-                 (loop for var in vars
-                       for rvar = (make-instance 'cleavir-bir:readvar
-                                  :inputs (list var))
-                       do (insert inserter rvar)
-                       collect rvar)
+                 ;; Return readvars plus any extra values, if there were
+                 ;; more values than variables.
+                 (append
+                  (loop repeat nvals ; cut out early if there are more vars
+                        for var in vars
+                        for rvar = (make-instance 'cleavir-bir:readvar
+                                     :inputs (list var))
+                        do (insert inserter rvar)
+                        collect rvar)
+                  rv)
                  :no-return)))
           (t
            ;; Multiple values were returned. Save.
