@@ -104,7 +104,7 @@ has use-before-define on inputs ~a"
   ;; In either case, we're a definer.
   (let ((outputs (outputs instruction)))
     (typecase instruction
-      ((or catch writevar)
+      (writevar
        (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
              "Writevar ~a has bad outputs ~a" instruction outputs)
        (test (cleavir-set:presentp instruction
@@ -279,15 +279,8 @@ has use-before-define on inputs ~a"
   (test (cleavir-set:presentp u (unwinds (catch u)))
         "Unwind ~a is not present in its catch's ~a unwinds ~a"
         u (catch u) (unwinds (catch u)))
-  ;; ensure there is at least one input (the continuation)
-  (test (> (length (inputs u)) 0)
-        "Unwind ~a is missing inputs" u)
-  ;; ensure the first input is a continuation
-  (test (rtype= (rtype (first (inputs u))) :continuation)
-        "Unwind ~a's first input ~a is not a continuation"
-        u (first (inputs u)))
   ;; ensure inputs match destination
-  (match-jump-types u (rest (inputs u)) (outputs u)))
+  (match-jump-types u (inputs u) (outputs u)))
 
 (defmethod verify progn ((j jump))
   (match-jump-types j (inputs j) (outputs j))

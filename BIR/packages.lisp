@@ -8,7 +8,7 @@
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
-  (:export #:dynamic-environment #:scope #:parent #:lexical-bind #:bindings)
+  (:export #:dynamic-environment #:scope #:parent #:bindings)
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
@@ -34,8 +34,7 @@
            #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop-info #:in-rtypes #:out-rtypes #:defprimop
            #:primop #:vprimop #:nvprimop #:tprimop #:info)
-  (:export #:map-instructions #:map-instructions-with-owner-from-set
-           #:map-iblocks
+  (:export #:map-iblocks
            #:insert-instruction-before #:insert-instruction-after
            #:replace-computation #:delete-computation #:delete-instruction
            #:delete-transmission #:replace-uses #:replace-terminator

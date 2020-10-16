@@ -4,8 +4,8 @@
 ;;; object. This is a static property distinct from its lisp type specifier.
 ;;; BIR knows the following rtypes:
 ;;; :object, meaning a general lisp object,
-;;; :multiple-values,
-;;; and :continuation. Clients may define and use additional rtypes.
+;;; and :multiple-values.
+;;; Clients may define and use additional rtypes.
 (defgeneric rtype= (rt1 rt2)
   (:method (rt1 rt2) (eql rt1 rt2)))
 
@@ -19,17 +19,15 @@
       nil
       (dynamic-environment (iblock dynamic-environment))))
 
-;;; Abstract. Something that can bind lexical variables.
-(defclass lexical-bind () ())
-;;; Set of variables it binds.
-(defgeneric bindings (lexical-bind))
-
 (defgeneric rtype (datum))
 
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
    (%name :initarg :name :initform nil :reader name :type (or symbol null))
    (%ctype :initarg :ctype :accessor ctype)))
+
+;;; A lexical is a datum that can be bound in an environment.
+(defclass lexical (datum) ())
 
 (defun ctyped-p (datum) (slot-boundp datum '%ctype))
 
@@ -183,7 +181,7 @@
 
 ;;; A mutable lexical variable.
 ;;; Has to be read from and written to via instructions.
-(defclass variable (datum)
+(defclass variable (lexical)
   (;; Indicates the extent of a closed over variable. Filled in by
    ;; dynamic extent analysis.
    (%extent :initarg :extent :accessor extent
@@ -191,8 +189,8 @@
             :type (member :unanalyzed
                           :dynamic
                           :indefinite))
-   ;; The LEXICAL-BIND that binds this.
-   (%binder :initarg :binder :accessor binder :type lexical-bind)
+   ;; The LETI that binds this variable.
+   (%binder :initarg :binder :accessor binder :type leti)
    (%definitions :initarg :definitions :reader definitions
                  :accessor writers
                  :initform (cleavir-set:empty-set)

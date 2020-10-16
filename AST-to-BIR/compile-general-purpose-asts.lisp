@@ -167,12 +167,10 @@
 (defun (setf block-info) (new-info block-ast)
   (setf (gethash block-ast *block-info*) new-info))
 
-(defun insert-unwind (inserter catch contvar dest &optional inputs outputs)
-  (let* ((read (insert inserter (make-instance 'cleavir-bir:readvar
-                                  :rtype :continuation :inputs (list contvar))))
-         (uw (make-instance 'cleavir-bir:unwind
-               :inputs (list* read inputs) :outputs outputs :catch catch
-               :destination dest)))
+(defun insert-unwind (inserter catch dest &optional inputs outputs)
+  (let ((uw (make-instance 'cleavir-bir:unwind
+              :inputs inputs :outputs outputs :catch catch
+              :destination dest)))
     (terminate inserter uw)
     (cleavir-set:nadjoinf (cleavir-bir:unwinds catch) uw)
     (cleavir-set:nadjoinf (cleavir-bir:entrances dest) (iblock inserter)))
@@ -197,18 +195,14 @@
          (phi (make-instance 'cleavir-bir:phi :rtype :multiple-values
                              :iblock mergeb))
          (catch (make-instance 'cleavir-bir:catch
-                  :next (list during mergeb)))
-         (contvar (make-instance 'cleavir-bir:variable
-                    :name (cleavir-ast:name ast)
-                    :binder catch :rtype :continuation)))
+                  :next (list during mergeb)
+                  :name (cleavir-ast:name ast))))
     (cleavir-set:nadjoinf (cleavir-bir:catches function) catch)
-    (setf (cleavir-bir:outputs catch) (list contvar))
     (setf (cleavir-bir:inputs mergeb) (list phi))
-    (adjoin-variable inserter contvar)
     (setf (cleavir-bir:dynamic-environment during) catch)
     (terminate inserter catch)
     (begin inserter during)
-    (setf (block-info ast) (list function catch contvar mergeb))
+    (setf (block-info ast) (list function catch mergeb))
     (let ((normal-rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
       (unless (eq normal-rv :no-return)
         (terminate inserter
@@ -226,7 +220,7 @@
 (defmethod compile-ast ((ast cleavir-ast:return-from-ast) inserter system)
   (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
     (unless (eq rv :no-return)
-      (destructuring-bind (function catch contvar mergeb)
+      (destructuring-bind (function catch mergeb)
           (block-info (cleavir-ast:block-ast ast))
         (if (eq function (function inserter))
             ;; local
@@ -237,7 +231,7 @@
                :outputs (cleavir-bir:inputs mergeb)
                :next (list mergeb)))
             ;; nonlocal
-            (insert-unwind inserter catch contvar mergeb
+            (insert-unwind inserter catch mergeb
                            (adapt inserter rv :multiple-values)
                            (cleavir-bir:inputs mergeb))))))
   :no-return)
@@ -291,20 +285,16 @@
                    for bname = (symbolicate '#:tag- tagname)
                    collecting (make-iblock inserter :name bname)))
            (catch (make-instance 'cleavir-bir:catch
-                    :next (list* prefix-iblock tag-iblocks)))
-           (contvar (make-instance 'cleavir-bir:variable
-                      :binder catch :rtype :continuation)))
+                    :next (list* prefix-iblock tag-iblocks))))
       (cleavir-set:nadjoinf (cleavir-bir:catches function) catch)
-      (setf (cleavir-bir:outputs catch) (list contvar))
       ;; this is used to check whether the catch is actually necessary.
       (setf (go-info catch) nil)
-      (adjoin-variable inserter contvar)
       (setf (cleavir-bir:dynamic-environment prefix-iblock) catch)
       (loop for (tag-ast) in tags
             for tag-iblock in tag-iblocks
             do (setf (cleavir-bir:dynamic-environment tag-iblock) catch
                      (go-info tag-ast)
-                     (list catch tag-iblock function contvar)))
+                     (list catch tag-iblock function)))
       (terminate inserter catch)
       (begin inserter prefix-iblock)
       (when (compile-sequence-for-effect prefix inserter system)
@@ -343,7 +333,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:go-ast) inserter system)
   (declare (ignore system))
-  (destructuring-bind (catch iblock cfunction cvar)
+  (destructuring-bind (catch iblock cfunction)
       (go-info (cleavir-ast:tag-ast ast))
     (let ((function (function inserter)))
       (cond
@@ -355,7 +345,7 @@
         (t
          (setf (go-info catch) t)
          ;; nonlocal
-         (insert-unwind inserter catch cvar iblock)))))
+         (insert-unwind inserter catch iblock)))))
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

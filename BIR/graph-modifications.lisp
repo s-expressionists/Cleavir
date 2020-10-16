@@ -142,10 +142,7 @@
   (cleavir-set:nremovef (entrances (destination inst)) (iblock inst))
   (cleavir-set:nremovef (unwinds (catch inst)) inst))
 (defmethod clean-up-instruction progn ((inst catch))
-  (let ((variable (first (outputs inst))))
-    (cleavir-set:nremovef (writers variable) inst)
-    (maybe-clear-variable variable)
-    (cleavir-set:nremovef (catches (function inst)) inst)))
+  (cleavir-set:nremovef (catches (function inst)) inst))
 (defmethod clean-up-instruction progn ((inst terminator))
   (let ((ib (iblock inst)))
     (dolist (n (next inst)) (cleavir-set:nremovef (predecessors n) ib))))
@@ -380,21 +377,21 @@
 (defun refresh-local-users (function)
   (check-type function function)
   ;;; First zero out existing uses
-  (map-instructions
+  (map-local-instructions
    (lambda (inst)
      (dolist (input (inputs inst))
        (remove-use input inst)))
    function)
   ;;; Now add em back
-  (map-instructions
+  (map-local-instructions
    (lambda (inst)
      (dolist (input (inputs inst))
        (add-use input inst)))
    function)
   (values))
 
-(defun refresh-users (top)
-  (cleavir-set:mapset nil #'refresh-local-users (functions (module top))))
+(defun refresh-users (module)
+  (cleavir-set:mapset nil #'refresh-local-users module))
 
 (defun remove-function-from-module (function)
   (cleavir-set:nremovef (cleavir-bir:functions (cleavir-bir:module function))
