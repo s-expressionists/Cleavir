@@ -96,11 +96,13 @@
            rv))
         (t ; multiple blocks, so we have to merge their results
          (let ((mergeb (make-iblock inserter :name '#:merge)))
-           (if (loop for (_0 _1 rv) in map
-                     always (listp rv))
-               ;; No multiple values, so we can phi these.
-               (let* ((nrtypes (loop for (_0 _1 rv) in map
-                                     maximizing (length rv)))
+           (if (let ((first-rv (third (first map))))
+                 (and (listp first-rv)
+                      (loop with len = (length first-rv)
+                            for (_0 _1 rv) in (rest map)
+                            always (and (listp rv) (= (length rv) len)))))
+               ;; All the same number of values, so we can phi them.
+               (let* ((nrtypes (length (third (first map))))
                       ;; FIXME: In the future we may have non-:objects.
                       ;; It would be nice to not force everything to be objects
                       ;; in that circumstance.
