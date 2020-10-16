@@ -78,7 +78,5 @@
     (post-find-local-calls function)))
 
 (defun find-module-local-calls (module)
-  (cleavir-set:mapset nil #'find-function-local-calls (cleavir-bir:functions module))
-  ;; FIXME: This will no longer be necessary once AST-to-BIR tagbody
-  ;; translation is fixed.
-  (cleavir-bir:refresh-iblocks module))
+  (cleavir-set:mapset nil #'find-function-local-calls
+                      (cleavir-bir:functions module)))
