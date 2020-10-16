@@ -74,8 +74,11 @@
                                         (mapcar #'first args)))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
-  (mapcar #'first
+  (let ((a
           (compile-arguments (cleavir-ast:argument-asts ast) inserter system)))
+    (if (eq a :no-return)
+        a
+        (mapcar #'first a))))
 
 (defun compile-m-v-extract (inserter system lhss mv form-asts)
   (let* ((during (make-iblock inserter))
