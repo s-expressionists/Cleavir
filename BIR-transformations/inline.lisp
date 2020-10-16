@@ -18,14 +18,16 @@
 (defun lambda-list-inlinable-p (lambda-list)
   (every (lambda (a) (typep a 'cleavir-bir:argument)) lambda-list))
 
+;; Return true if the call arguments are compatible with those of the function.
+;; If they're not, warn and return false.
 (defun check-argument-list-compatible (arguments function)
   (let ((lambda-list (cleavir-bir:lambda-list function)))
     (let ((nsupplied (length arguments))
           (nrequired (length lambda-list)))
-      (unless (= nsupplied nrequired)
-        (warn "Expected ~a required arguments but got ~a arguments for function ~a."
-              nrequired nsupplied (cleavir-bir:name function))))
-    t))
+      (if (= nsupplied nrequired)
+          t
+          (warn "Expected ~a required arguments but got ~a arguments for function ~a."
+                nrequired nsupplied (cleavir-bir:name function))))))
 
 ;; Detect calls to a function via its closure and mark them as direct
 ;; local calls to the function. If there are no more references to the
