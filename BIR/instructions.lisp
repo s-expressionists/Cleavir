@@ -96,8 +96,7 @@
 (defclass writetemp (accesstemp one-input no-output operation) ())
 
 (defclass catch (no-input lexical-bind dynamic-environment terminator operation)
-  (;; NOTE: Should be a weak set
-   (%unwinds :initarg :unwinds :accessor unwinds
+  ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
              ;; A set of corresponding UNWINDs
              :type cleavir-set:set)))
