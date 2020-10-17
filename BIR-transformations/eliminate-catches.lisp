@@ -13,8 +13,7 @@
     ;; Replace the instruction
     (cleavir-bir:replace-terminator
      (make-instance 'cleavir-bir:jump
-       :inputs () :outputs () :unwindp nil
-       :next (list normal-next))
+       :inputs () :outputs () :next (list normal-next))
      catch)
     ;; Other blocks might be unreachable now
     (mapc #'cleavir-bir:maybe-delete-iblock other-next)
