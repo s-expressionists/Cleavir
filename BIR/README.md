@@ -78,7 +78,7 @@ Additionally, `function`s are `value`s, as they are used as inputs to calls and 
 Every datum has the following accessible properties:
 
  * `name` is used for debugging.
- * `rtype` represents the "representation type" of the datum. This is it's "low level" type, not a lisp type specifier. Available rtypes are `:object`, representing "boxed" general Lisp objects; `:multiple-values`; `:continuation`; and anything a client wants to define.
+ * `rtype` represents the "representation type" of the datum. This is it's "low level" type, not a lisp type specifier. Available rtypes are `:object`, representing "boxed" general Lisp objects; `:multiple-values`; and anything a client wants to define.
 
 `phi`s have an `iblock`, which is the iblock they are a confluence at; that is to say, the phi's definitions are the terminators of the predecessors of its `iblock`.
 
@@ -147,7 +147,7 @@ Write/read some `alloca` storage's value.
 catch
 -----
 
-Mark a nonlocal entrance point. It is closed over and used by the
+Mark a nonlocal entrance point. It can be closed over and used by the
 `unwind` instructions to find the correct stack frame. `unwind`s of a
 catch returns a set of all unwinds using the catch.
 
@@ -159,7 +159,8 @@ Bind variables. For the latter, dynamic extent is explicitly marked.
 unwind
 ------
 
-Perform a nonlocal exit. First input is the continuation. Remaining inputs are passed to the `phi`s of the destination iblock.
+Perform a nonlocal exit. Inputs are passed to the `phi`s of the
+destination iblock.
 
 jump
 ----
@@ -304,9 +305,8 @@ Nonlocal exit
 ((function OUTER start (%f %x)
   (start ()
    (:= (X) (writevar %x))
-   (:= (%continuation) (catch (normal end))))
+   (catch <nil> (normal end)))
   (normal ()
-   (:= (CONTVAR) (writevar %continuation))
    (:= (%inner) (enclose INNER))
    (:= (%r) (call %f %inner))
    (:= (%v) (jump %r (end))))
@@ -316,13 +316,12 @@ Nonlocal exit
   (start ()
    (:= (%x) (readvar X))
    (:= (%0) (fixed-to-multiple %x))
-   (:= (%c) (readvar CONTVAR))
-   (unwind %c %1 (OUTER/end)))))
+   (unwind <nil> %1 (OUTER/end)))))
 ```
 
 Here the iblock named `normal` (and only that iblock) has the `catch` instruction as its dynamic environment; not sure of a good way to indicate that textually yet.
 
-The `unwind` instruction executes a nonlocal exit, passing a DATUM (here a `:multiple-values`) to its destination iblock as it does. A new variable CONTVAR is introduced to handle the shared continuation value. This is like how it works in HIR now, except that the variable is explicitly introduced before closure conversion so that closure conversion only has to look at variables, not all data.
+The `unwind` instruction executes a nonlocal exit, passing a DATUM (here a `:multiple-values`) to its destination iblock as it does.
 
 Comparison with HIR
 ===================
