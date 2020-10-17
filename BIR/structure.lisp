@@ -203,10 +203,7 @@
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 (defmethod function ((v variable))
-  (let ((b (binder v)))
-    (if (typep b 'function)
-        b
-        (function b))))
+  (function (binder v)))
 
 (defun immutablep (variable)
   (= (cleavir-set:size (writers variable)) 1))
