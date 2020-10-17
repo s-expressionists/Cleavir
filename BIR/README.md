@@ -104,7 +104,8 @@ Instruction classes
 enclose
 -------
 
-Represents the creation of a Lisp function object, based on a `function` and input variables and values to close over.
+Represents the creation of a Lisp function object, packaging together
+its `function` and environment.
 
 unreachable
 -----------
@@ -146,7 +147,9 @@ Write/read some `alloca` storage's value.
 catch
 -----
 
-Mark a nonlocal entrance point. Outputs and binds a variable, which is the "continuation" used by `unwind` instructions to find the correct stack frame. `unwinds` of a catch returns a set of all unwinds using the continuation.
+Mark a nonlocal entrance point. It is closed over and used by the
+`unwind` instructions to find the correct stack frame. `unwind`s of a
+catch returns a set of all unwinds using the catch.
 
 leti, dynamic-leti
 ------------------
