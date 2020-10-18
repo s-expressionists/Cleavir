@@ -223,6 +223,8 @@
 (defmethod replace-uses ((new datum) (old datum))
   (cleavir-set:doset (use (uses old))
     (replace-input new old use)))
+(defmethod replace-uses ((new datum) (old linear-datum))
+  (replace-input new old (use old)))
 (defmethod replace-uses ((new linear-datum) (old linear-datum))
   (assert (not (slot-boundp new '%use)))
   (when (slot-boundp old '%use)
