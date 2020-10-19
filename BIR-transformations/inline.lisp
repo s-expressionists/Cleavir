@@ -62,16 +62,20 @@
              ;; sure this definition reaches the readers.
              (when (cleavir-bir:immutablep variable)
                (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                 (let ((use (cleavir-bir:use reader)))
-                   (typecase use
-                     (cleavir-bir:call
-                      ;; Check the function is in call position for this call.
-                      (when (or (eq use (cleavir-bir:callee use))
-                                (not (member reader (rest (cleavir-bir:inputs use)))))
-                        (when (check-argument-list-compatible (rest (cleavir-bir:inputs use))
-                                                              function)
-                          (change-class use 'cleavir-bir:local-call)
-                          (cleavir-bir:replace-computation reader function))))))))
+                 (unless (cleavir-bir:unused-p reader)
+                   (let ((use (cleavir-bir:use reader)))
+                     (typecase use
+                       (cleavir-bir:call
+                        ;; Check the function is in call position for this call.
+                        (when (or (eq use (cleavir-bir:callee use))
+                                  (not (member reader
+                                               (rest
+                                                (cleavir-bir:inputs use)))))
+                          (when (check-argument-list-compatible
+                                 (rest (cleavir-bir:inputs use))
+                                 function)
+                            (change-class use 'cleavir-bir:local-call)
+                            (cleavir-bir:replace-computation reader function)))))))))
              ;; No more references to the variable means we can clean up
              ;; the writer and enclose.
              (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
