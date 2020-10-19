@@ -3,7 +3,6 @@
 (defvar *variables*)
 (defvar *block-info*)
 (defvar *go-info*)
-(defvar *iblocks*)
 (defvar *function-info*)
 (defvar *current-module*)
 
@@ -101,7 +100,7 @@
   (let ((ib (make-instance 'cleavir-bir:iblock
               :name name
               :function function :dynamic-environment dynamic-environment)))
-    (cleavir-set:nadjoinf *iblocks* ib)
+    (cleavir-set:nadjoinf (cleavir-bir:iblocks function) ib)
     (cleavir-set:nadjoinf (cleavir-bir:scope dynamic-environment) ib)
     ib))
 

@@ -26,7 +26,6 @@
 
 (defmethod compile-function ((ast cleavir-ast:function-ast) system)
   (let* ((module *current-module*)
-         (*iblocks* (cleavir-set:empty-set))
          (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
                      :variables (cleavir-set:empty-set)
@@ -62,12 +61,6 @@
       (when (cleavir-set:empty-set-p (cleavir-bir:bindings leti))
         (cleavir-bir:delete-instruction leti)))
     (cleavir-bir:refresh-local-iblocks function)
-    (let ((reachable (cleavir-bir:iblocks function))
-          (end (cleavir-bir:end function)))
-      (cleavir-set:doset (ib *iblocks*)
-        (unless (cleavir-set:presentp ib reachable)
-          (when (eq ib end) (setf (cleavir-bir:end function) nil))
-          (cleavir-bir:clean-up-iblock ib))))
     function))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

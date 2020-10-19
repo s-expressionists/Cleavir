@@ -371,7 +371,12 @@
 ;;; make the iblocks field match the actually reachable blocks.
 (defun refresh-local-iblocks (function)
   (check-type function function)
-  (setf (iblocks function) (reachable-iblocks function)))
+  (let ((old (iblocks function))
+        (new (reachable-iblocks function)))
+    (setf (iblocks function) new)
+    (cleavir-set:doset (ib old)
+      (unless (cleavir-set:presentp ib new)
+        (clean-up-iblock ib)))))
 
 (defun refresh-iblocks (module)
   (cleavir-set:mapset nil #'refresh-local-iblocks (functions module)))
