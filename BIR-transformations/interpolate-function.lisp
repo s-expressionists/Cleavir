@@ -45,7 +45,7 @@
                           :inputs () :outputs ()
                           :next (list after))
            returni)
-          (cleavir-bir:delete-iblock after))
+          (cleavir-bir:maybe-delete-iblock after))
       ;; If the interpolated function unwinds to the call function, change it
       ;; to a local unwind.
       (cleavir-set:doset (ib (cleavir-bir:exits interpolated-function))
