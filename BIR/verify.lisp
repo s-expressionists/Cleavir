@@ -70,12 +70,16 @@
                   (typep (first inputs) 'variable))
              "Readvar ~a has non-variable input ~a"
              instruction (first inputs))
-       (test (cleavir-set:presentp instruction (uses (first inputs)))
+       (test (and (not (unused-p (first inputs)))
+                  (cleavir-set:presentp instruction (uses (first inputs))))
              "Readvar ~a is not in the uses of its input variable ~a"
              instruction (first inputs)))
       (local-call
        (assert (typep (first inputs) 'function))
-       (assert (every (lambda (i) (eq (use i) instruction)) (rest inputs))))
+       (assert (every (lambda (i)
+                        (and (not (unused-p i))
+                             (eq (use i) instruction)))
+                      (rest inputs))))
       (t (flet ((validp (v)
                   (etypecase v
                     (computation (cleavir-set:presentp v *seen-instructions*))
@@ -85,12 +89,13 @@
 has use-before-define on inputs ~a"
                  instruction inputs
                  (remove-if #'validp inputs)))
-         (flet ((used-input-p (input)
-                  (eq (use input) instruction)))
-           (test (every #'used-input-p inputs)
-                 "Instruction ~a is not the use of its inputs ~a"
-                 instruction
-                 (remove-if #'used-input-p inputs)))))
+       (flet ((used-input-p (input)
+                (and (not (unused-p input))
+                     (eq (use input) instruction))))
+         (test (every #'used-input-p inputs)
+               "Instruction ~a is not the use of its inputs ~a"
+               instruction
+               (remove-if #'used-input-p inputs)))))
     ;; Make sure input lists are not shared, so we can destroy them
     (unless (null inputs)
       (test (not (cleavir-set:presentp inputs *seen-lists*))
