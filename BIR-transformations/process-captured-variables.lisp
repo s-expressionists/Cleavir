@@ -13,8 +13,8 @@
           (close-over function (cleavir-bir:function local-call) lexical))))))
 
 ;;; Fill in the environments of every function.
-(defun process-captured-variables (ir)
-  (cleavir-set:doset (function (cleavir-bir:functions (cleavir-bir:module ir)) (values))
+(defun process-captured-variables (module)
+  (cleavir-set:doset (function (cleavir-bir:functions module) (values))
     (cleavir-set:doset (variable (cleavir-bir:variables function))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
         (close-over function (cleavir-bir:function reader) variable))
