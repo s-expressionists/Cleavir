@@ -66,11 +66,7 @@
                    (let ((use (cleavir-bir:use reader)))
                      (typecase use
                        (cleavir-bir:call
-                        ;; Check the function is in call position for this call.
-                        (when (or (eq use (cleavir-bir:callee use))
-                                  (not (member reader
-                                               (rest
-                                                (cleavir-bir:inputs use)))))
+                        (when (eq reader (cleavir-bir:callee use))
                           (when (check-argument-list-compatible
                                  (rest (cleavir-bir:inputs use))
                                  function)
