@@ -39,8 +39,7 @@
            #:replace-computation #:delete-computation #:delete-instruction
            #:delete-transmission #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
-           #:clean-up-iblock #:iblocks-mergable-p #:merge-iblocks
-           #:remove-function-from-module)
+           #:clean-up-iblock #:iblocks-mergable-p #:merge-iblocks)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)

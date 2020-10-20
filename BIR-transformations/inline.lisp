@@ -45,7 +45,6 @@
       (when (cleavir-bir:unused-p enclose)
         ;; FIXME: Note this dead code.
         (cleavir-bir:delete-computation enclose)
-        (cleavir-bir:remove-function-from-module function)
         (return-from find-function-local-calls))
       (let ((use (cleavir-bir:use enclose)))
         (typecase use

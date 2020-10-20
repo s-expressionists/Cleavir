@@ -54,6 +54,18 @@
           (let ((dest (cleavir-bir:destination u)))
             (when (eq (cleavir-bir:function dest) call-function)
               (replace-unwind u)))))
+      ;; Re-home iblocks (and indirectly, instructions)
+      (cleavir-bir:map-iblocks
+       (lambda (ib)
+         (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
+           (setf (cleavir-bir:dynamic-environment ib)
+                 (cleavir-bir:dynamic-environment before)))
+         (setf (cleavir-bir:function ib) call-function)
+         (cleavir-set:nadjoinf (cleavir-bir:iblocks call-function) ib))
+       interpolated-function)
+      ;; The interpolated function no longer owns these blocks. Need
+      ;; to do this so we don't accidentally clean them up.
+      (setf (cleavir-bir:iblocks interpolated-function) (cleavir-set:empty-set))
       (cond (return-values
              (let ((call-use (unless (cleavir-bir:unused-p call)
                                (cleavir-bir:use call))))
@@ -70,16 +82,6 @@
       ;; Replace the arguments in the interpolated function body with the
       ;; actual argument values
       (mapc #'cleavir-bir:replace-uses arguments lambda-list)
-      (cleavir-bir:remove-function-from-module interpolated-function)
-      ;; Re-home iblocks (and indirectly, instructions)
-      (cleavir-bir:map-iblocks
-       (lambda (ib)
-         (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
-           (setf (cleavir-bir:dynamic-environment ib)
-                 (cleavir-bir:dynamic-environment before)))
-         (setf (cleavir-bir:function ib) call-function)
-         (cleavir-set:nadjoinf (cleavir-bir:iblocks call-function) ib))
-       interpolated-function)
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
       (when (and interp-end
