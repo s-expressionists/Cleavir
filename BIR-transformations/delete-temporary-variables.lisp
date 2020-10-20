@@ -15,8 +15,8 @@
        (= (cleavir-set:size (cleavir-bir:writers variable)) 1)
        (= (cleavir-set:size (cleavir-bir:readers variable)) 1)))
 
-(defun delete-temporary-variables (ir)
-  (cleavir-set:doset (function (cleavir-bir:functions (cleavir-bir:module ir)))
+(defun delete-temporary-variables (module)
+  (cleavir-set:doset (function (cleavir-bir:functions module))
     (cleavir-set:doset (var (cleavir-bir:variables function))
       (when (temporary-variable-p var)
         (delete-variable var)))))
