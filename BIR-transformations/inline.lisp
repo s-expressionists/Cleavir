@@ -1,8 +1,8 @@
 (in-package #:cleavir-bir-transformations)
 
-;; We just attempted to detect local calls. See if anything is worth
-;; doing after. FIXME: Think of a nice CLOSy way to make this optional
-;; and specializable.
+;;; We just attempted to detect local calls. See if anything is worth
+;;; doing after. FIXME: Think of a nice CLOSy way to make this optional
+;;; and specializable.
 (defun post-find-local-calls (function)
   ;; When a function has no encloses and has only one local call, it
   ;; is eligible for interpolation.
@@ -18,8 +18,8 @@
 (defun lambda-list-inlinable-p (lambda-list)
   (every (lambda (a) (typep a 'cleavir-bir:argument)) lambda-list))
 
-;; Return true if the call arguments are compatible with those of the function.
-;; If they're not, warn and return false.
+;;; Return true if the call arguments are compatible with those of the function.
+;;; If they're not, warn and return false.
 (defun check-argument-list-compatible (arguments function)
   (let ((lambda-list (cleavir-bir:lambda-list function)))
     (let ((nsupplied (length arguments))
@@ -29,14 +29,15 @@
           (warn "Expected ~a required arguments but got ~a arguments for function ~a."
                 nrequired nsupplied (cleavir-bir:name function))))))
 
-;; Detect calls to a function via its closure and mark them as direct
-;; local calls to the function. If there are no more references to the
-;; closure, we can clean it up. This allows us to avoid allocating
-;; closures for functions which only have local calls. Check that the
-;; call and the lambda list have compatible arguments, flaming and not
-;; converting if it doesn't so we can get a runtime error. This serves
-;; as a sort of "escape analysis" for functions, recording the result
-;; of the analysis directly into the IR.
+;;; Detect calls to a function via its closure and mark them as direct
+;;; local calls to the function, doing compile time argument
+;;; checking. If there are no more references to the closure, we can
+;;; clean it up. This allows us to avoid allocating closures for
+;;; functions which only have local calls. If the call arguments and
+;;; the lambda list are not compatible, flame and do not convert so we
+;;; can get a runtime error. This also serves as a sort of "escape
+;;; analysis" for functions, recording the result of the analysis
+;;; directly into the IR.
 (defun find-function-local-calls (function)
   ;; FIXME: Arg parsing code not yet written!
   (when (lambda-list-inlinable-p (cleavir-bir:lambda-list function))
