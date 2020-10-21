@@ -40,6 +40,16 @@
 ;;; " iblock
 (defvar *verifying-iblock*)
 
+(defun member-of-lambda-list-p (argument lambda-list)
+  (loop for l in lambda-list
+        thereis (cond ((atom l) (eq argument l))
+                      ((= (length l) 2)
+                       (or (eq argument (first l))
+                           (eq argument (second l))))
+                      ((= (length l) 3)
+                       (or (eq argument (second l))
+                           (eq argument (third l)))))))
+
 (defmethod verify progn ((instruction instruction))
   ;; verify type decls
   (test (typep (predecessor instruction) '(or instruction null))
@@ -83,6 +93,10 @@
       (t (flet ((validp (v)
                   (etypecase v
                     (computation (cleavir-set:presentp v *seen-instructions*))
+                    (argument
+                     (member-of-lambda-list-p
+                      v
+                      (lambda-list (function instruction))))
                     (linear-datum t))))
            (test (every #'validp inputs)
                  "Instruction ~a, with inputs ~a,
@@ -201,7 +215,7 @@ has use-before-define on inputs ~a"
         "Enclose ~a has bad code ~a" inst (code inst))
   ;; Make sure encloses set is correct
   (test (cleavir-set:presentp inst (encloses (code inst)))
-        "Enclose ~a is not present in its CODE ~a's encloses"
+        "Enclose ~a is not present in its CODE ~a's encloses ~a"
         inst (code inst) (encloses (code inst)))
   ;; Make sure the function we are enclosing is in the module.
   (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
