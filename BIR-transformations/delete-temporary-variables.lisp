@@ -10,8 +10,8 @@
         (cleavir-bir:delete-instruction writer)))
     ;; Local variable with one reader and one writer can be substituted away,
     (when (and (not (cleavir-bir:closed-over-p variable))
-               (zerop (1- (cleavir-set:size writers)))
-               (zerop (1- (cleavir-set:size readers))))
+               (= (cleavir-set:size writers) 1)
+               (= (cleavir-set:size readers) 1))
       (let ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
             (reader (cleavir-set:arb (cleavir-bir:readers variable))))
         (cleavir-bir:delete-transmission writer reader)))
