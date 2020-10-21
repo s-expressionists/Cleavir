@@ -280,22 +280,24 @@
    ;; Block of the return instruction.
    ;; If there isn't one, i.e. the function never returns, this is nil.
    (%end :initarg :end :accessor end :type (or null iblock))
-   ;; FIXME: have multiple entry points instead
    (%lambda-list :initarg :lambda-list :accessor lambda-list)
-   ;; The set of variables bound by this function.
+   ;; The set of variables bound by this function, i.e. the union of
+   ;; the variables bound by all LETI instructions in it.
    (%variables :initarg :variables :accessor variables
+               :initform (cleavir-set:empty-set)
                :type cleavir-set:set)
    ;; The set of catches in this function.
    (%catches :initarg :catches :accessor catches
+             :initform (cleavir-set:empty-set)
              :type cleavir-set:set)
-   ;; The set of lexicals closed over in this environment. Currently
+   ;; The set of lexicals closed over by this function. Currently
    ;; filled in by process-captured-variables.
    (%environment :initform (cleavir-set:empty-set) :accessor environment
                  :type cleavir-set:set)
    ;; The set of ENCLOSE instructions with this as their CODE.
    (%encloses :initform (cleavir-set:empty-set) :accessor encloses
               :type cleavir-set:set)
-   ;; The set of local calls for this function.
+   ;; The set of local calls of this function.
    (%local-calls :initform (cleavir-set:empty-set) :accessor local-calls
                  :type cleavir-set:set)
    ;; For debug/introspection
