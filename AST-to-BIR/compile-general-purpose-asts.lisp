@@ -28,8 +28,6 @@
   (let* ((module *current-module*)
          (function (make-instance 'cleavir-bir:function
                      :name (cleavir-ast:name ast)
-                     :variables (cleavir-set:empty-set)
-                     :catches (cleavir-set:empty-set)
                      :docstring (cleavir-ast:docstring ast)
                      :original-lambda-list (cleavir-ast:original-lambda-list ast)
                      :origin (cleavir-ast:origin ast)
