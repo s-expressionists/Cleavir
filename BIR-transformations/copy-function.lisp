@@ -41,15 +41,15 @@
 
 (defun copy-lambda-list (lambda-list map)
   (loop for thing in lambda-list
-        do (cond ((member thing lambda-list-keywords))
-                 ((listp thing)
-                  (if (= (length thing) 3)
-                      (list (first thing)
-                            (copy-argument (second thing) map)
-                            (copy-argument (third thing) map))
-                      (list (copy-argument (first thing) map)
-                            (copy-argument (second thing) map))))
-                 (t (copy-argument thing map)))))
+        collect (cond ((member thing lambda-list-keywords) thing)
+                      ((listp thing)
+                       (if (= (length thing) 3)
+                           (list (first thing)
+                                 (copy-argument (second thing) map)
+                                 (copy-argument (third thing) map))
+                           (list (copy-argument (first thing) map)
+                                 (copy-argument (second thing) map))))
+                      (t (copy-argument thing map)))))
 
 (defun %copy-function (function stack map)
   (let* ((module (cleavir-bir:module function))
@@ -87,7 +87,7 @@
 (defun copy-iblock (iblock map function)
   (let ((copy (make-instance 'cleavir-bir:iblock
                 :inputs (mapcar (finder map) (cleavir-bir:inputs iblock))
-                :function function)))
+                :name (cleavir-bir:name iblock) :function function)))
     (cleavir-set:nadjoinf (cleavir-bir:iblocks function) copy)
     copy))
 
@@ -130,7 +130,8 @@
 (defmethod copy-output ((datum cleavir-bir:variable) stack map)
   (copy-variable datum stack map))
 
-(defun output-copier (map) (lambda (datum) (copy-output datum map)))
+(defun output-copier (stack map)
+  (lambda (datum) (copy-output datum stack map)))
 
 (defgeneric clone-initargs (instruction stack map)
   (:method-combination append))
@@ -155,6 +156,19 @@
                          (cleavir-bir:destination term))
                         (cleavir-bir:iblock term)))
 
+(defmethod initialize-copy :after ((bind cleavir-bir:leti))
+  (cleavir-set:doset (b (cleavir-bir:bindings bind))
+    (setf (cleavir-bir:binder b) bind)))
+
+(defmethod initialize-copy :after ((c cleavir-bir:catch))
+  (cleavir-set:nadjoinf (cleavir-bir:catches (cleavir-bir:function c)) c))
+
+(defmethod initialize-copy :after ((e cleavir-bir:enclose))
+  ;; Since a.t.m. each enclose copies the function, by definition it only
+  ;; has this as an enclose.
+  (setf (cleavir-bir:encloses (cleavir-bir:code e))
+        (cleavir-set:make-set e)))
+
 (defmethod clone-initargs append
     ((instruction cleavir-bir:instruction) stack map)
   (declare (ignore stack))
@@ -166,9 +180,9 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:operation) stack map)
-  (declare (ignore stack))
   (list
-   :outputs (mapcar (output-copier map) (cleavir-bir:outputs instruction))))
+   :outputs (mapcar (output-copier stack map)
+                    (cleavir-bir:outputs instruction))))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:terminator) stack map)
@@ -178,8 +192,8 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:enclose) stack map)
-  (declare (ignore stack map))
-  (error "Copying an enclose is not implemented yet"))
+  (list
+   :code (%copy-function (cleavir-bir:code instruction) stack map)))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:primop) stack map)
@@ -200,11 +214,11 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:leti) stack map)
-  (declare (ignore stack))
   (list
    :bindings (cleavir-set:mapset
               'cleavir-set:set
-              (finder map) (cleavir-bir:bindings instruction))))
+              (variable-copier stack map)
+              (cleavir-bir:bindings instruction))))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:unwind) stack map)
@@ -239,3 +253,8 @@
     ((instruction cleavir-bir:cast) stack map)
   (declare (ignore stack map))
   (list :rtype (cleavir-bir:rtype instruction)))
+
+(defmethod clone-initargs append
+    ((instruction cc-bir:precalc-constant) stack map)
+  (declare (ignore stack map))
+  (list :value (cleavir-bir:constant-value instruction)))

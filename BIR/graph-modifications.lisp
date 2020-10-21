@@ -2,7 +2,8 @@
 
 (defmethod (setf dynamic-environment) :before
     ((nde dynamic-environment) (obj iblock))
-  (cleavir-set:nremovef (scope (dynamic-environment obj)) obj)
+  (when (slot-boundp obj '%dynamic-environment)
+    (cleavir-set:nremovef (scope (dynamic-environment obj)) obj))
   (cleavir-set:nadjoinf (scope nde) obj))
 
 ;;; Maintaining use and definition sets
