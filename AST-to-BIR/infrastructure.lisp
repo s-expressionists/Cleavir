@@ -9,7 +9,7 @@
 ;;; KLUDGE: We need to write the following two functions this way
 ;;; because mutually referential functions can cause lexical-binds to
 ;;; occur after the name they bind is referenced.
-(defun bind-variable (lexical-ast binder)
+(defun bind-variable (lexical-ast binder ignore)
   (let ((variable (gethash lexical-ast *variables*)))
     (cond (variable
            ;; Tie the knot for mutually referential functions.
@@ -20,14 +20,15 @@
            (setf (gethash lexical-ast *variables*)
                  (make-instance 'cleavir-bir:variable
                                 :name (cleavir-ast:name lexical-ast)
-                                :binder binder :rtype :object))))))
+                                :binder binder :rtype :object
+                                :ignore ignore))))))
 
 (defun find-variable (lexical-ast)
   (check-type lexical-ast cleavir-ast:lexical-ast)
   (or (gethash lexical-ast *variables*)
       ;; Normally this should never happen but mutually referential
       ;; functions create a circularity we must tie.
-      (bind-variable lexical-ast nil)))
+      (bind-variable lexical-ast nil nil)))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)

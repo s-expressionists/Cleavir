@@ -579,17 +579,20 @@
   ;; KLUDGE: This is of type SETQ-AST so we don't need to change
   ;; the HIR compiler. Don't inherit from setq-ast once we get rid of the hir compiler.
   ((%lhs-ast :initarg :lhs-ast :reader lhs-ast)
-   (%value-ast :initarg :value-ast :reader value-ast)))
+   (%value-ast :initarg :value-ast :reader value-ast)
+   (%ignore :initarg :ignore :reader ignore)))
 
-(defun make-lexical-bind-ast (lhs-ast value-ast &key origin (policy *policy*))
+(defun make-lexical-bind-ast (lhs-ast value-ast &key ignore origin (policy *policy*))
   (make-instance 'lexical-bind-ast
     :origin origin :policy policy
     :lhs-ast lhs-ast
-    :value-ast value-ast))
+    :value-ast value-ast
+    :ignore ignore))
 
 (cleavir-io:define-save-info lexical-bind-ast
   (:lhs-ast lhs-ast)
-  (:value-ast value-ast))
+  (:value-ast value-ast)
+  (:ignore ignore))
 
 (defmethod children ((ast lexical-bind-ast))
   (list (lhs-ast ast) (value-ast ast)))

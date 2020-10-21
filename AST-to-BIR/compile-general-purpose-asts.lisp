@@ -377,7 +377,7 @@
 (defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter system)
   (let* (;; Assumption: LETI begins the function's start block.
          (leti (cleavir-bir:start (cleavir-bir:start (function inserter))))
-         (var (bind-variable (cleavir-ast:lhs-ast ast) leti))
+         (var (bind-variable (cleavir-ast:lhs-ast ast) leti (cleavir-ast:ignore ast)))
          (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (cleavir-set:nadjoinf (cleavir-bir:bindings leti) var)
     (adjoin-variable inserter var)

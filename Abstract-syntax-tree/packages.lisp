@@ -2,7 +2,7 @@
 
 (defpackage #:cleavir-ast
   (:use #:common-lisp)
-  (:shadow #:symbol)
+  (:shadow #:symbol #:ignore)
   (:export
    #:ast #:children
    #:source-info
@@ -15,7 +15,7 @@
    #:side-effect-free-p
    #:immediate-ast #:make-immediate-ast #:value
    #:constant-ast #:make-constant-ast #:value
-   #:lexical-bind-ast #:make-lexical-bind-ast
+   #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
    #:lexical-ast #:make-lexical-ast
    #:symbol-value-ast #:make-symbol-value-ast
    #:set-symbol-value-ast #:make-set-symbol-value-ast
@@ -99,6 +99,6 @@
 
 (defpackage #:cleavir-ast-graphviz
   (:use #:common-lisp #:cleavir-ast)
-  (:shadowing-import-from #:cleavir-ast #:symbol)
+  (:shadowing-import-from #:cleavir-ast #:symbol #:ignore)
   (:export
    #:draw-ast))

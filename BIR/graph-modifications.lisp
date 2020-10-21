@@ -134,10 +134,11 @@
   ;; style-warning, as mandated by the spec. Also make sure this
   ;; warning only happens for source variables, with coordination with
   ;; CSTs, for example.
-  (ecase (use-status variable)
-    ((nil) (warn "The variable ~a is defined but never used." (name variable)))
-    (set (warn "The variable ~a is assigned but never used ~a." (name variable)))
-    (read)))
+  (unless (ignore variable)
+    (ecase (use-status variable)
+      ((nil) (warn "The variable ~a is defined but never used." (name variable)))
+      (set (warn "The variable ~a is assigned but never used." (name variable)))
+      (read))))
 
 ;;; If a variable is no longer referenced, remove it from its function
 ;;; and binder if possible.

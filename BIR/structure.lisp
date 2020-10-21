@@ -203,6 +203,8 @@
    ;; Has this variable ever been used?
    (%use-status :initform nil :reader use-status
                 :type (member nil set read))
+   ;; What kind of ignore declaration is on this variable?
+   (%ignore :initarg :ignore :reader ignore)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
 (defun record-variable-set (variable)

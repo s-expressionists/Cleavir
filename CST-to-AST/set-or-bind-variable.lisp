@@ -20,6 +20,7 @@
 	 (list (cleavir-ast:make-lexical-bind-ast
 		(cleavir-env:identity info)
 		value-ast
-                :origin (cst:source variable-cst))
+                :origin (cst:source variable-cst)
+                :ignore (cleavir-env:ignore info))
 	       (funcall next-thunk))
          :origin (cst:source variable-cst)))))

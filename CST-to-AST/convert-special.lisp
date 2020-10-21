@@ -262,7 +262,9 @@
   (loop for (name . fun-ast) in functions
         collect (cleavir-ast:make-lexical-bind-ast
                  (function-lexical env name)
-                 fun-ast)))
+                 fun-ast
+                 ;; TODO: propagate ignore declaration
+                 )))
 
 (defun check-function-bindings (bindings operator)
   (check-cst-proper-list bindings 'bindings-must-be-proper-list
