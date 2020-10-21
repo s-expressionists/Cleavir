@@ -44,4 +44,5 @@
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
-  (:export #:disassemble))
+  (:export #:disassemble)
+  (:export #:unused-variable))
