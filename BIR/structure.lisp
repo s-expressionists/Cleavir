@@ -200,7 +200,18 @@
           :initform (cleavir-set:empty-set)
           ;; All READVAR instructions.
           :type cleavir-set:set)
+   ;; Has this variable ever been used?
+   (%use-status :initform nil :reader use-status
+                :type (member nil set read))
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defun record-variable-set (variable)
+  (with-slots (%use-status) variable
+    (or %use-status (setf %use-status 'set))))
+
+(defun record-variable-ref (variable)
+  (with-slots (%use-status) variable
+    (setf %use-status 'read)))
 
 (defmethod function ((v variable))
   (function (binder v)))

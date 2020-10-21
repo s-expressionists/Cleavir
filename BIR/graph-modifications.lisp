@@ -123,13 +123,28 @@
     (when (cleavir-set:empty-set-p (bindings binder))
       (cleavir-bir:delete-instruction binder))))
 
+(defun clean-up-variable (variable)
+  (cleavir-set:nremovef (cleavir-bir:variables (function variable)) variable)
+  (remove-binding variable (binder variable))
+  ;; Flame about source variables that were never used.
+
+  ;; FIXME: We need to flame better than this, for example by
+  ;; propagating source information and displaying the form of the
+  ;; unique writer, and also making this warning a subclass of
+  ;; style-warning, as mandated by the spec. Also make sure this
+  ;; warning only happens for source variables, with coordination with
+  ;; CSTs, for example.
+  (ecase (use-status variable)
+    ((nil) (warn "The variable ~a is defined but never used." (name variable)))
+    (set (warn "The variable ~a is assigned but never used ~a." (name variable)))
+    (read)))
+
 ;;; If a variable is no longer referenced, remove it from its function
 ;;; and binder if possible.
 (defun maybe-clear-variable (variable)
   (when (and (cleavir-set:empty-set-p (cleavir-bir:readers variable))
              (cleavir-set:empty-set-p (cleavir-bir:writers variable)))
-    (cleavir-set:nremovef (cleavir-bir:variables (function variable)) variable)
-    (remove-binding variable (binder variable))
+    (clean-up-variable variable)
     t))
 
 (defmethod clean-up-instruction progn ((inst readvar))

@@ -396,6 +396,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter system)
   (let ((var (find-variable (cleavir-ast:lhs-ast ast))))
+    (cleavir-bir:record-variable-set var)
     (with-compiled-ast (rv (cleavir-ast:value-ast ast) inserter system)
       (insert inserter
               (make-instance 'cleavir-bir:writevar
@@ -557,6 +558,7 @@
       (cleavir-bir:argument
        (list var))
       (t
+       (cleavir-bir:record-variable-ref var)
        (list (insert inserter
                      (make-instance 'cleavir-bir:readvar
                        :inputs (list var))))))))

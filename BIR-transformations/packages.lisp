@@ -4,6 +4,6 @@
   (:use #:cl)
   (:export #:module-eliminate-catches #:eliminate-catches)
   (:export #:process-captured-variables)
-  (:export #:delete-temporary-variables)
+  (:export #:module-optimize-variables)
   (:export #:simple-unwinding-p)
   (:export #:find-module-local-calls))
