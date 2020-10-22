@@ -122,10 +122,10 @@
   (let ((bindings (bindings binder)))
     (cleavir-set:nremovef bindings variable)
     (when (cleavir-set:empty-set-p (bindings binder))
-      (cleavir-bir:delete-instruction binder))))
+      (delete-instruction binder))))
 
 (defun clean-up-variable (variable)
-  (cleavir-set:nremovef (cleavir-bir:variables (function variable)) variable)
+  (cleavir-set:nremovef (variables (function variable)) variable)
   (remove-binding variable (binder variable))
   ;; Flame about source variables that were never used.
 
@@ -137,7 +137,8 @@
   ;; CSTs, for example.
   (unless (or (ignore variable)
               (eq (use-status variable) 'read))
-    (warn 'unused-variable :variable variable)))
+    (warn 'unused-variable :variable variable
+          :origin (origin (binder variable)))))
 
 ;;; If a variable is no longer referenced, remove it from its function
 ;;; and binder if possible.

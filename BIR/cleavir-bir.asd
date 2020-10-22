@@ -2,7 +2,7 @@
 
 (defsystem :cleavir-bir
   :depends-on (:cleavir-primop :cleavir-set :cleavir-attributes
-                               :acclimation)
+                               :cleavir-conditions)
   :components
   ((:file "packages")
    (:file "structure" :depends-on ("packages"))
