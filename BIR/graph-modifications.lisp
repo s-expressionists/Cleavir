@@ -327,14 +327,16 @@
          ;; Infinite loop.
          (not (eq iblock1 iblock2)))))
 
-;;; Merge two iblocks, the first of which must end in a jump.
+;;; Merge two iblocks, the first of which must end in a jump. Also
+;;; make sure to take care of the second iblocks inputs.
 (defun merge-iblocks (iblock1 iblock2)
   (check-type iblock1 iblock)
   (check-type iblock2 iblock)
   (assert (iblocks-mergable-p iblock1 iblock2))
-  (let ((end-predecessor (predecessor (end iblock1)))
-        (start (start iblock2))
-        (function (function iblock2)))
+  (let* ((jump (end iblock1))
+         (end-predecessor (predecessor jump))
+         (start (start iblock2))
+         (function (function iblock2)))
     (cond (end-predecessor
            (setf (successor end-predecessor) start)
            (setf (predecessor start) end-predecessor))
@@ -346,6 +348,12 @@
        (setf (cleavir-bir:iblock instruction)
              iblock1))
      start)
+    ;; Propagate the inputs of the jump into the uses of the second
+    ;; block's phis.
+    (mapc (lambda (input phi)
+            (remove-use input jump)
+            (replace-uses input phi))
+          (inputs jump) (inputs iblock2))
     ;; Update the predecessors of the successors.
     (dolist (succ (successors iblock2))
       (cleavir-set:nremovef (predecessors succ) iblock2)
