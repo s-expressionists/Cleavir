@@ -4,19 +4,22 @@
 ;;;
 ;;; The base classes for conditions used here.
 
-(define-condition compilation-condition (acclimation:condition)
+(define-condition compilation-condition (cleavir-conditions:program-condition)
   ((%cst :initarg :cst :reader cst)))
 
+(defmethod cleavir-conditions:origin ((condition compilation-condition))
+  (cst:source (cst condition)))
+
 (define-condition compilation-program-error
-    (program-error compilation-condition)
+    (cleavir-conditions:program-error compilation-condition)
   ())
 
 (define-condition compilation-warning
-    (warning compilation-condition)
+    (cleavir-conditions:program-warning compilation-condition)
   ())
 
 (define-condition compilation-style-warning
-    (style-warning compilation-condition)
+    (cleavir-conditions:program-style-warning compilation-condition)
   ())
 
 ;;; This class is used for conditions that "encapsulate"
