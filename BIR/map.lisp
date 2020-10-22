@@ -1,10 +1,24 @@
 (in-package #:cleavir-bir)
 
+(defmacro do-iblock-instructions ((instruction from &optional (direction :forward))
+                                  &body body)
+  `(loop for ,instruction = ,from then (,(ecase direction
+                                           (:forward 'successor)
+                                           (:backward 'predecessor))
+                                        ,instruction)
+         until (null ,instruction)
+         do (progn ,@body)))
+
 (defun map-iblock-instructions (f start-instruction)
   (check-type start-instruction instruction)
-  (loop for i = start-instruction then (successor i)
-        until (null i)
-        do (funcall f i))
+  (do-iblock-instructions (instruction start-instruction)
+    (funcall f instruction))
+  (values))
+
+(defun map-iblock-instructions-backwards (f end-instruction)
+  (check-type end-instruction instruction)
+  (do-iblock-instructions (instruction end-instruction :backward)
+    (funcall f instruction))
   (values))
 
 (defun map-reachable-iblocks (f start)
