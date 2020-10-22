@@ -196,7 +196,10 @@
            ;; We start a block, so we need to change the iblock's start.
            (setf (start (iblock instruction)) succ))
           (t
-           (setf (successor pred) succ))))
+           (setf (successor pred) succ)))
+    ;; Null out the iblock for this instruction, so we can test if
+    ;; this instruction still exists later.
+    (setf (iblock instruction) nil))
   (values))
 
 (defgeneric replace-terminator (new old))
