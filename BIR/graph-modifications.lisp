@@ -300,6 +300,16 @@
   (delete-instruction out-inst)
   (delete-instruction in-inst))
 
+;;; Merge IBLOCK to its unique successor if possible, returning false
+;;; if not.
+(defun merge-successor-if-possible (iblock)
+  (let* ((successors (successors iblock))
+         (successor (first successors)))
+    (and successor
+         (null (rest successors))
+         (iblocks-mergable-p iblock successor)
+         (merge-iblocks iblock successor))))
+
 (defun iblocks-mergable-p (iblock1 iblock2)
   (let ((predecessors (predecessors iblock2)))
     (and (typep (cleavir-bir:end iblock1)

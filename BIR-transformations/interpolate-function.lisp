@@ -84,10 +84,7 @@
       (mapc #'cleavir-bir:replace-uses arguments lambda-list)
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
-      (when (and interp-end
-                 (cleavir-bir:iblocks-mergable-p interp-end after))
-        (cleavir-bir:merge-iblocks interp-end after))
-      (let ((fstart (cleavir-bir:start interpolated-function)))
-        (when (cleavir-bir:iblocks-mergable-p before fstart)
-          (cleavir-bir:merge-iblocks before fstart)))))
+      (when interp-end
+        (cleavir-bir:merge-successor-if-possible interp-end))
+      (cleavir-bir:merge-successor-if-possible before)))
   (values))

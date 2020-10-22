@@ -18,8 +18,7 @@
     ;; Other blocks might be unreachable now
     (mapc #'cleavir-bir:maybe-delete-iblock other-next)
     ;; Merge if able
-    (when (cleavir-bir:iblocks-mergable-p fore normal-next)
-      (cleavir-bir:merge-iblocks fore normal-next))
+    (cleavir-bir:merge-successor-if-possible fore)
     ;; Fix reachability
     (cleavir-bir:refresh-local-iblocks (cleavir-bir:function fore))))
 
