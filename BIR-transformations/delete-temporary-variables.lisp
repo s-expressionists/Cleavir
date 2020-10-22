@@ -7,7 +7,8 @@
     ;; Unreferenced variable can be deleted.
     (when (cleavir-set:empty-set-p readers)
       (cleavir-set:doset (writer writers)
-        (cleavir-bir:delete-instruction writer)))
+        (cleavir-bir:delete-instruction writer))
+      (return-from optimize-variable))
     ;; Local variable with one reader and one writer can be substituted away,
     (when (and (not (cleavir-bir:closed-over-p variable))
                (= (cleavir-set:size writers) 1)
