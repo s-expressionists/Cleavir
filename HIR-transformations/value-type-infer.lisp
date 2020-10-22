@@ -310,12 +310,15 @@
         ;; possible in convoluted flowgraphs where numbers can be
         ;; assigned in a periodic manner. Detect such a scenario and
         ;; warn about it.
+        ;; NOTE: In practice this is actually common enough that we don't want
+        ;; to muck up the I/O with a lot of warnings.
         (when block-count
           (let ((count (gethash block block-count)))
             (if count
                 (progn
                   (incf (gethash block block-count))
                   (when (> count 750)
+                    #+(or)
                     (warn "value numbering: Fixpoint iterations exceeded threshold limit.")
                     (return)))
                 (setf (gethash block block-count) 0))))

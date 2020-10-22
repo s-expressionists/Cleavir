@@ -52,11 +52,22 @@
 		      :test #'eq))
     result))
 
+(defun datum-name-as-string (datum)
+  ;; This handles names of the form (setf foo) in addition to symbols.
+  ;; setf names can come up if a function closes over an flet or labels
+  ;; definition.
+  ;; Using symbol-name like this when possible is also a bit faster than
+  ;; writing, though it's not a bottleneck either way.
+  (let ((name (cleavir-ir:name datum)))
+    (if (symbolp name)
+        (symbol-name name)
+        (write-to-string name :escape nil :readably nil :pretty nil))))
+
 ;;; Given a list of ENTER-INSTRUCTIONs, return an alist mapping each
 ;;; ENTER-INSTRUCTION to a new dynamic lexical location.
 (defun allocate-dynamic-locations (enter-instructions location)
   (let ((name (if (read-only-location-p location)
-                  (string (cleavir-ir:name location))
+                  (datum-name-as-string location)
                   "CELL")))
     (loop for enter-instruction in enter-instructions
           collect (cons enter-instruction

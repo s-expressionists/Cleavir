@@ -10,6 +10,7 @@
 	       :cleavir-environment
 	       :cleavir-compilation-policy
                :cleavir-ctype
+               :cleavir-conditions
                :acclimation)
   :serial t
   :components
