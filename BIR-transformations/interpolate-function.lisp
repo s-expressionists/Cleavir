@@ -42,8 +42,8 @@
       (if interp-end
           (cleavir-bir:replace-terminator
            (make-instance 'cleavir-bir:jump
-                          :inputs () :outputs ()
-                          :next (list after))
+             :inputs () :outputs ()
+             :next (list after))
            returni)
           (cleavir-bir:maybe-delete-iblock after))
       ;; If the interpolated function unwinds to the call function, change it
@@ -84,7 +84,9 @@
       (mapc #'cleavir-bir:replace-uses arguments lambda-list)
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
-      (when interp-end
-        (cleavir-bir:merge-successor-if-possible interp-end))
+      (if interp-end
+          (cleavir-bir:merge-successor-if-possible interp-end)
+          ;; The function doesn't return, so make sure later blocks are deleted
+          (cleavir-bir:refresh-local-iblocks call-function))
       (cleavir-bir:merge-successor-if-possible before)))
   (values))
