@@ -6,13 +6,29 @@
 (defun post-find-local-calls (function)
   ;; When a function has no encloses and has only one local call, it
   ;; is eligible for interpolation.
-  (when (cleavir-set:empty-set-p (cleavir-bir:encloses function))
+  (when (and (cleavir-set:empty-set-p (cleavir-bir:encloses function))
+             (lambda-list-inlinable-p (cleavir-bir:lambda-list function)))
     ;; FIXME: We could contify more generally here.
-    (let ((local-calls (cleavir-bir:local-calls function)))
-      (when (= (cleavir-set:size local-calls) 1)
-        (let ((local-call (cleavir-set:arb local-calls)))
-          (when (lambda-list-inlinable-p (cleavir-bir:lambda-list function))
-            (interpolate-function function local-call)))))))
+    (let* ((local-calls (cleavir-bir:local-calls function))
+           (nlocalcalls (cleavir-set:size local-calls)))
+      (cond ((zerop nlocalcalls))
+            ((= nlocalcalls 1)
+             (let ((local-call (cleavir-set:arb local-calls)))
+               (interpolate-function function local-call)))
+            #+(or)
+            (t
+             ;; Copy the function for interpolation, for all but one call.
+             (let ((int (cleavir-set:arb local-calls)))
+               (format t "~&local calls: ~a~%" local-calls)
+               (format t "~&int: ~a~%" int)
+               (cleavir-set:doset (c local-calls)
+                 (unless (eq c int)
+                   (format t "~&c: ~a~%" c)
+                   (let ((copy (copy-function function)))
+                     (cleavir-bir:verify (cleavir-bir:module copy))
+                     (interpolate-function copy c)
+                     (cleavir-bir:verify (cleavir-bir:module copy)))))
+               (interpolate-function function int)))))))
 
 ;; required parameters only. rip.
 (defun lambda-list-inlinable-p (lambda-list)

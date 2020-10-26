@@ -15,6 +15,7 @@
            #:output #:name #:ctype #:ctyped-p
            #:definitions #:uses #:definition #:use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
+           #:use-status #:ignore
            #:record-variable-ref #:record-variable-set
            #:immutablep #:closed-over-p)
   (:export #:constant #:make-constant #:immediate #:load-time-value
