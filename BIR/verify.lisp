@@ -24,6 +24,7 @@
                 (name ,gfunction) *problems*))
        (values))))
 
+(defvar *seen-iblocks*)
 ;;; KLUDGE: This is somewhat inexact; for example if two blocks share their
 ;;; only predecessor, one could have a computation in the other as an input,
 ;;; which is invalid, but if we happened to traverse the blocks in the wrong
@@ -218,16 +219,18 @@ has use-before-define on inputs ~a"
         "Enclose ~a is not present in its CODE ~a's encloses ~a"
         inst (code inst) (encloses (code inst)))
   ;; Make sure the function we are enclosing is in the module.
-  (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
-        "The function ~a being enclosed by ~a is not present in the module ~a."
-        (code inst) inst *verifying-module*))
+  (when (boundp '*verifying-module*)
+    (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
+          "The function ~a being enclosed by ~a is not present in the module ~a."
+          (code inst) inst *verifying-module*)))
 
 (defmethod verify progn ((inst local-call))
   ;; Make sure the function we are calling is in the module.
-  (let ((function (first (inputs inst))))
-    (test (cleavir-set:presentp function (functions *verifying-module*))
-          "The function ~a being called by ~a is not present in the module ~a."
-          function inst *verifying-module*)))
+  (when (boundp '*verifying-module*)
+    (let ((function (first (inputs inst))))
+      (test (cleavir-set:presentp function (functions *verifying-module*))
+            "The function ~a being called by ~a is not present in the module ~a."
+            function inst *verifying-module*))))
 
 (defun dynenvs (d)
   (loop for dyn = d then (parent dyn)
@@ -321,6 +324,10 @@ has use-before-define on inputs ~a"
         mtf (rtype (first (inputs mtf))) :multiple-values))
 
 (defmethod verify progn ((iblock iblock))
+  ;; Iblock only appears in the graph once
+  (test (not (cleavir-set:presentp iblock *seen-iblocks*))
+        "Iblock ~a appears multiple times" iblock)
+  (cleavir-set:nadjoinf *seen-iblocks* iblock)
   ;; All predecessors truly have this as a successor
   (let ((non-successor-predecessors
           (cleavir-set:filter 'list
@@ -414,8 +421,9 @@ has use-before-define on inputs ~a"
         (test (and (slot-boundp end '%end) (typep (end end) 'returni))
               "Final instruction ~a is not a returni" (end end)))
       ;; Module is correct
-      (test (eq (module function) *verifying-module*)
-            "Function ~a is in the wrong module" function)
+      (when (boundp '*verifying-module*)
+        (test (eq (module function) *verifying-module*)
+              "Function ~a is in the wrong module" function))
       ;; Reachability etc
       (let ((reachable (cleavir-set:empty-set)))
         (flet ((iblock-verifier (iblock)
@@ -454,7 +462,8 @@ has use-before-define on inputs ~a"
                   function)))))))
 
 (defmethod verify progn ((module module))
-  (let ((*seen-instructions* (cleavir-set:empty-set))
+  (let ((*seen-iblocks* (cleavir-set:empty-set))
+        (*seen-instructions* (cleavir-set:empty-set))
         (*seen-lists* (cleavir-set:empty-set))
         (*seen-next* (cleavir-set:empty-set))
         (*verifying-module* module))
