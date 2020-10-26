@@ -224,11 +224,14 @@
 (defmethod replace-terminator :after ((new unwind) old)
   (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
+(defun orphan-iblock-p (iblock)
+  (and (cleavir-set:empty-set-p (predecessors iblock))
+       (cleavir-set:empty-set-p (entrances iblock))))
+
 (defun delete-iblock (iblock)
   ;; FIXME: Should note reasons to the user if nontrivial code is being
   ;; deleted. Or perhaps that should be handled at a higher level?
-  (assert (and (cleavir-set:empty-set-p (predecessors iblock))
-               (cleavir-set:empty-set-p (entrances iblock))))
+  (assert (orphan-iblock-p iblock))
   (clean-up-iblock iblock)
   (let ((f (function iblock)))
     (when (and (slot-boundp f '%end)
@@ -238,12 +241,11 @@
     (let ((successors (successors iblock)))
       (dolist (s successors)
         (cleavir-set:nremovef (predecessors s) iblock)
-        (when (cleavir-set:empty-set-p (predecessors s))
+        (when (orphan-iblock-p s)
           (delete-iblock s))))))
 
 (defun maybe-delete-iblock (iblock)
-  (when (and (cleavir-set:empty-set-p (predecessors iblock))
-             (cleavir-set:empty-set-p (entrances iblock)))
+  (when (orphan-iblock-p iblock)
     (delete-iblock iblock)))
 
 ;;; Internal. Replace one value with another in an input list.
