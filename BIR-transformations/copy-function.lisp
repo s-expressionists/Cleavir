@@ -57,6 +57,7 @@
   (let* ((module (cleavir-bir:module function))
          (copy (make-instance 'cleavir-bir:function
                  :name (cleavir-bir:name function)
+                 :iblocks (cleavir-set:empty-set)
                  :docstring (cleavir-bir:docstring function)
                  :original-lambda-list (cleavir-bir:original-lambda-list
                                         function)
@@ -144,6 +145,22 @@
 (defun output-copier (stack map)
   (lambda (datum) (copy-output datum stack map)))
 
+;; Usually just needs to find the damn thing from a previous output
+(defgeneric copy-input (datum map))
+(defmethod copy-input ((datum cleavir-bir:datum) map)
+  (copy-of datum map))
+(defmethod copy-input ((datum cleavir-bir:constant) map)
+  (cleavir-bir:make-constant (cleavir-bir:constant-value datum)))
+(defmethod copy-input ((datum cleavir-bir:load-time-value) map)
+  (make-instance 'cleavir-bir:load-time-value
+    :name (cleavir-bir:name datum)
+    :form (cleavir-bir:form datum)
+    :read-only-p (cleavir-bir:read-only-p datum)
+    :rtype (cleavir-bir:rtype datum)))
+
+(defun input-copier (map)
+  (lambda (datum) (copy-input datum map)))
+
 (defgeneric clone-initargs (instruction stack map)
   (:method-combination append))
 
@@ -184,7 +201,7 @@
     ((instruction cleavir-bir:instruction) stack map)
   (declare (ignore stack))
   (list
-   :inputs (mapcar (finder map) (cleavir-bir:inputs instruction))
+   :inputs (mapcar (input-copier map) (cleavir-bir:inputs instruction))
    :iblock (copy-of (cleavir-bir:iblock instruction) map)
    :policy (cleavir-bir:policy instruction)
    :origin (cleavir-bir:origin instruction)))
