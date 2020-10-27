@@ -605,6 +605,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;;
+
+(defmethod compile-ast ((ast cleavir-ast:constant-ast) inserter system)
+  (declare (ignore inserter system))
+  (list (cleavir-bir:make-constant (cleavir-ast:value ast))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; LOAD-TIME-VALUE-AST. Needs work.
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)

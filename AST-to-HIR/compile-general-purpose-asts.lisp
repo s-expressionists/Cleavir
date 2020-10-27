@@ -1255,3 +1255,14 @@
       (cleavir-ast:form ast) (cleavir-ast:read-only-p ast))
      (first results)
      (first successors))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Compile a CONSTANT-AST.
+
+(defmethod compile-ast ((ast cleavir-ast:constant-ast) context)
+  (with-accessors ((results results) (successors successors)) context
+    (cleavir-ir:make-assignment-instruction
+     (cleavir-ir:make-constant-input
+      (cleavir-ast:value ast))
+     (first results) (first successors))))

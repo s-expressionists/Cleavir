@@ -6,7 +6,6 @@
            #:*compiler*
            #:convert
            #:convert-constant
-           #:convert-constant-to-immediate
            #:convert-special
            #:convert-special-binding
            #:convert-special-variable
