@@ -373,7 +373,8 @@ has use-before-define on inputs ~a"
         iblock (dynamic-environment iblock))
   ;; Function is the right function
   (test (eq (function iblock) *verifying-function*)
-        "iblock ~a is in the wrong function")
+        "iblock ~a is in the wrong function"
+        iblock)
   ;; inputs are all phis, and all phis have only terminators as definitions
   (flet ((phip (p) (typep p 'phi)))
     (test (every #'phip (inputs iblock))
