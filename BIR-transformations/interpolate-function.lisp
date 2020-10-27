@@ -12,16 +12,17 @@
     (when (catch-eliminable-p catch)
       (eliminate-catch catch))))
 
-;;; interpolated-function must have only required parameters
-(defun interpolate-function (interpolated-function call)
-  (let* ((lambda-list (cleavir-bir:lambda-list interpolated-function))
+;;; the interpolated-function must have only required parameters
+(defun interpolate-function (call)
+  (check-type call cleavir-bir:local-call)
+  (let* ((interpolated-function (first (cleavir-bir:inputs call)))
+         (lambda-list (cleavir-bir:lambda-list interpolated-function))
          (call-block (cleavir-bir:iblock call))
          (call-function (cleavir-bir:function call-block))
          (interp-end (cleavir-bir:end interpolated-function))
          (returni (when interp-end (cleavir-bir:end interp-end)))
          (return-values (when interp-end (first (cleavir-bir:inputs returni))))
          (arguments (rest (cleavir-bir:inputs call))))
-    (check-type call cleavir-bir:local-call)
     (assert (every (lambda (a) (typep a 'cleavir-bir:argument)) lambda-list))
     ;; Rewire control
     (multiple-value-bind (before after)
@@ -60,6 +61,7 @@
          (when (eq (cleavir-bir:dynamic-environment ib) interpolated-function)
            (setf (cleavir-bir:dynamic-environment ib)
                  (cleavir-bir:dynamic-environment before)))
+         (assert (eq (cleavir-bir:function ib) interpolated-function))
          (setf (cleavir-bir:function ib) call-function)
          (cleavir-set:nadjoinf (cleavir-bir:iblocks call-function) ib))
        interpolated-function)
