@@ -4,27 +4,7 @@
 ;;; doing after. FIXME: Think of a nice CLOSy way to make this optional
 ;;; and specializable.
 (defun post-find-local-calls (function)
-  ;; When a function has no encloses and has only one local call, it
-  ;; is eligible for interpolation.
-  (when (and (cleavir-set:empty-set-p (cleavir-bir:encloses function))
-             (lambda-list-inlinable-p (cleavir-bir:lambda-list function)))
-    ;; FIXME: We could contify more generally here.
-    (let* ((local-calls (cleavir-bir:local-calls function))
-           (nlocalcalls (cleavir-set:size local-calls)))
-      (cond ((zerop nlocalcalls))
-            ((= nlocalcalls 1)
-             (interpolate-function (cleavir-set:arb local-calls)))
-            #+(or)
-            (t
-             (cleavir-set:doset (c local-calls)
-               (let ((copy (copy-function function))
-                     (module (cleavir-bir:module function)))
-                 (assert (cleavir-set:presentp copy (cleavir-bir:functions module)))
-                 (cleavir-bir:verify (cleavir-bir:module function))
-                 (setf (first (cleavir-bir:inputs c)) copy)
-                 (interpolate-function c)
-                 (assert (not (cleavir-set:presentp copy (cleavir-bir:functions module))))
-                 (cleavir-bir:verify (cleavir-bir:module function)))))))))
+  (maybe-interpolate function))
 
 ;; required parameters only. rip.
 (defun lambda-list-inlinable-p (lambda-list)

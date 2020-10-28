@@ -179,6 +179,18 @@
      (cleavir-set:mapset 'cleavir-set:set #'end (predecessors ib))
      (cleavir-set:mapset 'cleavir-set:set #'end (entrances ib)))))
 
+;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
+(defun transitive-use (linear-datum)
+  (loop
+    (when (unused-p linear-datum)
+      (return nil))
+    (let ((use (use linear-datum)))
+      (unless (typep use 'jump)
+        (return use))
+      (setq linear-datum
+            (nth (position linear-datum (inputs use))
+                 (outputs use))))))
+
 ;;; A mutable lexical variable.
 ;;; Has to be read from and written to via instructions.
 (defclass variable (lexical)
