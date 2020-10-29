@@ -195,27 +195,29 @@
             ;; FIXME: Subtly wrong because of loops and may be unreachable.
             (cleavir-bir:maybe-delete-iblock return-point)))
       (cleavir-set:doset (call local-calls)
-        (rewire-call-into-body call (cleavir-bir:start function))))
-    ;; Merge the blocks. Merge the tail first since the
-    ;; interpolated function might just be one block.
-    (if end
-        (cleavir-bir:merge-successor-if-possible end)
-        ;; The function doesn't return, so make sure later blocks are deleted
-        (cleavir-bir:refresh-local-iblocks target-owner))
-    (when unique-call
-      (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
-      ;; TODO: can generalize this to the case of more than
-      ;; one outside call.
-      ;; If we have a FTM->MTF sequence, clear it out.
-      (when (and common-use
-                 (typep common-use 'cleavir-bir:multiple-to-fixed))
-        (let ((definition (first (cleavir-bir:inputs common-use))))
-          (when (typep definition 'cleavir-bir:fixed-to-multiple)
-            (cleavir-bir:delete-transmission definition common-use))))))
-  ;; We've interpolated and there are potentially useless
-  ;; catches in TARGET-OWNER, so now that the IR is in a
-  ;; consistent state, eliminate them.
-  (eliminate-catches target-owner))
+        (rewire-call-into-body call (cleavir-bir:start function)))
+      ;; Merge the blocks. Merge the tail first since the
+      ;; interpolated function might just be one block.
+      (if end
+          (cleavir-bir:merge-successor-if-possible end)
+          ;; The function doesn't return, so make sure later blocks are deleted
+          (cleavir-bir:refresh-local-iblocks target-owner))
+      (when unique-call
+        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
+        ;; TODO: can generalize this to the case of more than
+        ;; one outside call.
+        ;; If we have a FTM->MTF sequence, clear it out.
+        (when (and common-use
+                   (typep common-use 'cleavir-bir:multiple-to-fixed))
+          (let ((definition (first (cleavir-bir:inputs common-use))))
+            (when (typep definition 'cleavir-bir:fixed-to-multiple)
+              (cleavir-bir:delete-transmission definition common-use)))))
+      ;; We've interpolated and there are potentially useless
+      ;; catches in TARGET-OWNER, so now that the IR is in a
+      ;; consistent state, eliminate them.
+      (eliminate-catches target-owner)
+      (return-from contify t)))
+  nil)
 
 (defun maybe-interpolate (function)
   ;; When a function has no encloses and returns to a single control
@@ -230,4 +232,6 @@
           ;; Per BIR rules we can't really interpolate any function
           ;; when it's ambiguous what its dynenv or owners should be.
           (when (and common-dynenv target-owner)
-            (contify function local-calls return-point common-use common-dynenv target-owner)))))))
+            (when (contify function local-calls return-point common-use common-dynenv target-owner)
+              (return-from maybe-interpolate t)))))))
+  nil)
