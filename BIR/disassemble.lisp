@@ -64,6 +64,9 @@
       (setf (gethash iblock *ids*)
             (name-id (name iblock)))))
 
+(defmethod disassemble-instruction-extra append ((inst primop))
+  (list (name (info inst))))
+
 (defmethod disassemble-instruction-extra append ((inst terminator))
   (let ((n (mapcar #'iblock-id (next inst))))
     (if (null n)
