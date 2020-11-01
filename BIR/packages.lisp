@@ -3,7 +3,7 @@
 (defpackage #:cleavir-bir
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
-           #:disassemble)
+           #:disassemble #:ignore)
   (:export #:module #:functions)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
