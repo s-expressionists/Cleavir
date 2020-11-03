@@ -90,7 +90,8 @@
       (cleavir-bir:split-block-after call)
     (let ((jump (make-instance 'cleavir-bir:jump
                                :next (list start)
-                               :outputs (cleavir-bir:inputs start))))
+                               :outputs (cleavir-bir:inputs start)))
+          (lambda-list (cleavir-bir:lambda-list (cleavir-bir:callee call))))
       (cleavir-bir:replace-terminator
        jump
        (cleavir-bir:end before))
@@ -98,8 +99,19 @@
       (cleavir-bir:delete-iblock after)
       ;; Remove the local call.
       (cleavir-bir:delete-computation call)
-      (setf (cleavir-bir:inputs jump)
-            (rest (cleavir-bir:inputs call))))))
+      (let ((call-arguments (rest (cleavir-bir:inputs call)))
+            (inputs '()))
+        (map-lambda-list (lambda (state item)
+                           (declare (ignore item))
+                           (let ((arg (pop call-arguments)))
+                             (ecase state
+                               (:required
+                                (push arg inputs))
+                               (:optional
+                                (push (or arg (cleavir-bir:make-constant nil)) inputs)
+                                (push (cleavir-bir:make-constant (if arg t nil)) inputs)))))
+                         lambda-list)
+        (setf (cleavir-bir:inputs jump) (nreverse inputs))))))
 
 (defun rewire-return (function return-point-block)
   ;; Replace the return instruction with a jump if there is one, or else
@@ -127,13 +139,24 @@
                        (cleavir-bir:variables function))
   (cleavir-set:nunionf (cleavir-bir:catches target-function)
                        (cleavir-bir:catches function))
-  (let* ((start (cleavir-bir:start function))
-         (phis (mapcar (lambda (argument)
-                         (assert (typep argument 'cleavir-bir:argument))
-                         (make-instance 'cleavir-bir:phi :iblock start))
-                       (cleavir-bir:lambda-list function))))
-    (setf (cleavir-bir:inputs start) phis)
-    (mapc #'cleavir-bir:replace-uses phis (cleavir-bir:lambda-list function)))
+  (let ((start (cleavir-bir:start function))
+        (lambda-list (cleavir-bir:lambda-list function))
+        (phis '()))
+    (map-lambda-list (lambda (state item)
+                       (ecase state
+                         (:required
+                          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start)))
+                            (push supplied phis)
+                            (cleavir-bir:replace-uses supplied item)))
+                         (:optional
+                          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start))
+                                (supplied-p (make-instance 'cleavir-bir:phi :iblock start)))
+                            (push supplied phis)
+                            (push supplied-p phis)
+                            (cleavir-bir:replace-uses supplied (first item))
+                            (cleavir-bir:replace-uses supplied-p (second item))))))
+                     lambda-list)
+    (setf (cleavir-bir:inputs start) (nreverse phis)))
   ;; If the function unwinds to their target function, change it to a
   ;; local unwind.
   (cleavir-set:doset (ib (cleavir-bir:exits function))

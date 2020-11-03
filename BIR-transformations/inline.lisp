@@ -1,25 +1,44 @@
 (in-package #:cleavir-bir-transformations)
 
+(defun lambda-list-too-hairy-p (lambda-list)
+  (or (member '&rest lambda-list)
+      (member '&key lambda-list)))
+
+;;; This utility parses BIR lambda lists. FUNCTION takes two
+;;; arguments: the current lambda-list item being parsed and the state
+;;; of the parse (i.e. &OPTIONAL). Does not yet deal with &REST or
+;;; &KEY.
+(defun map-lambda-list (function lambda-list)
+  (assert (not (lambda-list-too-hairy-p lambda-list)))
+  (let ((state :required))
+    (dolist (item lambda-list)
+      (if (eq item '&optional)
+          (setq state :optional)
+          (funcall function state item)))))
+
 ;;; We just attempted to detect local calls. See if anything is worth
 ;;; doing after. FIXME: Think of a nice CLOSy way to make this optional
 ;;; and specializable.
 (defun post-find-local-calls (function)
   (maybe-interpolate function))
 
-;; required parameters only. rip.
-(defun lambda-list-inlinable-p (lambda-list)
-  (every (lambda (a) (typep a 'cleavir-bir:argument)) lambda-list))
-
-;;; Return true if the call arguments are compatible with those of the function.
-;;; If they're not, warn and return false.
+;;; Return true if the call arguments are compatible with those of the
+;;; function lambda list. If they're not, warn and return false.
 (defun check-argument-list-compatible (arguments function)
-  (let ((lambda-list (cleavir-bir:lambda-list function)))
-    (let ((nsupplied (length arguments))
-          (nrequired (length lambda-list)))
-      (if (= nsupplied nrequired)
-          t
-          (warn "Expected ~a required arguments but got ~a arguments for function ~a."
-                nrequired nsupplied (cleavir-bir:name function))))))
+  (let ((lambda-list (cleavir-bir:lambda-list function))
+        (nsupplied (length arguments))
+        (nrequired 0)
+        (noptional 0))
+    (assert (not (lambda-list-too-hairy-p lambda-list)))
+    (map-lambda-list (lambda (state item)
+                       (ecase state
+                         (:required (incf nrequired))
+                         (:optional (incf noptional))))
+                     lambda-list)
+    (if (<= nrequired nsupplied (+ noptional nrequired))
+        t
+        (warn "Expected ~a required arguments and ~a optional arguments but got ~a arguments for function ~a."
+              nrequired noptional nsupplied (cleavir-bir:name function)))))
 
 ;;; Detect calls to a function via its closure and mark them as direct
 ;;; local calls to the function, doing compile time argument
@@ -32,7 +51,7 @@
 ;;; directly into the IR.
 (defun find-function-local-calls (function)
   ;; FIXME: Arg parsing code not yet written!
-  (when (lambda-list-inlinable-p (cleavir-bir:lambda-list function))
+  (unless (lambda-list-too-hairy-p (cleavir-bir:lambda-list function))
     (cleavir-set:doset (enclose (cleavir-bir:encloses function))
       (when (cleavir-bir:unused-p enclose)
         ;; FIXME: Note this dead code.
