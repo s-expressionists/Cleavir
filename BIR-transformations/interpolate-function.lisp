@@ -122,9 +122,8 @@
                               :outputs outputs
                               :next (list return-point-block))))
     ;; THis assertion is sort of guaranteed by LOGICAL-CONTINUATION.
-    (assert (funcall '<=
-                     (length (cleavir-bir:inputs return-point-block))
-                     (length (cleavir-bir:inputs returni))))
+    (assert (<= (length (cleavir-bir:inputs return-point-block))
+                (length (cleavir-bir:inputs returni))))
     (cleavir-bir:replace-terminator jump returni)
     (setf (cleavir-bir:inputs jump)
           (if (cleavir-bir:inputs return-point-block)
