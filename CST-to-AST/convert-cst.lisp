@@ -150,7 +150,7 @@
   (let ((symbol (cleavir-env:name info))
         (origin (cst:source cst)))
     (cleavir-ast:make-symbol-value-ast
-     (cleavir-ast:make-load-time-value-ast `',symbol t :origin origin)
+     (cleavir-ast:make-constant-ast symbol :origin origin)
      :origin origin)))
 
 (defmethod convert-cst

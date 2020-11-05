@@ -4,8 +4,7 @@
   (declare (ignore global-env))
   (let ((source (cst:source cst)))
     (cleavir-ast:make-fdefinition-ast
-     (cleavir-ast:make-load-time-value-ast `',(cleavir-env:name info)
-                                           t :origin source)
+     (cleavir-ast:make-constant-ast (cleavir-env:name info) :origin source)
      :attributes (cleavir-env:attributes info)
      :origin source)))
 

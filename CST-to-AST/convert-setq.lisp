@@ -44,8 +44,8 @@
     (process-progn
      (list (cleavir-ast:make-lexical-bind-ast temp form-ast :origin origin)
 	   (cleavir-ast:make-set-symbol-value-ast
-	    (cleavir-ast:make-load-time-value-ast `',(cleavir-env:name info) t
-                                                  :origin origin)
+	    (cleavir-ast:make-constant-ast (cleavir-env:name info)
+              :origin origin)
 	    temp
 	    :origin origin)
 	   temp)
