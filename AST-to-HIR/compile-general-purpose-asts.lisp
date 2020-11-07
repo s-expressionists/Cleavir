@@ -857,8 +857,8 @@
        (let ((cleavir-ast:*policy* (cleavir-ast:policy ast)))
          (compile-ast (cleavir-ast:make-if-ast
                        ast
-                       (cleavir-ast:make-load-time-value-ast (list 'quote t))
-                       (cleavir-ast:make-load-time-value-ast (list 'quote nil)))
+                       (cleavir-ast:make-constant-ast (list 'quote t))
+                       (cleavir-ast:make-constant-ast (list 'quote nil)))
                       context)))
       (2
        (assert-context ast context 0 2)
@@ -1164,8 +1164,8 @@
        (let ((cleavir-ast:*policy* (cleavir-ast:policy ast)))
          (compile-ast (cleavir-ast:make-if-ast
                        ast
-                       (cleavir-ast:make-load-time-value-ast (list 'quote t))
-                       (cleavir-ast:make-load-time-value-ast (list 'quote nil)))
+                       (cleavir-ast:make-constant-ast (list 'quote t))
+                       (cleavir-ast:make-constant-ast (list 'quote nil)))
                       context)))
       (2
        (assert-context ast context 0 2)
