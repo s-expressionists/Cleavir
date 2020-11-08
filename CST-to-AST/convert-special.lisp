@@ -423,24 +423,36 @@
 ;;;
 ;;; Converting LOAD-TIME-VALUE.
 
+;;; During file compilation, we generate a LOAD-TIME-VALUE-AST for a
+;;; LOAD-TIME-VALUE taking a non-constant form to handle referencing
+;;; the value of the form evaluated at load time in a null lexical
+;;; environment. Otherwise, the semantics of load-time-value are akin
+;;; to a constant reference to the value of the form evaluated at
+;;; compile time in a null lexical environment.
 (defmethod convert-special ((symbol (eql 'load-time-value)) cst env system)
   (declare (ignore system))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 2)
   (cst:db origin (load-time-value-cst form-cst . remaining-cst) cst
     (declare (ignore load-time-value-cst))
-    (cleavir-ast:make-load-time-value-ast
-     (cst:raw form-cst)
-     (if (cst:null remaining-cst)
-         nil
-         (let ((read-only-p (cst:raw (cst:first remaining-cst))))
-           (if (member read-only-p '(nil t))
-               read-only-p
-               ;; The HyperSpec specifically requires a "boolean"
-               ;; and not a "generalized boolean".
-               (error 'read-only-p-must-be-boolean
-                      :cst (cst:first remaining-cst)))))
-     :origin origin)))
+    (let ((form (cst:raw form-cst))
+          (read-only-p (if (cst:null remaining-cst)
+                           nil
+                           (cst:raw (cst:first remaining-cst)))))
+      (unless (member read-only-p '(nil t))
+        ;; The HyperSpec specifically requires a "boolean"
+        ;; and not a "generalized boolean".
+        (error 'read-only-p-must-be-boolean
+               :cst (cst:first remaining-cst)))
+      ;; FIXME: We probably want to create and use
+      ;; cleavir-env:constantp in case the environments don't match
+      ;; up.
+      (if (and (eq *compiler* 'cl:compile-file)
+               (not (constantp form env)))
+          (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
+          (cleavir-ast:make-constant-ast
+           (cleavir-env:eval form (cleavir-env:compile-time env) env)
+           :origin origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

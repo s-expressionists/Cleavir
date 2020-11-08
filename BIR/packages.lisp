@@ -4,7 +4,7 @@
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble #:ignore)
-  (:export #:module #:functions)
+  (:export #:module #:functions #:constants #:constant-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
@@ -18,8 +18,8 @@
            #:use-status #:ignore
            #:record-variable-ref #:record-variable-set
            #:immutablep #:closed-over-p)
-  (:export #:constant #:make-constant #:immediate #:load-time-value
-           #:constant-value #:immediate-value #:form #:read-only-p)
+  (:export #:constant #:load-time-value
+           #:constant-value #:form #:read-only-p)
   (:export #:instruction #:operation #:computation #:inputs #:outputs
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next
@@ -27,6 +27,7 @@
   (:export #:*origin* #:*policy*)
   (:export #:multiple-to-fixed #:fixed-to-multiple
            #:accessvar #:writevar #:readvar #:cast
+           #:constant-reference #:make-constant-reference
            #:returni #:unreachable #:eqi #:jump #:unwindp
            #:typeq #:type-specifier #:typew #:ctype #:choke
            #:case #:comparees

@@ -608,8 +608,12 @@
 ;;;
 
 (defmethod compile-ast ((ast cleavir-ast:constant-ast) inserter system)
-  (declare (ignore inserter system))
-  (list (cleavir-bir:make-constant (cleavir-ast:value ast))))
+  (declare (ignore system))
+  (list
+   (insert inserter
+           (cleavir-bir:make-constant-reference
+            (cleavir-bir:constant-in-module (cleavir-ast:value ast)
+                                            *current-module*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -620,12 +624,3 @@
   (list
    (make-instance 'cleavir-bir:load-time-value
      :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; IMMEDIATE-AST. Needs work.
-
-(defmethod compile-ast ((ast cleavir-ast:immediate-ast) inserter system)
-  (declare (ignore inserter system))
-  (list
-   (make-instance 'cleavir-bir:immediate :value (cleavir-ast:value ast))))

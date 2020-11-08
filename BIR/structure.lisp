@@ -66,16 +66,11 @@
 (defclass value (ssa) ())
 (defmethod definition ((datum value)) datum)
 
-;;; TODO: Using this uniformly will be work.
-(defclass constant (value transfer)
+(defclass constant (value)
   ((%value :initarg :value :reader constant-value)
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
-;;; TODO: These are bad, but AST changes will be required to fix it.
-(defclass immediate (value transfer)
-  ((%value :initarg :value :reader immediate-value)
-   ;; dicey
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
 (defclass load-time-value (value transfer)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
@@ -242,10 +237,6 @@
       (unless (eq owner (function writer))
         (return-from closed-over-p t)))))
 
-;;; TODO: This will implicate load form bla bla bla stuff.
-(defun make-constant (value)
-  (make-instance 'constant :value value))
-
 ;;; A sequence of instructions with no branching.
 (defclass iblock ()
   ((%start :initarg :start :accessor start
@@ -333,7 +324,29 @@
 (defclass module ()
   ((%functions :initarg :functions :accessor functions
                :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)))
+               :type cleavir-set:set)
+   (%constants :accessor constants
+               :initform (cleavir-set:empty-set)
+               :type cleavir-set:set)
+   ;; This table ensures that only one constant object per similar
+   ;; object is created.
+   (%constant-table :accessor constant-table)))
+
+(defmethod initialize-instance :after ((module module) &key)
+  ;; FIXME: In code with file compilation semantics, we are allowed to
+  ;; coalesce EQUAL constants. Figure out how to allow clients to plug
+  ;; into the table initialization logic here.
+  (setf (constant-table module) (make-hash-table :test #'eq)))
+
+;;; Find the constant object for CONSTANT-VALUE in MODULE, allocating
+;;; a new one in the module if necessary.
+(defun constant-in-module (constant-value module)
+  (let ((constant-table (constant-table module)))
+    (or (gethash constant-value constant-table)
+        (let ((constant (make-instance 'constant :value constant-value)))
+          (cleavir-set:nadjoinf (constants module) constant)
+          (setf (gethash constant-value constant-table) constant)
+          constant))))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))

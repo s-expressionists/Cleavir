@@ -131,7 +131,10 @@
              (loop for var in vars
                    ;; If there are more variables than values, compensate
                    for r = (or (pop rv)
-                               (cleavir-bir:make-constant 'nil))
+                               (let ((ref (cleavir-bir:make-constant-reference
+                                           (cleavir-bir:constant-in-module 'nil *current-module*))))
+                                 (insert inserter ref)
+                                 ref))
                    for wv = (make-instance 'cleavir-bir:writevar
                               :inputs (list r) :outputs (list var))
                    do (insert inserter wv))

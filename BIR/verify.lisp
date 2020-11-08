@@ -91,6 +91,13 @@
                         (and (not (unused-p i))
                              (eq (use i) instruction)))
                       (rest inputs))))
+      (constant-reference
+       (test (typep (first inputs) 'constant)
+             "Constant reference ~a has non-constant input ~a"
+             instruction (first inputs))
+       (test (cleavir-set:presentp (first inputs) (constants *verifying-module*))
+             "Referenced constant ~a not in its module."
+             (first inputs)))
       (t (flet ((validp (v)
                   (etypecase v
                     (computation (cleavir-set:presentp v *seen-instructions*))

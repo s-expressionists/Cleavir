@@ -711,9 +711,12 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:cst-to-ast)) cst env system)
-  (check-simple-primop-syntax cst 1)
-  (cst:db origin (op-cst form-cst) cst
-    (declare (ignore op-cst))
-    (cleavir-ast:make-constant-ast
-     (convert form-cst (cleavir-env:compile-time env) system)
-     :origin (cst:source form-cst))))
+  (check-simple-primop-syntax cst 2)
+  (cst:db origin (op-cst form-cst use-file-compilation-semantics-p) cst
+    (let ((*compiler* (if (cst:raw use-file-compilation-semantics-p)
+                          'cl:compile-file
+                          'cl:compile)))
+      (declare (ignore op-cst))
+      (cleavir-ast:make-constant-ast
+       (convert form-cst (cleavir-env:compile-time env) system)
+       :origin (cst:source form-cst)))))

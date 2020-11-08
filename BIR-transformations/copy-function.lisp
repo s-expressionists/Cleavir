@@ -149,8 +149,6 @@
 (defgeneric copy-input (datum map))
 (defmethod copy-input ((datum cleavir-bir:datum) map)
   (copy-of datum map))
-(defmethod copy-input ((datum cleavir-bir:constant) map)
-  (cleavir-bir:make-constant (cleavir-bir:constant-value datum)))
 (defmethod copy-input ((datum cleavir-bir:load-time-value) map)
   (make-instance 'cleavir-bir:load-time-value
     :name (cleavir-bir:name datum)

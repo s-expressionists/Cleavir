@@ -101,16 +101,31 @@
       (cleavir-bir:delete-computation call)
       (let ((call-arguments (rest (cleavir-bir:inputs call)))
             (inputs '()))
-        (map-lambda-list (lambda (state item)
-                           (declare (ignore item))
-                           (let ((arg (pop call-arguments)))
-                             (ecase state
-                               (:required
-                                (push arg inputs))
-                               (:optional
-                                (push (or arg (cleavir-bir:make-constant nil)) inputs)
-                                (push (cleavir-bir:make-constant (if arg t nil)) inputs)))))
-                         lambda-list)
+        (map-lambda-list
+         (lambda (state item)
+           (declare (ignore item))
+           (let ((arg (pop call-arguments)))
+             (ecase state
+               (:required
+                (push arg inputs))
+               (:optional
+                (let ((module (cleavir-bir:module (cleavir-bir:function call))))
+                  (cond
+                    (arg
+                     (let ((suppliedp (cleavir-bir:make-constant-reference
+                                       (cleavir-bir:constant-in-module t module))))
+                       (cleavir-bir:insert-instruction-before suppliedp jump)
+                       (push arg inputs)
+                       (push suppliedp inputs)))
+                    (t
+                     (let* ((nil-constant (cleavir-bir:constant-in-module nil module))
+                            (value (cleavir-bir:make-constant-reference nil-constant))
+                            (suppliedp (cleavir-bir:make-constant-reference nil-constant)))
+                       (cleavir-bir:insert-instruction-before value jump)
+                       (cleavir-bir:insert-instruction-before suppliedp jump)
+                       (push value inputs)
+                       (push suppliedp inputs)))))))))
+         lambda-list)
         (setf (cleavir-bir:inputs jump) (nreverse inputs))))))
 
 (defun rewire-return (function return-point-block)

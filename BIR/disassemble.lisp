@@ -128,8 +128,9 @@
 (defun disassemble (module)
   (check-type module module)
   (with-disassembly ()
-    (cleavir-set:mapset 'list #'disassemble-function
-                        (cleavir-bir:functions module))))
+    (cons (constants module)
+          (cleavir-set:mapset 'list #'disassemble-function
+                              (cleavir-bir:functions module)))))
 
 (defun print-iblock-disasm (iblock-disasm &key (show-dynenv t))
   (destructuring-bind ((label . args) dynenv entrances &rest insts)
@@ -151,4 +152,8 @@
       (print-iblock-disasm iblock :show-dynenv show-dynenv))))
 
 (defun print-disasm (disasm &key (show-dynenv t))
-  (dolist (fun disasm) (print-function-disasm fun :show-dynenv show-dynenv)))
+  (format t "~&-------module-------")
+  (destructuring-bind (constants . funs) disasm
+    (format t "~&constants: ~a" constants)
+    (dolist (fun funs)
+      (print-function-disasm fun :show-dynenv show-dynenv))))

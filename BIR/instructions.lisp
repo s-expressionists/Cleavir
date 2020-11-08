@@ -32,6 +32,21 @@
   (cleavir-set:nadjoinf (readers (first inputs)) i)
   i)
 
+;;; Constants
+
+(defclass constant-reference (one-input computation) ())
+
+(defmethod rtype ((inst constant-reference)) :object)
+
+(defmethod initialize-instance :after
+    ((i constant-reference) &rest initargs &key inputs)
+  (declare (ignore initargs))
+  (cleavir-set:nadjoinf (readers (first inputs)) i)
+  i)
+
+(defun make-constant-reference (constant)
+  (make-instance 'constant-reference :inputs (list constant)))
+
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
