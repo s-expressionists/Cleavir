@@ -1,8 +1,10 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun lambda-list-too-hairy-p (lambda-list)
-  (or (member '&rest lambda-list)
-      (member '&key lambda-list)))
+  (not (every (lambda (item)
+                (or (typep item 'cleavir-bir:argument)
+                    (eq item '&optional)))
+              lambda-list)))
 
 ;;; This utility parses BIR lambda lists. FUNCTION takes two
 ;;; arguments: the current lambda-list item being parsed and the state
