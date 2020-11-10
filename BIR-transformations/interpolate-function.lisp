@@ -108,7 +108,7 @@
              (ecase state
                (:required
                 (push arg inputs))
-               (:optional
+               (&optional
                 (let ((module (cleavir-bir:module (cleavir-bir:function call))))
                   (cond
                     (arg
@@ -162,7 +162,7 @@
                           (let ((supplied (make-instance 'cleavir-bir:phi :iblock start)))
                             (push supplied phis)
                             (cleavir-bir:replace-uses supplied item)))
-                         (:optional
+                         (&optional
                           (let ((supplied (make-instance 'cleavir-bir:phi :iblock start))
                                 (supplied-p (make-instance 'cleavir-bir:phi :iblock start)))
                             (push supplied phis)

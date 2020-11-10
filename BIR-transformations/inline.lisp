@@ -14,8 +14,8 @@
   (assert (not (lambda-list-too-hairy-p lambda-list)))
   (let ((state :required))
     (dolist (item lambda-list)
-      (if (eq item '&optional)
-          (setq state :optional)
+      (if (symbolp item)
+          (setq state item)
           (funcall function state item)))))
 
 ;;; We just attempted to detect local calls. See if anything is worth
@@ -35,7 +35,7 @@
     (map-lambda-list (lambda (state item)
                        (ecase state
                          (:required (incf nrequired))
-                         (:optional (incf noptional))))
+                         (&optional (incf noptional))))
                      lambda-list)
     (if (<= nrequired nsupplied (+ noptional nrequired))
         t
