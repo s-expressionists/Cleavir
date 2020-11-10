@@ -2,7 +2,7 @@
 
 (defun lambda-list-too-hairy-p (lambda-list)
   (not (every (lambda (item)
-                (or (typep item 'cleavir-bir:argument)
+                (or (not (symbolp item))
                     (eq item '&optional)))
               lambda-list)))
 
