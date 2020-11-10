@@ -47,6 +47,17 @@
 (defun make-constant-reference (constant)
   (make-instance 'constant-reference :inputs (list constant)))
 
+;;; Load time value
+
+;;; FIXME: This ought to be an instruction defined by the
+;;; client, since load-time-value could be compiled down in a myriad
+;;; of ways.
+(defclass load-time-value (no-input computation)
+  ((%form :initarg :form :reader form)
+   (%read-only-p :initarg :read-only-p :reader read-only-p)))
+
+(defmethod rtype ((inst load-time-value)) :object)
+
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
   ((%info :initarg :info :reader info

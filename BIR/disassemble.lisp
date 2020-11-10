@@ -32,10 +32,6 @@
 
 (defgeneric disassemble-datum (datum))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
-(defmethod disassemble-datum ((value load-time-value))
-  (if (and (read-only-p value) (constantp (form value)))
-      `',(eval (form value))
-      `(cl:load-time-value ,(form value) ,(read-only-p value))))
 (defmethod disassemble-datum ((value datum))
   (or (gethash value *ids*)
       (setf (gethash value *ids*)
@@ -82,6 +78,9 @@
 (defmethod disassemble-instruction-extra append ((inst unwind))
   (list (disassemble-datum (catch inst))
         (iblock-id (destination inst))))
+
+(defmethod disassemble-instruction-extra append ((inst load-time-value))
+  (list (form inst) (read-only-p inst)))
 
 (defmethod disassemble-instruction-extra append ((inst leti))
   (list (cleavir-set:mapset 'list #'disassemble-datum (bindings inst))))

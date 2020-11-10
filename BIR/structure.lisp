@@ -71,11 +71,6 @@
    (%readers :initform (cleavir-set:empty-set) :accessor readers)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
-(defclass load-time-value (value transfer)
-  ((%form :initarg :form :reader form)
-   (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
-
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
 ;;; however; default values are NIL. (TODO: Is that right for policy?)
@@ -328,6 +323,10 @@
    (%constants :accessor constants
                :initform (cleavir-set:empty-set)
                :type cleavir-set:set)
+   ;; FIXME: move load time value handling more to client
+   (%load-time-values :accessor load-time-values
+                      :initform (cleavir-set:empty-set)
+                      :type cleavir-set:set)
    ;; This table ensures that only one constant object per similar
    ;; object is created.
    (%constant-table :accessor constant-table)))

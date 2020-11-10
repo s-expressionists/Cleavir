@@ -166,6 +166,9 @@
     (cleavir-set:nremovef (readers constant) inst)
     (when (cleavir-set:empty-set-p (readers constant))
       (cleavir-set:nremovef (constants (module (function inst))) constant))))
+;; FIXME: move to client
+(defmethod clean-up-instruction progn ((inst load-time-value))
+  (cleavir-set:nremovef (load-time-values (module (function inst))) inst))
 (defmethod clean-up-instruction progn ((inst enclose))
   (let* ((code (code inst))
          (code-encloses (encloses code)))

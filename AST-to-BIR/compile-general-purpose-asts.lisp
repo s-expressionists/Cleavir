@@ -620,7 +620,7 @@
 ;;; LOAD-TIME-VALUE-AST. Needs work.
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)
-  (declare (ignore inserter system))
-  (list
-   (make-instance 'cleavir-bir:load-time-value
-     :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))))
+  (let ((inst (make-instance 'cleavir-bir:load-time-value
+                             :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))))
+    (cleavir-set:nadjoinf (cleavir-bir:load-time-values *current-module*) inst)
+    (list (insert inserter inst))))
