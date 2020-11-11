@@ -17,14 +17,17 @@
             (reader (cleavir-set:arb (cleavir-bir:readers variable))))
         (cleavir-bir:delete-transmission writer reader)))
     ;; Variable bound to constant can get propagated.
-    #+(or)
-    (when (immutablep variable)
-      (let ((writer (cleavir-set:arb (cleavir-bir:writers variable))))
-        (let ((input (first (inputs writer))))
-          ;; We can't do this nicely yet. We'd like to check for a
-          ;; constant here and then change the readvar's to references
-          ;; to the constant.
-          )))))
+    (when (cleavir-bir:immutablep variable)
+      (let* ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
+             (input (first (cleavir-bir:inputs writer))))
+        (typecase input
+          (cleavir-bir:constant-reference
+           (let ((constant (first (cleavir-bir:inputs input))))
+             (cleavir-set:doset (reader (cleavir-bir:readers variable))
+               (change-class reader 'cleavir-bir:constant-reference
+                 :inputs (list constant)))
+             (cleavir-bir:delete-instruction writer)))
+          (t))))))
 
 (defun module-optimize-variables (module)
   (cleavir-set:doset (function (cleavir-bir:functions module))
