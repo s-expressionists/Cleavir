@@ -4,7 +4,7 @@
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble #:ignore)
-  (:export #:module #:functions #:constants #:constant-in-module)
+  (:export #:module #:functions #:constants #:constant-in-module #:load-time-values)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
