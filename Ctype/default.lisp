@@ -191,16 +191,23 @@
         ((top-p ct2 sys) 'nil)
         (t `(and ,ct1 (not ,ct2)))))
 
-(defmethod application (fctype actype system)
-  (declare (ignore actype))
+(defun general-function-returns (fctype system)
   (cond ((function-ctype-p fctype)
          (function-returns fctype))
         ((intersection-ctype-p fctype)
-         (apply #'conjoin system (intersection-ctypes fctype)))
+         (cl:apply #'conjoin system (intersection-ctypes fctype)))
         ((union-ctype-p fctype)
-         (apply #'disjoin system (union-ctypes fctype)))
+         (cl:apply #'disjoin system (union-ctypes fctype)))
         ;; give up
         (t `(cl:values &rest t))))
+
+(defmethod apply (fctype actype system)
+  (declare (ignore actype))
+  (general-function-returns fctype system))
+
+(defmethod funcall (system fctype &rest atypes)
+  (declare (ignore atypes))
+  (general-function-returns fctype system))
 
 (defmethod cons (car cdr sys)
   (declare (ignore sys))

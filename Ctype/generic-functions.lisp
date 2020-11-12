@@ -74,13 +74,23 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic function APPLICATION.
+;;; Generic function APPLY.
 ;;;
 ;;; Given a ctype of a function, and the ctype of a list of arguments,
-;;; return a ctype for the return values from APPLYing the function to those
+;;; return a ctype for the return values from CL:APPLYing the function to those
 ;;; arguments.
 
-(defgeneric application (fctype actype system))
+(defgeneric apply (fctype actype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function FUNCALL.
+;;;
+;;; Given a ctype of a function, and a list of argument ctypes,
+;;; return a ctype for the return values from CL:APPLYing the function to those
+;;; arguments.
+
+(defgeneric funcall (system fctype &rest actypes))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

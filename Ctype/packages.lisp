@@ -4,7 +4,8 @@
            #:upgraded-array-element-type
            #:upgraded-complex-part-type
            #:cons #:array #:complex #:member
-           #:satisfies #:function #:values)
+           #:satisfies #:function #:values
+           #:funcall #:apply)
   (:export #:subtypep
            #:upgraded-array-element-type
            #:upgraded-complex-part-type)
@@ -15,4 +16,4 @@
            #:member #:satisfies #:function #:values
            #:coerce-to-values)
   (:export #:values-required #:values-optional #:values-rest)
-  (:export #:application))
+  (:export #:apply #:funcall))
