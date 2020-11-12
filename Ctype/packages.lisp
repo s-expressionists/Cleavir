@@ -15,6 +15,4 @@
            #:member #:satisfies #:function #:values
            #:coerce-to-values)
   (:export #:values-required #:values-optional #:values-rest)
-  (:export #:function-required #:function-optional #:function-rest
-           #:function-keysp #:function-keys #:function-allow-other-keys-p
-           #:function-returns))
+  (:export #:application))

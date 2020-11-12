@@ -74,6 +74,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic function APPLICATION.
+;;;
+;;; Given a ctype of a function, and the ctype of a list of arguments,
+;;; return a ctype for the return values from APPLYing the function to those
+;;; arguments.
+
+(defgeneric application (fctype actype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function CONS.
 ;;;
 ;;; Given two non-values ctypes, return the ctype of a cons type using them.
@@ -184,24 +194,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions VALUES-RQEUIRED, VALUES-OPTIONAL, VALUES-REST.
-;;; Read components of a values type.
+;;; Read components of a values ctype.
 
 (defgeneric values-required (ctype system))
 (defgeneric values-optional (ctype system))
 (defgeneric values-rest (ctype system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Generic functions REQUIRED, OPTIONAL, REST, KEYSP, KEYS, ALLOW-OTHER-KEYS-P,
-;;; and RETURNS.
-;;;
-;;; These are readers for function and values ctypes. Only the first three work
-;;; with values ctypes; the rest are exclusive to function ctypes.
-
-(defgeneric function-required (ctype system))
-(defgeneric function-optional (ctype system))
-(defgeneric function-rest (ctype system))
-(defgeneric function-keysp (ctype system))
-(defgeneric function-keys (ctype system))
-(defgeneric function-allow-other-keys-p (ctype system))
-(defgeneric function-returns (ctype system))

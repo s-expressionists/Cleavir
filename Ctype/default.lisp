@@ -46,6 +46,17 @@
   ;; We assume that NIL is not a class.
   (eql ctype 'nil))
 
+;;; Internal
+(defun intersection-ctype-p (ctype)
+  (and (consp ctype) (eq (car ctype) 'and)))
+(defun intersection-ctypes (ctype) (rest ctype))
+(defun union-ctype-p (ctype sys)
+  (and (consp ctype) (eq (car ctype) 'or)))
+(defun union-ctypes (ctype) (rest ctype))
+(defun function-ctype-p (ctype)
+  (and (consp ctype) (eq (car ctype) 'cl:function)))
+(defun function-return (ctype) (third ctype))
+
 (defun values-conjoin (vct1 vct2 sys)
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
@@ -180,6 +191,17 @@
         ((top-p ct2 sys) 'nil)
         (t `(and ,ct1 (not ,ct2)))))
 
+(defmethod application (fctype actype system)
+  (declare (ignore actype))
+  (cond ((function-ctype-p fctype)
+         (function-returns fctype))
+        ((intersection-ctype-p fctype)
+         (apply #'conjoin system (intersection-ctypes fctype)))
+        ((union-ctype-p fctype)
+         (apply #'disjoin system (union-ctypes fctype)))
+        ;; give up
+        (t `(cl:values &rest t))))
+
 (defmethod cons (car cdr sys)
   (declare (ignore sys))
   (cond ((eql car 'nil) 'nil)
@@ -254,32 +276,3 @@
 (defmethod values-rest (ctype system)
   (declare (ignore system))
   (ll-rest (cl:rest ctype)))
-
-(defmethod function-required (ctype system)
-  (declare (ignore system))
-  (ll-required (second ctype)))
-
-(defmethod function-optional (ctype system)
-  (declare (ignore system))
-  (ll-optional (second ctype)))
-
-(defmethod function-rest (ctype system)
-  (declare (ignore system))
-  (ll-rest (second ctype)))
-
-;;; Again, these below are only valid for function ctypes.
-(defmethod function-keysp (ctype system)
-  (declare (ignore system))
-  (ll-keysp (second ctype)))
-
-(defmethod function-keys (ctype system)
-  (declare (ignore system))
-  (ll-keys (second ctype)))
-
-(defmethod function-allow-other-keys-p (ctype system)
-  (declare (ignore system))
-  (ll-aokp (second ctype)))
-
-(defmethod function-returns (ctype system)
-  (declare (ignore system))
-  (third ctype))
