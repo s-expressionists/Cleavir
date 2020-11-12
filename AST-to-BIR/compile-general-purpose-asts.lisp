@@ -40,24 +40,19 @@
                                                 '#:-start)
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
-    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast)))
-          (leti (make-instance 'cleavir-bir:leti
-                               :bindings (cleavir-set:empty-set))))
-      (setf (cleavir-bir:lambda-list function) lambda-list
-            (cleavir-bir:start function) start)
-      (begin inserter start)
-      (insert inserter leti)
-      (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
-        (cond
-          ((eq rv :no-return)
-           (setf (cleavir-bir:end function) nil))
-          (t
-           (setf (cleavir-bir:end function) (iblock inserter))
-           (terminate inserter
-                      (make-instance 'cleavir-bir:returni
-                        :inputs (adapt inserter rv :multiple-values))))))
-      (when (cleavir-set:empty-set-p (cleavir-bir:bindings leti))
-        (cleavir-bir:delete-instruction leti)))
+    (setf (cleavir-bir:lambda-list function)
+          (bind-lambda-list-arguments (cleavir-ast:lambda-list ast)))
+    (setf (cleavir-bir:start function) start)
+    (begin inserter start)
+    (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
+      (cond
+        ((eq rv :no-return)
+         (setf (cleavir-bir:end function) nil))
+        (t
+         (setf (cleavir-bir:end function) (iblock inserter))
+         (terminate inserter
+                    (make-instance 'cleavir-bir:returni
+                                   :inputs (adapt inserter rv :multiple-values))))))
     (cleavir-bir:refresh-local-iblocks function)
     function))
 
@@ -373,18 +368,16 @@
 ;;; LEXICAL-BIND-AST
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter system)
-  (let* (;; Assumption: LETI begins the function's start block.
-         (leti (cleavir-bir:start (cleavir-bir:start (function inserter))))
-         (var (bind-variable (cleavir-ast:lhs-ast ast) leti (cleavir-ast:ignore ast)))
-         (rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
-    (cleavir-set:nadjoinf (cleavir-bir:bindings leti) var)
-    (adjoin-variable inserter var)
+  (let ((rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (cond ((eq rv :no-return) rv)
           (t
-           (insert inserter
-                   (make-instance 'cleavir-bir:writevar
-                     :inputs (adapt inserter rv '(:object))
-                     :outputs (list var)))
+           (let* ((var (bind-variable (cleavir-ast:lhs-ast ast) (cleavir-ast:ignore ast)))
+                  (leti (make-instance 'cleavir-bir:leti
+                          :inputs (adapt inserter rv '(:object))
+                          :outputs (list var))))
+             (adjoin-variable inserter var)
+             (insert inserter leti)
+             (setf (cleavir-bir:binder var) leti))
            ;; return no values
            ()))))
 

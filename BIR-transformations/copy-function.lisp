@@ -183,8 +183,7 @@
                         (cleavir-bir:iblock term)))
 
 (defmethod initialize-copy :after ((bind cleavir-bir:leti))
-  (cleavir-set:doset (b (cleavir-bir:bindings bind))
-    (setf (cleavir-bir:binder b) bind)))
+  (setf (cleavir-bir:binder b) (first (cleavir-bir:outputs bind))))
 
 (defmethod initialize-copy :after ((c cleavir-bir:catch))
   (cleavir-set:nadjoinf (cleavir-bir:catches (cleavir-bir:function c)) c))
@@ -238,14 +237,6 @@
     ((instruction cleavir-bir:alloca) stack map)
   (list
    :rtype (cleavir-bir:rtype instruction)))
-
-(defmethod clone-initargs append
-    ((instruction cleavir-bir:leti) stack map)
-  (list
-   :bindings (cleavir-set:mapset
-              'cleavir-set:set
-              (variable-copier stack map)
-              (cleavir-bir:bindings instruction))))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:unwind) stack map)

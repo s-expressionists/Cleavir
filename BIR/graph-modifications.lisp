@@ -120,30 +120,19 @@
     (cleavir-set:nremovef (functions (module function)) function)
     (map-iblocks #'clean-up-iblock function)))
 
-(defgeneric remove-binding (variable binder)
-  (:method (variable binder) (declare (ignore variable binder))))
-(defmethod remove-binding (variable (binder leti))
-  (let ((bindings (bindings binder)))
-    (cleavir-set:nremovef bindings variable)
-    (when (cleavir-set:empty-set-p (bindings binder))
-      (delete-instruction binder))))
-
 (defun clean-up-variable (variable)
   (cleavir-set:nremovef (variables (function variable)) variable)
-  (let* ((binder (binder variable))
-         (origin (origin binder)))
-    (remove-binding variable binder)
-    ;; Flame about source variables that were never used.
-    
-    ;; FIXME: We need to flame better than this, for example by
-    ;; propagating source information and displaying the form of the
-    ;; unique writer, and also making this warning a subclass of
-    ;; style-warning, as mandated by the spec. Also make sure this
-    ;; warning only happens for source variables, with coordination with
-    ;; CSTs, for example.
-    (unless (or (ignore variable)
-                (eq (use-status variable) 'read))
-      (warn 'unused-variable :variable variable :origin origin))))
+  ;; Flame about source variables that were never used.
+
+  ;; FIXME: We need to flame better than this, for example by
+  ;; propagating source information and displaying the form of the
+  ;; unique writer, and also making this warning a subclass of
+  ;; style-warning, as mandated by the spec. Also make sure this
+  ;; warning only happens for source variables, with coordination with
+  ;; CSTs, for example.
+  (unless (or (ignore variable)
+              (eq (use-status variable) 'read))
+    (warn 'unused-variable :variable variable :origin (origin (binder variable)))))
 
 ;;; If a variable is no longer referenced, remove it from its function
 ;;; and binder if possible.

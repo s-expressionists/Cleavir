@@ -82,9 +82,6 @@
 (defmethod disassemble-instruction-extra append ((inst load-time-value))
   (list (form inst) (read-only-p inst)))
 
-(defmethod disassemble-instruction-extra append ((inst leti))
-  (list (cleavir-set:mapset 'list #'disassemble-datum (bindings inst))))
-
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
   (with-disassembly ()

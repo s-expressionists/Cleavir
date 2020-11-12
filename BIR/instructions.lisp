@@ -128,10 +128,7 @@
              :type cleavir-set:set)))
 
 ;;; Mark a lexical binding.
-(defclass leti (no-input no-output operation)
-  ((%bindings :initarg :bindings :accessor bindings
-              :initform (cleavir-set:empty-set)
-              :type cleavir-set:set)))
+(defclass leti (writevar) ())
 
 ;;; Mark an explicit dynamic-extent lexical binding, so that extent is
 ;;; explicitly represented.
