@@ -302,12 +302,16 @@ has use-before-define on inputs ~a"
   (test (typep (catch u) 'catch)
         "Unwind ~a's catch ~a is not a catch" u (catch u))
   (test (typep (destination u) 'iblock)
-        "Unwind ~a's destinaction ~a is not an iblock" u (destination u))
+        "Unwind ~a's destination ~a is not an iblock" u (destination u))
   ;; Make sure the catch knows about us
   ;; (since if we're being verified, we must be reachable and live)
   (test (cleavir-set:presentp u (unwinds (catch u)))
         "Unwind ~a is not present in its catch's ~a unwinds ~a"
         u (catch u) (unwinds (catch u)))
+  ;; Make sure this unwind's block is an entrance of the destination block.
+  (test (cleavir-set:presentp (iblock u) (entrances (destination u)))
+        "The iblock of unwind ~a is not in the entrances set of the destination ~a"
+        u (destination u))
   ;; ensure inputs match destination
   (match-jump-types u (inputs u) (outputs u)))
 
@@ -382,6 +386,11 @@ has use-before-define on inputs ~a"
   (test (eq (function iblock) *verifying-function*)
         "iblock ~a is in the wrong function"
         iblock)
+  ;; Check entrances actually end in unwind.
+  (cleavir-set:doset (entrance (entrances iblock))
+    (test (typep (end entrance) 'unwind)
+          "entrance ~a of iblock ~a does not end in unwind"
+          entrance iblock))
   ;; inputs are all phis, and all phis have only terminators as definitions
   (flet ((phip (p) (typep p 'phi)))
     (test (every #'phip (inputs iblock))

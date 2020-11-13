@@ -225,6 +225,9 @@
 (defmethod replace-terminator :after ((new unwind) old)
   (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
+(defmethod replace-terminator :after (new (old unwind))
+  (cleavir-set:nremovef (entrances (destination old)) (iblock old)))
+
 (defun orphan-iblock-p (iblock)
   (and (cleavir-set:empty-set-p (predecessors iblock))
        (cleavir-set:empty-set-p (entrances iblock))))
@@ -338,13 +341,14 @@
   (let* ((jump (end iblock1))
          (end-predecessor (predecessor jump))
          (start (start iblock2))
-         (function (function iblock2)))
+         (function (function iblock2))
+         (end (end iblock2)))
     (cond (end-predecessor
            (setf (successor end-predecessor) start)
            (setf (predecessor start) end-predecessor))
           (t
            (setf (start iblock1) start)))
-    (setf (end iblock1) (end iblock2))
+    (setf (end iblock1) end)
     (map-iblock-instructions
      (lambda (instruction)
        (setf (cleavir-bir:iblock instruction)
@@ -356,10 +360,15 @@
             (remove-use input jump)
             (replace-uses input phi))
           (inputs jump) (inputs iblock2))
-    ;; Update the predecessors of the successors.
-    (dolist (succ (successors iblock2))
-      (cleavir-set:nremovef (predecessors succ) iblock2)
-      (cleavir-set:nadjoinf (predecessors succ) iblock1))
+    (if (typep end 'unwind)
+        ;; Update the new block's presence in entrances
+        (let ((dest (destination end)))
+          (cleavir-set:nremovef (entrances dest) iblock2)
+          (cleavir-set:nadjoinf (entrances dest) iblock1))
+        ;; Update the predecessors of the successors.
+        (dolist (succ (successors iblock2))
+          (cleavir-set:nremovef (predecessors succ) iblock2)
+          (cleavir-set:nadjoinf (predecessors succ) iblock1)))
     ;; If the block happens to be the end of its function, adjust
     (when (eq (end function) iblock2)
       (setf (end function) iblock1))
