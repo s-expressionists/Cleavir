@@ -349,10 +349,11 @@
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
-  (cleavir-set:filter
-   'cleavir-set:set
-   (lambda (ib) (not (cleavir-set:empty-set-p (entrances ib))))
-   (iblocks function)))
+  (let ((entrances (cleavir-set:empty-set)))
+    (cleavir-set:doset (catch (catches function))
+      (cleavir-set:doset (unwind (unwinds catch))
+        (cleavir-set:nadjoinf entrances (destination unwind))))
+    entrances))
 
 ;;; The set of blocks in a function that nonlocally exit, i.e. are terminated
 ;;; by UNWIND instructions.
