@@ -260,7 +260,7 @@
 
 (defgeneric replace-uses (new old))
 (defmethod replace-uses ((new datum) (old datum))
-  (cleavir-set:doset (use (uses old))
+  (dolist (use (uses old))
     (replace-input new old use)))
 (defmethod replace-uses ((new datum) (old linear-datum))
   (replace-input new old (use old)))

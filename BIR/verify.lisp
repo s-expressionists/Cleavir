@@ -82,7 +82,7 @@
              "Readvar ~a has non-variable input ~a"
              instruction (first inputs))
        (test (and (not (unused-p (first inputs)))
-                  (cleavir-set:presentp instruction (uses (first inputs))))
+                  (member instruction (uses (first inputs))))
              "Readvar ~a is not in the uses of its input variable ~a"
              instruction (first inputs)))
       (local-call
@@ -134,8 +134,7 @@ has use-before-define on inputs ~a"
       (writevar
        (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
              "Writevar ~a has bad outputs ~a" instruction outputs)
-       (test (cleavir-set:presentp instruction
-                                   (definitions (first outputs)))
+       (test (member instruction (definitions (first outputs)))
              "Writevar ~a is not a definition of its output ~a"
              instruction (first outputs)))
       (terminator
@@ -143,7 +142,7 @@ has use-before-define on inputs ~a"
          (test (every #'phi-p outputs)
                "Terminator ~a has non-phi outputs ~a"
                instruction (remove-if #'phi-p outputs)))
-       (flet ((presentp (o) (cleavir-set:presentp instruction (definitions o))))
+       (flet ((presentp (o) (member instruction (definitions o))))
          (test (every #'presentp outputs)
                "Terminator ~a is not a definition of its outputs ~a"
                instruction (remove-if #'presentp outputs))))
@@ -269,7 +268,7 @@ has use-before-define on inputs ~a"
 (defmethod verify progn ((rv readvar))
   (let ((var (first (inputs rv))))
     ;; make sure something writes the variable
-    (test (not (cleavir-set:empty-set-p (definitions var)))
+    (test (not (null (definitions var)))
           "Readvar ~a reads variable ~a with no writers"
           rv (first (inputs rv)))))
 
@@ -397,9 +396,9 @@ has use-before-define on inputs ~a"
           "iblock ~a has non-phi inputs ~a"
           iblock (remove-if #'phip (inputs iblock))))
   (flet ((terminatord (p)
-           (cleavir-set:every (lambda (inst)
-                                (typep inst 'terminator))
-                              (definitions p))))
+           (every (lambda (inst)
+                    (typep inst 'terminator))
+                  (definitions p))))
     (test (every #'terminatord (inputs iblock))
           "phis ~a have non-terminator definitions"
           (remove-if #'terminatord (inputs iblock))))

@@ -39,16 +39,16 @@
 (defgeneric definitions (datum))
 (defgeneric uses (datum))
 
-;; Shortcuts so that consing sets may be avoided.
+;; Shortcuts so that consing may be avoided.
 (defgeneric unused-p (datum)
-  (:method ((datum datum)) (cleavir-set:empty-set-p (uses datum))))
+  (:method ((datum datum)) (null (uses datum))))
 (defgeneric ssa-p (datum)
-  (:method ((datum datum)) (= 1 (cleavir-set:size (definitions datum)))))
+  (:method ((datum datum)) (= (length (definitions datum)) 1)))
 
 ;;; A datum with only one definition (static single assignment).
 (defclass ssa (datum) ())
 (defgeneric definition (ssa))
-(defmethod definitions ((datum ssa)) (cleavir-set:make-set datum))
+(defmethod definitions ((datum ssa)) (list datum))
 (defmethod ssa-p ((ssa datum)) t)
 
 ;;; A datum with only one use.
@@ -164,10 +164,13 @@
             :type iblock)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 (defmethod definitions ((phi phi))
-  (let ((ib (iblock phi)))
-    (cleavir-set:nunion
-     (cleavir-set:mapset 'cleavir-set:set #'end (predecessors ib))
-     (cleavir-set:mapset 'cleavir-set:set #'end (entrances ib)))))
+  (let ((ib (iblock phi))
+        (definitions '()))
+    (cleavir-set:doset (predecessor (predecessors ib))
+      (pushnew (end predecessor) definitions))
+    (cleavir-set:doset (entrance (entrances ib))
+      (pushnew (end entrance) definitions))
+    definitions))
 
 ;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
 (defun transitive-use (linear-datum)
@@ -193,12 +196,11 @@
                           :indefinite))
    ;; The LETI that binds this variable.
    (%binder :initarg :binder :accessor binder :type leti)
-   (%definitions :initarg :definitions :reader definitions
-                 :accessor writers
+   (%definitions :accessor writers
                  :initform (cleavir-set:empty-set)
                  ;; All WRITEVAR instructions.
                  :type cleavir-set:set)
-   (%uses :initarg :uses :accessor readers :reader uses
+   (%uses :accessor readers
           :initform (cleavir-set:empty-set)
           ;; All READVAR instructions.
           :type cleavir-set:set)
@@ -208,6 +210,12 @@
    ;; What kind of ignore declaration is on this variable?
    (%ignore :initarg :ignore :reader ignore)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defmethod uses ((datum variable))
+  (cleavir-set:set-to-list (readers datum)))
+
+(defmethod definitions ((datum variable))
+  (cleavir-set:set-to-list (writers datum)))
 
 (defun record-variable-set (variable)
   (with-slots (%use-status) variable
