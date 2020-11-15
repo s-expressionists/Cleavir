@@ -184,14 +184,22 @@
             (nth (position linear-datum (inputs use))
                  (outputs use))))))
 
-;;; A mutable lexical variable.
-;;; Has to be read from and written to via instructions.
+;;; A mutable lexical variable which must be read from and written to
+;;; via READVAR and WRITEVAR instructions.
 (defclass variable (lexical)
-  (;; Indicates the extent of a closed over variable. Filled in by
-   ;; dynamic extent analysis.
+  (;; Indicates the extent of a lexical variable. Filled in by
+   ;; variable extent analysis. Note that the dynamic extent of
+   ;; variables themselves are induced by the extent of the closures
+   ;; closing over it and independent of dynamic extent
+   ;; declarations. A dynamic extent declaration on a variable is
+   ;; instead supposed to mark the extent of the value it is bound
+   ;; to. Therefore we carry that kind of dynamic extent on the binder
+   ;; of the variable and propagate that back to implement the
+   ;; semantics of dynamic extent declarations.
    (%extent :initarg :extent :accessor extent
             :initform :unanalyzed
             :type (member :unanalyzed
+                          :local
                           :dynamic
                           :indefinite))
    ;; The LETI that binds this variable.
