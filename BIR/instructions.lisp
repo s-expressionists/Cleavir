@@ -2,7 +2,12 @@
 
 (defclass enclose (no-input computation)
   ((%code :initarg :code :reader code
-          :type function)))
+          :type function)
+   ;; Indicates the extent of the closure created by this
+   ;; instructions.
+   (%extent :initarg :extent :accessor extent
+            :initform :indefinite
+            :type (member :dynamic :indefinite))))
 (defmethod rtype ((d enclose)) :object)
 
 (defclass unreachable (no-input no-output terminator0) ())

@@ -6,4 +6,5 @@
   (:export #:process-captured-variables)
   (:export #:module-optimize-variables)
   (:export #:simple-unwinding-p)
-  (:export #:find-module-local-calls))
+  (:export #:find-module-local-calls)
+  (:export #:dynamic-extent-analyze-closures))

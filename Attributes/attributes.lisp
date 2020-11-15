@@ -37,7 +37,8 @@
         for attr in attributes
         for bits = (ecase attr
                      ((:no-call) #b11)
-                     ((:dyn-call) #b10))
+                     ((:dyn-call) #b10)
+                     ((:dx-call) #b100))
         do (setf result (logior result bits))
         finally (return result)))
 
@@ -47,5 +48,6 @@
   (logbitp
    (ecase attribute-name
      ((:no-call) 0)
-     ((:dyn-call) 1))
+     ((:dyn-call) 1)
+     ((:dx-call) 2))
    attributes))
