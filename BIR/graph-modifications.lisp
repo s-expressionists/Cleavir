@@ -187,8 +187,7 @@
   (typecase instruction
     (computation (assert (unused-p instruction)))
     (operation
-     (assert (every (lambda (o) (or (not (ssa-p o)) (unused-p o)))
-                    (outputs instruction)))))
+     (assert (every #'unused-p (outputs instruction)))))
   (clean-up-instruction instruction)
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
@@ -259,9 +258,6 @@
         (nsubstitute new old (inputs instruction) :test #'eq)))
 
 (defgeneric replace-uses (new old))
-(defmethod replace-uses ((new datum) (old datum))
-  (dolist (use (uses old))
-    (replace-input new old use)))
 (defmethod replace-uses ((new datum) (old linear-datum))
   (replace-input new old (use old)))
 (defmethod replace-uses ((new linear-datum) (old linear-datum))

@@ -72,18 +72,13 @@
         "Instruction ~a's iblock ~a does not match its presence in ~a"
         instruction (iblock instruction) *verifying-iblock*)
   ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate
-  ;; this instruction (but see KLUDGE above). READVAR has a non-linear input.
-  ;; Also check that the uses are hooked up.
+  ;; this instruction (but see KLUDGE above).
   (let ((inputs (inputs instruction)))
     (typecase instruction
       (readvar
        (test (and (= (length inputs) 1)
                   (typep (first inputs) 'variable))
-             "Readvar ~a has non-variable input ~a"
-             instruction (first inputs))
-       (test (and (not (unused-p (first inputs)))
-                  (member instruction (uses (first inputs))))
-             "Readvar ~a is not in the uses of its input variable ~a"
+             "Accessvar ~a has non-variable input ~a"
              instruction (first inputs)))
       (local-call
        (assert (typep (first inputs) 'function))
@@ -134,7 +129,7 @@ has use-before-define on inputs ~a"
       (writevar
        (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
              "Writevar ~a has bad outputs ~a" instruction outputs)
-       (test (member instruction (definitions (first outputs)))
+       (test (cleavir-set:presentp instruction (writers (first outputs)))
              "Writevar ~a is not a definition of its output ~a"
              instruction (first outputs)))
       (terminator
@@ -268,9 +263,9 @@ has use-before-define on inputs ~a"
 (defmethod verify progn ((rv readvar))
   (let ((var (first (inputs rv))))
     ;; make sure something writes the variable
-    (test (not (null (definitions var)))
+    (test (plusp (cleavir-set:size (writers var)))
           "Readvar ~a reads variable ~a with no writers"
-          rv (first (inputs rv)))))
+          rv var)))
 
 (defmethod verify progn ((call call))
   (test (> (length (inputs call)) 0)

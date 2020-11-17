@@ -36,26 +36,17 @@
     (let ((name (name o)))
       (when name (write name :stream stream)))))
 
-(defgeneric definitions (datum))
-(defgeneric uses (datum))
-
-;; Shortcuts so that consing may be avoided.
-(defgeneric unused-p (datum)
-  (:method ((datum datum)) (null (uses datum))))
-(defgeneric ssa-p (datum)
-  (:method ((datum datum)) (= (length (definitions datum)) 1)))
+(defgeneric unused-p (datum))
+(defgeneric ssa-p (datum))
 
 ;;; A datum with only one definition (static single assignment).
 (defclass ssa (datum) ())
-(defgeneric definition (ssa))
-(defmethod definitions ((datum ssa)) (list datum))
 (defmethod ssa-p ((ssa datum)) t)
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :reader use :accessor %use
          :type instruction)))
-(defmethod uses ((datum linear-datum)) (cleavir-set:make-set (use datum)))
 (defmethod unused-p ((datum linear-datum))
   (not (slot-boundp datum '%use)))
 
@@ -64,7 +55,6 @@
 
 ;;; An SSA datum with only one definition - itself.
 (defclass value (ssa) ())
-(defmethod definition ((datum value)) datum)
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
@@ -163,6 +153,9 @@
   ((%iblock :initarg :iblock :reader iblock
             :type iblock)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defgeneric definitions (datum))
+
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
         (definitions '()))
@@ -204,14 +197,14 @@
                           :indefinite))
    ;; The LETI that binds this variable.
    (%binder :initarg :binder :accessor binder :type leti)
-   (%definitions :accessor writers
-                 :initform (cleavir-set:empty-set)
-                 ;; All WRITEVAR instructions.
-                 :type cleavir-set:set)
-   (%uses :accessor readers
-          :initform (cleavir-set:empty-set)
-          ;; All READVAR instructions.
-          :type cleavir-set:set)
+   (%writers :accessor writers
+             :initform (cleavir-set:empty-set)
+             ;; All WRITEVAR instructions.
+             :type cleavir-set:set)
+   (%readers :accessor readers
+             :initform (cleavir-set:empty-set)
+             ;; All READVAR instructions.
+             :type cleavir-set:set)
    ;; Has this variable ever been used?
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
@@ -219,11 +212,8 @@
    (%ignore :initarg :ignore :reader ignore)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
-(defmethod uses ((datum variable))
-  (cleavir-set:set-to-list (readers datum)))
-
-(defmethod definitions ((datum variable))
-  (cleavir-set:set-to-list (writers datum)))
+(defmethod unused-p ((datum variable))
+  (cleavir-set:empty-set-p (readers datum)))
 
 (defun record-variable-set (variable)
   (with-slots (%use-status) variable

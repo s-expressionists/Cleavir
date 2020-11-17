@@ -13,7 +13,7 @@
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:output #:name #:ctype #:ctyped-p
-           #:definitions #:uses #:definition #:use #:transitive-use #:unused-p)
+           #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
            #:use-status #:ignore
            #:record-variable-ref #:record-variable-set

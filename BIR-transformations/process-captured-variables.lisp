@@ -62,10 +62,10 @@
       (return-from function-extent :indefinite)))
   :dynamic)
 
-;; Determine the extent of every variable in a function based on the
-;; extent of any functions which close over it.
-;; Precondition: environments of functions must be filled in, and it
-;; helps to also analyze closure extent beforehand.
+;;; Determine the extent of every variable in a function based on the
+;;; extent of any functions which close over it.
+;;; Precondition: environments of functions must be filled in, and it
+;;; helps to also analyze closure extent beforehand.
 (defun determine-variable-extents (module)
   ;; First, initialize the extent of every variable.
   (cleavir-set:doset (function (cleavir-bir:functions module))
