@@ -31,9 +31,77 @@
         until (cst:null remaining)
         do (check-binding (cst:first remaining))))
 
+(defun process-remaining-let-bindings (bindings idspecs rdspecs body-forms-cst environment system)
+  (if (null bindings)
+      ;; We ran out of bindings.  We must build an AST for the body of
+      ;; the function.
+      (let ((new-env (augment-environment-with-declarations environment system rdspecs)))
+	(process-progn (convert-sequence body-forms-cst new-env system)))
+      (destructuring-bind (variable-cst . lexical-ast) (first bindings)
+	(let* (;; We enter the new variable into the environment and
+	       ;; then we process remaining parameters and ultimately
+	       ;; the body of the function.
+	       (new-env (augment-environment-with-variable
+			 variable-cst (first (first idspecs)) system environment environment))
+	       ;; We compute the AST of the remaining computation by
+	       ;; recursively calling this same function with the
+	       ;; remaining bindings (if any) and the environment that
+	       ;; we obtained by augmenting the original one with the
+	       ;; parameter variable.
+	       (next-ast (process-remaining-let-bindings (rest bindings)
+							 (rest idspecs)
+							 rdspecs
+							 body-forms-cst
+							 new-env
+							 system)))
+	  ;; All that is left to do now, is to construct the AST to
+	  ;; return by using the new variable and the AST of the
+	  ;; remaining computation as components.
+	  (set-or-bind-variable variable-cst lexical-ast next-ast new-env system)))))
+
+;;; We convert a LET form CST by lexically binding every variable.
+(defmethod convert-let (cst environment system)
+  (check-cst-proper-list cst 'form-must-be-proper-list)
+  (check-argument-count cst 1 nil)
+  (cst:db origin (let-cst bindings-cst . body-forms-cst) cst
+    (declare (ignore let-cst))
+    (check-bindings bindings-cst 'let)
+    (multiple-value-bind (declaration-csts forms-cst)
+        (cst:separate-ordinary-body body-forms-cst)
+      (let* ((canonical-declaration-specifiers
+               (cst:canonicalize-declarations
+                system (cleavir-env:declarations environment) declaration-csts))
+             (binding-csts (cst:listify bindings-cst))
+             (variable-csts (loop for binding-cst in binding-csts
+                                  collect (if (cst:atom binding-cst)
+                                              binding-cst
+                                              (cst:first binding-cst))))
+             (initform-csts (loop for binding-cst in binding-csts
+                                  collect (if (or (cst:atom binding-cst)
+                                                  (cst:null (cst:rest binding-cst)))
+                                              (make-atom-cst nil origin)
+                                              (cst:second binding-cst))))
+             (value-asts (loop for initform-cst in initform-csts
+                               collect (convert initform-cst environment system))))
+        (multiple-value-bind (item-specific-dspecs remaining-dspecs)
+            (itemize-declaration-specifiers (mapcar #'list variable-csts)
+                                            canonical-declaration-specifiers)
+          (process-remaining-let-bindings (mapcar #'cons variable-csts value-asts)
+                                          item-specific-dspecs
+                                          remaining-dspecs
+                                          forms-cst
+                                          environment
+                                          system))))))
+
+;;; NOTE: The following is how LETs used to be converted. We needed to
+;;; go through a LAMBDA form for technical reasons related to cell
+;;; conversion in HIR, but in BIR this reason no longer exists, so we
+;;; convert directly to lexical bind instructions for efficiency
+;;; reasons.
+
 ;;; We convert a LET form CST by transforming it into an equivalent
 ;;; LAMBDA form CST.
-
+#+(or)
 (defmethod convert-let (cst environment system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)

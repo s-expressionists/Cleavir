@@ -254,7 +254,7 @@
                        (name (cst:raw name-cst)))
                   (cons name fun))))
 
-;;; Compute and return a list of SETQ-ASTs that will assign the AST of
+;;; Compute and return a list of LEXICAL-BIND-ASTs that will assign the AST of
 ;;; each function in a list of function ASTs to its associated
 ;;; LEXICAL-AST.  FUNCTIONS is a list of CONS cells.  Each CONS cell
 ;;; has a function name in its CAR and an AST in its CDR.
