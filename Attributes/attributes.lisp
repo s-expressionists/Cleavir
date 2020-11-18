@@ -30,6 +30,12 @@
 ;;; that) because if f was e.g. stored in a global it could later
 ;;; be called in arbitrary dynamic environments.
 
+;;; :DX-CALL implies that the function's callable arguments do not
+;;; escape. For example, the function (lambda (f) (funcall f)) is
+;;; DX-CALL, while (lambda (f) f) is not. FIXME: This is probably
+;;; better expressed as a dynamic extent attribute on individual
+;;; arguments.
+
 ;;; We represent boolean attributes as an integer bitfield.
 
 (defun make-attributes (&rest attributes)
