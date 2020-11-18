@@ -33,14 +33,14 @@
 ;;; We represent boolean attributes as an integer bitfield.
 
 (defun make-attributes (&rest attributes)
-  (loop with result = 0
-        for attr in attributes
-        for bits = (ecase attr
-                     ((:no-call) #b11)
-                     ((:dyn-call) #b10)
-                     ((:dx-call) #b100))
-        do (setf result (logior result bits))
-        finally (return result)))
+  (let ((result 0))
+    (dolist (attr attributes)
+      (let ((bits (ecase attr
+                    ((:no-call) #b11)
+                    ((:dyn-call) #b10)
+                    ((:dx-call) #b100))))
+        (setf result (logior result bits))))
+    result))
 
 (defun default-attributes () 0)
 
