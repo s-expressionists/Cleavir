@@ -308,16 +308,15 @@
                                                  system)))
     (set-or-bind-variable
      (cst:name parameter) lexical-ast
-     (lambda ()
-       (process-parameters-in-group remaining-parameters-in-group
-                                    remaining-parameter-groups
-                                    remaining-idspecs-in-group
-                                    remaining-idspecs
-                                    remaining-entries-in-group
-                                    remaining-entries
-                                    body
-                                    new-env
-                                    system))
+     (process-parameters-in-group remaining-parameters-in-group
+                                  remaining-parameter-groups
+                                  remaining-idspecs-in-group
+                                  remaining-idspecs
+                                  remaining-entries-in-group
+                                  remaining-entries
+                                  body
+                                  new-env
+                                  system)
      new-env system)))
 
 (defmethod process-parameter
@@ -347,16 +346,15 @@
      var-cst (first entry)
      supplied-p-cst (second entry)
      init-ast new-env
-     (lambda ()
-       (process-parameters-in-group remaining-parameters-in-group
-                                    remaining-parameter-groups
-                                    remaining-idspecs-in-group
-                                    remaining-idspecs
-                                    remaining-entries-in-group
-                                    remaining-entries
-                                    body
-                                    new-env
-                                    system))
+     (process-parameters-in-group remaining-parameters-in-group
+                                  remaining-parameter-groups
+                                  remaining-idspecs-in-group
+                                  remaining-idspecs
+                                  remaining-entries-in-group
+                                  remaining-entries
+                                  body
+                                  new-env
+                                  system)
      system)))
 
 (defmethod process-parameter
@@ -386,16 +384,15 @@
      var-cst (first entry)
      supplied-p-cst (second entry)
      init-ast new-env
-     (lambda ()
-       (process-parameters-in-group remaining-parameters-in-group
-                                    remaining-parameter-groups
-                                    remaining-idspecs-in-group
-                                    remaining-idspecs
-                                    remaining-entries-in-group
-                                    remaining-entries
-                                    body
-                                    new-env
-                                    system))
+     (process-parameters-in-group remaining-parameters-in-group
+                                  remaining-parameter-groups
+                                  remaining-idspecs-in-group
+                                  remaining-idspecs
+                                  remaining-entries-in-group
+                                  remaining-entries
+                                  body
+                                  new-env
+                                  system)
      system)))
 
 (defmethod process-parameter
@@ -421,16 +418,15 @@
          (init-ast (convert init-form-cst environment system)))
     (set-or-bind-variable
      var-cst init-ast
-     (lambda ()
-       (process-parameters-in-group remaining-parameters-in-group
-                                    remaining-parameter-groups
-                                    remaining-idspecs-in-group
-                                    remaining-idspecs
-                                    remaining-entries-in-group
-                                    remaining-entries
-                                    body
-                                    new-env
-                                    system))
+     (process-parameters-in-group remaining-parameters-in-group
+                                  remaining-parameter-groups
+                                  remaining-idspecs-in-group
+                                  remaining-idspecs
+                                  remaining-entries-in-group
+                                  remaining-entries
+                                  body
+                                  new-env
+                                  system)
      new-env system)))
 
 (defun itemize-declaration-specifiers-by-parameter-group

@@ -8,19 +8,19 @@
 ;;; variable is special, this function creates a BIND-AST with
 ;;; NEXT-AST as its body.  If the variable is lexical, this function
 ;;; creates a PROGN-AST with two ASTs in it.  The first one is a
-;;; SETQ-AST that assigns the value to the variable, and the second
+;;; LEXICAL-BIND-AST that assigns the value to the variable, and the second
 ;;; one is the NEXT-AST.
-(defun set-or-bind-variable (variable-cst value-ast next-thunk env system)
+(defun set-or-bind-variable (variable-cst value-ast next-ast env system)
   (let ((info (cleavir-env:variable-info env (cst:raw variable-cst))))
     (assert (not (null info)))
     (if (typep info 'cleavir-env:special-variable-info)
         (convert-special-binding
-         variable-cst value-ast next-thunk env system)
+         variable-cst value-ast next-ast env system)
 	(cleavir-ast:make-progn-ast
 	 (list (cleavir-ast:make-lexical-bind-ast
 		(cleavir-env:identity info)
 		value-ast
                 :origin (cst:source variable-cst)
                 :ignore (cleavir-env:ignore info))
-	       (funcall next-thunk))
+	       next-ast)
          :origin (cst:source variable-cst)))))
