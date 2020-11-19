@@ -78,6 +78,7 @@
          :no-return)
         ((1) ; a single branch returned, so don't bother with a merge
          (destructuring-bind (_ block rv) (first map)
+           (declare (ignore _))
            (proceed inserter block)
            rv))
         (t ; multiple blocks, so we have to merge their results
@@ -613,7 +614,9 @@
 ;;; LOAD-TIME-VALUE-AST. Needs work.
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)
+  (declare (ignore system))
   (let ((inst (make-instance 'cleavir-bir:load-time-value
-                             :form (cleavir-ast:form ast) :read-only-p (cleavir-ast:read-only-p ast))))
+                :form (cleavir-ast:form ast)
+                :read-only-p (cleavir-ast:read-only-p ast))))
     (cleavir-set:nadjoinf (cleavir-bir:load-time-values *current-module*) inst)
     (list (insert inserter inst))))

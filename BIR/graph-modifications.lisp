@@ -10,7 +10,7 @@
 
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
-  (declare (ignore use))
+  (declare (cl:ignore use))
   (slot-makunbound datum '%use))
 (defmethod remove-use ((datum variable) use)
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
@@ -36,7 +36,7 @@
 (defmethod shared-initialize :before
     ((inst instruction) slot-names &rest initargs
      &key (inputs nil inputsp) &allow-other-keys)
-  (declare (ignore slot-names initargs))
+  (declare (cl:ignore slot-names initargs))
   ;; Maintain uses
   ;; The initform for inputs is nil, so we don't need to do this updating unless
   ;; an :inputs was provided.
@@ -65,7 +65,7 @@
 
 (defmethod shared-initialize :before
     ((inst operation) slot-names &rest initargs &key outputs &allow-other-keys)
-  (declare (ignore initargs))
+  (declare (cl:ignore initargs))
   ;; Maintain use lists
   (when (or (eq slot-names 't) (member '%outputs slot-names))
     (when (slot-boundp inst '%outputs)
@@ -222,9 +222,11 @@
   (values))
 
 (defmethod replace-terminator :after ((new unwind) old)
+  (declare (ignore old))
   (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
 (defmethod replace-terminator :after (new (old unwind))
+  (declare (ignore new))
   (cleavir-set:nremovef (entrances (destination old)) (iblock old)))
 
 (defun orphan-iblock-p (iblock)

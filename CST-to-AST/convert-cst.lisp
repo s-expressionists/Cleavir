@@ -19,6 +19,7 @@
 
 (defmethod convert-cst
     (cst (info cleavir-env:constant-variable-info) env system)
+  (declare (ignore cst))
   (let ((cst (cst:cst-from-expression (cleavir-env:value info))))
     (convert-constant cst env system)))
 
@@ -146,7 +147,7 @@
 ;;; We do this by generating a call to SYMBOL-VALUE.
 
 (defmethod convert-special-variable (cst info global-env system)
-  (declare (ignore global-env))
+  (declare (ignore cst global-env))
   (let ((symbol (cleavir-env:name info))
         (origin (cst:source cst)))
     (cleavir-ast:make-symbol-value-ast

@@ -9,7 +9,7 @@
      ast)
     result))
 
-(defun hoist-load-time-value (ast dynamic-environment-ast)
+(defun hoist-load-time-value (ast)
   (let* ((load-time-value-asts (find-load-time-value-asts ast))
 	 (forms (mapcar #'cleavir-ast:form load-time-value-asts)))
     (loop for ast in load-time-value-asts

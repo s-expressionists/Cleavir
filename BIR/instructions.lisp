@@ -23,7 +23,7 @@
 
 (defmethod initialize-instance :after
     ((i writevar) &rest initargs &key outputs)
-  (declare (ignore initargs))
+  (declare (cl:ignore initargs))
   (cleavir-set:nadjoinf (writers (first outputs)) i)
   i)
 
@@ -33,7 +33,7 @@
 
 (defmethod initialize-instance :after
     ((i readvar) &rest initargs &key inputs)
-  (declare (ignore initargs))
+  (declare (cl:ignore initargs))
   (cleavir-set:nadjoinf (readers (first inputs)) i)
   i)
 
@@ -45,7 +45,7 @@
 
 (defmethod initialize-instance :after
     ((i constant-reference) &rest initargs &key inputs)
-  (declare (ignore initargs))
+  (declare (cl:ignore initargs))
   (cleavir-set:nadjoinf (readers (first inputs)) i)
   i)
 

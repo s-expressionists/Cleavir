@@ -150,6 +150,7 @@
 (defmethod copy-input ((datum cleavir-bir:datum) map)
   (copy-of datum map))
 (defmethod copy-input ((datum cleavir-bir:load-time-value) map)
+  (declare (ignore map))
   (make-instance 'cleavir-bir:load-time-value
     :name (cleavir-bir:name datum)
     :form (cleavir-bir:form datum)
@@ -183,7 +184,7 @@
                         (cleavir-bir:iblock term)))
 
 (defmethod initialize-copy :after ((bind cleavir-bir:leti))
-  (setf (cleavir-bir:binder b) (first (cleavir-bir:outputs bind))))
+  (setf (cleavir-bir:binder bind) (first (cleavir-bir:outputs bind))))
 
 (defmethod initialize-copy :after ((c cleavir-bir:catch))
   (cleavir-set:nadjoinf (cleavir-bir:catches (cleavir-bir:function c)) c))
@@ -235,6 +236,7 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:alloca) stack map)
+  (declare (ignore stack map))
   (list
    :rtype (cleavir-bir:rtype instruction)))
 

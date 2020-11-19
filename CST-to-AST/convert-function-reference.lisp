@@ -1,7 +1,7 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
 (defmethod convert-global-function-reference (cst info global-env system)
-  (declare (ignore global-env))
+  (declare (ignore global-env system))
   (let ((source (cst:source cst)))
     (cleavir-ast:make-fdefinition-ast
      (cleavir-ast:make-constant-ast (cleavir-env:name info) :origin source)
@@ -15,19 +15,22 @@
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:local-function-info) env system)
-  (declare (ignore env system))
+  (declare (ignore cst env system))
   (cleavir-env:identity info))
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:global-macro-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-global-macro :cst cst))
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:local-macro-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-local-macro :cst cst))
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:special-operator-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-special-operator :cst cst))
 
 ;;; These are used by (foo ...) forms.
@@ -48,17 +51,20 @@
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:local-function-info) env system)
-  (declare (ignore env system))
+  (declare (ignore cst env system))
   (cleavir-env:identity info))
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:global-macro-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-global-macro :cst cst))
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:local-macro-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-local-macro :cst cst))
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:special-operator-info) env system)
+  (declare (ignore env system))
   (error 'function-name-names-special-operator :cst cst))

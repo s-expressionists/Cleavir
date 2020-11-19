@@ -183,7 +183,7 @@
 
 (defgeneric compile-test-ast (ast inserter system)
   (:method :around ((ast cleavir-ast:ast) inserter system)
-    (declare (ignore system))
+    (declare (ignore inserter system))
     (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))

@@ -5,8 +5,7 @@
      stream
      (language acclimation:english))
   (let ((form (cst:raw (cst condition))))
-    (format stream "The lambda list ~s is malformed."
-          (cst:raw (cst condition)))))
+    (format stream "The lambda list ~s is malformed." form)))
 
 (defmethod acclimation:report-condition
     ((condition incorrect-number-of-arguments)

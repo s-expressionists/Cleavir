@@ -197,6 +197,7 @@
      body
      environment
      system)
+  (declare (ignore idspecs entries))
   (values (convert-body body environment system) '()))
 
 (defmethod process-parameter-groups

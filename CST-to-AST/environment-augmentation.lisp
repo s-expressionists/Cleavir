@@ -109,7 +109,7 @@
      declaration-data-cst
      environment
      system)
-  (declare (ignore system))
+  (declare (ignore declaration-identifier-cst system))
   ;; This case is a bit tricky, because if the
   ;; variable is globally special, nothing should
   ;; be added to the environment.

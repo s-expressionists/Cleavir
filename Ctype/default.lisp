@@ -50,7 +50,7 @@
 (defun intersection-ctype-p (ctype)
   (and (consp ctype) (eq (car ctype) 'and)))
 (defun intersection-ctypes (ctype) (rest ctype))
-(defun union-ctype-p (ctype sys)
+(defun union-ctype-p (ctype)
   (and (consp ctype) (eq (car ctype) 'or)))
 (defun union-ctypes (ctype) (rest ctype))
 (defun function-ctype-p (ctype)
@@ -190,6 +190,8 @@
         ((bottom-p ct2 sys) ct1)
         ((top-p ct2 sys) 'nil)
         (t `(and ,ct1 (not ,ct2)))))
+
+(defun function-returns (fctype) (third fctype))
 
 (defun general-function-returns (fctype system)
   (cond ((function-ctype-p fctype)

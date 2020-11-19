@@ -1,6 +1,6 @@
 (defpackage #:cleavir-ctype
   (:use #:common-lisp)
-  (:shadow #:subtypep #:rest
+  (:shadow #:subtypep
            #:upgraded-array-element-type
            #:upgraded-complex-part-type
            #:cons #:array #:complex #:member

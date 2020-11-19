@@ -33,6 +33,7 @@
         (noptional 0))
     (assert (not (lambda-list-too-hairy-p lambda-list)))
     (map-lambda-list (lambda (state item)
+                       (declare (ignore item))
                        (ecase state
                          (:required (incf nrequired))
                          (&optional (incf noptional))))

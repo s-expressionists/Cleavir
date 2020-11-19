@@ -10,6 +10,7 @@
 ;;; If a policy is directly specified, just use that.
 (defmethod compute-policy-quality :around
     (name optimize environment)
+  (declare (ignore environment))
   (multiple-value-bind (value present-p)
       (optimize-value optimize name)
     (if present-p

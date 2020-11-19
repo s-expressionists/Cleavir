@@ -38,7 +38,7 @@
 
 (defmethod convert-setq-special-variable
     (var-cst form-ast info global-env system)
-  (declare (ignore system))
+  (declare (ignore global-env system))
   (let* ((origin (cst:source var-cst))
          (temp (cleavir-ast:make-lexical-ast (gensym) :origin origin)))
     (process-progn
