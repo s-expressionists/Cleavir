@@ -451,7 +451,7 @@
                (not (constantp form env)))
           (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
           (cleavir-ast:make-constant-ast
-           (cleavir-env:eval form (cleavir-env:compile-time env) env)
+           (cst-eval form-cst (cleavir-env:compile-time env) system)
            :origin origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
