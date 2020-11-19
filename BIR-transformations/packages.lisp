@@ -8,4 +8,5 @@
   (:export #:find-module-local-calls)
   (:export #:determine-function-environments)
   (:export #:determine-closure-extents)
-  (:export #:determine-variable-extents))
+  (:export #:determine-variable-extents)
+  (:export #:meta-evaluate-module))
