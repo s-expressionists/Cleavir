@@ -260,6 +260,9 @@
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
                          :type dynamic-environment)
+   ;; This flag lets us know when this block has already been deleted,
+   ;; so we can avoid analyzing deleted blocks.
+   (%deletedp :accessor deletedp :initform nil :type boolean)
    ;; The function this belongs to.
    (%function :initarg :function :accessor function :type function)
    ;; For debug/introspection

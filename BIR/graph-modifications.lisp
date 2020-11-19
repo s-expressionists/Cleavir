@@ -247,7 +247,8 @@
       (dolist (s successors)
         (cleavir-set:nremovef (predecessors s) iblock)
         (when (orphan-iblock-p s)
-          (delete-iblock s))))))
+          (delete-iblock s)))))
+  (setf (deletedp iblock) t))
 
 (defun maybe-delete-iblock (iblock)
   (when (orphan-iblock-p iblock)

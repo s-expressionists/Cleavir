@@ -25,11 +25,14 @@
 
 ;; 
 (defun meta-evaluate-iblock-forward (iblock)
-  (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
-    (meta-evaluate-instruction instruction))
-  ;; Make sure to merge the successors as much as possible so we can
-  ;; trigger more optimizations.
-  (loop while (cleavir-bir:merge-successor-if-possible iblock)))
+  ;; Make sure not to look at a block that might have been deleted
+  ;; earlier in the forward pass.
+  (unless (cleavir-bir:deletedp iblock)
+    (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
+      (meta-evaluate-instruction instruction))
+    ;; Make sure to merge the successors as much as possible so we can
+    ;; trigger more optimizations.
+    (loop while (cleavir-bir:merge-successor-if-possible iblock))))
 
 ;; Remove dead code for the backward pass.
 (defun meta-evaluate-iblock-backward (iblock)
