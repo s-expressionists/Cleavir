@@ -52,12 +52,14 @@
             (when (cleavir-attributes:has-boolean-attribute-p
                    (cleavir-bir:attributes instruction)
                    :flushable)
+              #+(or)
               (format t "~&meta-evaluate: flushing computation")
               (cleavir-bir:delete-computation instruction)))
            (cleavir-bir:vprimop
             (let ((name (cleavir-bir:name (cleavir-bir:info instruction))))
               (when (member name
                             '(fdefinition car cdr symbol-value))
+                #+(or)
                 (format t "~&meta-evaluate: flushing primop ~a" name)
                 (cleavir-bir:delete-computation instruction))))))))))
 
