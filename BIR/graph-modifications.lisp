@@ -120,6 +120,7 @@
     (cleavir-set:nremovef (functions (module function)) function)
     (map-iblocks #'clean-up-iblock function)))
 
+;;; Remove a variable from a module.
 (defun clean-up-variable (variable)
   (cleavir-set:nremovef (variables (function variable)) variable)
   ;; Flame about source variables that were never used.
@@ -134,22 +135,22 @@
               (eq (use-status variable) 'read))
     (warn 'unused-variable :variable variable :origin (origin (binder variable)))))
 
-;;; If a variable is no longer referenced, remove it from its function
-;;; and binder if possible.
-(defun maybe-clear-variable (variable)
-  (when (and (cleavir-set:empty-set-p (cleavir-bir:readers variable))
-             (cleavir-set:empty-set-p (cleavir-bir:writers variable)))
-    (clean-up-variable variable)
-    t))
-
 (defmethod clean-up-instruction progn ((inst readvar))
   (let ((variable (first (inputs inst))))
     (cleavir-set:nremovef (readers variable) inst)
-    (maybe-clear-variable variable)))
+    ;; If a variable is no longer referenced, remove all of its
+    ;; writers.
+    (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+      (cleavir-set:doset (writer (writers variable))
+        (delete-instruction writer)))))
 (defmethod clean-up-instruction progn ((inst writevar))
   (let ((variable (first (outputs inst))))
     (cleavir-set:nremovef (writers variable) inst)
-    (maybe-clear-variable variable)))
+    ;; When the variable no longer has any writers or readers, clean it
+    ;; up.
+    (when (and (cleavir-set:empty-set-p (cleavir-bir:writers variable))
+               (cleavir-set:empty-set-p (cleavir-bir:readers variable)))
+      (clean-up-variable variable))))
 (defmethod clean-up-instruction progn ((inst constant-reference))
   (let ((constant (first (inputs inst))))
     (cleavir-set:nremovef (readers constant) inst)
@@ -287,11 +288,13 @@
   (values))
 
 ;;; Deletes a pair of instructions that pass values along.
-;;; That is, given inputs -> in-inst ... out-inst -> outputs,
-;;; we replace the outputs with the inputs and delete both instructions.
-;;; This is a separate function because for one thing it's reasonably common,
-;;; and for two it internally messes with several invariants of the IR, which
-;;; would be tricky to deal with outside of the BIR system.
+;;; That is, given inputs -> in-inst ... out-inst -> outputs, we
+;;; replace the outputs with the inputs and delete the output
+;;; instruction. We rely on other triggers to clean up the in-inst.
+;;; This is a separate function because for one thing it's reasonably
+;;; common, and for two it internally messes with several invariants
+;;; of the IR, which would be tricky to deal with outside of the BIR
+;;; system.
 (defun delete-transmission (in-inst out-inst)
   (let ((outputs (outputs out-inst))
         (inputs (inputs in-inst)))
@@ -304,8 +307,7 @@
     (loop for inp in inputs do (remove-use inp in-inst))
     ;; Replace.
     (mapc #'replace-uses inputs outputs))
-  (delete-instruction out-inst)
-  (delete-instruction in-inst))
+  (delete-instruction out-inst))
 
 ;;; Merge IBLOCK to its unique successor if possible, returning false
 ;;; if not.
