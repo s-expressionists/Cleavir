@@ -36,6 +36,9 @@
 ;;; better expressed as a dynamic extent attribute on individual
 ;;; arguments.
 
+;;; :FLUSHABLE means the function does not side-effect and calls to it
+;;; can be deleted if the value of the call is not used.
+
 ;;; We represent boolean attributes as an integer bitfield.
 
 (defun make-attributes (&rest attributes)
@@ -44,7 +47,8 @@
       (let ((bits (ecase attr
                     ((:no-call) #b11)
                     ((:dyn-call) #b10)
-                    ((:dx-call) #b100))))
+                    ((:dx-call) #b100)
+                    ((:flushable) #b1000))))
         (setf result (logior result bits))))
     result))
 
@@ -55,5 +59,6 @@
    (ecase attribute-name
      ((:no-call) 0)
      ((:dyn-call) 1)
-     ((:dx-call) 2))
+     ((:dx-call) 2)
+     ((:flushable) 3))
    attributes))

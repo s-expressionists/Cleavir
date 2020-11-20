@@ -39,13 +39,16 @@
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
     (when (and (typep instruction 'cleavir-bir:computation)
                (cleavir-bir:unused-p instruction))
-      ;; FIXME: Replace this with a flushable attribute on
-      ;; computations somehow.
       (typecase instruction
         ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
          #+(or)
          (format t "meta-evaluate: flushing ~a" instruction)
-         (cleavir-bir:delete-computation instruction))))))
+         (cleavir-bir:delete-computation instruction))
+        (cleavir-bir:abstract-call
+         (when (cleavir-attributes:has-boolean-attribute-p
+                (cleavir-bir:attributes instruction)
+                :flushable)
+           (cleavir-bir:delete-computation instruction)))))))
 
 (defgeneric meta-evaluate-instruction (instruction))
 
