@@ -483,7 +483,28 @@
     :forms forms))
 
 (cleavir-io:define-save-info top-level-function-ast
-  (:forms forms))
+    (:forms forms))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Class PRIMOP-AST.
+;;;
+;;; A PRIMOP-AST represents the invocation of a primitive operator.
+;;; See the cleavir-primop system for more information.
+
+(defclass primop-ast (ast)
+  ((%info :initarg :info :reader info)
+   (%argument-asts :initarg :argument-asts :reader argument-asts)
+   (%attributes :initarg :attributes :reader attributes
+                :initform (cleavir-attributes:default-attributes))))
+
+(cleavir-io:define-save-info primop-ast
+    (:info info)
+  (:argument-asts argument-asts)
+  (:attributes attributes))
+
+(defmethod children ((ast primop-ast))
+  (argument-asts ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

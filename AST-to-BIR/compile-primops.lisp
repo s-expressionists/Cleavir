@@ -1,5 +1,36 @@
 (in-package #:cleavir-ast-to-bir)
 
+(defmethod compile-ast ((ast cleavir-ast:primop-ast) inserter system)
+  (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
+                                 inserter system)
+    (let ((info (cleavir-ast:info ast))
+          (out (cleavir-primop-info:out-rtypes info))
+          (in (cleavir-primop-info:in-rtypes info)))
+      (cond ((null out)
+             (insert inserter
+                     (make-instance 'cleavir-bir:nvprimop
+                       :info info :inputs (mapcar #'first args))))
+            ((integerp out)
+             (error "BUG: Test primop in invalid context: ~a" ast))
+            (t
+             (list
+              (insert inserter
+                      (make-instance 'cleavir-bir:vprimop
+                        :info info :inputs (mapcar #'first args)))))))))
+
+(defmethod compile-test-ast ((ast cleavir-ast:primop-ast) inserter system)
+  (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
+                                 inserter system)
+    (let* ((info (cleavir-ast:info ast))
+           (out (cleavir-primop-info:out-rtypes info)))
+      (check-type out (integer 0))
+      (let ((ibs (loop repeat out collect (make-iblock inserter))))
+        (terminate
+         inserter
+         (make-instance 'cleavir-bir:nvprimop
+           :info info :next ibs :inputs args))
+        (copy-list ibs)))))
+
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-primop-info:info primop))
          (out (cleavir-primop-info:out-rtypes info))
