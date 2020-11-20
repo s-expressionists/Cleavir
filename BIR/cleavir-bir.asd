@@ -6,8 +6,7 @@
   :components
   ((:file "packages")
    (:file "structure" :depends-on ("packages"))
-   (:file "primops" :depends-on ("structure" "packages"))
-   (:file "instructions" :depends-on ("primops" "structure" "packages"))
+   (:file "instructions" :depends-on ("structure" "packages"))
    (:file "map" :depends-on ("instructions" "structure" "packages"))
    (:file "conditions" :depends-on ("packages"))
    (:file "condition-reporters-english" :depends-on ("conditions" "packages"))

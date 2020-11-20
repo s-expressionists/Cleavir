@@ -430,7 +430,6 @@
 ;;; to a constant reference to the value of the form evaluated at
 ;;; compile time in a null lexical environment.
 (defmethod convert-special ((symbol (eql 'load-time-value)) cst env system)
-  (declare (ignore system))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 2)
   (cst:db origin (load-time-value-cst form-cst . remaining-cst) cst

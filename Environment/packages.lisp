@@ -28,6 +28,7 @@
    #:local-macro-info
    #:global-macro-info
    #:special-operator-info
+   #:primitive-operator-info
    #:block-info
    #:tag-info
    #:optimize-info

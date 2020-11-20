@@ -1,9 +1,20 @@
-
 (cl:in-package #:cleavir-cst-to-ast)
 
 (defun check-simple-primop-syntax (cst argument-count)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst argument-count argument-count))
+
+(defun convert-primop (symbol cst env system)
+  (let* ((info (cleavir-primop-info:info symbol))
+         (in (cleavir-primop-info:in-rtypes info)))
+    (check-simple-primop-syntax cst (length in))
+    (cst:db origin (op-cst . args-cst) cst
+      (declare (ignore op-cst))
+      (make-instance 'cleavir-ast:primop-ast
+        :info info
+        :argument-asts (convert-sequence args-cst env system)
+        :attributes (cleavir-primop-info:attributes info)
+        :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -239,11 +250,7 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:car)) cst env system)
-  (check-simple-primop-syntax cst 1)
-  (cst:db origin (car-cst arg-cst) cst
-    (declare (ignore car-cst))
-    (cleavir-ast:make-car-ast (convert arg-cst env system)
-                              :origin origin)))
+  (convert-primop symbol cst env system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -251,11 +258,7 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:cdr)) cst env system)
-  (check-simple-primop-syntax cst 1)
-  (cst:db origin (cdr-cst arg-cst) cst
-    (declare (ignore cdr-cst))
-    (cleavir-ast:make-cdr-ast (convert arg-cst env system)
-                              :origin origin)))
+  (convert-primop symbol cst env system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -263,12 +266,7 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:rplaca)) cst env system)
-  (check-simple-primop-syntax cst 2)
-  (cst:db origin (rplaca-cst arg1-cst arg2-cst) cst
-    (declare (ignore rplaca-cst))
-    (cleavir-ast:make-rplaca-ast (convert arg1-cst env system)
-                                 (convert arg2-cst env system)
-                                 :origin origin)))
+  (convert-primop symbol cst env system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -276,12 +274,7 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:rplacd)) cst env system)
-  (check-simple-primop-syntax cst 2)
-  (cst:db origin (rplacd-cst arg1-cst arg2-cst) cst
-    (declare (ignore rplacd-cst))
-    (cleavir-ast:make-rplacd-ast (convert arg1-cst env system)
-                                 (convert arg2-cst env system)
-                                 :origin origin)))
+  (convert-primop symbol cst env system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -320,13 +313,7 @@
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:fixnum-less)) cst env system)
-  (check-simple-primop-syntax cst 2)
-  (cst:db origin (less-cst arg1-cst arg2-cst) cst
-    (declare (ignore less-cst))
-    (make-instance 'cleavir-ast:fixnum-less-ast
-      :arg1-ast (convert arg1-cst env system)
-      :arg2-ast (convert arg2-cst env system)
-      :origin origin)))
+  (convert-primop symbol cst env system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

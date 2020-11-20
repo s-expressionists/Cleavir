@@ -44,3 +44,8 @@
    #:unreachable
    #:ast
    #:cst-to-ast))
+
+(defpackage #:cleavir-primop-info
+  (:use #:cl)
+  (:export #:info #:defprimop
+           #:name #:in-rtypes #:out-rtypes #:attributes))

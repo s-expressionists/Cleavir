@@ -66,14 +66,15 @@
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
-          :type primop-info)))
+          :type cleavir-primop-info:info)))
 
 ;; primop returning no values
 (defclass nvprimop (primop no-output operation) ())
 
 ;; primop returning values
 (defclass vprimop (primop computation) ())
-(defmethod rtype ((d vprimop)) (first (out-rtypes (info d))))
+(defmethod rtype ((d vprimop))
+  (first (cleavir-primop-info:out-rtypes (info d))))
 
 ;; primop that tests in a branch
 (defclass tprimop (primop no-output terminator operation) ())
