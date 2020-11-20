@@ -1,9 +1,9 @@
 (in-package #:cleavir-ast-to-bir)
 
 (defmacro defprimop (primop ast &rest readers)
-  (let* ((info (cleavir-bir:primop-info primop))
-         (out (cleavir-bir:out-rtypes info))
-         (in (cleavir-bir:in-rtypes info))
+  (let* ((info (cleavir-primop-info:info primop))
+         (out (cleavir-primop-info:out-rtypes info))
+         (in (cleavir-primop-info:in-rtypes info))
          (kind
            (cond ((null out) 'cleavir-bir:nvprimop)
                  ((integerp out) 'cleavir-bir:tprimop)

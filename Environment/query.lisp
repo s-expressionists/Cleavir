@@ -229,7 +229,12 @@
    ;; restarts, allowing the user to substitute a different name.
    ;; Therefore, the tool that calls FUNCTION-INFO should always use
    ;; the NAME reader for further processing.
-   (%name :initarg :name :reader name)))
+   (%name :initarg :name :reader name)
+   ;; Miscellaneous attributes. These may only make sense for some
+   ;; operators.
+   (%attributes :initform (cleavir-attributes:default-attributes)
+                :initarg :attributes
+                :reader attributes)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

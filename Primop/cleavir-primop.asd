@@ -26,5 +26,7 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-primop
+  :depends-on (:cleavir-attributes)
   :components
-  ((:file "packages")))
+  ((:file "packages")
+   (:file "info" :depends-on ("packages"))))
