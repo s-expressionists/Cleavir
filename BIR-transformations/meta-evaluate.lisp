@@ -42,13 +42,9 @@
       ;; FIXME: Replace this with a flushable attribute on
       ;; computations somehow.
       (typecase instruction
-        (cleavir-bir:readvar
+        ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
          #+(or)
-         (print "flushing readvar")
-         (cleavir-bir:delete-computation instruction))
-        (cleavir-bir:constant-reference
-         #+(or)
-         (print "flushing constant reference")
+         (format t "meta-evaluate: flushing ~a" instruction)
          (cleavir-bir:delete-computation instruction))))))
 
 (defgeneric meta-evaluate-instruction (instruction))
