@@ -37,18 +37,29 @@
 ;; Remove dead code for the backward pass.
 (defun meta-evaluate-iblock-backward (iblock)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
-    (when (and (typep instruction 'cleavir-bir:computation)
-               (cleavir-bir:unused-p instruction))
-      (typecase instruction
-        ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
-         #+(or)
-         (format t "meta-evaluate: flushing ~a" instruction)
-         (cleavir-bir:delete-computation instruction))
-        (cleavir-bir:abstract-call
-         (when (cleavir-attributes:has-boolean-attribute-p
-                (cleavir-bir:attributes instruction)
-                :flushable)
-           (cleavir-bir:delete-computation instruction)))))))
+    (typecase instruction
+      (cleavir-bir:multiple-to-fixed
+       (when (every #'cleavir-bir:unused-p (cleavir-bir:outputs instruction))
+         (cleavir-bir:delete-instruction instruction)))
+      (cleavir-bir:computation
+       (when (cleavir-bir:unused-p instruction)
+         (typecase instruction
+           ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
+            #+(or)
+            (format t "~&meta-evaluate: flushing ~a" instruction)
+            (cleavir-bir:delete-computation instruction))
+           (cleavir-bir:abstract-call
+            (when (cleavir-attributes:has-boolean-attribute-p
+                   (cleavir-bir:attributes instruction)
+                   :flushable)
+              (format t "~&meta-evaluate: flushing computation")
+              (cleavir-bir:delete-computation instruction)))
+           (cleavir-bir:vprimop
+            (let ((name (cleavir-bir:name (cleavir-bir:info instruction))))
+              (when (member name
+                            '(fdefinition car cdr symbol-value))
+                (format t "~&meta-evaluate: flushing primop ~a" name)
+                (cleavir-bir:delete-computation instruction))))))))))
 
 (defgeneric meta-evaluate-instruction (instruction))
 
