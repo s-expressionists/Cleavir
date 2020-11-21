@@ -87,9 +87,11 @@
                             (change-class use 'cleavir-bir:local-call)
                             (cleavir-bir:replace-computation reader function)))))))))
              ;; No more references to the variable means we can clean
-             ;; up the enclose. The writer should've already been
-             ;; cleaned up by the readvar deletion trigger.
+             ;; up the enclose. The writer might've already been
+             ;; cleaned up by any readvar deletion triggers.
              (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+               (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
+                 (cleavir-bir:delete-computation use))
                (cleavir-bir:delete-computation enclose)))))))
     (post-find-local-calls function)))
 
