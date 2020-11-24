@@ -67,23 +67,19 @@
 
 (defmethod meta-evaluate-instruction (instruction))
 
-(defun constant-fold-eqi (instruction)
+(defun constant-fold-ifi (instruction)
   (let* ((iblock (cleavir-bir:iblock instruction))
-         (inputs (cleavir-bir:inputs instruction))
-         (input1 (first inputs))
-         (input2 (second inputs)))
-    ;; If the arguments of EQI are both constant, then we can evaluate
-    ;; the result at compile time and fold the correct branch.
-    (when (and (typep input1 'cleavir-bir:constant-reference)
-               (typep input2 'cleavir-bir:constant-reference))
+         (test (first (cleavir-bir:inputs instruction))))
+    ;; If the test input of IFI is constant, then we can immediately
+    ;; fold to the correct branch.
+    (when (typep test 'cleavir-bir:constant-reference)
       #+(or)
-      (print "folding eqi instruction")
+      (print "folding ifi instruction")
       (let* ((next (cleavir-bir:next instruction))
              (then (first next))
              (else (second next)))
         (multiple-value-bind (next dead)
-            (if (eq (first (cleavir-bir:inputs input1))
-                    (first (cleavir-bir:inputs input2)))
+            (if (cleavir-bir:constant-value (first (cleavir-bir:inputs test)))
                 (values then else)
                 (values else then))
           (cleavir-bir:replace-terminator
@@ -96,5 +92,38 @@
           ;; refresh-local-iblocks is supposed to flush dead blocks.
           (cleavir-bir:maybe-delete-iblock dead))))))
 
-(defmethod meta-evaluate-instruction ((instruction cleavir-bir:eqi))
-  (constant-fold-eqi instruction))
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi))
+  (constant-fold-ifi instruction))
+
+;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
+;; inputs.
+(defun constant-fold-instruction (instruction inputs folder)
+  (when (every (lambda (input)
+                 (typep input 'cleavir-bir:constant-reference))
+               inputs)
+    (cleavir-bir:replace-computation
+     instruction
+     (cleavir-bir:make-constant-reference
+      (cleavir-bir:constant-in-module
+       (apply folder (mapcar (lambda (input)
+                               (first (cleavir-bir:inputs input)))
+                             inputs))
+       (cleavir-bir:module (cleavir-bir:function instruction)))))
+    t))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
+  (let ((inputs (cleavir-bir:inputs instruction)))
+    (unless (constant-fold-instruction instruction inputs #'eq)
+      (let ((input1 (first inputs))
+            (input2 (second inputs)))
+        ;; Do the transformation (if (eq <e> nil) <f> <g>) => (if <e> <g> <f>).
+        (when (typep input1 'cleavir-bir:constant-reference)
+          (psetq input1 input2
+                 input2 input1))
+        (when (eq (cleavir-bir:constant-value (first (cleavir-bir:inputs input2))) nil)
+          (let ((ifi (cleavir-bir:use instruction)))
+            (assert (typep ifi 'cleavir-bir:ifi))
+            (cleavir-bir::remove-use instruction ifi)
+            (cleavir-bir:delete-computation instruction)
+            (setf (cleavir-bir:inputs ifi) (list input1))
+            (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi)))))))))

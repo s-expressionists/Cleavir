@@ -126,6 +126,14 @@
   (compile-branch inserter system (cleavir-ast:test-ast ast)
                   (list (cleavir-ast:then-ast ast) (cleavir-ast:else-ast ast))))
 
+(defmethod compile-test-ast (ast inserter system)
+  (with-compiled-asts (test (ast) inserter system (:object))
+    (let ((tblock (make-iblock inserter :name '#:if-then))
+          (eblock (make-iblock inserter :name '#:if-else)))
+      (terminate inserter (make-instance 'cleavir-bir:ifi
+                            :inputs test :next (list tblock eblock)))
+      (list tblock eblock))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; BRANCH-AST
@@ -565,8 +573,10 @@
                             inserter system (:object :object))
     (let ((tblock (make-iblock inserter :name '#:eq-then))
           (eblock (make-iblock inserter :name '#:eq-else)))
-      (terminate inserter (make-instance 'cleavir-bir:eqi
-                            :inputs args :next (list tblock eblock)))
+      (let ((eq-test (make-instance 'cleavir-bir:eq-test :inputs args)))
+        (insert inserter eq-test)
+        (terminate inserter (make-instance 'cleavir-bir:ifi
+                              :inputs (list eq-test) :next (list tblock eblock))))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -579,8 +589,10 @@
                             inserter system (:object :object))
     (let ((tblock (make-iblock inserter :name '#:neq-then))
           (eblock (make-iblock inserter :name '#:neq-else)))
-      (terminate inserter (make-instance 'cleavir-bir:eqi
-                            :inputs args :next (list eblock tblock)))
+      (let ((eq-test (make-instance 'cleavir-bir:eq-test :inputs args)))
+        (insert inserter eq-test)
+        (terminate inserter (make-instance 'cleavir-bir:ifi
+                              :inputs (list eq-test) :next (list eblock tblock))))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

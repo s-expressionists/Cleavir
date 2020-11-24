@@ -29,6 +29,8 @@
            #:accessvar #:writevar #:readvar #:cast
            #:constant-reference #:make-constant-reference
            #:returni #:unreachable #:eqi #:jump #:unwindp
+           #:eq-test #:typeq-test
+           #:ifi #:conditional-test
            #:typeq #:type-specifier #:typew #:ctype #:choke
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination

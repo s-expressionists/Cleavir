@@ -318,10 +318,10 @@ has use-before-define on inputs ~a"
       (test (eq de (dynamic-environment (first (next j))))
             "Jump ~a is not marked as an unwind, but does unwind" j))))
 
-(defmethod verify progn ((eqi eqi))
-  ;; Verify next count
-  (test (= (length (next eqi)) 2)
-        "Eqi ~a has != 2 next ~a" eqi (next eqi)))
+(defmethod verify progn ((instruction conditional-test))
+  ;; Verify that the destination is an IFI.
+  (test (typep (use instruction) 'ifi)
+        "conditional test ~a is not used by an ifi instruction" instruction))
 
 (defmethod verify progn ((mtf multiple-to-fixed))
   (test (rtype= (rtype (first (inputs mtf))) :multiple-values)

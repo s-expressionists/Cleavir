@@ -414,9 +414,9 @@
                          (convert-constant (make-atom-cst nil origin)
                                            env system)
                          (cst:db s (else-cst) tail-cst
-                                 (convert else-cst env system)))))
+                           (convert else-cst env system)))))
       (cleavir-ast:make-if-ast
-       (boolify test-ast origin env system)
+       test-ast
        true-ast false-ast :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

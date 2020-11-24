@@ -159,8 +159,20 @@
   (not (eq (dynamic-environment (iblock instruction))
            (dynamic-environment (first (next instruction))))))
 
-;;; EQ
-(defclass eqi (no-output terminator operation) ())
+;;; IF instruction is a terminator which takes one input, tests it
+;;; against NIL, and branches to either of its two successors. This is
+;;; the canonical way to branch in Cleavir, which optimizations know
+;;; how to deal with.
+(defclass ifi (no-output terminator operation) ())
+
+;;; A CONDITIONAL-TEST instruction is a computation whose value is
+;;; guaranteed to be used by IFI as dispatch. The reason for this
+;;; constraint is that these can usually be specially treated by a
+;;; backend.
+(defclass conditional-test (computation) ())
+
+(defclass eq-test (conditional-test) ())
+(defclass typeq-test (conditional-test) ())
 
 ;;; FIXME: Should take a ctype rather than a type specifier.
 (defclass typeq (one-input no-output terminator operation)
