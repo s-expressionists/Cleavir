@@ -344,11 +344,9 @@
           (t
            (setf (start iblock) start)))
     (setf (end iblock) end)
-    (map-iblock-instructions
-     (lambda (instruction)
-       (setf (cleavir-bir:iblock instruction)
-             iblock))
-     start)
+    (do-iblock-instructions (instruction start)
+      (setf (cleavir-bir:iblock instruction)
+            iblock))
     ;; Propagate the inputs of the jump into the uses of the second
     ;; block's phis.
     (mapc (lambda (input phi)

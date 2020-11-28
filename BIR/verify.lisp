@@ -399,18 +399,16 @@ has use-before-define on inputs ~a"
           (remove-if #'terminatord (inputs iblock))))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
-    (map-iblock-instructions
-     (lambda (i)
-       ;; Ensure each instruction is only in the graph once
-       (test (not (cleavir-set:presentp i *seen-instructions*))
-             "Instruction ~a is in the graph multiple times" i)
-       ;; Ensure non-end instructions are non-terminator instructions
-       (unless (eq i (end iblock))
-         (test (typep i '(and instruction (not terminator)))
-               "~a is not a non-terminator instruction" i))
-       (verify i)
-       (cleavir-set:nadjoinf *seen-instructions* i))
-     (start iblock))))
+    (do-iblock-instructions (i (start iblock))
+      ;; Ensure each instruction is only in the graph once
+      (test (not (cleavir-set:presentp i *seen-instructions*))
+            "Instruction ~a is in the graph multiple times" i)
+      ;; Ensure non-end instructions are non-terminator instructions
+      (unless (eq i (end iblock))
+        (test (typep i '(and instruction (not terminator)))
+              "~a is not a non-terminator instruction" i))
+      (verify i)
+      (cleavir-set:nadjoinf *seen-instructions* i))))
 
 (defmethod verify progn ((function function))
   (with-problems (function)

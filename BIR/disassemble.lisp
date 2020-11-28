@@ -86,9 +86,8 @@
   (check-type iblock iblock)
   (with-disassembly ()
     (let ((insts nil))
-      (map-iblock-instructions
-       (lambda (i) (push (disassemble-instruction i) insts))
-       (start iblock))
+      (do-iblock-instructions (i (start iblock))
+        (push (disassemble-instruction i) insts))
       (list* (list* (iblock-id iblock)
                     (mapcar #'disassemble-datum (inputs iblock)))
              (dynamic-environment iblock)
