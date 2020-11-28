@@ -13,20 +13,20 @@
 (defun meta-evaluate-function (function)
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes.
-  (dotimes (repeat 3)
-    (declare (ignore repeat))
-    (dolist (iblock (cleavir-bir::iblocks-forward-flow-order function))
-      ;; Make sure not to look at a block that might have been deleted
-      ;; earlier in this forward pass.
-      (unless (cleavir-bir:deletedp iblock)
-        ;; Make sure to merge the successors as much as possible so we can
-        ;; trigger more optimizations.
-        (loop while (cleavir-bir:merge-successor-if-possible iblock))
-        (meta-evaluate-iblock-forward iblock))))
+  (let ((forward-flow (cleavir-bir::iblocks-forward-flow-order function)))
+    (dotimes (repeat 3)
+      (dolist (iblock forward-flow)
+        ;; Make sure not to look at a block that might have been
+        ;; deleted earlier in this forward pass.
+        (unless (cleavir-bir:deletedp iblock)
+          ;; Make sure to merge the successors as much as possible so we can
+          ;; trigger more optimizations.
+          (loop while (cleavir-bir:merge-successor-if-possible iblock))
+          (meta-evaluate-iblock-forward iblock)))))
+  (cleavir-bir:refresh-local-iblocks function)
   (cleavir-bir::map-iblocks-postorder
    #'meta-evaluate-iblock-backward
-   function)
-  (cleavir-bir:refresh-local-iblocks function))
+   function))
 
 ;; 
 (defun meta-evaluate-iblock-forward (iblock)
