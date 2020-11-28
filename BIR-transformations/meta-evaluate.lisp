@@ -7,17 +7,22 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun meta-evaluate-module (module)
-  #+(or)
-  (cleavir-bir::print-disasm (cleavir-bir:disassemble module))
   (cleavir-set:doset (function (cleavir-bir:functions module))
     (meta-evaluate-function function)))
 
 (defun meta-evaluate-function (function)
   ;; Obviously this should actually be a worklist algorithm and not
-  ;; just two passes.
-  (mapc
-   #'meta-evaluate-iblock-forward
-   (cleavir-bir::iblocks-forward-flow-order function))
+  ;; just two or three passes.
+  (dotimes (repeat 3)
+    (declare (ignore repeat))
+    (dolist (iblock (cleavir-bir::iblocks-forward-flow-order function))
+      ;; Make sure not to look at a block that might have been deleted
+      ;; earlier in this forward pass.
+      (unless (cleavir-bir:deletedp iblock)
+        ;; Make sure to merge the successors as much as possible so we can
+        ;; trigger more optimizations.
+        (loop while (cleavir-bir:merge-successor-if-possible iblock))
+        (meta-evaluate-iblock-forward iblock))))
   (cleavir-bir::map-iblocks-postorder
    #'meta-evaluate-iblock-backward
    function)
@@ -25,14 +30,8 @@
 
 ;; 
 (defun meta-evaluate-iblock-forward (iblock)
-  ;; Make sure not to look at a block that might have been deleted
-  ;; earlier in the forward pass.
-  (unless (cleavir-bir:deletedp iblock)
-    (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
-      (meta-evaluate-instruction instruction))
-    ;; Make sure to merge the successors as much as possible so we can
-    ;; trigger more optimizations.
-    (loop while (cleavir-bir:merge-successor-if-possible iblock))))
+  (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
+    (meta-evaluate-instruction instruction)))
 
 ;; Remove dead code for the backward pass.
 (defun meta-evaluate-iblock-backward (iblock)
@@ -56,7 +55,7 @@
               (format t "~&meta-evaluate: flushing computation")
               (cleavir-bir:delete-computation instruction)))
            (cleavir-bir:vprimop
-            (let ((name (cleavir-bir:name (cleavir-bir:info instruction))))
+            (let ((name (cleavir-primop-info:name (cleavir-bir:info instruction))))
               (when (member name
                             '(fdefinition car cdr symbol-value))
                 #+(or)
@@ -90,10 +89,52 @@
           ;; Try to delete the block if possible, so we can maybe
           ;; optimize more in this pass. Ultimately,
           ;; refresh-local-iblocks is supposed to flush dead blocks.
-          (cleavir-bir:maybe-delete-iblock dead))))))
+          (cleavir-bir:maybe-delete-iblock dead)))
+      t)))
+
+;;; Eliminate degenerate if instructions. Does the equivalent of (IF
+;;; (IF X Y Z) A B) => (IF X (IF Y A B) (IF Z A B)). The reason this
+;;; is optimization is desirable is that control flow is simplified,
+;;; and also the flow of values is simplified by eliminating a phi
+;;; which can lead to further optimization.
+(defun eliminate-degenerate-if (instruction)
+  (let* ((iblock (cleavir-bir:iblock instruction))
+         (phis (cleavir-bir:inputs iblock))
+         (test (first (cleavir-bir:inputs instruction))))
+    ;; A degenerate IFI starts its block (i.e. is the only instruction
+    ;; in the block) and tests the phi which is the unique input to
+    ;; its block.
+    (when (and (eq instruction (cleavir-bir:start iblock))
+               (null (rest phis))
+               (eq test (first phis)))
+      #+(or)
+      (print "eliminating degenerate if!")
+      ;; We duplicate the IFI and replace the terminators for every
+      ;; predecessor.
+      (let ((next (cleavir-bir:next instruction))
+            (origin (cleavir-bir:origin instruction))
+            (predecessors (cleavir-bir:predecessors iblock)))
+        (cleavir-set:doset (predecessor predecessors)
+          (let* ((end (cleavir-bir:end predecessor))
+                 (input (first (cleavir-bir:inputs end))))
+            (assert (not (cleavir-bir:unwindp end))
+                    ()
+                    "Don't replace jumps with unwinding action!")
+            (assert (and (null (rest (cleavir-bir:outputs end)))
+                         (eq (first (cleavir-bir:outputs end)) test))
+                    ()
+                    "Jump/phi pair inconsistent.")
+            (let ((ifi (make-instance 'cleavir-bir:ifi
+                         :next (copy-list next)
+                         :origin origin)))
+              (cleavir-bir:replace-terminator ifi end)
+              (setf (cleavir-bir:inputs ifi) (list input))))))
+      ;; Now we clean up the original IFI block.
+      (cleavir-bir:delete-iblock iblock))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi))
-  (constant-fold-ifi instruction))
+  (unless (constant-fold-ifi instruction)
+    (eliminate-degenerate-if instruction)))
 
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
@@ -111,9 +152,17 @@
        (cleavir-bir:module (cleavir-bir:function instruction)))))
     t))
 
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:multiple-to-fixed))
+  (let ((definition (first (cleavir-bir:inputs instruction))))
+    (when (typep definition 'cleavir-bir:fixed-to-multiple)
+      (cleavir-bir:delete-transmission definition instruction)
+      (cleavir-bir:delete-instruction definition))))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
     (unless (constant-fold-instruction instruction inputs #'eq)
+      ;; Really doesn't work yet.
+      #+(or)
       (let ((input1 (first inputs))
             (input2 (second inputs)))
         ;; Do the transformation (if (eq <e> nil) <f> <g>) => (if <e> <g> <f>).
