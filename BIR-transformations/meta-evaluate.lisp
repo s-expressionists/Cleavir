@@ -15,6 +15,7 @@
   ;; just two or three passes.
   (let ((forward-flow (cleavir-bir::iblocks-forward-flow-order function)))
     (dotimes (repeat 3)
+      (declare (ignore repeat))
       (dolist (iblock forward-flow)
         ;; Make sure not to look at a block that might have been
         ;; deleted earlier in this forward pass.
