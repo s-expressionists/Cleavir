@@ -312,72 +312,68 @@
 ;;; Merge IBLOCK to its unique successor if possible, returning false
 ;;; if not.
 (defun merge-successor-if-possible (iblock)
-  (let* ((successors (successors iblock))
-         (successor (first successors)))
-    (and successor
-         (null (rest successors))
-         (iblocks-mergable-p iblock successor)
-         (merge-iblocks iblock successor))))
+  (when (successor-mergable-p iblock)
+    (merge-successor iblock)))
 
-(defun iblocks-mergable-p (iblock1 iblock2)
-  (let ((predecessors (predecessors iblock2)))
-    (and (typep (cleavir-bir:end iblock1)
-                'cleavir-bir:jump)
-         (eq (first (successors iblock1)) iblock2)
-         (= (cleavir-set:size predecessors) 1)
-         (cleavir-set:empty-set-p (entrances iblock2))
-         (eq (cleavir-set:arb predecessors) iblock1)
-         (eq (function iblock1) (function iblock2))
-         (eq (dynamic-environment iblock1)
-             (dynamic-environment iblock2))
-         ;; Infinite loop.
-         (not (eq iblock1 iblock2)))))
+(defun successor-mergable-p (iblock)
+  (let ((successors (successors iblock)))
+    (and successors
+         (typep (cleavir-bir:end iblock) 'cleavir-bir:jump)
+         (let* ((successor (first successors))
+                (predecessors (predecessors successor)))
+           (and (= (cleavir-set:size predecessors) 1)
+                (cleavir-set:empty-set-p (entrances successor))
+                (eq (function iblock) (function successor))
+                (eq (dynamic-environment iblock)
+                    (dynamic-environment successor))
+                ;; Infinite loop.
+                (not (eq iblock successor)))))))
 
-;;; Merge two iblocks, the first of which must end in a jump. Also
-;;; make sure to take care of the second iblocks inputs.
-(defun merge-iblocks (iblock1 iblock2)
-  (check-type iblock1 iblock)
-  (check-type iblock2 iblock)
-  (assert (iblocks-mergable-p iblock1 iblock2))
-  (let* ((jump (end iblock1))
+;;; Merge an iblock ending in a jump with its successor. Also forward
+;;; the jumps outputs to the successor block's inputs.
+(defun merge-successor (iblock)
+  (let* ((jump (end iblock))
+         (successor (first (successors iblock)))
          (end-predecessor (predecessor jump))
-         (start (start iblock2))
-         (function (function iblock2))
-         (end (end iblock2)))
+         (start (start successor))
+         (function (function successor))
+         (end (end successor)))
     (cond (end-predecessor
            (setf (successor end-predecessor) start)
            (setf (predecessor start) end-predecessor))
           (t
-           (setf (start iblock1) start)))
-    (setf (end iblock1) end)
+           (setf (start iblock) start)))
+    (setf (end iblock) end)
     (map-iblock-instructions
      (lambda (instruction)
        (setf (cleavir-bir:iblock instruction)
-             iblock1))
+             iblock))
      start)
     ;; Propagate the inputs of the jump into the uses of the second
     ;; block's phis.
     (mapc (lambda (input phi)
             (remove-use input jump)
             (replace-uses input phi))
-          (inputs jump) (inputs iblock2))
+          (inputs jump) (inputs successor))
     (if (typep end 'unwind)
         ;; Update the new block's presence in entrances
         (let ((dest (destination end)))
-          (cleavir-set:nremovef (entrances dest) iblock2)
-          (cleavir-set:nadjoinf (entrances dest) iblock1))
+          (cleavir-set:nremovef (entrances dest) successor)
+          (cleavir-set:nadjoinf (entrances dest) iblock))
         ;; Update the predecessors of the successors.
-        (dolist (succ (successors iblock2))
-          (cleavir-set:nremovef (predecessors succ) iblock2)
-          (cleavir-set:nadjoinf (predecessors succ) iblock1)))
+        (dolist (succ (successors successor))
+          (cleavir-set:nremovef (predecessors succ) successor)
+          (cleavir-set:nadjoinf (predecessors succ) iblock)))
     ;; If the block happens to be the end of its function, adjust
-    (when (eq (end function) iblock2)
-      (setf (end function) iblock1))
-    ;; Remove iblock2 from the function.
-    (cleavir-set:nremovef (iblocks function) iblock2)
+    (when (eq (end function) successor)
+      (setf (end function) iblock))
+    ;; Remove successor from the function.
+    (cleavir-set:nremovef (iblocks function) successor)
     ;; and scope
-    (cleavir-set:nadjoinf (scope (dynamic-environment iblock2)) iblock2)
-    iblock1))
+    (cleavir-set:nremovef (scope (dynamic-environment successor)) successor)
+    ;; The successor block is now conceptually deleted.
+    (setf (deletedp successor) t)
+    iblock))
 
 ;;; Split a iblock into two iblocks.
 (defun split-block-after (inst)
