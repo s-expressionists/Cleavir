@@ -94,6 +94,10 @@
        (doset (i set1 t)
          (unless (presentp i set2) (return nil)))))
 
+(defun some (p set)
+  (doset (i set nil)
+    (when (funcall p i) (return t))))
+
 (defun every (p set)
   (doset (i set t)
     (unless (funcall p i) (return nil))))
