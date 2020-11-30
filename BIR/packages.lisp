@@ -35,7 +35,9 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp
-           #:abstract-call #:callee #:call #:local-call #:mv-call #:attributes #:transforms
+           #:abstract-call #:callee #:call #:local-call
+           #:abstract-local-call #:mv-call #:mv-local-call
+           #:attributes #:transforms
            #:leti #:dynamic-leti #:enclose #:code)
   (:export #:primop #:vprimop #:nvprimop #:tprimop #:info)
   (:export #:map-iblock-instructions #:map-iblock-instructions-backwards

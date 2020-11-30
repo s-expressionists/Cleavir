@@ -16,7 +16,7 @@
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
 (defmethod remove-use ((datum constant) use)
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
-(defmethod remove-use ((datum function) use)
+(defmethod remove-use ((datum function) (use abstract-local-call))
   (cleavir-set:nremovef (local-calls datum) use))
 
 (defgeneric add-use (datum use))
@@ -30,7 +30,7 @@
   (cleavir-set:nadjoinf (readers datum) use))
 (defmethod add-use ((datum constant) use)
   (cleavir-set:nadjoinf (readers datum) use))
-(defmethod add-use ((datum function) use)
+(defmethod add-use ((datum function) (use abstract-local-call))
   (cleavir-set:nadjoinf (local-calls datum) use))
 
 (defmethod shared-initialize :before
@@ -166,7 +166,7 @@
     (when (and (cleavir-set:empty-set-p code-encloses)
                (cleavir-set:empty-set-p (local-calls code)))
       (clean-up-function code))))
-(defmethod clean-up-instruction progn ((inst local-call))
+(defmethod clean-up-instruction progn ((inst abstract-local-call))
   (let* ((code (callee inst))
          (local-calls (local-calls code)))
     (cleavir-set:nremovef local-calls inst)

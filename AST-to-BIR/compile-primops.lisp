@@ -57,12 +57,6 @@
              (with-compiled-asts (rv ,ca inserter system (,@in))
                ,(if (eq kind 'cleavir-bir:nvprimop) form `(list ,form))))))))
 
-(defprimop cleavir-primop:car cleavir-ast:car-ast cleavir-ast:cons-ast)
-(defprimop cleavir-primop:cdr cleavir-ast:cdr-ast cleavir-ast:cons-ast)
-(defprimop cleavir-primop:rplaca cleavir-ast:rplaca-ast
-  cleavir-ast:cons-ast cleavir-ast:object-ast)
-(defprimop cleavir-primop:rplacd cleavir-ast:rplacd-ast
-  cleavir-ast:cons-ast cleavir-ast:object-ast)
 (defprimop symbol-value cleavir-ast:symbol-value-ast
   cleavir-ast:symbol-ast)
 (defprimop (setf symbol-value) cleavir-ast:set-symbol-value-ast
