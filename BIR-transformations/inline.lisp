@@ -47,7 +47,8 @@
            ;; cleaned up by any readvar deletion triggers.
            (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
              (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
-               (cleavir-bir:delete-computation enclose))))))))
+               (cleavir-bir:delete-instruction use))
+             (cleavir-bir:delete-computation enclose)))))))
   (post-find-local-calls function))
 
 (defun find-module-local-calls (module)
