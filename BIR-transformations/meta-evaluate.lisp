@@ -137,20 +137,28 @@
   (unless (constant-fold-ifi instruction)
     (eliminate-degenerate-if instruction)))
 
+;; Replace COMPUTATION with a constant reference to value.
+(defun replace-computation-by-constant-value (instruction value)
+  (cleavir-bir:replace-computation
+   instruction
+   (cleavir-bir:make-constant-reference
+    (cleavir-bir:constant-in-module
+     value
+     (cleavir-bir:module (cleavir-bir:function instruction))))))
+
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
 (defun constant-fold-instruction (instruction inputs folder)
   (when (every (lambda (input)
                  (typep input 'cleavir-bir:constant-reference))
                inputs)
-    (cleavir-bir:replace-computation
+    (replace-computation-by-constant-value
      instruction
-     (cleavir-bir:make-constant-reference
-      (cleavir-bir:constant-in-module
-       (apply folder (mapcar (lambda (input)
-                               (first (cleavir-bir:inputs input)))
-                             inputs))
-       (cleavir-bir:module (cleavir-bir:function instruction)))))
+     (apply folder
+            (mapcar (lambda (input)
+                      (cleavir-bir:constant-value
+                       (first (cleavir-bir:inputs input))))
+                    inputs)))
     t))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:multiple-to-fixed))
@@ -177,3 +185,11 @@
             (cleavir-bir:delete-computation instruction)
             (setf (cleavir-bir:inputs ifi) (list input1))
             (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi)))))))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:typeq-test))
+  (let ((object (first (cleavir-bir:inputs instruction))))
+    (when (typep object 'cleavir-bir:constant-reference)
+      (replace-computation-by-constant-value
+       instruction
+       (typep (cleavir-bir:constant-value (first (cleavir-bir:inputs object)))
+              (cleavir-bir:type-specifier instruction))))))

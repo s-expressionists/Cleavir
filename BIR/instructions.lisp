@@ -177,10 +177,7 @@
 (defclass conditional-test (computation) ())
 
 (defclass eq-test (conditional-test) ())
-(defclass typeq-test (conditional-test) ())
-
-;;; FIXME: Should take a ctype rather than a type specifier.
-(defclass typeq (one-input no-output terminator operation)
+(defclass typeq-test (conditional-test)
   ((%type-specifier :initarg :type-specifier :reader type-specifier)))
 
 (defclass typew (one-input no-output terminator operation)

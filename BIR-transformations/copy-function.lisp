@@ -255,7 +255,7 @@
   (declare (ignore stack map)))
 
 (defmethod clone-initargs append
-    ((instruction cleavir-bir:typeq) stack map)
+    ((instruction cleavir-bir:typeq-test) stack map)
   (declare (ignore stack map))
   (list :type-specifier (cleavir-bir:type-specifier instruction)))
 

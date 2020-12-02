@@ -474,10 +474,13 @@
            (eblock (make-iblock inserter
                                 :name (symbolicate
                                        '#:typeq- tspec-str '#:-else)))
-           (tq (make-instance 'cleavir-bir:typeq
-                 :inputs obj :next (list tblock eblock)
+           (tq (make-instance 'cleavir-bir:typeq-test
+                 :inputs obj
                  :type-specifier tspec)))
-      (terminate inserter tq)
+      (insert inserter tq)
+      (terminate inserter (make-instance 'cleavir-bir:ifi
+                            :inputs (list tq)
+                            :next (list tblock eblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
