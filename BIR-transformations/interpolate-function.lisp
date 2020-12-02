@@ -1,28 +1,5 @@
 (in-package #:cleavir-bir-transformations)
 
-;;; Return true if the call arguments are compatible with those of the
-;;; function lambda list. If they're not, warn and return false.
-(defun check-argument-list-compatible (arguments function)
-  (let ((lambda-list (cleavir-bir:lambda-list function))
-        (nsupplied (length arguments))
-        (nrequired 0)
-        (noptional 0))
-    (assert (not (lambda-list-too-hairy-p lambda-list)))
-    (map-lambda-list (lambda (state item)
-                       (declare (ignore item))
-                       (ecase state
-                         (:required (incf nrequired))
-                         (&optional (incf noptional))))
-                     lambda-list)
-    (if (<= nrequired nsupplied (+ noptional nrequired))
-        t
-        (warn "Expected ~a required arguments and ~a optional arguments but got ~a arguments for function ~a."
-              nrequired noptional nsupplied (cleavir-bir:name function)))))
-
-(defun check-call-valid-p (local-call)
-  (check-argument-list-compatible (rest (cleavir-bir:inputs local-call))
-                                  (cleavir-bir:callee local-call)))
-
 ;;; This is a basically the A_call analysis in Fluet & Weeks.  When we
 ;;; are tail recursing, simply return the callee as a sentinel.  It
 ;;; would be nice to use the A_dom analysis, as that is provably
@@ -286,18 +263,6 @@
                     (eq item '&optional)))
               lambda-list)))
 
-;;; This utility parses BIR lambda lists. FUNCTION takes two
-;;; arguments: the current lambda-list item being parsed and the state
-;;; of the parse (i.e. &OPTIONAL). Does not yet deal with &REST or
-;;; &KEY.
-(defun map-lambda-list (function lambda-list)
-  (assert (not (lambda-list-too-hairy-p lambda-list)))
-  (let ((state :required))
-    (dolist (item lambda-list)
-      (if (symbolp item)
-          (setq state item)
-          (funcall function state item)))))
-
 (defun maybe-interpolate (function)
   ;; When a function has no encloses and returns to a single control
   ;; point, it is eligible for interpolation.
@@ -305,8 +270,6 @@
              (not (lambda-list-too-hairy-p
                    (cleavir-bir:lambda-list function))))
     ;; FIXME: We should respect inline and not inline declarations.
-    ;; FIXME!!!!!: We no longer check whether the calls are valid
-    ;; before interpolating. Fix this asap.
     (let ((local-calls (cleavir-bir:local-calls function)))
       (unless (cleavir-set:empty-set-p local-calls)
         (multiple-value-bind (return-point common-use common-dynenv target-owner)

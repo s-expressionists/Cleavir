@@ -6,6 +6,45 @@
 (defun post-find-local-calls (function)
   (maybe-interpolate function))
 
+;;; This utility parses BIR lambda lists. FUNCTION takes two
+;;; arguments: the current lambda-list item being parsed and the state
+;;; of the parse (e.g. &OPTIONAL).
+(defun map-lambda-list (function lambda-list)
+  (let ((state :required))
+    (dolist (item lambda-list)
+      (if (symbolp item)
+          (setq state item)
+          (funcall function state item)))))
+
+;;; Return true if the call arguments are compatible with those of the
+;;; function lambda list. If they're not, warn and return false.
+;;; This checks argument counts but does NOT check &key argument validity,
+;;; which for non-constant keywords can involve complex analysis.
+(defun check-argument-list-compatible (arguments function)
+  (let ((lambda-list (cleavir-bir:lambda-list function))
+        (nsupplied (length arguments))
+        (nrequired 0)
+        (noptional 0)
+        (restp nil))
+    (map-lambda-list (lambda (state item)
+                       (declare (ignore item))
+                       (ecase state
+                         (:required (incf nrequired))
+                         (&optional (incf noptional))
+                         ((&rest &key) (setf restp t))
+                         (&allow-other-keys)))
+                     lambda-list)
+    (let ((nfixed (+ nrequired noptional)))
+      (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
+          t
+          (warn "~a is passed ~d arguments, but expects ~@?"
+                (cleavir-bir:name function) nsupplied
+                (cond (restp "at least ~d")
+                      ((zerop noptional) "exactly ~d")
+                      ((zerop nrequired) "at most ~*~d")
+                      (t "between ~d and ~d"))
+                nrequired nfixed)))))
+
 ;;; Detect calls to a function via its closure and mark them as direct
 ;;; local calls to the function, doing compile time argument
 ;;; checking. If there are no more references to the closure, we can
@@ -24,7 +63,10 @@
     (let ((use (cleavir-bir:use enclose)))
       (typecase use
         (cleavir-bir:call
-         (when (eq enclose (cleavir-bir:callee use))
+         (when (and (eq enclose (cleavir-bir:callee use))
+                    (check-argument-list-compatible
+                     (rest (cleavir-bir:inputs use))
+                     function))
            (change-class use 'cleavir-bir:local-call)
            (cleavir-bir:replace-computation enclose function))
          (when (cleavir-bir:unused-p enclose)
@@ -39,7 +81,10 @@
                  (let ((use (cleavir-bir:use reader)))
                    (typecase use
                      (cleavir-bir:call
-                      (when (eq reader (cleavir-bir:callee use))
+                      (when (and (eq reader (cleavir-bir:callee use))
+                                 (check-argument-list-compatible
+                                  (rest (cleavir-bir:inputs use))
+                                  function))
                         (change-class use 'cleavir-bir:local-call)
                         (cleavir-bir:replace-computation reader function))))))))
            ;; No more references to the variable means we can clean
