@@ -139,12 +139,13 @@
 
 ;; Replace COMPUTATION with a constant reference to value.
 (defun replace-computation-by-constant-value (instruction value)
-  (cleavir-bir:replace-computation
-   instruction
-   (cleavir-bir:make-constant-reference
-    (cleavir-bir:constant-in-module
-     value
-     (cleavir-bir:module (cleavir-bir:function instruction))))))
+  (let ((constant-reference
+          (cleavir-bir:make-constant-reference
+           (cleavir-bir:constant-in-module
+            value
+            (cleavir-bir:module (cleavir-bir:function instruction))))))
+    (cleavir-bir:insert-instruction-before constant-reference instruction)
+    (cleavir-bir:replace-computation instruction constant-reference)))
 
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
