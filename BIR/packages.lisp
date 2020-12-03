@@ -12,7 +12,7 @@
   (:export #:iblock #:predecessors #:entrances #:exits #:iblock-started-p #:deletedp)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
-           #:output #:name #:ctype #:assert-type-on-linear-datum
+           #:output #:name #:ctype #:assert-type-on-linear-datum #:derive-type-for-linear-datum
            #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
            #:use-status #:ignore

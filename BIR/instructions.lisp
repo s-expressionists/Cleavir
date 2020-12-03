@@ -53,8 +53,7 @@
 
 (defmethod (setf inputs) :after (new-inputs (i constant-reference))
   (setf (%derived-type i)
-        (cleavir-ctype:member nil (constant-value
-                                   (first new-inputs))))
+        (cleavir-ctype:member nil (constant-value (first new-inputs))))
   (call-next-method))
 
 (defun make-constant-reference (constant)

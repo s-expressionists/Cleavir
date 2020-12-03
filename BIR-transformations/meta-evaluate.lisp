@@ -209,3 +209,13 @@
            (replace-computation-by-constant-value
             instruction
             nil)))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti))
+  ;; For an immutable variable, we prove that the type of its readers
+  ;; is just the type of its definition.
+  (let ((variable (first (cleavir-bir:outputs instruction))))
+    (when (cleavir-bir:immutablep variable)
+      (let* ((definition (first (cleavir-bir:inputs instruction)))
+             (type (cleavir-bir:ctype definition)))
+        (cleavir-set:doset (reader (cleavir-bir:readers variable))
+          (cleavir-bir:derive-type-for-linear-datum reader type))))))

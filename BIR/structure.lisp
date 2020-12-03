@@ -72,6 +72,13 @@
                                  asserted-type
                                  nil)))
 
+;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
+(defun derive-type-for-linear-datum (linear-datum derived-type)
+  (setf (%derived-type linear-datum)
+        (cleavir-ctype:conjoin/2 (%derived-type linear-datum)
+                                 derived-type
+                                 nil)))
+
 ;;; A datum with one definition and one use.
 (defclass transfer (ssa linear-datum) ())
 
