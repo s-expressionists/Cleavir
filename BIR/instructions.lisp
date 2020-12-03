@@ -43,9 +43,9 @@
 
 (defmethod rtype ((inst constant-reference)) :object)
 
-(defmethod initialize-instance :after
-    ((i constant-reference) &rest initargs &key inputs)
-  (declare (cl:ignore initargs))
+(defmethod shared-initialize :after
+    ((i constant-reference) slot-names &rest initargs &key inputs)
+  (declare (cl:ignore initargs slot-names))
   (let ((constant (first inputs)))
     (cleavir-set:nadjoinf (readers constant) i)
     (setf (%derived-type i) (cleavir-ctype:member nil (constant-value constant))))

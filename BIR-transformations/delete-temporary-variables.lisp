@@ -33,7 +33,8 @@
              (cleavir-set:doset (reader (cleavir-bir:readers variable))
                (change-class reader 'cleavir-bir:constant-reference
                  :inputs (list constant)))
-             (cleavir-bir:delete-instruction writer)))
+             (cleavir-bir:delete-instruction writer)
+             (cleavir-bir:delete-instruction input)))
           (t))))))
 
 (defun module-optimize-variables (module)
