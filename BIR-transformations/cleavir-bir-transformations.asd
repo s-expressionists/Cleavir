@@ -2,7 +2,7 @@
 
 (defsystem :cleavir-bir-transformations
   :depends-on (:cleavir-bir :cleavir-set
-               :cleavir-attributes) ; for simple-unwind
+               :cleavir-attributes :cleavir-ctype)
   :components
   ((:file "packages")
    (:file "eliminate-catches" :depends-on ("packages"))

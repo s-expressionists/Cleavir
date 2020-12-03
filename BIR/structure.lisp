@@ -23,13 +23,10 @@
 
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name :type (or symbol null))
-   (%ctype :initarg :ctype :accessor ctype)))
+   (%name :initarg :name :initform nil :reader name :type (or symbol null))))
 
 ;;; A lexical is a datum that can be bound in an environment.
 (defclass lexical (datum) ())
-
-(defun ctyped-p (datum) (slot-boundp datum '%ctype))
 
 (defmethod print-object ((o datum) stream)
   (print-unreadable-object (o stream :type t)
@@ -46,9 +43,34 @@
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :reader use :accessor %use
-         :type instruction)))
+         :type instruction)
+   ;; A type the compiler has proven holds for this linear-datum.
+   (%derived-type :initform (cleavir-ctype:top nil)
+                  :initarg :derived-type
+                  :accessor %derived-type)
+   ;; The type that is explicitly asserted holds for this
+   ;; linear-datum.
+   (%asserted-type :initform (cleavir-ctype:top nil)
+                   :initarg :asserted-type
+                   :accessor %asserted-type)))
 (defmethod unused-p ((datum linear-datum))
   (not (slot-boundp datum '%use)))
+
+;;; This type represents the type of the linear-datum that we can
+;;; assume about the linear-datum when making inferences, since it
+;;; represents the intersection of what the compiler has proven about
+;;; the datum and what is explicitly asserted. This gives us freedom
+;;; to trust or explicitly check the assertion as needed while making
+;;; this decision transparent to inference.
+(defmethod ctype ((datum linear-datum))
+  (cleavir-ctype:conjoin/2 (%derived-type datum) (%asserted-type datum) nil))
+
+;;; Add a type assertion to LINEAR-DATUM.
+(defun assert-type-on-linear-datum (linear-datum asserted-type)
+  (setf (%asserted-type linear-datum)
+        (cleavir-ctype:conjoin/2 (%asserted-type linear-datum)
+                                 asserted-type
+                                 nil)))
 
 ;;; A datum with one definition and one use.
 (defclass transfer (ssa linear-datum) ())

@@ -46,8 +46,16 @@
 (defmethod initialize-instance :after
     ((i constant-reference) &rest initargs &key inputs)
   (declare (cl:ignore initargs))
-  (cleavir-set:nadjoinf (readers (first inputs)) i)
+  (let ((constant (first inputs)))
+    (cleavir-set:nadjoinf (readers constant) i)
+    (setf (%derived-type i) (cleavir-ctype:member nil (constant-value constant))))
   i)
+
+(defmethod (setf inputs) :after (new-inputs (i constant-reference))
+  (setf (%derived-type i)
+        (cleavir-ctype:member nil (constant-value
+                                   (first new-inputs))))
+  (call-next-method))
 
 (defun make-constant-reference (constant)
   (make-instance 'constant-reference :inputs (list constant)))

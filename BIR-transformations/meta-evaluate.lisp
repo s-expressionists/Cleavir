@@ -187,9 +187,22 @@
             (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi)))))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:typeq-test))
-  (let ((object (first (cleavir-bir:inputs instruction))))
-    (when (typep object 'cleavir-bir:constant-reference)
-      (replace-computation-by-constant-value
-       instruction
-       (typep (cleavir-bir:constant-value (first (cleavir-bir:inputs object)))
-              (cleavir-bir:type-specifier instruction))))))
+  (let* ((object (first (cleavir-bir:inputs instruction)))
+         (ctype (cleavir-bir:ctype object))
+         (type-specifier (cleavir-bir:type-specifier instruction)))
+    (cond ((cleavir-ctype:subtypep ctype type-specifier nil)
+           (format t "~&folding typeq test ~a as true since testing ~a" type-specifier ctype)
+           (replace-computation-by-constant-value
+            instruction
+            t))
+          ;; XXX: Switch this to bottom-p when things are worked out
+          ;; more.
+          ((multiple-value-bind (disjoint certain)
+               (cleavir-ctype:subtypep (cleavir-ctype:conjoin/2 ctype type-specifier nil)
+                                       (cleavir-ctype:bottom nil)
+                                       nil)
+             (and disjoint certain))
+           (format t "~&folding typeq test ~a since testing ~a " type-specifier ctype)
+           (replace-computation-by-constant-value
+            instruction
+            nil)))))

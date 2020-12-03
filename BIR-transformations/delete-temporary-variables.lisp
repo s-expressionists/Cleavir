@@ -11,10 +11,17 @@
       (return-from optimize-variable))
     ;; Local variable with one reader and one writer can be substituted away,
     (when (and (not (cleavir-bir:closed-over-p variable))
-               (= (cleavir-set:size writers) 1)
+               (cleavir-bir:immutablep variable)
                (= (cleavir-set:size readers) 1))
-      (let ((writer (cleavir-set:arb (cleavir-bir:writers variable)))
+      (let ((writer (cleavir-bir:binder variable))
             (reader (cleavir-set:arb (cleavir-bir:readers variable))))
+        ;; Move the asserted type from the reader onto the writer's
+        ;; input. The derived type on the reader should be no stronger
+        ;; than the writer's input by the write-once use-once nature
+        ;; of the variable.
+        (cleavir-bir:assert-type-on-linear-datum
+         (first (cleavir-bir:inputs writer))
+         (cleavir-bir::%asserted-type reader))
         (cleavir-bir:delete-transmission writer reader)))
     ;; Variable bound to constant can get propagated.
     (when (cleavir-bir:immutablep variable)

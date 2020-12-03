@@ -408,11 +408,6 @@
 ;;;
 ;;; THE-AST
 
-(defun new-ctype (datum ctype system)
-  (if (cleavir-bir:ctyped-p datum)
-      (cleavir-ctype:conjoin system (cleavir-bir:ctype datum) ctype)
-      ctype))
-
 (defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
   (let* ((inner (cleavir-ast:form-ast ast))
          (ctype (cleavir-ast:ctype ast))
@@ -422,28 +417,23 @@
          (rv (compile-ast inner inserter system)))
     (cond ((eq rv :no-return) rv)
           ((listp rv) ; several single values
-           (loop for r in rv
-                 ;; Iterate through ctypes
-                 for ct = (if (null required)
-                              (if (null optional)
-                                  rest
-                                  (pop optional))
-                              (pop required))
-                 for cct = (new-ctype r ct system)
-                 when (cleavir-ctype:bottom-p cct system)
-                   do (terminate inserter
-                                 (make-instance 'cleavir-bir:unreachable))
-                   and return :no-return
-                 do (setf (cleavir-bir:ctype r) cct)
-                 finally (return rv)))
+           ;; Iterate through ctypes
+           (dolist (r rv)
+             (cleavir-bir:assert-type-on-linear-datum
+              r
+              (if (null required)
+                  (if (null optional)
+                      rest
+                      (pop optional))
+                  (pop required))))
+           rv)
           (t ; arbitrary values
            (cond ((some (lambda (ct) (cleavir-ctype:bottom-p ct system))
                         required)
                   (terminate inserter (make-instance 'cleavir-bir:unreachable))
                   :no-return)
                  (t
-                  (setf (cleavir-bir:ctype rv)
-                        (new-ctype rv ctype system))
+                  (cleavir-bir:assert-type-on-linear-datum rv ctype)
                   rv))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
