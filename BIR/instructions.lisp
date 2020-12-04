@@ -100,8 +100,15 @@
 (defclass mv-call (abstract-call) ())
 (defmethod callee ((i mv-call)) (first (inputs i)))
 
-;; A local call is a call to a function within the same
-;; module. Therefore, the first input is actually a FUNCTION.
+;;; A local call is a legal call to a function within the same
+;;; module. Therefore, the first input is actually a
+;;; FUNCTION. Importantly, illegal calls (i.e. ones whose arguments
+;;; are not compatible with the lambda list of the callee) are not
+;;; classified as local calls, both so that they can reuse the same
+;;; runtime mechanism for argument count errors that normal calls from
+;;; outside a module use, and so that we can make the assumption that
+;;; local calls have compatible arguments with the lambda list of the
+;;; callee.
 (defclass abstract-local-call (abstract-call) ())
 
 (defclass local-call (abstract-local-call) ())
