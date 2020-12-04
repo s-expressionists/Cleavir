@@ -67,30 +67,49 @@
 
 (defmethod meta-evaluate-instruction (instruction))
 
-(defun constant-fold-ifi (instruction)
+;;; Fold the IFI if we can determine whether or not the test will
+;;; evaluate to NIL.
+(defun fold-ifi (instruction)
   (let* ((iblock (cleavir-bir:iblock instruction))
-         (test (first (cleavir-bir:inputs instruction))))
-    ;; If the test input of IFI is constant, then we can immediately
-    ;; fold to the correct branch.
-    (when (typep test 'cleavir-bir:constant-reference)
-      #+(or)
-      (print "folding ifi instruction")
-      (let* ((next (cleavir-bir:next instruction))
-             (then (first next))
-             (else (second next)))
-        (multiple-value-bind (next dead)
-            (if (cleavir-bir:constant-value (first (cleavir-bir:inputs test)))
-                (values then else)
-                (values else then))
-          (cleavir-bir:replace-terminator
-           (make-instance 'cleavir-bir:jump
-                          :next (list next)
-                          :inputs '() :outputs '())
-           instruction)
-          ;; Try to delete the block if possible, so we can maybe
-          ;; optimize more in this pass. Ultimately,
-          ;; refresh-local-iblocks is supposed to flush dead blocks.
-          (cleavir-bir:maybe-delete-iblock dead)))
+         (test (first (cleavir-bir:inputs instruction)))
+         (next (cleavir-bir:next instruction))
+         (then (first next))
+         (else (second next)))
+    (multiple-value-bind (next dead)
+        (cond ((typep test 'cleavir-bir:constant-reference)
+               (if (cleavir-bir:constant-value (first (cleavir-bir:inputs test)))
+                   (values then else)
+                   (values else then)))
+              ((multiple-value-bind (disjoint certain)
+                   (cleavir-ctype:subtypep
+                    (cleavir-ctype:conjoin/2 (cleavir-bir:ctype test)
+                                             (cleavir-ctype:null-type nil)
+                                             nil)
+                    (cleavir-ctype:bottom nil)
+                    nil)
+                 (and disjoint certain))
+               #+(or)
+               (format t "folding based on type ~a" (cleavir-bir:ctype test))
+               (values then else))
+              ((cleavir-ctype:subtypep (cleavir-bir:ctype test)
+                                       (cleavir-ctype:null-type nil)
+                                       nil)
+               #+(or)
+               (print "folding based on type NULL")
+               (values else then)))
+      (when dead
+        #+(or)
+        (print "folding ifi instruction")
+        (cleavir-bir:replace-terminator
+         (make-instance 'cleavir-bir:jump
+                        :next (list next)
+                        :inputs '() :outputs '())
+         instruction)
+        (cleavir-bir:merge-successor-if-possible iblock)
+        ;; Try to delete the block if possible, so we can maybe
+        ;; optimize more in this pass. Ultimately,
+        ;; refresh-local-iblocks is supposed to flush dead blocks.
+        (cleavir-bir:maybe-delete-iblock dead))
       t)))
 
 ;;; Eliminate degenerate if instructions. Does the equivalent of (IF
@@ -134,7 +153,7 @@
       (cleavir-bir:delete-iblock iblock))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi))
-  (unless (constant-fold-ifi instruction)
+  (unless (fold-ifi instruction)
     (eliminate-degenerate-if instruction)))
 
 ;; Replace COMPUTATION with a constant reference to value.
