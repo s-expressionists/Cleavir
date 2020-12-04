@@ -14,6 +14,7 @@
            #:conjoin #:disjoin)
   (:export #:cons #:array #:complex #:range
            #:member #:satisfies #:function #:values
+           #:null-type
            #:coerce-to-values)
   (:export #:values-required #:values-optional #:values-rest)
   (:export #:apply #:funcall))
