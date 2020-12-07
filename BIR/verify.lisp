@@ -86,6 +86,8 @@
                         (and (not (unused-p i))
                              (eq (use i) instruction)))
                       (rest inputs))))
+      (mv-local-call
+       (assert (typep (first inputs) 'function)))
       (constant-reference
        (test (typep (first inputs) 'constant)
              "Constant reference ~a has non-constant input ~a"
@@ -225,7 +227,7 @@ has use-before-define on inputs ~a"
           "The function ~a being enclosed by ~a is not present in the module ~a."
           (code inst) inst *verifying-module*)))
 
-(defmethod verify progn ((inst local-call))
+(defmethod verify progn ((inst abstract-local-call))
   ;; Make sure the function we are calling is in the module.
   (when (boundp '*verifying-module*)
     (let ((function (first (inputs inst))))

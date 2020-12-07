@@ -71,6 +71,12 @@
            (cleavir-bir:replace-computation enclose function))
          (when (cleavir-bir:unused-p enclose)
            (cleavir-bir:delete-computation enclose)))
+        (cleavir-bir:mv-call
+         (when (eq enclose (cleavir-bir:callee use))
+           (change-class use 'cleavir-bir:mv-local-call)
+           (cleavir-bir:replace-computation enclose function))
+         (when (cleavir-bir:unused-p enclose)
+           (cleavir-bir:delete-computation enclose)))
         (cleavir-bir:writevar
          (let ((variable (first (cleavir-bir:outputs use))))
            ;; Variable needs to be immutable since we want to make
@@ -86,6 +92,10 @@
                                   (rest (cleavir-bir:inputs use))
                                   function))
                         (change-class use 'cleavir-bir:local-call)
+                        (cleavir-bir:replace-computation reader function)))
+                     (cleavir-bir:mv-call
+                      (when (eq reader (cleavir-bir:callee use))
+                        (change-class use 'cleavir-bir:mv-local-call)
                         (cleavir-bir:replace-computation reader function))))))))
            ;; No more references to the variable means we can clean
            ;; up the enclose. The writer might've already been

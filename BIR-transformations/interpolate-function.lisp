@@ -266,7 +266,10 @@
                    (cleavir-bir:lambda-list function))))
     ;; FIXME: We should respect inline and not inline declarations.
     (let ((local-calls (cleavir-bir:local-calls function)))
-      (unless (cleavir-set:empty-set-p local-calls)
+      (unless (or (cleavir-set:empty-set-p local-calls)
+                  (cleavir-set:some
+                   (lambda (c) (typep c 'cleavir-bir:mv-local-call))
+                   local-calls))
         (multiple-value-bind (return-point common-use common-dynenv target-owner)
             (common-return-cont function local-calls)
           (assert (not (eq return-point :uncalled)))
