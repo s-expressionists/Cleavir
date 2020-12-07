@@ -171,17 +171,16 @@
                             (cleavir-bir:replace-uses supplied-p (second item))))))
                      lambda-list)
     (setf (cleavir-bir:inputs start) (nreverse phis)))
-  ;; If the function unwinds to their target function, change it to a
-  ;; local unwind.
-  (cleavir-set:doset (ib (cleavir-bir:exits function))
-    (let ((u (cleavir-bir:end ib)))
-      (check-type u cleavir-bir:unwind)
-      (when (eq (cleavir-bir:function (cleavir-bir:destination u))
-                target-function)
-        (replace-unwind u))))
-  ;; Re-home iblocks (and indirectly, instructions)
+  ;; Re-home iblocks (and indirectly, instructions), and if the
+  ;; function unwinds to its target function, change it to a local
+  ;; unwind.
   (cleavir-bir:map-iblocks
    (lambda (ib)
+     (let ((u (cleavir-bir:end ib)))
+       (when (typep (cleavir-bir:end ib) 'cleavir-bir:unwind)
+         (when (eq (cleavir-bir:function (cleavir-bir:destination u))
+                   target-function)
+           (replace-unwind u))))
      (when (eq (cleavir-bir:dynamic-environment ib) function)
        (setf (cleavir-bir:dynamic-environment ib)
              dynenv))
