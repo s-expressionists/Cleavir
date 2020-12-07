@@ -7,35 +7,32 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun meta-evaluate-module (module)
-  (cleavir-set:doset (function (cleavir-bir:functions module))
-    (meta-evaluate-function function)))
+  ;; Obviously this should actually be a worklist algorithm and not
+  ;; just two or three passes. We repeat on the module level so that
+  ;; types are more likely to get propagated interprocedurally.
+  (dotimes (repeat 3)
+    (declare (ignore repeat))
+    (cleavir-set:doset (function (cleavir-bir:functions module))
+      (meta-evaluate-function function))))
 
 (defun meta-evaluate-function (function)
-  ;; Obviously this should actually be a worklist algorithm and not
-  ;; just two or three passes.
-  (let ((forward-flow (cleavir-bir::iblocks-forward-flow-order function)))
-    (dotimes (repeat 3)
-      (declare (ignore repeat))
-      (dolist (iblock forward-flow)
-        ;; Make sure not to look at a block that might have been
-        ;; deleted earlier in this forward pass.
-        (unless (cleavir-bir:deletedp iblock)
-          ;; Make sure to merge the successors as much as possible so we can
-          ;; trigger more optimizations.
-          (loop while (cleavir-bir:merge-successor-if-possible iblock))
-          (meta-evaluate-iblock-forward iblock)))))
-  (cleavir-bir:refresh-local-iblocks function)
-  (cleavir-bir::map-iblocks-postorder
-   #'meta-evaluate-iblock-backward
-   function))
+  (dolist (iblock (cleavir-bir::iblocks-forward-flow-order function))
+    ;; Make sure not to look at a block that might have been
+    ;; deleted earlier in this forward pass.
+    (unless (cleavir-bir:deletedp iblock)
+      ;; Make sure to merge the successors as much as possible so we can
+      ;; trigger more optimizations.
+      (loop while (cleavir-bir:merge-successor-if-possible iblock))
+      (meta-evaluate-iblock iblock)
+      (flush-dead-code iblock)))
+  (cleavir-bir:refresh-local-iblocks function))
 
-;; 
-(defun meta-evaluate-iblock-forward (iblock)
+(defun meta-evaluate-iblock (iblock)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
     (meta-evaluate-instruction instruction)))
 
-;; Remove dead code for the backward pass.
-(defun meta-evaluate-iblock-backward (iblock)
+;; Remove dead code.
+(defun flush-dead-code (iblock)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
     (typecase instruction
       (cleavir-bir:multiple-to-fixed
