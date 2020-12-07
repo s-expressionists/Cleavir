@@ -100,13 +100,13 @@
                     nil)
                  (and disjoint certain))
                #+(or)
-               (format t "folding based on type ~a" (cleavir-bir:ctype test))
+               (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
                (values then else))
               ((cleavir-ctype:subtypep (cleavir-bir:ctype test)
                                        (cleavir-ctype:null-type nil)
                                        nil)
                #+(or)
-               (print "folding based on type NULL")
+               (print "folding ifi based on type NULL")
                (values else then)))
       (when dead
         #+(or)
@@ -217,6 +217,15 @@
                                           (cleavir-ctype:null-type nil)
                                           nil))
                           (t rest-type)))))))))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:fixed-to-multiple))
+  (cleavir-bir:derive-type-for-linear-datum
+   instruction
+   (cleavir-ctype:values
+    (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction))
+    nil
+    (cleavir-ctype:bottom nil)
+    nil)))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
