@@ -194,9 +194,29 @@
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:multiple-to-fixed))
   (let ((definition (first (cleavir-bir:inputs instruction))))
-    (when (typep definition 'cleavir-bir:fixed-to-multiple)
-      (cleavir-bir:delete-transmission definition instruction)
-      (cleavir-bir:delete-instruction definition))))
+    (cond ((typep definition 'cleavir-bir:fixed-to-multiple)
+           (cleavir-bir:delete-transmission definition instruction)
+           (cleavir-bir:delete-instruction definition))
+          ;; Derive the type of the outputs (fixed values) from the
+          ;; definition.
+          (t
+           (let ((values-type (cleavir-bir:ctype definition)))
+             (unless (cleavir-ctype:top-p values-type nil)
+               (let ((required-type (cleavir-ctype:values-required values-type nil))
+                     (optional-type (cleavir-ctype:values-optional values-type nil))
+                     (rest-type (cleavir-ctype:disjoin
+                                 nil
+                                 (cleavir-ctype:values-rest values-type nil)
+                                 (cleavir-ctype:null-type nil))))
+                 (dolist (output (cleavir-bir:outputs instruction))
+                   (cleavir-bir:derive-type-for-linear-datum
+                    output
+                    (cond (required-type (pop required-type))
+                          (optional-type (cleavir-ctype:disjoin/2
+                                          (pop optional-type)
+                                          (cleavir-ctype:null-type nil)
+                                          nil))
+                          (t rest-type)))))))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
