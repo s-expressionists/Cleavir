@@ -413,7 +413,7 @@ has use-before-define on inputs ~a"
 (defmethod verify progn ((function function))
   (with-problems (function)
     (let ((start (start function))
-          (end (end function))
+          (returni (returni function))
           (*verifying-function* function))
       ;; make sure the function is actually in its module.
       (test (cleavir-set:presentp function (functions (module function)))
@@ -422,13 +422,6 @@ has use-before-define on inputs ~a"
       ;; start is an iblock (verify type decl)
       (test (typep start 'iblock)
             "Function start ~a is not an iblock" start)
-      ;; end is an iblock or nil (verify type decl)
-      (test (typep end '(or iblock null))
-            "Function end ~a is not an iblock or NIL" end)
-      ;; End of the end block is a return instruction
-      (when end
-        (test (and (slot-boundp end '%end) (typep (end end) 'returni))
-              "Final instruction ~a is not a returni" (end end)))
       ;; Module is correct
       (when (boundp '*verifying-module*)
         (test (eq (module function) *verifying-module*)
@@ -438,10 +431,10 @@ has use-before-define on inputs ~a"
         (flet ((iblock-verifier (iblock)
                  (verify iblock)
                  ;; A function has at most one return instruction
-                 (test (if (eq iblock end)
-                           t
-                           (not (typep (end iblock) 'returni)))
-                       "iblock ~a is not the end, but ends in a returni"
+                 (test (if (typep (end iblock) 'returni)
+                           (eq (end iblock) returni)
+                           t)
+                       "iblock ~a ends in a returni which is not the returni of the function."
                        iblock)
                  (cleavir-set:nadjoinf reachable iblock)))
           (map-reachable-iblocks #'iblock-verifier start)
@@ -460,14 +453,15 @@ has use-before-define on inputs ~a"
         (cleavir-set:doset (catch (catches function))
           (test (cleavir-set:presentp catch *seen-instructions*)
                 "The catch ~a is recorded by the function ~a but not reachable." catch function))
-        ;; The end block, if it exists, is reachable and in the iblocks set.
-        (let ((end (end function)))
-          (when end
+        ;; The return instruction's iblock, if it exists, is reachable
+        ;; and in the iblocks set.
+        (when returni
+          (let ((end (iblock returni)))
             (test (cleavir-set:presentp end reachable)
-                  "The end block of function ~a is not reachable."
+                  "The return iblock of the function ~a is not reachable."
                   function)
             (test (cleavir-set:presentp end (iblocks function))
-                  "The end block of function ~a is not recorded."
+                  "The return iblock of function ~a is not recorded."
                   function)))))))
 
 (defmethod verify progn ((module module))

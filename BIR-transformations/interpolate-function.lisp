@@ -129,9 +129,7 @@
         (setf (cleavir-bir:inputs jump) (nreverse inputs))))))
 
 (defun rewire-return (function return-point-block)
-  ;; Replace the return instruction with a jump if there is one, or else
-  ;; delete AFTER and any later straight line blocks.
-  (let* ((returni (cleavir-bir:end (cleavir-bir:end function)))
+  (let* ((returni (cleavir-bir:returni function))
          (outputs (cleavir-bir:inputs return-point-block))
          (jump (make-instance 'cleavir-bir:jump
                               :outputs outputs
@@ -145,16 +143,8 @@
               (cleavir-bir:inputs returni)
               '()))))
 
-;;; Integrate the blocks of FUNCTION into TARGET-FUNCTION in the
-;;; dynamic environment DYNENV. Move the arguments of FUNCTION into
-;;; its start block.
-(defun interpolate-function (function target-function dynenv)
-  (cleavir-set:nunionf (cleavir-bir:variables target-function)
-                       (cleavir-bir:variables function))
-  (cleavir-set:nunionf (cleavir-bir:catches target-function)
-                       (cleavir-bir:catches function))
+(defun move-function-arguments-to-iblock (function)
   (let ((start (cleavir-bir:start function))
-        (lambda-list (cleavir-bir:lambda-list function))
         (phis '()))
     (map-lambda-list (lambda (state item)
                        (ecase state
@@ -169,8 +159,16 @@
                             (push supplied-p phis)
                             (cleavir-bir:replace-uses supplied (first item))
                             (cleavir-bir:replace-uses supplied-p (second item))))))
-                     lambda-list)
-    (setf (cleavir-bir:inputs start) (nreverse phis)))
+                     (cleavir-bir:lambda-list function))
+    (setf (cleavir-bir:inputs start) (nreverse phis))))
+
+;;; Integrate the blocks of FUNCTION into TARGET-FUNCTION in the
+;;; dynamic environment DYNENV.
+(defun interpolate-function (function target-function dynenv)
+  (cleavir-set:nunionf (cleavir-bir:variables target-function)
+                       (cleavir-bir:variables function))
+  (cleavir-set:nunionf (cleavir-bir:catches target-function)
+                       (cleavir-bir:catches function))
   ;; Re-home iblocks (and indirectly, instructions), and if the
   ;; function unwinds to its target function, change it to a local
   ;; unwind.
@@ -199,7 +197,7 @@
 ;;; When the function does return normally, wire the return value of
 ;;; the function into the common ``transitive'' use of the local calls.
 (defun contify (function local-calls return-point common-use common-dynenv target-owner)
-  (let* ((end (cleavir-bir:end function))
+  (let* ((returni (cleavir-bir:returni function))
          ;; If the return-point has a predecessor, it does not start a
          ;; block and will be the unique outside call to this
          ;; function, which means we should normalize the return point
@@ -221,21 +219,20 @@
                (if (eq return-point :unknown)
                    :unknown
                    (cleavir-bir:iblock return-point)))))
-    (unless (and end (eq return-point :unknown))
+    (unless (and returni (eq return-point :unknown))
+      (move-function-arguments-to-iblock function)
+      (unless (eq return-point :unknown)
+        (when returni
+          (rewire-return function return-point)))
       (interpolate-function function
                             target-owner
                             common-dynenv)
-      (unless (eq return-point :unknown)
-        (if end
-            (rewire-return function return-point)
-            ;; FIXME: Subtly wrong because of loops and may be unreachable.
-            (cleavir-bir:maybe-delete-iblock return-point)))
       (cleavir-set:doset (call local-calls)
         (rewire-call-into-body call (cleavir-bir:start function)))
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
-      (if end
-          (cleavir-bir:merge-successor-if-possible end)
+      (if returni
+          (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni))
           ;; The function doesn't return, so make sure later blocks are deleted
           (cleavir-bir:refresh-local-iblocks target-owner))
       (when unique-call
@@ -253,8 +250,7 @@
       ;; catches in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.
       (eliminate-catches target-owner)
-      (return-from contify t)))
-  nil)
+      t)))
 
 (defun lambda-list-too-hairy-p (lambda-list)
   (not (every (lambda (item)

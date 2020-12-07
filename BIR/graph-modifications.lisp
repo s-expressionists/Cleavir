@@ -181,6 +181,8 @@
 (defmethod clean-up-instruction progn ((inst terminator))
   (let ((ib (iblock inst)))
     (dolist (n (next inst)) (cleavir-set:nremovef (predecessors n) ib))))
+(defmethod clean-up-instruction progn ((inst returni))
+  (setf (returni (function inst)) nil))
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
@@ -239,10 +241,6 @@
   ;; deleted. Or perhaps that should be handled at a higher level?
   (assert (orphan-iblock-p iblock))
   (clean-up-iblock iblock)
-  (let ((f (function iblock)))
-    (when (and (slot-boundp f '%end)
-               (eq iblock (end f)))
-      (setf (end f) nil)))
   (when (slot-boundp iblock '%end)
     (let ((successors (successors iblock)))
       (dolist (s successors)
@@ -318,7 +316,7 @@
 (defun successor-mergable-p (iblock)
   (let ((successors (successors iblock)))
     (and successors
-         (typep (cleavir-bir:end iblock) 'cleavir-bir:jump)
+         (typep (end iblock) 'cleavir-bir:jump)
          (let* ((successor (first successors))
                 (predecessors (predecessors successor)))
            (and (= (cleavir-set:size predecessors) 1)
@@ -362,9 +360,6 @@
         (dolist (succ (successors successor))
           (cleavir-set:nremovef (predecessors succ) successor)
           (cleavir-set:nadjoinf (predecessors succ) iblock)))
-    ;; If the block happens to be the end of its function, adjust
-    (when (eq (end function) successor)
-      (setf (end function) iblock))
     ;; Remove successor from the function.
     (cleavir-set:nremovef (iblocks function) successor)
     ;; and scope
@@ -410,9 +405,6 @@
           (dolist (n (next (end new)))
             (cleavir-set:nremovef (predecessors n) ib)
             (cleavir-set:nadjoinf (predecessors n) new))))
-    ;; If the block happens to be the end of its function, adjust
-    (when (eq (end function) ib)
-      (setf (end function) new))
     (values ib new)))
 
 (defun reachable-iblocks (function)

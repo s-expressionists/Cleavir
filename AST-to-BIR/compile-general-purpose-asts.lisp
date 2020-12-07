@@ -47,12 +47,12 @@
     (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
       (cond
         ((eq rv :no-return)
-         (setf (cleavir-bir:end function) nil))
+         (setf (cleavir-bir:returni function) nil))
         (t
-         (setf (cleavir-bir:end function) (iblock inserter))
-         (terminate inserter
-                    (make-instance 'cleavir-bir:returni
-                                   :inputs (adapt inserter rv :multiple-values))))))
+         (let ((returni (make-instance 'cleavir-bir:returni
+                          :inputs (adapt inserter rv :multiple-values))))
+           (setf (cleavir-bir:returni function) returni)
+           (terminate inserter returni)))))
     (cleavir-bir:refresh-local-iblocks function)
     function))
 

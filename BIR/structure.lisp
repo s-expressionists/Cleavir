@@ -313,9 +313,10 @@
              :type cleavir-set:set)
    (%start :initarg :start :accessor start
            :type iblock)
-   ;; Block of the return instruction.
-   ;; If there isn't one, i.e. the function never returns, this is nil.
-   (%end :initarg :end :accessor end :type (or null iblock))
+   ;; The return instruction of this function.  If there isn't one,
+   ;; i.e. the function never returns as the return is unreachable,
+   ;; this is nil.
+   (%returni :initarg :returni :accessor returni :type (or null returni))
    (%lambda-list :initarg :lambda-list :accessor lambda-list)
    ;; The set of variables bound by this function, i.e. the union of
    ;; the variables bound by all LETI instructions in it.

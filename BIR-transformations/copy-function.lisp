@@ -72,14 +72,13 @@
     (setf (copy-of function map) copy)
     (setf (cleavir-bir:lambda-list copy)
           (copy-lambda-list (cleavir-bir:lambda-list function) map)
-          (cleavir-bir:end copy) nil)
+          ;; TODO
+          (cleavir-bir:returni copy) :FIXME)
     (cleavir-bir:map-iblocks
      (lambda (ib)
        (let ((copy-ib (copy-iblock ib map copy)))
          (when (eq ib (cleavir-bir:start function))
-           (setf (cleavir-bir:start copy) copy-ib))
-         (when (eq ib (cleavir-bir:end function))
-           (setf (cleavir-bir:end copy) copy-ib))))
+           (setf (cleavir-bir:start copy) copy-ib))))
      function)
     (mapc
      (lambda (ib) (fill-iblock-copy ib stack map))
