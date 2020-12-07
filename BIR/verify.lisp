@@ -394,10 +394,11 @@ has use-before-define on inputs ~a"
           iblock (remove-if #'phip (inputs iblock))))
   (flet ((terminatord (p)
            (every (lambda (inst)
-                    (typep inst 'terminator))
+                    (and (typep inst 'terminator)
+                         (member p (outputs inst))))
                   (definitions p))))
     (test (every #'terminatord (inputs iblock))
-          "phis ~a have non-terminator definitions"
+          "phis ~a have some invalid definitions"
           (remove-if #'terminatord (inputs iblock))))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))

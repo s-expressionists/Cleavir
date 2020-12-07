@@ -28,6 +28,20 @@
   (cleavir-bir:refresh-local-iblocks function))
 
 (defun meta-evaluate-iblock (iblock)
+  ;; Derive the types of any iblock inputs. We have to do this from
+  ;; scratch optimistically because we are disjoining the types of the
+  ;; definitions, instead of narrowing the types conservatively.
+  (dolist (phi (cleavir-bir:inputs iblock))
+    (let ((type (cleavir-ctype:bottom nil)))
+      (dolist (definition (cleavir-bir:definitions phi))
+        (setq type
+              (cleavir-ctype:disjoin/2
+               type
+               (cleavir-bir:ctype
+                (nth (position phi (cleavir-bir:outputs definition))
+                     (cleavir-bir:inputs definition)))
+               nil)))
+      (setf (cleavir-bir::%derived-type phi) type)))
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
     (meta-evaluate-instruction instruction)))
 
