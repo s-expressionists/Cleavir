@@ -15,7 +15,51 @@
     (cleavir-set:doset (function (cleavir-bir:functions module))
       (meta-evaluate-function function))))
 
+;;; Derive the type of the function arguments from the types of the
+;;; arguments of its local calls.
+(defun derive-function-argument-types (function)
+  (when (cleavir-set:empty-set-p (cleavir-bir:encloses function))
+    ;; If there are no local calls either, don't bother doing
+    ;; anything, especially since we're deriving the type from scratch
+    ;; optimistically.
+    (let ((local-calls (cleavir-bir:local-calls function)))
+      (unless (cleavir-set:empty-set-p local-calls)
+        (cleavir-bir:map-lambda-list
+         (lambda (state item index)
+           (case state
+             ((:required &optional)
+              (let ((type (cleavir-ctype:bottom nil))
+                    (suppliedp (cleavir-ctype:bottom nil)))
+                (cleavir-set:doset (local-call local-calls)
+                  (unless (cleavir-bir:deletedp (cleavir-bir:iblock local-call))
+                    (let ((arg (nth index (rest (cleavir-bir:inputs local-call)))))
+                      (setq type
+                            (cleavir-ctype:disjoin/2
+                             type
+                             (if arg
+                                 (cleavir-bir:ctype arg)
+                                 (cleavir-ctype:null-type nil))
+                             nil))
+                      (setq suppliedp
+                            (cleavir-ctype:disjoin/2
+                             suppliedp
+                             (if arg
+                                 (cleavir-ctype:member nil t)
+                                 (cleavir-ctype:null-type nil))
+                             nil)))))
+                (ecase state
+                  (:required
+                   (setf (cleavir-bir::%derived-type item) type))
+                  (&optional
+                   (setf (cleavir-bir::%derived-type (first item)) type)
+                   (setf (cleavir-bir::%derived-type (second item)) suppliedp)))))
+             (&key
+              ;; too hairy for me to handle
+              )))
+         (cleavir-bir:lambda-list function))))))
+
 (defun meta-evaluate-function (function)
+  (derive-function-argument-types function)
   (dolist (iblock (cleavir-bir::iblocks-forward-flow-order function))
     ;; Make sure not to look at a block that might have been
     ;; deleted earlier in this forward pass.
@@ -27,10 +71,10 @@
       (flush-dead-code iblock)))
   (cleavir-bir:refresh-local-iblocks function))
 
-(defun meta-evaluate-iblock (iblock)
-  ;; Derive the types of any iblock inputs. We have to do this from
-  ;; scratch optimistically because we are disjoining the types of the
-  ;; definitions, instead of narrowing the types conservatively.
+;;; Derive the types of any iblock inputs. We have to do this from
+;;; scratch optimistically because we are disjoining the types of the
+;;; definitions, instead of narrowing the types conservatively.
+(defun derive-iblock-input-types (iblock)
   (dolist (phi (cleavir-bir:inputs iblock))
     (let ((type (cleavir-ctype:bottom nil)))
       (dolist (definition (cleavir-bir:definitions phi))
@@ -42,7 +86,10 @@
                   (nth (position phi (cleavir-bir:outputs definition))
                        (cleavir-bir:inputs definition)))
                  nil))))
-      (setf (cleavir-bir::%derived-type phi) type)))
+      (setf (cleavir-bir::%derived-type phi) type))))
+
+(defun meta-evaluate-iblock (iblock)
+  (derive-iblock-input-types iblock)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
     (meta-evaluate-instruction instruction)))
 
