@@ -101,9 +101,9 @@
       (cleavir-bir:delete-computation call)
       (let ((call-arguments (rest (cleavir-bir:inputs call)))
             (inputs '()))
-        (map-lambda-list
-         (lambda (state item)
-           (declare (ignore item))
+        (cleavir-bir:map-lambda-list
+         (lambda (state item index)
+           (declare (ignore item index))
            (let ((arg (pop call-arguments)))
              (ecase state
                (:required
@@ -146,20 +146,22 @@
 (defun move-function-arguments-to-iblock (function)
   (let ((start (cleavir-bir:start function))
         (phis '()))
-    (map-lambda-list (lambda (state item)
-                       (ecase state
-                         (:required
-                          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start)))
-                            (push supplied phis)
-                            (cleavir-bir:replace-uses supplied item)))
-                         (&optional
-                          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start))
-                                (supplied-p (make-instance 'cleavir-bir:phi :iblock start)))
-                            (push supplied phis)
-                            (push supplied-p phis)
-                            (cleavir-bir:replace-uses supplied (first item))
-                            (cleavir-bir:replace-uses supplied-p (second item))))))
-                     (cleavir-bir:lambda-list function))
+    (cleavir-bir:map-lambda-list
+     (lambda (state item index)
+       (declare (ignore index))
+       (ecase state
+         (:required
+          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start)))
+            (push supplied phis)
+            (cleavir-bir:replace-uses supplied item)))
+         (&optional
+          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start))
+                (supplied-p (make-instance 'cleavir-bir:phi :iblock start)))
+            (push supplied phis)
+            (push supplied-p phis)
+            (cleavir-bir:replace-uses supplied (first item))
+            (cleavir-bir:replace-uses supplied-p (second item))))))
+     (cleavir-bir:lambda-list function))
     (setf (cleavir-bir:inputs start) (nreverse phis))))
 
 ;;; Integrate the blocks of FUNCTION into TARGET-FUNCTION in the

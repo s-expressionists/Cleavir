@@ -6,16 +6,6 @@
 (defun post-find-local-calls (function)
   (maybe-interpolate function))
 
-;;; This utility parses BIR lambda lists. FUNCTION takes two
-;;; arguments: the current lambda-list item being parsed and the state
-;;; of the parse (e.g. &OPTIONAL).
-(defun map-lambda-list (function lambda-list)
-  (let ((state :required))
-    (dolist (item lambda-list)
-      (if (symbolp item)
-          (setq state item)
-          (funcall function state item)))))
-
 ;;; Return true if the call arguments are compatible with those of the
 ;;; function lambda list. If they're not, warn and return false.
 ;;; This checks argument counts but does NOT check &key argument validity,
@@ -26,14 +16,15 @@
         (nrequired 0)
         (noptional 0)
         (restp nil))
-    (map-lambda-list (lambda (state item)
-                       (declare (ignore item))
-                       (ecase state
-                         (:required (incf nrequired))
-                         (&optional (incf noptional))
-                         ((&rest &key) (setf restp t))
-                         (&allow-other-keys)))
-                     lambda-list)
+    (cleavir-bir:map-lambda-list
+     (lambda (state item index)
+       (declare (ignore item index))
+       (ecase state
+         (:required (incf nrequired))
+         (&optional (incf noptional))
+         ((&rest &key) (setf restp t))
+         (&allow-other-keys)))
+     lambda-list)
     (let ((nfixed (+ nrequired noptional)))
       (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
           t

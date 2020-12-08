@@ -64,3 +64,16 @@
 (defun map-local-instructions (f function)
   (check-type function function)
   (map-iblocks (lambda (ib) (map-iblock-instructions f (start ib))) function))
+
+;;; This utility parses BIR lambda lists. FUNCTION takes three
+;;; arguments: The state of the parse (e.g. &OPTIONAL), the current
+;;; lambda-list item being parsed, and the index of the item.
+(defun map-lambda-list (function lambda-list)
+  (let ((state :required)
+        (index 0))
+    (dolist (item lambda-list)
+      (if (symbolp item)
+          (setq state item)
+          (progn
+            (funcall function state item index)
+            (incf index))))))
