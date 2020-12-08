@@ -40,8 +40,20 @@
                                                 '#:-start)
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
-    (setf (cleavir-bir:lambda-list function)
-          (bind-lambda-list-arguments (cleavir-ast:lambda-list ast)))
+    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast))))
+      (setf (cleavir-bir:lambda-list function) lambda-list)
+      ;; Derive the type of the &rest argument to be LIST.
+      (cleavir-bir:map-lambda-list
+       (lambda (state item index)
+         (declare (ignore index))
+         (when (eq state '&rest)
+           (cleavir-bir:derive-type-for-linear-datum
+            item
+            (cleavir-ctype:disjoin/2
+             (cleavir-ctype:null-type nil)
+             (cleavir-ctype:cons t t nil)
+             nil))))
+       lambda-list))
     (setf (cleavir-bir:start function) start)
     (begin inserter start)
     (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))
