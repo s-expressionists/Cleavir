@@ -235,21 +235,34 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
     (unless (constant-fold-instruction instruction inputs #'eq)
-      ;; Really doesn't work yet.
+      ;; The tautology stuff doesn't help yet. We'd need EQL
+      ;; constraints to actually do anything useful.
       #+(or)
       (let ((input1 (first inputs))
             (input2 (second inputs)))
+        ;; (EQ <readvar <var X>> <readvar <var X>>) => T
+        (when (and (typep input1 'cleavir-bir:readvar)
+                   (typep input2 'cleavir-bir:readvar)
+                   (eq (first (cleavir-bir:inputs input1))
+                       (first (cleavir-bir:inputs input2))))
+          (print "folding tautalogy")
+          (replace-computation-by-constant-value
+           instruction
+           t))
         ;; Do the transformation (if (eq <e> nil) <f> <g>) => (if <e> <g> <f>).
-        (when (typep input1 'cleavir-bir:constant-reference)
-          (psetq input1 input2
-                 input2 input1))
-        (when (eq (cleavir-bir:constant-value (first (cleavir-bir:inputs input2))) nil)
-          (let ((ifi (cleavir-bir:use instruction)))
-            (assert (typep ifi 'cleavir-bir:ifi))
-            (cleavir-bir::remove-use instruction ifi)
-            (cleavir-bir:delete-computation instruction)
-            (setf (cleavir-bir:inputs ifi) (list input1))
-            (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi)))))))))
+        ;; Really doesn't work yet.
+        #+(or)
+        (progn
+          (when (typep input1 'cleavir-bir:constant-reference)
+            (psetq input1 input2
+                   input2 input1))
+          (when (eq (cleavir-bir:constant-value (first (cleavir-bir:inputs input2))) nil)
+            (let ((ifi (cleavir-bir:use instruction)))
+              (assert (typep ifi 'cleavir-bir:ifi))
+              (cleavir-bir::remove-use instruction ifi)
+              (cleavir-bir:delete-computation instruction)
+              (setf (cleavir-bir:inputs ifi) (list input1))
+              (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi))))))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:typeq-test))
   (let* ((object (first (cleavir-bir:inputs instruction)))
