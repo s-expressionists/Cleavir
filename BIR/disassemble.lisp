@@ -47,13 +47,16 @@
   (:method append ((instruction instruction)) ()))
 
 (defun disassemble-instruction (instruction)
-  (let ((outs (mapcar #'disassemble-datum (outputs instruction)))
-        (dis `(,(label instruction)
+  (let ((dis `(,(label instruction)
                ,@(mapcar #'disassemble-datum (inputs instruction))
                ,@(disassemble-instruction-extra instruction))))
-    (if (null outs)
-        dis
-        `(:= (,@outs) ,dis))))
+    `(:= (,@(mapcar (lambda (out)
+                      `(,(disassemble-datum out)
+                        ,@(when (typep out 'linear-datum)
+                            `(,(%derived-type out)
+                              ,(%asserted-type out)))))
+                    (outputs instruction)))
+         ,dis)))
 
 (defun iblock-id (iblock)
   (or (gethash iblock *ids*)
@@ -136,7 +139,25 @@
     (when entrances
       (format t "~&   entrances = ~(~:a~)" entrances))
     (dolist (inst insts)
-      (format t "~&     ~(~a~)" inst))))
+      (destructuring-bind (_ outs . rest) inst
+        (declare (ignore _))
+        (format t "~&     ")
+        (format t "~{~(~a~)~}" rest)
+        (when outs
+          (format t " -> "))
+        (dolist (out outs)
+          (destructuring-bind (value &optional (derived-type nil dsuppliedp)
+                                               (asserted-type nil asuppliedp))
+              out
+            (format t "~a " value)
+            (when (or dsuppliedp asuppliedp)
+              (format t "~45T; "))
+            (when dsuppliedp
+              (unless (cleavir-ctype:top-p derived-type nil)
+                (format t "derived-type: ~(~a~) " derived-type)))
+            (when asuppliedp
+              (unless (cleavir-ctype:top-p asserted-type nil)
+                (format t "asserted-type: ~(~a~) " asserted-type)))))))))
 
 (defun print-function-disasm (function-disasm &key (show-dynenv t))
   (destructuring-bind ((name start args env) . iblocks)
