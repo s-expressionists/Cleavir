@@ -227,6 +227,11 @@
     (cleavir-ctype:bottom nil)
     nil)))
 
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:enclose))
+  ;; We should probably do something sophisticated here like using the
+  ;; types of the functions arguments or return value.
+  )
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
     (unless (constant-fold-instruction instruction inputs #'eq)

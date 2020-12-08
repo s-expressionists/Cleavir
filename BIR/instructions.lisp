@@ -10,6 +10,15 @@
             :type (member :dynamic :indefinite))))
 (defmethod rtype ((d enclose)) :object)
 
+(defmethod initialize-instance :after
+    ((i enclose) &rest initargs &key inputs)
+  (declare (cl:ignore initargs))
+  (derive-type-for-linear-datum
+   i
+   (cleavir-ctype:function
+    nil nil (cleavir-ctype:top nil) nil nil nil (cleavir-ctype:top nil) nil))
+  i)
+
 (defclass unreachable (no-input no-output terminator0) ())
 
 (defclass nop (no-input no-output operation) ())
