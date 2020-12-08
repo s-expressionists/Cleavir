@@ -275,11 +275,6 @@
     (cleavir-ctype:bottom nil)
     nil)))
 
-(defmethod meta-evaluate-instruction ((instruction cleavir-bir:enclose))
-  ;; We should probably do something sophisticated here like using the
-  ;; types of the functions arguments or return value.
-  )
-
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test))
   (let ((inputs (cleavir-bir:inputs instruction)))
     (unless (constant-fold-instruction instruction inputs #'eq)
@@ -345,3 +340,17 @@
              (type (cleavir-bir:ctype definition)))
         (cleavir-set:doset (reader (cleavir-bir:readers variable))
           (cleavir-bir:derive-type-for-linear-datum reader type))))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni))
+  ;; Porpagate the return type to local calls and encloses of the function.
+  (let ((function (cleavir-bir:function instruction))
+        (return-type (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
+    (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
+      (cleavir-bir:derive-type-for-linear-datum
+       local-call
+       return-type))
+    (cleavir-set:doset (enclose (cleavir-bir:encloses function))
+      (cleavir-bir:derive-type-for-linear-datum
+       enclose
+       (cleavir-ctype:function
+        nil nil (cleavir-ctype:top nil) nil nil nil return-type nil)))))
