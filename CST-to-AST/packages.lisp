@@ -27,6 +27,7 @@
            #:entry-from-parameter
            #:entries-from-parameter-group
            #:lambda-list-from-parameter-group
+           #:defprimop
            ;; Names of conditions.
            #:compilation-condition
            #:compilation-program-error

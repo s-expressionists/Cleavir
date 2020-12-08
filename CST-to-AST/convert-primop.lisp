@@ -16,6 +16,11 @@
         :attributes (cleavir-primop-info:attributes info)
         :origin origin))))
 
+(defmacro defprimop (symbol)
+  `(defmethod convert-special
+       ((symbol (eql ',symbol)) cst env system)
+     (convert-primop symbol cst env system)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting CLEAVIR-PRIMOP:AST.
@@ -246,35 +251,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Converting CLEAVIR-PRIMOP:CAR.
+;;; Converting CLEAVIR-PRIMOP:CAR, CDR, RPLACA, RPLACD.
 
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:car)) cst env system)
-  (convert-primop symbol cst env system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Converting CLEAVIR-PRIMOP:CDR.
-
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:cdr)) cst env system)
-  (convert-primop symbol cst env system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Converting CLEAVIR-PRIMOP:RPLACA.
-
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:rplaca)) cst env system)
-  (convert-primop symbol cst env system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Converting CLEAVIR-PRIMOP:RPLACD.
-
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:rplacd)) cst env system)
-  (convert-primop symbol cst env system))
+(defprimop cleavir-primop:car)
+(defprimop cleavir-primop:cdr)
+(defprimop cleavir-primop:rplaca)
+(defprimop cleavir-primop:rplacd)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -311,9 +293,7 @@
 ;;;
 ;;; Converting CLEAVIR-PRIMOP:FIXNUM-LESS.
 
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:fixnum-less)) cst env system)
-  (convert-primop symbol cst env system))
+(defprimop cleavir-primop:fixnum-less)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
