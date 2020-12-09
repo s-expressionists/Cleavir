@@ -420,6 +420,21 @@
 ;;;
 ;;; THE-AST
 
+;;; Wrap THEI on LINEAR-DATUM. Don't try and intersect the type
+;;; assertion onto an existing THEI, since we'd like to keep the
+;;; runtime operation of the assertions separate. But do avoid
+;;; wrapping THEI when the derived type of LINEAR-DATUM is a subtype
+;;; of the asserted type, since we can prove from the get-go that the
+;;; type assertion is never needed.
+(defun wrap-thei (inserter linear-datum asserted-type)
+  (if (cleavir-ctype:subtypep (cleavir-bir:ctype linear-datum) asserted-type nil)
+      linear-datum
+      (let ((thei (make-instance 'cleavir-bir:thei
+                                 :inputs (list linear-datum)
+                                 :asserted-type asserted-type)))
+        (insert inserter thei)
+        thei)))
+
 (defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
   (let* ((inner (cleavir-ast:form-ast ast))
          (ctype (cleavir-ast:ctype ast))
@@ -430,23 +445,15 @@
     (cond ((eq rv :no-return) rv)
           ((listp rv) ; several single values
            ;; Iterate through ctypes
-           (dolist (r rv)
-             (cleavir-bir:assert-type-on-linear-datum
-              r
-              (if (null required)
-                  (if (null optional)
-                      rest
-                      (pop optional))
-                  (pop required))))
-           rv)
+           (mapcar (lambda (r)
+                     (wrap-thei inserter r (if (null required)
+                                               (if (null optional)
+                                                   rest
+                                                   (pop optional))
+                                               (pop required))))
+                   rv))
           (t ; arbitrary values
-           (cond ((some (lambda (ct) (cleavir-ctype:bottom-p ct system))
-                        required)
-                  (terminate inserter (make-instance 'cleavir-bir:unreachable))
-                  :no-return)
-                 (t
-                  (cleavir-bir:assert-type-on-linear-datum rv ctype)
-                  rv))))))
+           (wrap-thei inserter rv ctype)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

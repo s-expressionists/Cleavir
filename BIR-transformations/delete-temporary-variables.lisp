@@ -15,15 +15,7 @@
                (= (cleavir-set:size readers) 1))
       (let ((writer (cleavir-bir:binder variable))
             (reader (cleavir-set:arb (cleavir-bir:readers variable))))
-        ;; We're only allowed to substitute away the binding when the
-        ;; variable's reader does not have a stronger type assertion
-        ;; on it than the bound value, so as to not lose the type
-        ;; assertion.
-        (when (cleavir-ctype:subtypep
-               (cleavir-bir::%asserted-type (first (cleavir-bir:inputs writer)))
-               (cleavir-bir::%asserted-type reader)
-               nil)
-          (cleavir-bir:delete-transmission writer reader))))
+        (cleavir-bir:delete-transmission writer reader)))
     ;; Variable bound to constant can get propagated.
     (when (cleavir-bir:immutablep variable)
       (let* ((writer (cleavir-set:arb (cleavir-bir:writers variable)))

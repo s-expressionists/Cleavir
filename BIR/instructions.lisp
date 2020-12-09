@@ -225,3 +225,22 @@
   (;; The destination rtype.
    ;; (The source rtype is the rtype of the input.)
    (%rtype :initarg :rtype :reader rtype)))
+
+;;; Represents a type assertion on the first input.
+(defclass thei (one-input computation)
+  ((%asserted-type :initarg :asserted-type
+                   :initform (cleavir-ctype:top nil)
+                   :accessor asserted-type)))
+
+;;; The RTYPE should just be whatever the input's RTYPE is.
+(defmethod rtype ((datum thei)) (rtype (first (inputs datum))))
+
+;;; For a THEI, the type we use to make inferences is the intersection
+;;; of what the compiler has proven about the input and what is
+;;; explicitly asserted. This gives us freedom to trust or explicitly
+;;; check the assertion as needed while making this decision
+;;; transparent to inference.
+(defmethod ctype ((linear-datum thei))
+  (cleavir-ctype:conjoin/2 (asserted-type linear-datum)
+                           (ctype (first (inputs linear-datum)))
+                           nil))

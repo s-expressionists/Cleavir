@@ -12,7 +12,7 @@
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p #:deletedp)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
-           #:output #:name #:ctype #:assert-type-on-linear-datum #:derive-type-for-linear-datum
+           #:output #:name #:ctype #:derive-type-for-linear-datum
            #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
            #:use-status #:ignore
@@ -38,7 +38,8 @@
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes #:transforms
-           #:leti #:dynamic-leti #:enclose #:code)
+           #:leti #:dynamic-leti #:enclose #:code
+           #:thei #:asserted-type)
   (:export #:primop #:vprimop #:nvprimop #:tprimop #:info)
   (:export #:map-iblock-instructions #:map-iblock-instructions-backwards
            #:do-iblock-instructions)

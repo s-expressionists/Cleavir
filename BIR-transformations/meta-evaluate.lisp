@@ -343,7 +343,7 @@
           (cleavir-bir:derive-type-for-linear-datum reader type))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni))
-  ;; Porpagate the return type to local calls and encloses of the function.
+  ;; Propagate the return type to local calls and encloses of the function.
   (let ((function (cleavir-bir:function instruction))
         (return-type (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
@@ -355,3 +355,13 @@
        enclose
        (cleavir-ctype:function
         nil nil (cleavir-ctype:top nil) nil nil nil return-type nil)))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei))
+  ;; Remove THEI when its input's type is a subtype of the THEI's
+  ;; asserted type.
+  (let ((input (first (cleavir-bir:inputs instruction))))
+    (when (cleavir-ctype:subtypep (cleavir-bir:ctype input)
+                                  (cleavir-bir:asserted-type instruction)
+                                  nil)
+      (setf (cleavir-bir:inputs instruction) '())
+      (cleavir-bir:replace-computation instruction input))))

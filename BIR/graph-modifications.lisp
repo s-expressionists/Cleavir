@@ -267,10 +267,6 @@
   (when (slot-boundp old '%use)
     (setf (%use new) (%use old))
     (replace-input new old (%use old)))
-  ;; Make sure not to lose the type assertion.
-  (cleavir-bir:assert-type-on-linear-datum
-   new
-   (cleavir-bir::%asserted-type old))
   (values))
 (defmethod replace-uses :after ((new datum) (old linear-datum))
   (when (slot-boundp old '%use)

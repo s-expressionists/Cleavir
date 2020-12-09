@@ -53,8 +53,7 @@
     `(:= (,@(mapcar (lambda (out)
                       `(,(disassemble-datum out)
                         ,@(when (typep out 'linear-datum)
-                            `(,(%derived-type out)
-                              ,(%asserted-type out)))))
+                            `(,(ctype out)))))
                     (outputs instruction)))
          ,dis)))
 
@@ -84,6 +83,9 @@
 
 (defmethod disassemble-instruction-extra append ((inst load-time-value))
   (list (form inst) (read-only-p inst)))
+
+(defmethod disassemble-instruction-extra append ((inst thei))
+  (list (asserted-type inst)))
 
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
@@ -146,18 +148,14 @@
         (when outs
           (format t " -> "))
         (dolist (out outs)
-          (destructuring-bind (value &optional (derived-type nil dsuppliedp)
-                                               (asserted-type nil asuppliedp))
+          (destructuring-bind (value &optional (ctype nil suppliedp))
               out
             (format t "~a " value)
-            (when (or dsuppliedp asuppliedp)
+            (when suppliedp
               (format t "~45T; "))
-            (when dsuppliedp
-              (unless (cleavir-ctype:top-p derived-type nil)
-                (format t "derived-type: ~(~a~) " derived-type)))
-            (when asuppliedp
-              (unless (cleavir-ctype:top-p asserted-type nil)
-                (format t "asserted-type: ~(~a~) " asserted-type)))))))))
+            (when suppliedp
+              (unless (cleavir-ctype:top-p ctype nil)
+                (format t "ctype: ~(~a~) " ctype)))))))))
 
 (defun print-function-disasm (function-disasm &key (show-dynenv t))
   (destructuring-bind ((name start args env) . iblocks)

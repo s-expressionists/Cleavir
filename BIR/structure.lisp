@@ -40,6 +40,10 @@
 (defclass ssa (datum) ())
 (defmethod ssa-p ((ssa datum)) t)
 
+;;; This type represents the type of the datum that we can assume when
+;;; making inferences.
+(defgeneric ctype (linear-datum))
+
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :reader use :accessor %use
@@ -47,33 +51,17 @@
    ;; A type the compiler has proven holds for this linear-datum.
    (%derived-type :initform (cleavir-ctype:top nil)
                   :initarg :derived-type
-                  :accessor %derived-type)
-   ;; The type that is explicitly asserted holds for this
-   ;; linear-datum.
-   (%asserted-type :initform (cleavir-ctype:top nil)
-                   :initarg :asserted-type
-                   :accessor %asserted-type)))
+                  :accessor %derived-type
+                  ;; For a generic linear datum, the type we use to
+                  ;; make inferences is just the type the compiler has
+                  ;; proven about this datum.
+                  :reader ctype)))
 (defmethod unused-p ((datum linear-datum))
   (not (slot-boundp datum '%use)))
 
-;;; This type represents the type of the linear-datum that we can
-;;; assume about the linear-datum when making inferences, since it
-;;; represents the intersection of what the compiler has proven about
-;;; the datum and what is explicitly asserted. This gives us freedom
-;;; to trust or explicitly check the assertion as needed while making
-;;; this decision transparent to inference.
-(defmethod ctype ((datum linear-datum))
-  (cleavir-ctype:conjoin/2 (%derived-type datum) (%asserted-type datum) nil))
-
-;;; Add a type assertion to LINEAR-DATUM.
-(defun assert-type-on-linear-datum (linear-datum asserted-type)
-  (setf (%asserted-type linear-datum)
-        (cleavir-ctype:conjoin/2 (%asserted-type linear-datum)
-                                 asserted-type
-                                 nil)))
-
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type)
+  (assert (not (typep linear-datum 'thei)))
   (setf (%derived-type linear-datum)
         (cleavir-ctype:conjoin/2 (%derived-type linear-datum)
                                  derived-type
