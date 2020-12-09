@@ -149,10 +149,9 @@
                   shared
                   (append shared
                           (loop repeat (- ntarget nresults)
-                                collect (let ((nil-ref (cleavir-bir:make-constant-reference
-                                                        (cleavir-bir:constant-in-module 'nil *current-module*))))
-                                          (insert inserter nil-ref)
-                                          nil-ref)))))
+                                collect (insert inserter
+                                                (cleavir-bir:make-constant-reference
+                                                 (cleavir-bir:constant-in-module 'nil *current-module*)))))))
             ;; target is a bunch of values and result is multiple-values,
             ;; so mtf.
             (let ((outputs (loop repeat (length target)
