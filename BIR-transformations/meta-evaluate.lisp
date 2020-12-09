@@ -242,8 +242,7 @@
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:multiple-to-fixed))
   (let ((definition (first (cleavir-bir:inputs instruction))))
-    (cond ;; FIXME: We lose type assertions when doing this...
-          ((typep definition 'cleavir-bir:fixed-to-multiple)
+    (cond ((typep definition 'cleavir-bir:fixed-to-multiple)
            (cleavir-bir:delete-transmission definition instruction)
            (cleavir-bir:delete-instruction definition))
           ;; Derive the type of the outputs (fixed values) from the
