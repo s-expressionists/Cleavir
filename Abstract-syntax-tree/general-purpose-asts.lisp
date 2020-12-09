@@ -569,11 +569,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class SETQ-AST.
-;;; 
-;;; This AST does not correspond exactly to the SETQ special operator,
-;;; because the AST does not return a value.
 
-(defclass setq-ast (no-value-ast-mixin ast)
+(defclass setq-ast (ast)
   ((%lhs-ast :initarg :lhs-ast :reader lhs-ast)
    (%value-ast :initarg :value-ast :reader value-ast)))
 
@@ -596,9 +593,7 @@
 ;;;
 ;;; This AST represents the binding of a lexical variable.
 
-(defclass lexical-bind-ast (setq-ast)           ;; (no-value-ast-mixin ast)
-  ;; KLUDGE: This is of type SETQ-AST so we don't need to change
-  ;; the HIR compiler. Don't inherit from setq-ast once we get rid of the hir compiler.
+(defclass lexical-bind-ast (ast)
   ((%lhs-ast :initarg :lhs-ast :reader lhs-ast)
    (%value-ast :initarg :value-ast :reader value-ast)
    (%ignore :initarg :ignore :reader ignore)))

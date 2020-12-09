@@ -412,9 +412,9 @@
     (with-compiled-ast (rv (cleavir-ast:value-ast ast) inserter system)
       (insert inserter
               (make-instance 'cleavir-bir:writevar
-                :inputs rv :outputs (list var)))
-      ;; return no values
-      ())))
+                :inputs rv :outputs (list var))))
+    (list (insert inserter (make-instance 'cleavir-bir:readvar
+                             :inputs (list var))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -429,11 +429,9 @@
 (defun wrap-thei (inserter linear-datum asserted-type)
   (if (cleavir-ctype:subtypep (cleavir-bir:ctype linear-datum) asserted-type nil)
       linear-datum
-      (let ((thei (make-instance 'cleavir-bir:thei
-                                 :inputs (list linear-datum)
-                                 :asserted-type asserted-type)))
-        (insert inserter thei)
-        thei)))
+      (insert inserter (make-instance 'cleavir-bir:thei
+                         :inputs (list linear-datum)
+                         :asserted-type asserted-type))))
 
 (defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
   (let* ((inner (cleavir-ast:form-ast ast))
