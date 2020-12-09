@@ -57,11 +57,11 @@
   (declare (cl:ignore initargs slot-names))
   (let ((constant (first inputs)))
     (cleavir-set:nadjoinf (readers constant) i)
-    (setf (%derived-type i) (cleavir-ctype:member nil (constant-value constant))))
+    (setf (derived-type i) (cleavir-ctype:member nil (constant-value constant))))
   i)
 
 (defmethod (setf inputs) :after (new-inputs (i constant-reference))
-  (setf (%derived-type i)
+  (setf (derived-type i)
         (cleavir-ctype:member nil (constant-value (first new-inputs))))
   (call-next-method))
 
@@ -230,7 +230,9 @@
 (defclass thei (one-input computation)
   ((%asserted-type :initarg :asserted-type
                    :initform (cleavir-ctype:top nil)
-                   :accessor asserted-type)))
+                   :accessor asserted-type)
+   ;; THEI should not use this slot.
+   (%derived-type)))
 
 ;;; The RTYPE should just be whatever the input's RTYPE is.
 (defmethod rtype ((datum thei)) (rtype (first (inputs datum))))

@@ -51,7 +51,7 @@
    ;; A type the compiler has proven holds for this linear-datum.
    (%derived-type :initform (cleavir-ctype:top nil)
                   :initarg :derived-type
-                  :accessor %derived-type
+                  :writer (setf derived-type)
                   ;; For a generic linear datum, the type we use to
                   ;; make inferences is just the type the compiler has
                   ;; proven about this datum.
@@ -61,9 +61,8 @@
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type)
-  (assert (not (typep linear-datum 'thei)))
-  (setf (%derived-type linear-datum)
-        (cleavir-ctype:conjoin/2 (%derived-type linear-datum)
+  (setf (derived-type linear-datum)
+        (cleavir-ctype:conjoin/2 (ctype linear-datum)
                                  derived-type
                                  nil)))
 

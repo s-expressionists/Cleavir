@@ -49,10 +49,10 @@
                              nil)))))
                 (ecase state
                   (:required
-                   (setf (cleavir-bir::%derived-type item) type))
+                   (setf (cleavir-bir:derived-type item) type))
                   (&optional
-                   (setf (cleavir-bir::%derived-type (first item)) type)
-                   (setf (cleavir-bir::%derived-type (second item)) suppliedp)))))
+                   (setf (cleavir-bir:derived-type (first item)) type)
+                   (setf (cleavir-bir:derived-type (second item)) suppliedp)))))
              (&key
               ;; too hairy for me to handle
               )))
@@ -86,7 +86,7 @@
                   (nth (position phi (cleavir-bir:outputs definition))
                        (cleavir-bir:inputs definition)))
                  nil))))
-      (setf (cleavir-bir::%derived-type phi) type))))
+      (setf (cleavir-bir:derived-type phi) type))))
 
 (defun meta-evaluate-iblock (iblock)
   (derive-iblock-input-types iblock)
