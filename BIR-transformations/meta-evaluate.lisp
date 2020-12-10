@@ -168,8 +168,8 @@
         ;; Try to delete the block if possible, so we can maybe
         ;; optimize more in this pass. Ultimately,
         ;; refresh-local-iblocks is supposed to flush dead blocks.
-        (cleavir-bir:maybe-delete-iblock dead))
-      t)))
+        (cleavir-bir:maybe-delete-iblock dead)
+        t))))
 
 ;;; Eliminate degenerate if instructions. Does the equivalent of (IF
 ;;; (IF X Y Z) A B) => (IF X (IF Y A B) (IF Z A B)). The reason this
