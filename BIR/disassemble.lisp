@@ -84,6 +84,9 @@
 (defmethod disassemble-instruction-extra append ((inst load-time-value))
   (list (form inst) (read-only-p inst)))
 
+(defmethod disassemble-instruction-extra append ((inst typeq-test))
+  (list (type-specifier inst)))
+
 (defmethod disassemble-instruction-extra append ((inst thei))
   (list (asserted-type inst)))
 
