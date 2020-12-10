@@ -164,6 +164,15 @@
 (defclass argument (value transfer)
   ((%rtype :initarg :rtype :initform :object :reader rtype)))
 
+;;; An ARGUMENT is unused if either it itself has no use or it's use
+;;; is a LETI with no readers.
+(defmethod unused-p ((datum argument))
+  (or (call-next-method)
+      (let ((use (cleavir-bir:use datum)))
+        (and (typep use 'cleavir-bir:leti)
+             (cleavir-set:empty-set-p
+              (cleavir-bir:readers (first (cleavir-bir:outputs use))))))))
+
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock

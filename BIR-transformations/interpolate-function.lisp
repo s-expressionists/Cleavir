@@ -124,7 +124,10 @@
                        (cleavir-bir:insert-instruction-before value jump)
                        (cleavir-bir:insert-instruction-before suppliedp jump)
                        (push value inputs)
-                       (push suppliedp inputs)))))))))
+                       (push suppliedp inputs))))))
+               (&rest
+                ;; The argument is unused, so don't pass anything.
+                (assert (cleavir-bir:unused-p item))))))
          lambda-list)
         (setf (cleavir-bir:inputs jump) (nreverse inputs))))))
 
@@ -160,7 +163,10 @@
             (push supplied phis)
             (push supplied-p phis)
             (cleavir-bir:replace-uses supplied (first item))
-            (cleavir-bir:replace-uses supplied-p (second item))))))
+            (cleavir-bir:replace-uses supplied-p (second item))))
+         (&rest
+          ;; The argument is is unused, so don't do anything.
+          (assert (cleavir-bir:unused-p item)))))
      (cleavir-bir:lambda-list function))
     (setf (cleavir-bir:inputs start) (nreverse phis))))
 
@@ -254,11 +260,19 @@
       (eliminate-catches target-owner)
       t)))
 
+;; We can inline required, optional, and ignored &rest parameters.
 (defun lambda-list-too-hairy-p (lambda-list)
-  (not (every (lambda (item)
-                (or (not (symbolp item))
-                    (eq item '&optional)))
-              lambda-list)))
+  (let ((too-hairy-p nil))
+    (cleavir-bir:map-lambda-list
+     (lambda (state item index)
+       (case state
+         ((:required &optional))
+         (&rest
+          (setq too-hairy-p (not (cleavir-bir:unused-p item))))
+         (t
+          (setq too-hairy-p t))))
+     lambda-list)
+    too-hairy-p))
 
 (defun maybe-interpolate (function)
   ;; When a function has no encloses and returns to a single control
