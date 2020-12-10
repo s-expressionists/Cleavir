@@ -86,7 +86,6 @@
     (declare (ignore typeq-cst))
     (cleavir-ast:make-typeq-ast
      (convert arg1-cst env system)
-     (cst:raw arg2-cst)
      (cleavir-env:parse-type-specifier (cst:raw arg2-cst) env system)
      :origin origin)))
 

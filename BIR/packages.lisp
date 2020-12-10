@@ -31,7 +31,7 @@
            #:returni #:unreachable #:eqi #:jump #:unwindp
            #:eq-test #:typeq-test
            #:ifi #:conditional-test
-           #:type-specifier #:typew #:ctype #:choke
+           #:typew #:ctype #:choke
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:alloca #:writetemp #:readtemp

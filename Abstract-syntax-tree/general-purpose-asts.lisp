@@ -752,23 +752,16 @@
 ;;; have the ELSE branch of the IF-AST call ERROR.
 
 (defclass typeq-ast (boolean-ast-mixin ast)
-  (;; This slot contains the type specifier as an S-expression.  When
-   ;; this AST is compiled to HIR, the contents of this slot will be
-   ;; transmitted to the TYPEQ-INSTRUCTION so that it can be used by
-   ;; the type inference machinery.
-   (%type-specifier :initarg :type-specifier :reader type-specifier)
-   (%ctype :initarg :ctype :reader ctype)
+  ((%ctype :initarg :ctype :reader ctype)
    (%form-ast :initarg :form-ast :reader form-ast)))
 
-(defun make-typeq-ast (form-ast type-specifier ctype
-                       &key origin (policy *policy*))
+(defun make-typeq-ast (form-ast ctype &key origin (policy *policy*))
   (make-instance 'typeq-ast
     :origin origin :policy policy
     :form-ast form-ast
-    :type-specifier type-specifier :ctype ctype))
+    :ctype ctype))
 
 (cleavir-io:define-save-info typeq-ast
-  (:type-specifier type-specifier)
   (:ctype ctype)
   (:form-ast form-ast))
 
