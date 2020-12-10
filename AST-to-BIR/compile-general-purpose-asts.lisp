@@ -483,7 +483,7 @@
                                        '#:typeq- tspec-str '#:-else)))
            (tq (make-instance 'cleavir-bir:typeq-test
                  :inputs obj
-                 :type-specifier tspec)))
+                 :type-specifier tspec :ctype (cleavir-ast:ctype ast))))
       (insert inserter tq)
       (terminate inserter (make-instance 'cleavir-bir:ifi
                             :inputs (list tq)
