@@ -51,7 +51,7 @@
    #:tagbody-ast #:make-tagbody-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
    #:the-ast #:make-the-ast #:ctype
-   #:typeq-ast #:make-typeq-ast #:type-specifier
+   #:typeq-ast #:make-typeq-ast
    #:typew-ast #:make-typew-ast
    #:type-check-function-ast
    #:the-typew-ast #:make-the-typew-ast

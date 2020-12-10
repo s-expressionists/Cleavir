@@ -306,16 +306,16 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:typeq-test))
   (let* ((object (first (cleavir-bir:inputs instruction)))
          (ctype (cleavir-bir:ctype object))
-         (type-specifier (cleavir-bir:type-specifier instruction)))
-    (cond ((cleavir-ctype:subtypep ctype type-specifier nil)
+         (typeq-ctype (cleavir-bir:ctype instruction)))
+    (cond ((cleavir-ctype:subtypep ctype typeq-ctype nil)
            #+(or)
-           (format t "~&folding typeq test ~a as true since testing ~a" type-specifier ctype)
+           (format t "~&folding typeq test ~a as true since testing ~a" typeq-ctype ctype)
            (replace-computation-by-constant-value
             instruction
             t))
-          ((cleavir-ctype:disjointp nil ctype type-specifier)
+          ((cleavir-ctype:disjointp nil ctype typeq-ctype)
            #+(or)
-           (format t "~&folding typeq test ~a as false since testing ~a " type-specifier ctype)
+           (format t "~&folding typeq test ~a as false since testing ~a " typeq-ctype ctype)
            (replace-computation-by-constant-value
             instruction
             nil)))))
