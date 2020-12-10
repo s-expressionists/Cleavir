@@ -260,7 +260,7 @@
       (eliminate-catches target-owner)
       t)))
 
-;; We can inline required, optional, and ignored &rest parameters.
+;;; We can inline required, optional, and ignored &rest parameters.
 (defun lambda-list-too-hairy-p (lambda-list)
   (let ((too-hairy-p nil))
     (cleavir-bir:map-lambda-list

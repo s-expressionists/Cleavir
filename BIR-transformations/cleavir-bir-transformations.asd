@@ -13,4 +13,5 @@
    (:file "copy-function" :depends-on ("packages"))
    (:file "inline" :depends-on ("interpolate-function" "packages"))
    (:file "simple-unwind" :depends-on ("packages"))
-   (:file "meta-evaluate" :depends-on ("packages"))))
+   (:file "meta-evaluate" :depends-on ("packages"))
+   (:file "generate-type-check" :depends-on ("packages"))))

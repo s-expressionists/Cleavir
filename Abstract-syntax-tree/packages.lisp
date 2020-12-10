@@ -53,6 +53,7 @@
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:type-specifier
    #:typew-ast #:make-typew-ast
+   #:type-check-function-ast
    #:the-typew-ast #:make-the-typew-ast
    #:bind-ast #:make-bind-ast
    #:eq-ast #:make-eq-ast #:neq-ast #:make-neq-ast

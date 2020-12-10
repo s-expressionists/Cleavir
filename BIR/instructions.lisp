@@ -231,8 +231,11 @@
   ((%asserted-type :initarg :asserted-type
                    :initform (cleavir-ctype:top nil)
                    :accessor asserted-type)
-   ;; THEI should not use this slot.
-   (%derived-type)))
+   ;; When we wish to generate type checks, this slot holds the
+   ;; function that will do so. Otherwise, it is NIL.
+   (%type-check-function :initarg :type-check-function
+                         :accessor type-check-function
+                         :type (or null function))))
 
 ;;; The RTYPE should just be whatever the input's RTYPE is.
 (defmethod rtype ((datum thei)) (rtype (first (inputs datum))))

@@ -39,7 +39,7 @@
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes #:transforms
            #:leti #:dynamic-leti #:enclose #:code
-           #:thei #:asserted-type #:delete-thei)
+           #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:vprimop #:nvprimop #:tprimop #:info)
   (:export #:map-iblock-instructions #:map-iblock-instructions-backwards
            #:do-iblock-instructions)

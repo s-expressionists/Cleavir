@@ -347,8 +347,15 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei))
   ;; Remove THEI when its input's type is a subtype of the THEI's
   ;; asserted type.
-  (let ((input (first (cleavir-bir:inputs instruction))))
-    (when (cleavir-ctype:subtypep (cleavir-bir:ctype input)
+  (let* ((input (first (cleavir-bir:inputs instruction)))
+         (ctype (cleavir-bir:ctype input))
+         (type-check-function (cleavir-bir:type-check-function instruction)))
+    (when (cleavir-ctype:subtypep ctype
                                   (cleavir-bir:asserted-type instruction)
                                   nil)
-      (cleavir-bir:delete-thei instruction))))
+      (cleavir-bir:delete-thei instruction))
+    ;; Propagate the type of the input into function.
+    (when type-check-function
+      (cleavir-bir:derive-type-for-linear-datum
+       (first (cleavir-bir:lambda-list type-check-function))
+       ctype))))

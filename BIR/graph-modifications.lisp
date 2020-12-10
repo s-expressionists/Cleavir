@@ -94,7 +94,8 @@
   (check-type existing (and instruction (not terminator)))
   (let ((succ (successor existing)))
     (setf (predecessor succ) new (successor existing) new
-          (predecessor new) existing (successor new) succ))
+          (predecessor new) existing (successor new) succ
+          (iblock new) (iblock existing)))
   (values))
 
 ;;; Remove backpointers to an instruction, etc.
@@ -183,11 +184,20 @@
     (dolist (n (next inst)) (cleavir-set:nremovef (predecessors n) ib))))
 (defmethod clean-up-instruction progn ((inst returni))
   (setf (returni (function inst)) nil))
+(defmethod clean-up-instruction progn ((inst thei))
+  (let ((type-check-function (type-check-function inst)))
+    (when type-check-function
+      (assert (and (cleavir-set:empty-set-p (encloses type-check-function))
+                   (cleavir-set:empty-set-p (local-calls type-check-function)))
+              ()
+              "Type check function for THEI should not have local calls and encloses!")
+      (clean-up-function type-check-function))))
 
 ;;; Remove a THEI by forwarding its input to its use.
 (defun delete-thei (thei)
-  (setf (inputs thei) '())
-  (cleavir-bir:replace-computation thei (first (inputs thei))))
+  (let ((input (first (inputs thei))))
+    (setf (inputs thei) '())
+    (cleavir-bir:replace-computation thei input)))
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)

@@ -88,7 +88,7 @@
   (list (type-specifier inst)))
 
 (defmethod disassemble-instruction-extra append ((inst thei))
-  (list (asserted-type inst)))
+  (list (asserted-type inst) (type-check-function inst)))
 
 (defun disassemble-iblock (iblock)
   (check-type iblock iblock)
