@@ -237,6 +237,10 @@
 ;;; The RTYPE should just be whatever the input's RTYPE is.
 (defmethod rtype ((datum thei)) (rtype (first (inputs datum))))
 
+(defmethod (setf derived-type) (new-value (linear-datum thei))
+  (declare (cl:ignore new-value))
+  (error "Should not set the derived type of a THEI."))
+
 ;;; For a THEI, the type we use to make inferences is the intersection
 ;;; of what the compiler has proven about the input and what is
 ;;; explicitly asserted. This gives us freedom to trust or explicitly
