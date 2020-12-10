@@ -355,6 +355,7 @@
                                   nil)
       (cleavir-bir:delete-thei instruction))
     ;; Propagate the type of the input into function.
+    ;; FIXME: Extend this to values types.
     (when type-check-function
       (cleavir-bir:derive-type-for-linear-datum
        (first (cleavir-bir:lambda-list type-check-function))
