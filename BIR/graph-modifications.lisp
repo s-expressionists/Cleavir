@@ -184,6 +184,11 @@
 (defmethod clean-up-instruction progn ((inst returni))
   (setf (returni (function inst)) nil))
 
+;;; Remove a THEI by forwarding its input to its use.
+(defun delete-thei (thei)
+  (setf (inputs thei) '())
+  (cleavir-bir:replace-computation thei (first (inputs thei))))
+
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))

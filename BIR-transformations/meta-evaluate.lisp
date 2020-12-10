@@ -351,5 +351,4 @@
     (when (cleavir-ctype:subtypep (cleavir-bir:ctype input)
                                   (cleavir-bir:asserted-type instruction)
                                   nil)
-      (setf (cleavir-bir:inputs instruction) '())
-      (cleavir-bir:replace-computation instruction input))))
+      (cleavir-bir:delete-thei instruction))))
