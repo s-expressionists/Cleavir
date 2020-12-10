@@ -3,8 +3,7 @@
 ;;;; This is a BIR post-pass which takes THEI and generates the type
 ;;;; check by inlining or local calling the type check function stored
 ;;;; in the instruction. If there is a manifest type conflict, we warn
-;;;; about it here. If THEI does not have type check function, we
-;;;; simply remove it.
+;;;; about it here.
 
 ;;;; This pass should run before function environments are determined,
 ;;;; since it may inline functions.
