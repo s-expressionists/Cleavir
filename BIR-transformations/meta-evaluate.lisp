@@ -139,14 +139,9 @@
                (if (cleavir-bir:constant-value (first (cleavir-bir:inputs test)))
                    (values then else)
                    (values else then)))
-              ((multiple-value-bind (disjoint certain)
-                   (cleavir-ctype:subtypep
-                    (cleavir-ctype:conjoin/2 (cleavir-bir:ctype test)
-                                             (cleavir-ctype:null-type nil)
-                                             nil)
-                    (cleavir-ctype:bottom nil)
-                    nil)
-                 (and disjoint certain))
+              ((cleavir-ctype:disjointp nil
+                                        (cleavir-bir:ctype test)
+                                        (cleavir-ctype:null-type nil))
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
                (values then else))
@@ -318,13 +313,7 @@
            (replace-computation-by-constant-value
             instruction
             t))
-          ;; XXX: Switch this to bottom-p when things are worked out
-          ;; more.
-          ((multiple-value-bind (disjoint certain)
-               (cleavir-ctype:subtypep (cleavir-ctype:conjoin/2 ctype type-specifier nil)
-                                       (cleavir-ctype:bottom nil)
-                                       nil)
-             (and disjoint certain))
+          ((cleavir-ctype:disjointp nil ctype type-specifier)
            #+(or)
            (format t "~&folding typeq test ~a as false since testing ~a " type-specifier ctype)
            (replace-computation-by-constant-value

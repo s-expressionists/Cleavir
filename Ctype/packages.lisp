@@ -11,7 +11,7 @@
            #:upgraded-complex-part-type)
   (:export #:conjoin/2 #:disjoin/2 #:negate #:subtract
            #:top #:bottom #:top-p #:bottom-p
-           #:conjoin #:disjoin)
+           #:conjoin #:disjoin #:disjointp)
   (:export #:cons #:array #:complex #:range
            #:member #:satisfies #:function #:values
            #:null-type
