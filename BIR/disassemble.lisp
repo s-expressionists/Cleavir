@@ -142,7 +142,7 @@
       (format t "~&   entrances = ~(~:a~)" entrances))
     (dolist (inst insts)
       (destructuring-bind (_ outs . rest) inst
-        (declare (ignore _))
+        (declare (cl:ignore _))
         (format t "~&     ")
         (format t "~{~(~a~)~}" rest)
         (when outs

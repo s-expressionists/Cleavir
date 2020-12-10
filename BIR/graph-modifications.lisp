@@ -225,11 +225,11 @@
   (values))
 
 (defmethod replace-terminator :after ((new unwind) old)
-  (declare (ignore old))
+  (declare (cl:ignore old))
   (cleavir-set:nadjoinf (entrances (destination new)) (iblock new)))
 
 (defmethod replace-terminator :after (new (old unwind))
-  (declare (ignore new))
+  (declare (cl:ignore new))
   (cleavir-set:nremovef (entrances (destination old)) (iblock old)))
 
 (defun orphan-iblock-p (iblock)
