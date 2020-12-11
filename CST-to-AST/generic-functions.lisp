@@ -67,3 +67,25 @@
   (:method (ast ctype origin environment system)
     (declare (ignore ctype origin environment system))
     ast))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function TYPE-WRAP-ARGUMENT, TYPE-WRAP-RETURN-VALUES.
+;;;
+;;; Given an AST and a ctype, returns a new AST that incorporates the
+;;; information that the AST's value will be of that ctype, in some
+;;; client-defined fashion. For example it could execute a type check,
+;;; or puts in a type declaration (a the-ast), or it could just return
+;;; the AST as-is, ignoring the information.  There is a default
+;;; method that returns the AST as-is. These are used for ftype
+;;; declarations.
+
+(defgeneric type-wrap-argument (ast ctype origin environment system)
+  (:method (ast ctype origin environment system)
+    (declare (ignore ctype origin environment system))
+    ast))
+
+(defgeneric type-wrap-return-values (ast ctype origin environment system)
+  (:method (ast ctype origin environment system)
+    (declare (ignore ctype origin environment system))
+    ast))

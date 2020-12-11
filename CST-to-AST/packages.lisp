@@ -18,7 +18,7 @@
            #:convert-setq
            #:convert-let
            #:convert-let*
-           #:type-wrap
+           #:type-wrap #:type-wrap-argument #:type-wrap-return-values
            #:process-parameter-groups
            #:process-parameter-group
            #:process-parameters-in-group
@@ -82,7 +82,6 @@
            #:cst
            #:original-condition
            #:expected-min #:expected-max #:observed
-           #:callee-ftype
            ;; Restart names.
            #:consider-global
            #:consider-special
