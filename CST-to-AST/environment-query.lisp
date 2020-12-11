@@ -41,18 +41,19 @@
 
 ;;; FIXME: Needs cleanup and to be moved.
 ;;; This function takes a (FUNCTION ...) type specifier and returns
-;;; validp, required, optional, restp, rest, keysp, keys, allow-other-keys-p as values.
-;;; We could signal warnings/errors on malformed function types, but we're getting these
-;;; from the client, which might want to do its own validation, ahead of time.
+;;; validp, required, optional, restp, rest, keysp, keys,
+;;; allow-other-keys-p, and values as values.  We could signal
+;;; warnings/errors on malformed function types, but we're getting
+;;; these from the client, which might want to do its own validation,
+;;; ahead of time.
 (defun parse-function-type (ftype)
   (flet ((give-up ()
-           (return-from parse-function-type nil)))
+           (return-from parse-function-type (values nil nil nil t t nil nil nil t))))
     (if (and (consp ftype)
              (eq (car ftype) 'cl:function)
              (consp (cdr ftype))
              (cleavir-code-utilities:proper-list-p (cadr ftype)))
         (destructuring-bind (lambda-list &optional (values '*)) (cdr ftype)
-          (declare (ignore values))
           (loop with state = :required
                 with required with optional with restp
                 with rest with keysp with keys with aok-p
@@ -89,7 +90,7 @@
                              (give-up))))))
                 finally
                    (return (values t (nreverse required) (nreverse optional)
-                                   restp rest keysp (nreverse keys) aok-p))))
+                                   restp rest keysp (nreverse keys) aok-p values))))
         (give-up))))
 
 ;;; This function takes a type specifier and returns a (FUNCTION ...) type specifier.
@@ -99,9 +100,9 @@
         ((function)
          ;; This may be from a user declaration, so don't accept it out of hand
          (let ((len (cleavir-code-utilities:proper-list-length ftype)))
-           (if (and len (<= len 1 3))
+           (if (and len (<= 1 len 3))
                (destructuring-bind (&optional (lambda-list '*) (ret '*))
-                   ftype
+                   (rest ftype)
                  `(function ,lambda-list ,ret))
                '(function * *))))
         ((and)
