@@ -139,9 +139,9 @@
                (if (cleavir-bir:constant-value (first (cleavir-bir:inputs test)))
                    (values then else)
                    (values else then)))
-              ((cleavir-ctype:disjointp nil
-                                        (cleavir-bir:ctype test)
-                                        (cleavir-ctype:null-type nil))
+              ((cleavir-ctype:disjointp (cleavir-bir:ctype test)
+                                        (cleavir-ctype:null-type nil)
+                                        nil)
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
                (values then else))
@@ -313,7 +313,7 @@
            (replace-computation-by-constant-value
             instruction
             t))
-          ((cleavir-ctype:disjointp nil ctype typeq-ctype)
+          ((cleavir-ctype:disjointp ctype typeq-ctype nil)
            #+(or)
            (format t "~&folding typeq test ~a as false since testing ~a " typeq-ctype ctype)
            (replace-computation-by-constant-value

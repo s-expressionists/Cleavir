@@ -13,5 +13,5 @@
          (reduce (lambda (ct1 ct2) (disjoin/2 ct1 ct2 system))
                  ctypes))))
 
-(defun disjointp (system &rest ctypes)
-  (bottom-p (cl:apply #'conjoin system ctypes) system))
+(defun disjointp (ct1 ct2 system)
+  (bottom-p (conjoin/2 ct1 ct2 system) system))
