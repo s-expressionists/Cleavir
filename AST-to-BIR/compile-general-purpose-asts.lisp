@@ -40,7 +40,8 @@
                                                 '#:-start)
                              :function function :dynamic-environment function)))
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
-    (let ((lambda-list (bind-lambda-list-arguments (cleavir-ast:lambda-list ast))))
+    (let ((lambda-list (bind-lambda-list-arguments
+                        (cleavir-ast:lambda-list ast))))
       (setf (cleavir-bir:lambda-list function) lambda-list)
       ;; Derive the type of the &rest argument to be LIST.
       (cleavir-bir:map-lambda-list
@@ -49,10 +50,13 @@
          (when (eq state '&rest)
            (cleavir-bir:derive-type-for-linear-datum
             item
-            (cleavir-ctype:disjoin/2
-             (cleavir-ctype:null-type nil)
-             (cleavir-ctype:cons t t nil)
-             nil))))
+            
+            (let ((top-ctype (cleavir-ctype:top system)))
+              ;; LIST is of course (or null cons)
+              (cleavir-ctype:disjoin/2
+               (cleavir-ctype:null-type system)
+               (cleavir-ctype:cons top-ctype top-ctype system)
+               system)))))
        lambda-list))
     (setf (cleavir-bir:start function) start)
     (begin inserter start)
@@ -426,8 +430,10 @@
 ;;; wrapping THEI when the derived type of LINEAR-DATUM is a subtype
 ;;; of the asserted type, since we can prove from the get-go that the
 ;;; type assertion is never needed.
-(defun wrap-thei (inserter linear-datum asserted-type type-check-function)
-  (if (cleavir-ctype:subtypep (cleavir-bir:ctype linear-datum) asserted-type nil)
+(defun wrap-thei (inserter linear-datum asserted-type
+                  type-check-function system)
+  (if (cleavir-ctype:subtypep (cleavir-bir:ctype linear-datum) asserted-type
+                              system)
       linear-datum
       (insert inserter (make-instance 'cleavir-bir:thei
                          :inputs (list linear-datum)
@@ -455,13 +461,14 @@
                                         rest
                                         (first optional))
                                     (first required))
-                                type-check-function))
+                                type-check-function
+                                system))
                ;; FIXME: this is not as good as splitting this up into individual THEIs,
                ;; but we don't have a good way to split up type-check-function.
                (wrap-thei inserter (first (adapt inserter rv :multiple-values))
-                          ctype type-check-function)))
+                          ctype type-check-function system)))
           (t ; arbitrary values
-           (wrap-thei inserter rv ctype type-check-function)))))
+           (wrap-thei inserter rv ctype type-check-function system)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
