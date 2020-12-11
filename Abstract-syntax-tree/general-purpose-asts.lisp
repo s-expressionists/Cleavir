@@ -716,8 +716,10 @@
   ((%form-ast :initarg :form-ast :reader form-ast)
    ;; A VALUES ctype.
    (%ctype :initarg :ctype :reader ctype)
-   ;; A function which checks the values or NIL if we do not wish to
-   ;; perform a type check.
+   ;; This slot holds either a function which checks the FORM-AST,
+   ;; :TRUSTED if we want to treat this as trusted type assertion with
+   ;; no check needed, or :EXTERNAL if a type check is needed but done
+   ;; elsewhere.
    (%type-check-function-ast :initarg :type-check-function-ast :reader type-check-function-ast)))
 
 (defun make-the-ast (form-ast ctype type-check-function-ast &key origin (policy *policy*))
@@ -734,9 +736,9 @@
 (defmethod children ((ast the-ast))
   (let ((form-ast (form-ast ast))
         (type-check-function-ast (type-check-function-ast ast)))
-    (if type-check-function-ast
-        (list form-ast type-check-function-ast)
-        (list form-ast))))
+    (if (symbolp type-check-function-ast)
+        (list form-ast)
+        (list form-ast type-check-function-ast))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -11,9 +11,9 @@
 ;;; Warn about a compile time type conflict.
 (defun maybe-warn-type-conflict (thei)
   (let ((input (first (cleavir-bir:inputs thei))))
-    (when (cleavir-ctype:subtypep (cleavir-bir:ctype thei)
-                                  (cleavir-ctype:bottom nil)
-                                  nil)
+    (when (cleavir-ctype:disjointp (cleavir-bir:asserted-type thei)
+                                   (cleavir-bir:ctype input)
+                                   nil)
       (warn "The derived type of ~a is ~a but it is asserted as ~a by ~a."
             input
             (cleavir-bir:ctype input)
@@ -23,7 +23,7 @@
 (defun generate-type-check (thei)
   (let* ((input (first (cleavir-bir:inputs thei)))
          (type-check-function (cleavir-bir:type-check-function thei)))
-    (when type-check-function
+    (unless (symbolp type-check-function)
       (let ((rtype (cleavir-bir:rtype thei)))
         (case rtype
           (:object

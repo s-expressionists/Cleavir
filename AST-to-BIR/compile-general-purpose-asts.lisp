@@ -449,8 +449,9 @@
          (rest (cleavir-ctype:values-rest ctype system))
          (rv (compile-ast inner inserter system))
          (type-check-function
-           (and type-check-function-ast
-                (compile-function type-check-function-ast system))))
+           (if (symbolp type-check-function-ast)
+               type-check-function-ast
+               (compile-function type-check-function-ast system))))
     (cond ((eq rv :no-return) rv)
           ((listp rv) ; several single values
            (if (null (rest rv)) ; single value

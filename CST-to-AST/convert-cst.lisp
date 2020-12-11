@@ -106,7 +106,7 @@
                                    (lambda (argument-ast)
                                      (type-wrap-argument
                                       argument-ast
-                                      (cleavir-env:parse-type-specifier
+                                      (cleavir-env:parse-values-type-specifier
                                        (cond (required (pop required))
                                              (optional
                                               (cleavir-ctype:disjoin/2

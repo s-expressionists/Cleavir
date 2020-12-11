@@ -231,11 +231,13 @@
   ((%asserted-type :initarg :asserted-type
                    :initform (cleavir-ctype:top nil)
                    :accessor asserted-type)
-   ;; When we wish to generate type checks, this slot holds the
-   ;; function that will do so. Otherwise, it is NIL.
+   ;; This slot holds either a function which checks the input,
+   ;; :TRUSTED if we want to treat this as trusted type assertion with
+   ;; no check needed, or :EXTERNAL if a type check is needed but done
+   ;; elsewhere.
    (%type-check-function :initarg :type-check-function
                          :accessor type-check-function
-                         :type (or null function))))
+                         :type (or (member :trusted :external) function))))
 
 ;;; The RTYPE should just be whatever the input's RTYPE is.
 (defmethod rtype ((datum thei)) (rtype (first (inputs datum))))
@@ -244,12 +246,19 @@
   (declare (cl:ignore new-value))
   (error "Should not set the derived type of a THEI."))
 
-;;; For a THEI, the type we use to make inferences is the intersection
+;;; For THEI, the type we use to make inferences is the intersection
 ;;; of what the compiler has proven about the input and what is
-;;; explicitly asserted. This gives us freedom to trust or explicitly
-;;; check the assertion as needed while making this decision
-;;; transparent to inference.
+;;; explicitly asserted when we are trusting THEI or explicitly type
+;;; checking. However, when the type check is marked as being done
+;;; externally, that means the compiler has not yet proven that the
+;;; asserted type holds, and so it must return the type of the
+;;; input. This gives us freedom to trust or explicitly check the
+;;; assertion as needed while making this decision transparent to
+;;; inference, and also type conflict when the type is checked
+;;; externally.
 (defmethod ctype ((linear-datum thei))
-  (cleavir-ctype:conjoin/2 (asserted-type linear-datum)
-                           (ctype (first (inputs linear-datum)))
-                           nil))
+  (if (eq (type-check-function linear-datum) :external)
+      (ctype (first (inputs linear-datum)))
+      (cleavir-ctype:conjoin/2 (asserted-type linear-datum)
+                               (ctype (first (inputs linear-datum)))
+                               nil)))
