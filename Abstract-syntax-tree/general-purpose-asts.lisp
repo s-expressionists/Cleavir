@@ -751,17 +751,17 @@
 ;;; IF-AST.
 
 (defclass typeq-ast (boolean-ast-mixin ast)
-  ((%ctype :initarg :ctype :reader ctype)
+  ((%test-ctype :initarg :test-ctype :reader test-ctype)
    (%form-ast :initarg :form-ast :reader form-ast)))
 
-(defun make-typeq-ast (form-ast ctype &key origin (policy *policy*))
+(defun make-typeq-ast (form-ast test-ctype &key origin (policy *policy*))
   (make-instance 'typeq-ast
     :origin origin :policy policy
     :form-ast form-ast
-    :ctype ctype))
+    :test-ctype test-ctype))
 
 (cleavir-io:define-save-info typeq-ast
-  (:ctype ctype)
+  (:test-ctype test-ctype)
   (:form-ast form-ast))
 
 (defmethod children ((ast typeq-ast))

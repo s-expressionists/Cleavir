@@ -256,7 +256,7 @@
 (defmethod clone-initargs append
     ((instruction cleavir-bir:typeq-test) stack map)
   (declare (ignore stack map))
-  (list :ctype (cleavir-bir:ctype instruction)))
+  (list :ctype (cleavir-bir:test-ctype instruction)))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:typew) stack map)

@@ -85,7 +85,7 @@
   (list (form inst) (read-only-p inst)))
 
 (defmethod disassemble-instruction-extra append ((inst typeq-test))
-  (list (type-specifier inst)))
+  (list (test-ctype inst)))
 
 (defmethod disassemble-instruction-extra append ((inst thei))
   (list (asserted-type inst) (type-check-function inst)))

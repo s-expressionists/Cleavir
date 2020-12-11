@@ -201,7 +201,7 @@
 
 (defclass eq-test (conditional-test) ())
 (defclass typeq-test (conditional-test)
-  ((%ctype :initarg :ctype :reader ctype)))
+  ((%test-ctype :initarg :test-ctype :reader test-ctype)))
 
 (defclass typew (one-input no-output terminator operation)
   ((%ctype :initarg :ctype :reader ctype)))

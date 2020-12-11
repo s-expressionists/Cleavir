@@ -483,7 +483,7 @@
 
 (defmethod compile-test-ast ((ast cleavir-ast:typeq-ast) inserter system)
   (with-compiled-ast (obj (cleavir-ast:form-ast ast) inserter system)
-    (let* ((tspec (cleavir-ast:ctype ast))
+    (let* ((tspec (cleavir-ast:test-ctype ast))
            ;; FIXME: Will get weird with custom ctypes.
            (tspec-str (write-to-string tspec))
            (tblock (make-iblock inserter
@@ -494,7 +494,7 @@
                                        '#:typeq- tspec-str '#:-else)))
            (tq (make-instance 'cleavir-bir:typeq-test
                  :inputs obj
-                 :ctype (cleavir-ast:ctype ast))))
+                 :test-ctype tspec)))
       (insert inserter tq)
       (terminate inserter (make-instance 'cleavir-bir:ifi
                             :inputs (list tq)

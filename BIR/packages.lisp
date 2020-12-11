@@ -29,7 +29,7 @@
            #:accessvar #:writevar #:readvar #:cast
            #:constant-reference #:make-constant-reference
            #:returni #:unreachable #:eqi #:jump #:unwindp
-           #:eq-test #:typeq-test
+           #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
            #:typew #:ctype #:choke
            #:case #:comparees
