@@ -93,12 +93,38 @@
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (let* ((name-cst (cst:first cst))
          (function-ast (convert-called-function-reference name-cst info env system))
-         (argument-asts (convert-sequence arguments-cst env system)))
-    (cleavir-ast:make-call-ast function-ast argument-asts
-                               :origin (cst:source cst)
-                               :attributes (cleavir-env:attributes info)
-                               :transforms (cleavir-env:transforms info)
-                               :inline (cleavir-env:inline info))))
+         (argument-asts (convert-sequence arguments-cst env system))
+         (origin (cst:source cst))
+         (ftype (normalize-ftype (first (cleavir-env:function-type env info)))))
+    (multiple-value-bind (validp required optional restp rest keysp keys aok-p values)
+        (parse-function-type ftype)
+      ;; FIXME: Do something with validp?
+      (declare (ignore validp restp keysp keys aok-p))
+      (type-wrap-return-values
+       (cleavir-ast:make-call-ast function-ast
+                                  (mapcar
+                                   (lambda (argument-ast)
+                                     (type-wrap-argument
+                                      argument-ast
+                                      (cleavir-env:parse-type-specifier
+                                       (cond (required (pop required))
+                                             (optional
+                                              (cleavir-ctype:disjoin/2
+                                               (pop optional)
+                                               (cleavir-ctype:null-type nil)
+                                               nil))
+                                             (t rest))
+                                       env system)
+                                      origin env system))
+                                   argument-asts)
+                                  :origin origin
+                                  :attributes (cleavir-env:attributes info)
+                                  :transforms (cleavir-env:transforms info)
+                                  :inline (cleavir-env:inline info))
+       (cleavir-env:parse-values-type-specifier values env system)
+       origin
+       env
+       system))))
 
 ;;; Convert a form representing a call to a named global function.
 ;;; CST is the concrete syntax tree representing the entire
