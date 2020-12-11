@@ -14,4 +14,4 @@
                  ctypes))))
 
 (defun disjointp (system &rest ctypes)
-  (bottom-p (apply #'conjoin system ctypes) system))
+  (bottom-p (cl:apply #'conjoin system ctypes) system))
