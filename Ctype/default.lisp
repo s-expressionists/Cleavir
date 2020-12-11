@@ -102,7 +102,9 @@
                    (push (conjoin/2 (pop required1) (pop required2) sys)
                          required)))
         when donep
-          return (values (nreverse required) (nreverse optional) rest sys)))
+        return (if (some (lambda (req) (bottom-p req sys)) required)
+                   nil
+                   (values (nreverse required) (nreverse optional) rest sys))))
 
 (defmethod conjoin/2 (ct1 ct2 sys)
   (cond
