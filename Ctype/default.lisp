@@ -156,6 +156,10 @@
   (cond
     ((and (values-ctype-p ct1) (values-ctype-p ct2))
      (values-conjoin ct1 ct2 sys))
+    ((values-ctype-p ct1)
+     (values-conjoin ct1 (coerce-to-values ct2 sys) sys))
+    ((values-ctype-p ct2)
+     (values-conjoin (coerce-to-values ct1 sys) ct2 sys))
     ;; Pick off some very basic cases.
     ((or (bottom-p ct1 sys) (bottom-p ct2 sys)) 'nil)
     ((top-p ct1 sys) ct2)
@@ -221,6 +225,10 @@
   (cond
     ((and (values-ctype-p ct1) (values-ctype-p ct2))
      (values-disjoin ct1 ct2 sys))
+    ((values-ctype-p ct1)
+     (values-disjoin ct1 (coerce-to-values ct2 sys) sys))
+    ((values-ctype-p ct2)
+     (values-disjoin (coerce-to-values ct1 sys) ct2 sys))
     ((or (top-p ct1 sys) (top-p ct2 sys)) 't)
     ((bottom-p ct1 sys) ct2)
     ((bottom-p ct2 sys) ct1)
