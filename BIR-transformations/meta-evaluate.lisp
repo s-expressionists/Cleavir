@@ -153,9 +153,9 @@
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
                (values then else))
-              ((cleavir-ctype:subtypep (cleavir-bir:ctype test)
-                                       (cleavir-ctype:null-type nil)
-                                       nil)
+              ((cleavir-ctype:values-subtypep (cleavir-bir:ctype test)
+                                              (cleavir-ctype:null-type nil)
+                                              nil)
                #+(or)
                (print "folding ifi based on type NULL")
                (values else then)))
@@ -326,7 +326,7 @@
   (let* ((object (first (cleavir-bir:inputs instruction)))
          (ctype (cleavir-bir:ctype object))
          (test-ctype (cleavir-bir:test-ctype instruction)))
-    (cond ((cleavir-ctype:subtypep ctype test-ctype nil)
+    (cond ((cleavir-ctype:values-subtypep ctype test-ctype nil)
            #+(or)
            (format t "~&folding typeq test ~a as true since testing ~a" test-ctype ctype)
            (replace-computation-by-constant-value
@@ -357,6 +357,8 @@
       (cleavir-bir:derive-type-for-linear-datum
        local-call
        return-type))
+    ;; Doesn't actually do anything useful.
+    #+(or)
     (cleavir-set:doset (enclose (cleavir-bir:encloses function))
       (cleavir-bir:derive-type-for-linear-datum
        enclose
@@ -371,9 +373,9 @@
         ;; Remove THEI when its input's type is a subtype of the
         ;; THEI's asserted type and there's a type check. There's not
         ;; much reason to delete the THEI if there is no check.
-        (when (cleavir-ctype:subtypep ctype
-                                      (cleavir-bir:asserted-type instruction)
-                                      nil)
+        (when (cleavir-ctype:values-subtypep ctype
+                                             (cleavir-bir:asserted-type instruction)
+                                             nil)
           (cleavir-bir:delete-thei instruction))
         ;; Propagate the type of the input into function.
         ;; FIXME: Extend this to values types.

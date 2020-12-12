@@ -6,13 +6,20 @@
 ;;; and UPGRADED-COMPLEX-PART-TYPE.
 ;;;
 ;;; As in CL, but with ctypes, no environment, and a client parameter. SUBTYPEP
-;;; may only be called with two non-values ctypes or two values ctypes. U-A-E-T
+;;; may only be called with non-values ctypes.. U-A-E-T
 ;;; and U-C-P-T may not be called with values ctypes.
 
 (defgeneric subtypep (ctype1 ctype2 system))
 
 (defgeneric upgraded-array-element-type (ctype system))
 (defgeneric upgraded-complex-part-type (ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function SUBTYPEP.
+;;;
+;;; This version of SUBTYPEP works with values ctypes as well.
+(defgeneric values-subtypep (ctype1 ctype2 system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

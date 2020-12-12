@@ -432,8 +432,9 @@
 ;;; type assertion is never needed.
 (defun wrap-thei (inserter linear-datum asserted-type
                   type-check-function system)
-  (if (cleavir-ctype:subtypep (cleavir-bir:ctype linear-datum) asserted-type
-                              system)
+  (if (cleavir-ctype:values-subtypep (cleavir-bir:ctype linear-datum)
+                                     asserted-type
+                                     system)
       linear-datum
       (insert inserter (make-instance 'cleavir-bir:thei
                          :inputs (list linear-datum)

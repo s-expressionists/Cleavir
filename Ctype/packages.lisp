@@ -17,4 +17,5 @@
            #:null-type
            #:coerce-to-values)
   (:export #:values-required #:values-optional #:values-rest)
+  (:export #:values-subtypep)
   (:export #:apply #:funcall))
