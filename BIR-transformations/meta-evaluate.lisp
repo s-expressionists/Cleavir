@@ -309,13 +309,13 @@
          (test-ctype (cleavir-bir:test-ctype instruction)))
     (cond ((cleavir-ctype:subtypep ctype test-ctype nil)
            #+(or)
-           (format t "~&folding typeq test ~a as true since testing ~a" typeq-ctype ctype)
+           (format t "~&folding typeq test ~a as true since testing ~a" test-ctype ctype)
            (replace-computation-by-constant-value
             instruction
             t))
           ((cleavir-ctype:disjointp ctype test-ctype nil)
            #+(or)
-           (format t "~&folding typeq test ~a as false since testing ~a " typeq-ctype ctype)
+           (format t "~&folding typeq test ~a as false since testing ~a " test-ctype ctype)
            (replace-computation-by-constant-value
             instruction
             nil)))))
