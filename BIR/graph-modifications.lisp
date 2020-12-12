@@ -186,7 +186,7 @@
   (setf (returni (function inst)) nil))
 (defmethod clean-up-instruction progn ((inst thei))
   (let ((type-check-function (type-check-function inst)))
-    (when type-check-function
+    (unless (symbolp type-check-function)
       (assert (and (cleavir-set:empty-set-p (encloses type-check-function))
                    (cleavir-set:empty-set-p (local-calls type-check-function)))
               ()
