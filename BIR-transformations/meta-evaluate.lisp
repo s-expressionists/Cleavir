@@ -364,18 +364,19 @@
         nil nil (cleavir-ctype:top nil) nil nil nil return-type nil)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei))
-  ;; Remove THEI when its input's type is a subtype of the THEI's
-  ;; asserted type.
-  (let* ((input (first (cleavir-bir:inputs instruction)))
-         (ctype (cleavir-bir:ctype input))
-         (type-check-function (cleavir-bir:type-check-function instruction)))
-    (when (cleavir-ctype:subtypep ctype
-                                  (cleavir-bir:asserted-type instruction)
-                                  nil)
-      (cleavir-bir:delete-thei instruction))
-    ;; Propagate the type of the input into function.
-    ;; FIXME: Extend this to values types.
+  (let ((type-check-function (cleavir-bir:type-check-function instruction)))
     (unless (symbolp type-check-function)
-      (cleavir-bir:derive-type-for-linear-datum
-       (first (cleavir-bir:lambda-list type-check-function))
-       ctype))))
+      (let* ((input (first (cleavir-bir:inputs instruction)))
+             (ctype (cleavir-bir:ctype input)))
+        ;; Remove THEI when its input's type is a subtype of the
+        ;; THEI's asserted type and there's a type check. There's not
+        ;; much reason to delete the THEI if there is no check.
+        (when (cleavir-ctype:subtypep ctype
+                                      (cleavir-bir:asserted-type instruction)
+                                      nil)
+          (cleavir-bir:delete-thei instruction))
+        ;; Propagate the type of the input into function.
+        ;; FIXME: Extend this to values types.
+        (cleavir-bir:derive-type-for-linear-datum
+         (first (cleavir-bir:lambda-list type-check-function))
+         ctype)))))
