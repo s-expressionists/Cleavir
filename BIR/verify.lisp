@@ -322,7 +322,7 @@ has use-before-define on inputs ~a"
 
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
-  (test (typep (use instruction) 'ifi)
+  (test (or (unused-p instruction) (typep (use instruction) 'ifi))
         "conditional test ~a is not used by an ifi instruction" instruction))
 
 (defmethod verify progn ((mtf multiple-to-fixed))

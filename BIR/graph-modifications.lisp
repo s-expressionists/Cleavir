@@ -199,6 +199,24 @@
     (setf (inputs thei) '())
     (cleavir-bir:replace-computation thei input)))
 
+(defun delete-phi (phi)
+  (assert (unused-p phi))
+  (let ((iblock (iblock phi)))
+    (setf (cleavir-bir:inputs iblock)
+          (delete phi (cleavir-bir:inputs iblock)))
+    (dolist (def (definitions phi))
+      (let ((pos (position phi (cleavir-bir:outputs def))))
+        (setf (cleavir-bir:outputs def)
+              (loop for output in (cleavir-bir:outputs def)
+                    for index from 0
+                    unless (= index pos)
+                      collect output))
+        (setf (cleavir-bir:inputs def)
+              (loop for input in (cleavir-bir:inputs def)
+                    for index from 0
+                    unless (= index pos)
+                      collect input))))))
+
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))
@@ -381,6 +399,33 @@
     (cleavir-set:nremovef (scope (dynamic-environment successor)) successor)
     ;; The successor block is now conceptually deleted.
     (setf (deletedp successor) t)
+    iblock))
+
+(defun empty-iblock-p (iblock)
+  (let ((start (cleavir-bir:start iblock)))
+    (and (typep start 'cleavir-bir:jump)
+         (not (cleavir-bir:unwindp start))
+         (null (cleavir-bir:inputs iblock))
+         (null (cleavir-bir:outputs start))
+         (not (eq (start (function iblock)) iblock))
+         (not (eq iblock (first (next start)))))))
+
+;;; Forward the predecessors of iblock to the successor of iblock if
+;;; it is empty.
+(defun delete-iblock-if-empty (iblock)
+  (when (empty-iblock-p iblock)
+    (let ((successor (first (successors iblock)))
+          (predecessors (predecessors iblock)))
+      (cleavir-set:doset (predecessor predecessors)
+        (let ((end (end predecessor)))
+          (nsubstitute successor iblock (next end)))
+        (cleavir-set:nadjoinf (predecessors successor) predecessor))
+      (cleavir-set:nremovef (predecessors successor) iblock))
+    ;; Remove iblock from the function.
+    (cleavir-set:nremovef (iblocks (function iblock)) iblock)
+    ;; and scope
+    (cleavir-set:nremovef (scope (dynamic-environment iblock)) iblock)
+    (setf (deletedp iblock) t)
     iblock))
 
 ;;; Split a iblock into two iblocks.

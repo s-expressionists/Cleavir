@@ -10,10 +10,11 @@
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
-  (dotimes (repeat 3)
+  (dotimes (repeat 4)
     (declare (ignore repeat))
     (cleavir-set:doset (function (cleavir-bir:functions module))
-      (meta-evaluate-function function))))
+      (meta-evaluate-function function)))
+  (cleavir-bir:refresh-iblocks module))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
@@ -64,12 +65,12 @@
     ;; Make sure not to look at a block that might have been
     ;; deleted earlier in this forward pass.
     (unless (cleavir-bir:deletedp iblock)
-      ;; Make sure to merge the successors as much as possible so we can
-      ;; trigger more optimizations.
       (loop while (cleavir-bir:merge-successor-if-possible iblock))
-      (meta-evaluate-iblock iblock)
-      (flush-dead-code iblock)))
-  (cleavir-bir:refresh-local-iblocks function))
+      (unless (cleavir-bir:delete-iblock-if-empty iblock)
+        ;; Make sure to merge the successors as much as possible so we can
+        ;; trigger more optimizations.
+        (meta-evaluate-iblock iblock)
+        (flush-dead-code iblock)))))
 
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
@@ -95,6 +96,9 @@
 
 ;; Remove dead code.
 (defun flush-dead-code (iblock)
+  (dolist (phi (cleavir-bir:inputs iblock))
+    (when (cleavir-bir:unused-p phi)
+      (cleavir-bir:delete-phi phi)))
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
     (typecase instruction
       (cleavir-bir:multiple-to-fixed
@@ -114,6 +118,10 @@
               #+(or)
               (format t "~&meta-evaluate: flushing computation")
               (cleavir-bir:delete-computation instruction)))
+           (cleavir-bir:conditional-test
+            #+(or)
+            (format t "~&meta-evaluate: flushing conditional test ~a" instruction)
+            (cleavir-bir:delete-computation instruction))
            (cleavir-bir:vprimop
             (let ((name (cleavir-primop-info:name (cleavir-bir:info instruction))))
               (when (member name
@@ -159,25 +167,24 @@
                         :next (list next)
                         :inputs '() :outputs '())
          instruction)
-        (cleavir-bir:merge-successor-if-possible iblock)
         ;; Try to delete the block if possible, so we can maybe
-        ;; optimize more in this pass. Ultimately,
-        ;; refresh-local-iblocks is supposed to flush dead blocks.
+        ;; optimize more in this pass. Ultimately, the flow order will
+        ;; be recomputed.
         (cleavir-bir:maybe-delete-iblock dead)
         t))))
 
-;;; Eliminate degenerate if instructions. Does the equivalent of (IF
+;;; Eliminate IF IF constructs. Does the equivalent of (IF
 ;;; (IF X Y Z) A B) => (IF X (IF Y A B) (IF Z A B)). The reason this
 ;;; is optimization is desirable is that control flow is simplified,
 ;;; and also the flow of values is simplified by eliminating a phi
 ;;; which can lead to further optimization.
-(defun eliminate-degenerate-if (instruction)
+(defun eliminate-if-if (instruction)
   (let* ((iblock (cleavir-bir:iblock instruction))
          (phis (cleavir-bir:inputs iblock))
          (test (first (cleavir-bir:inputs instruction))))
-    ;; A degenerate IFI starts its block (i.e. is the only instruction
-    ;; in the block) and tests the phi which is the unique input to
-    ;; its block.
+    ;; An IFI is eligible for this optimization if it starts its block
+    ;; (i.e. is the only instruction in the block) and tests the phi
+    ;; which is the unique input to its block.
     (when (and (eq instruction (cleavir-bir:start iblock))
                (null (rest phis))
                (eq test (first phis)))
@@ -204,11 +211,23 @@
               (cleavir-bir:replace-terminator ifi end)
               (setf (cleavir-bir:inputs ifi) (list input))))))
       ;; Now we clean up the original IFI block.
-      (cleavir-bir:delete-iblock iblock))))
+      (cleavir-bir:delete-iblock iblock)
+      t)))
+
+;;; Eliminate an IF if the two successors of IF are the same.
+(defun eliminate-degenerate-if (ifi)
+  (let* ((next (cleavir-bir:next ifi))
+         (succ (first next)))
+    (when (eq succ (second next))
+      #+(or)
+      (print "ifi same block -> jump optimization")
+      (change-class ifi 'cleavir-bir:jump :outputs () :inputs ()
+        :next (list succ)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi))
-  (unless (fold-ifi instruction)
-    (eliminate-degenerate-if instruction)))
+  (or (fold-ifi instruction)
+      (eliminate-if-if instruction)
+      (eliminate-degenerate-if instruction)))
 
 ;; Replace COMPUTATION with a constant reference to value.
 (defun replace-computation-by-constant-value (instruction value)

@@ -11,7 +11,7 @@
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p #:deletedp)
   (:export #:rtype #:rtype=)
-  (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
+  (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi #:delete-phi
            #:output #:name #:ctype #:derived-type #:derive-type-for-linear-datum
            #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:encloses #:binder
@@ -48,7 +48,7 @@
            #:replace-computation #:delete-computation #:delete-instruction
            #:delete-transmission #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
-           #:clean-up-iblock #:merge-successor-if-possible)
+           #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)
   (:export #:refresh-iblocks #:refresh-local-iblocks
            #:refresh-users #:refresh-local-users)
