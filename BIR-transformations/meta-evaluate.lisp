@@ -96,9 +96,6 @@
 
 ;; Remove dead code.
 (defun flush-dead-code (iblock)
-  (dolist (phi (cleavir-bir:inputs iblock))
-    (when (cleavir-bir:unused-p phi)
-      (cleavir-bir:delete-phi phi)))
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
     (typecase instruction
       (cleavir-bir:multiple-to-fixed
@@ -128,7 +125,10 @@
                             '(fdefinition car cdr symbol-value))
                 #+(or)
                 (format t "~&meta-evaluate: flushing primop ~a" name)
-                (cleavir-bir:delete-computation instruction))))))))))
+                (cleavir-bir:delete-computation instruction)))))))))
+  (dolist (phi (cleavir-bir:inputs iblock))
+    (when (cleavir-bir:unused-p phi)
+      (cleavir-bir:delete-phi phi))))
 
 (defgeneric meta-evaluate-instruction (instruction))
 

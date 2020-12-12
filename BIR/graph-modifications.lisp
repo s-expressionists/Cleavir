@@ -200,7 +200,6 @@
     (cleavir-bir:replace-computation thei input)))
 
 (defun delete-phi (phi)
-  (assert (unused-p phi))
   (let ((iblock (iblock phi)))
     (setf (cleavir-bir:inputs iblock)
           (delete phi (cleavir-bir:inputs iblock)))
