@@ -339,15 +339,55 @@
             instruction
             nil)))))
 
+;;; Local variable with one reader and one writer can be substituted
+;;; away,
+(defun substitute-single-read-variable-if-possible (variable)
+  (let ((readers (cleavir-bir:readers variable)))
+    (when (and (cleavir-bir:immutablep variable)
+               (= (cleavir-set:size readers) 1))
+      (let ((writer (cleavir-bir:binder variable))
+            (reader (cleavir-set:arb readers)))
+        (when (eq (cleavir-bir:function writer)
+                  (cleavir-bir:function reader))
+          #+(or)
+          (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
+          (cleavir-bir:delete-transmission writer reader)
+          t)))))
+
+;;; Variable bound to constant can get propagated.
+(defun constant-propagate-variable-if-possible (variable)
+  (when (cleavir-bir:immutablep variable)
+    (let* ((writer (cleavir-bir:binder variable))
+           (input (first (cleavir-bir:inputs writer))))
+      ;; FIXME: Should really check for a constant type here instead.
+      (typecase input
+        (cleavir-bir:constant-reference
+         (let ((constant (first (cleavir-bir:inputs input))))
+           (cleavir-set:doset (reader (cleavir-bir:readers variable))
+             (change-class reader 'cleavir-bir:constant-reference
+               :inputs (list constant)))
+           #+(or)
+           (format t "~&meta-evaluate: constant propagating ~a"
+                   (cleavir-bir:constant-value constant))
+           (cleavir-bir:delete-instruction writer)
+           (cleavir-bir:delete-instruction input))
+         t)
+        (t)))))
+
+;;; For an immutable variable, we prove that the type of its readers
+;;; is just the type of its definition.
+(defun derive-type-for-variable (variable)
+  (when (cleavir-bir:immutablep variable)
+    (let* ((definition (first (cleavir-bir:inputs (cleavir-bir:binder variable))))
+           (type (cleavir-bir:ctype definition)))
+      (cleavir-set:doset (reader (cleavir-bir:readers variable))
+        (cleavir-bir:derive-type-for-linear-datum reader type)))))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti))
-  ;; For an immutable variable, we prove that the type of its readers
-  ;; is just the type of its definition.
   (let ((variable (first (cleavir-bir:outputs instruction))))
-    (when (cleavir-bir:immutablep variable)
-      (let* ((definition (first (cleavir-bir:inputs instruction)))
-             (type (cleavir-bir:ctype definition)))
-        (cleavir-set:doset (reader (cleavir-bir:readers variable))
-          (cleavir-bir:derive-type-for-linear-datum reader type))))))
+    (unless (or (substitute-single-read-variable-if-possible variable)
+                (constant-propagate-variable-if-possible variable))
+      (derive-type-for-variable variable))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni))
   ;; Propagate the return type to local calls and encloses of the function.
@@ -366,19 +406,18 @@
         nil nil (cleavir-ctype:top nil) nil nil nil return-type nil)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei))
-  (let ((type-check-function (cleavir-bir:type-check-function instruction)))
-    (unless (symbolp type-check-function)
-      (let* ((input (first (cleavir-bir:inputs instruction)))
-             (ctype (cleavir-bir:ctype input)))
-        ;; Remove THEI when its input's type is a subtype of the
-        ;; THEI's asserted type and there's a type check. There's not
-        ;; much reason to delete the THEI if there is no check.
-        (when (cleavir-ctype:values-subtypep ctype
-                                             (cleavir-bir:asserted-type instruction)
-                                             nil)
-          (cleavir-bir:delete-thei instruction))
-        ;; Propagate the type of the input into function.
-        ;; FIXME: Extend this to values types.
-        (cleavir-bir:derive-type-for-linear-datum
-         (first (cleavir-bir:lambda-list type-check-function))
-         ctype)))))
+  (let* ((input (first (cleavir-bir:inputs instruction)))
+         (ctype (cleavir-bir:ctype input)))
+    ;; Remove THEI when its input's type is a subtype of the
+    ;; THEI's asserted type.
+    (if (cleavir-ctype:values-subtypep ctype
+                                       (cleavir-bir:asserted-type instruction)
+                                       nil)
+        (cleavir-bir:delete-thei instruction)
+        (let ((type-check-function (cleavir-bir:type-check-function instruction)))
+          (unless (symbolp type-check-function)
+            ;; Propagate the type of the input into function.
+            ;; FIXME: Extend this to values types.
+            (cleavir-bir:derive-type-for-linear-datum
+             (first (cleavir-bir:lambda-list type-check-function))
+             ctype))))))
