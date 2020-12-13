@@ -101,7 +101,7 @@
     ;; FIXME: Actually use CTYPEs here.
     (multiple-value-bind (required optional restp rest keysp keys aok-p values)
         (parse-function-type ftype)
-      (declare (ignore restp keysp keys aok-p))
+      (declare (ignore restp keys aok-p))
       (type-wrap-return-values
        (cleavir-ast:make-call-ast function-ast
                                   (mapcar
@@ -114,6 +114,8 @@
                                       (cleavir-env:parse-values-type-specifier
                                        (cond (required (pop required))
                                              (optional (pop optional))
+                                             ;; FIXME: Actually treat &key properly!
+                                             (keysp t)
                                              (t rest))
                                        env system)
                                       origin env system))
