@@ -292,6 +292,4 @@
           ;; Per BIR rules we can't really interpolate any function
           ;; when it's ambiguous what its dynenv or owners should be.
           (when (and common-dynenv target-owner)
-            (when (contify function local-calls return-point common-use common-dynenv target-owner)
-              (return-from maybe-interpolate t)))))))
-  nil)
+            (contify function local-calls return-point common-use common-dynenv target-owner)))))))
