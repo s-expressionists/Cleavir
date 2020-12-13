@@ -95,11 +95,13 @@
          (function-ast (convert-called-function-reference name-cst info env system))
          (argument-asts (convert-sequence arguments-cst env system))
          (origin (cst:source cst))
-         (ftype (normalize-ftype (first (cleavir-env:function-type env info)))))
-    (multiple-value-bind (validp required optional restp rest keysp keys aok-p values)
+         ;; FIXME: This should be the intersection of all function
+         ;; type entries in the environment.
+         (ftype (first (cleavir-env:function-type env info))))
+    ;; FIXME: Actually use CTYPEs here.
+    (multiple-value-bind (required optional restp rest keysp keys aok-p values)
         (parse-function-type ftype)
-      ;; FIXME: Do something with validp?
-      (declare (ignore validp restp keysp keys aok-p))
+      (declare (ignore restp keysp keys aok-p))
       (type-wrap-return-values
        (cleavir-ast:make-call-ast function-ast
                                   (mapcar
@@ -108,11 +110,7 @@
                                       argument-ast
                                       (cleavir-env:parse-values-type-specifier
                                        (cond (required (pop required))
-                                             (optional
-                                              (cleavir-ctype:disjoin/2
-                                               (pop optional)
-                                               (cleavir-ctype:null-type nil)
-                                               nil))
+                                             (optional (pop optional))
                                              (t rest))
                                        env system)
                                       origin env system))

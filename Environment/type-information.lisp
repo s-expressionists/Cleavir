@@ -241,7 +241,7 @@
   (destructuring-bind (&optional (arg '*) (value '*)) rest
     (multiple-value-call #'cleavir-ctype:function
       (if (eq arg '*)
-          arg
+          (values nil nil t nil nil)
           (parse-function-type-lambda-list arg environment system))
       (if (eq value '*)
           value
