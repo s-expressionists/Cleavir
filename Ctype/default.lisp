@@ -71,10 +71,8 @@
                          (subtypep rest1 rest2 system))
                       (multiple-value-bind (answer certain)
                           (subtypep (first t1) (first t2) system)
-                        (unless certain
-                          (return (cl:values nil nil)))
                         (unless answer
-                          (return (cl:values nil t)))))))))))
+                          (return (cl:values nil certain)))))))))))
 
 (defmethod top (sys) (declare (ignore sys)) 't)
 (defmethod bottom (sys) (declare (ignore sys)) 'nil)

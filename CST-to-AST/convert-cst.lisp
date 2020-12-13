@@ -108,6 +108,9 @@
                                    (lambda (argument-ast)
                                      (type-wrap-argument
                                       argument-ast
+                                      ;; Re-evaluate whether this
+                                      ;; should be a values type
+                                      ;; specifier.
                                       (cleavir-env:parse-values-type-specifier
                                        (cond (required (pop required))
                                              (optional (pop optional))
