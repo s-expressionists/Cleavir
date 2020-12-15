@@ -244,7 +244,7 @@
           (values nil nil t nil nil nil)
           (parse-function-type-lambda-list arg environment system))
       (if (eq value '*)
-          value
+          (cleavir-ctype:values nil nil t system)
           (parse-values-type-specifier value environment system))
       system)))
 

@@ -85,4 +85,4 @@
                   finally
                      (return (values (nreverse required) (nreverse optional)
                                      restp rest keysp (nreverse keys) aok-p values)))))
-      (values nil nil t t nil nil nil t)))
+      (values nil nil t t nil nil nil '(values &rest t))))
