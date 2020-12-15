@@ -117,7 +117,19 @@
                                              (optional (pop optional))
                                              ;; FIXME: Actually treat &key properly!
                                              (keysp t)
-                                             (t rest))
+                                             (t (if (cleavir-ctype:bottom-p rest system)
+                                                    (progn
+                                                      ;; FIXME: Use a
+                                                      ;; condition
+                                                      ;; class here.
+                                                      (warn "A call to ~a was passed a number of arguments incompatible with its declared type."
+                                                            (cst:raw name-cst) ftype)
+                                                      ;; Without this
+                                                      ;; we'll get a
+                                                      ;; borked call
+                                                      ;; as a result.
+                                                      (cleavir-ctype:top system))
+                                                    rest)))
                                        system)
                                       origin env system))
                                    argument-asts)
