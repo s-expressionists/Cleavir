@@ -216,9 +216,24 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic functions VALUES-RQEUIRED, VALUES-OPTIONAL, VALUES-REST.
+;;; Generic functions VALUES-REQUIRED, VALUES-OPTIONAL, VALUES-REST.
 ;;; Read components of a values ctype.
 
 (defgeneric values-required (ctype system))
 (defgeneric values-optional (ctype system))
 (defgeneric values-rest (ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions FUNCTION-REQUIRED, FUNCTION-OPTIONAL, FUNCTION-REST, FUNCTION-KEYSP, FUNCTION-KEYS, FUNCTION-ALLOW-OTHER-KEYS-P,
+;;; and FUNCTION-VALUES.
+;;;
+;;; Read components of a function ctype.
+
+(defgeneric function-required (ctype system))
+(defgeneric function-optional (ctype system))
+(defgeneric function-rest (ctype system))
+(defgeneric function-keysp (ctype system))
+(defgeneric function-keys (ctype system))
+(defgeneric function-allow-other-keys-p (ctype system))
+(defgeneric function-values (ctype system))

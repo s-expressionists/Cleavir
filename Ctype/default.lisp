@@ -343,3 +343,31 @@
 (defmethod values-rest (ctype system)
   (declare (ignore system))
   (ll-rest (cl:rest ctype)))
+
+(defmethod function-required (ctype system)
+  (declare (ignore system))
+  (ll-required (second ctype)))
+
+(defmethod function-optional (ctype system)
+  (declare (ignore system))
+  (ll-optional (second ctype)))
+
+(defmethod function-rest (ctype system)
+  (declare (ignore system))
+  (ll-rest (second ctype)))
+
+(defmethod function-keysp (ctype system)
+  (declare (ignore system))
+  (ll-keysp (second ctype)))
+
+(defmethod function-keys (ctype system)
+  (declare (ignore system))
+  (ll-keys (second ctype)))
+
+(defmethod function-allow-other-keys-p (ctype system)
+  (declare (ignore system))
+  (ll-aokp (second ctype)))
+
+(defmethod function-values (ctype system)
+  (declare (ignore system))
+  (third ctype))
