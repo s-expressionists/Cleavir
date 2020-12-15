@@ -221,37 +221,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Converting CLEAVIR-PRIMOP:MULTIPLE-VALUE-EXTRACT
-;;;
-;;; This primitive operation is a combination of
-;;; M-V-PROG1 and M-V-SETQ useful for implementing THE.
-;;; (m-v-extract (var...) form . body) evaluates the
-;;; form, and then sets the vars to its values, or
-;;; to NIL if there are enough values. The vars must be
-;;; lexical. Then the body forms are evaluated.
-;;; Finally, all the values of the form are returned,
-;;; including any that weren't stored in the variables.
-;;; NOTE: This is basically a generalization of M-V-PROG1,
-;;; but has less optimal behavior than M-V-SETQ because
-;;; the values may have to be saved.
-
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:multiple-value-extract)) cst env system)
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 2 nil)
-  (cst:db origin (op-cst variables-cst form-cst . body-cst) cst
-    (declare (ignore op-cst))
-    (let ((lexes
-            (loop for var in (cst:raw variables-cst)
-                  collect (find-lexical-variable var env))))
-      (cleavir-ast:make-multiple-value-extract-ast
-       lexes
-       (convert form-cst env system)
-       (convert-sequence body-cst env system)
-       :origin origin))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Converting CLEAVIR-PRIMOP:CAR, CDR, RPLACA, RPLACD.
 
 (defprimop cleavir-primop:car)
