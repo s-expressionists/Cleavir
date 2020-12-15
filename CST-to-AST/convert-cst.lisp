@@ -98,10 +98,11 @@
          ;; FIXME: This should be the intersection of all function
          ;; type entries in the environment.
          (ftype (first (cleavir-env:function-type env info))))
-    ;; FIXME: Use the CTYPE accessors instead of this hand rolled parser.
-    (multiple-value-bind (required optional restp rest keysp keys aok-p values)
-        (parse-function-type ftype)
-      (declare (ignore restp keys aok-p))
+    (let ((required (cleavir-ctype:function-required ftype system))
+          (optional (cleavir-ctype:function-optional ftype system))
+          (rest (cleavir-ctype:function-rest ftype system))
+          (keysp (cleavir-ctype:function-keysp ftype system))
+          (values (cleavir-ctype:function-values ftype system)))
       (type-wrap-return-values
        (cleavir-ast:make-call-ast function-ast
                                   (mapcar
