@@ -15,8 +15,7 @@
   (declare (cl:ignore initargs))
   (derive-type-for-linear-datum
    i
-   (cleavir-ctype:function
-    nil nil (cleavir-ctype:top nil) nil nil nil (cleavir-ctype:top nil) nil))
+   (cleavir-ctype:function-top nil))
   i)
 
 (defclass unreachable (no-input no-output terminator0) ())

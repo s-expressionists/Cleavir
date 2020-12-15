@@ -20,5 +20,6 @@
   (:export #:function-required #:function-optional #:function-rest
            #:function-keysp #:function-keys #:function-allow-other-keys-p
            #:function-values)
+  (:export #:function-top)
   (:export #:values-subtypep)
   (:export #:apply #:funcall))

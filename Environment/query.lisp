@@ -121,10 +121,7 @@
    ;; the same object as was supplied for that particular function.
    (%identity :initarg :identity :reader identity)
    ;; The type of the local function. 
-   (%type :initform (cleavir-ctype:function
-                     nil nil t nil nil nil
-                     (cleavir-ctype:values nil nil t nil)
-                     nil)
+   (%type :initform (cleavir-ctype:function-top nil)
           :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, INLINE and
    ;; NOTINLINE.  NIL means that there is neither an INLINE nor a
@@ -165,10 +162,7 @@
    ;; the NAME reader for further processing.
    (%name :initarg :name :reader name)
    ;; The type of the global function. 
-   (%type :initform (cleavir-ctype:function nil nil t nil nil nil
-                                            (cleavir-ctype:values
-                                             nil nil t nil)
-                                            nil)
+   (%type :initform (cleavir-ctype:function-top nil)
           :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, INLINE and
    ;; NOTINLINE.  NIL means that there is neither an INLINE nor a

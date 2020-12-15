@@ -15,3 +15,8 @@
 
 (defun disjointp (ct1 ct2 system)
   (bottom-p (conjoin/2 ct1 ct2 system) system))
+
+;;; This is the ctype of (function * *).
+(defun function-top (system)
+  (function nil nil (top system) nil nil nil (values nil nil (top system) system) system))
+
