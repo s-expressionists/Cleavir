@@ -453,7 +453,13 @@
            (if (symbolp type-check-function-ast)
                type-check-function-ast
                (compile-function type-check-function-ast system))))
-    (cond ((eq rv :no-return) rv)
+    (cond ((or (eq rv :no-return))
+           :no-return)
+          ((some (lambda (ctype)
+                   (cleavir-ctype:bottom-p ctype system))
+                 required)
+           (terminate inserter (make-instance 'cleavir-bir:unreachable))
+           :no-return)
           ((listp rv) ; several single values
            (if (null (rest rv)) ; single value
                (list (wrap-thei inserter
