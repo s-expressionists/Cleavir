@@ -34,6 +34,7 @@
            #:typew #:ctype #:choke
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
+           #:values-save #:values-collect
            #:alloca #:writetemp #:readtemp
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call

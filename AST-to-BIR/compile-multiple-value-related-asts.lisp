@@ -22,16 +22,13 @@
   ;; could be rewritten to account for this kind of context.
   (let* ((during (make-iblock inserter))
          (de (dynamic-environment inserter))
-         (alloca (make-instance 'cleavir-bir:alloca
-                   :rtype :multiple-values :next (list during)))
-         (write (make-instance 'cleavir-bir:writetemp
-                  :alloca alloca :inputs (list mv)))
-         (read (make-instance 'cleavir-bir:readtemp
-                 :alloca alloca :rtype :multiple-values)))
-    (setf (cleavir-bir:dynamic-environment during) alloca)
-    (terminate inserter alloca)
+         (save (make-instance 'cleavir-bir:values-save
+                 :inputs (list mv) :next (list during)))
+         (read (make-instance 'cleavir-bir:values-collect
+                 :inputs (list save))))
+    (setf (cleavir-bir:dynamic-environment during) save)
+    (terminate inserter save)
     (begin inserter during)
-    (insert inserter write)
     (cond ((compile-sequence-for-effect form-asts inserter system)
            (insert inserter read)
            (let ((after (make-iblock inserter :dynamic-environment de)))
@@ -66,7 +63,7 @@
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast)
                         inserter system)
   (with-compiled-ast (callee (cleavir-ast:function-form-ast ast)
-                             inserter system)
+                      inserter system)
     (with-compiled-arguments (args (cleavir-ast:form-asts ast) inserter system
                                    :multiple-values)
       (insert inserter (make-instance 'cleavir-bir:mv-call
