@@ -98,7 +98,7 @@
          ;; FIXME: This should be the intersection of all function
          ;; type entries in the environment.
          (ftype (first (cleavir-env:function-type env info))))
-    ;; FIXME: Actually use CTYPEs here.
+    ;; FIXME: Use the CTYPE accessors instead of this hand rolled parser.
     (multiple-value-bind (required optional restp rest keysp keys aok-p values)
         (parse-function-type ftype)
       (declare (ignore restp keys aok-p))
@@ -108,23 +108,23 @@
                                    (lambda (argument-ast)
                                      (type-wrap-argument
                                       argument-ast
-                                      ;; Re-evaluate whether this
-                                      ;; should be a values type
+                                      ;; FIXME: figure out if we need
+                                      ;; this to be a values
                                       ;; specifier.
-                                      (cleavir-env:parse-values-type-specifier
+                                      (cleavir-ctype:coerce-to-values
                                        (cond (required (pop required))
                                              (optional (pop optional))
                                              ;; FIXME: Actually treat &key properly!
                                              (keysp t)
                                              (t rest))
-                                       env system)
+                                       system)
                                       origin env system))
                                    argument-asts)
                                   :origin origin
                                   :attributes (cleavir-env:attributes info)
                                   :transforms (cleavir-env:transforms info)
                                   :inline (cleavir-env:inline info))
-       (cleavir-env:parse-values-type-specifier values env system)
+       values
        origin
        env
        system))))
