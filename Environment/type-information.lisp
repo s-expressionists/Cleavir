@@ -129,6 +129,10 @@
       type-specifier))
 
 (defmethod parse-expanded-type-specifier
+    ((type-specifier (eql 'cl:function)) environment system)
+  (cleavir-ctype:function-top system))
+
+(defmethod parse-expanded-type-specifier
     ((type-specifier class) environment system)
   (declare (cl:ignore environment system))
   type-specifier)
@@ -241,10 +245,10 @@
   (destructuring-bind (&optional (arg '*) (value '*)) rest
     (multiple-value-call #'cleavir-ctype:function
       (if (eq arg '*)
-          (values nil nil t nil nil nil)
+          (values nil nil (cleavir-ctype:top system) nil nil nil)
           (parse-function-type-lambda-list arg environment system))
       (if (eq value '*)
-          (cleavir-ctype:values nil nil t system)
+          (cleavir-ctype:values nil nil (cleavir-ctype:top system) system)
           (parse-values-type-specifier value environment system))
       system)))
 
