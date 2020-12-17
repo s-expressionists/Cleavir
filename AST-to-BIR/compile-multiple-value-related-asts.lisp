@@ -87,7 +87,7 @@
                    for save = (terminate
                                inserter
                                (make-instance 'cleavir-bir:values-save
-                                 :inputs (list mv) :next (list next)))
+                                 :inputs mv :next (list next)))
                    collect save into saves
                    do (setf (cleavir-bir:dynamic-environment next) save)
                       (begin inserter next)
@@ -98,7 +98,7 @@
                              (let* ((mv (adapt inserter rv :multiple-values))
                                     (c (make-instance
                                            'cleavir-bir:values-collect
-                                         :inputs (nconc saves (list mv))))
+                                         :inputs (nconc saves mv)))
                                     (after
                                       (make-iblock inserter
                                                    :dynamic-environment orig-de
@@ -109,10 +109,11 @@
                                             :inputs () :outputs ()
                                             :next (list after)))
                                (begin inserter after)
-                               (insert inserter
-                                       (make-instance 'cleavir-bir:mv-call
-                                         :inputs (list (first callee)
-                                                       c)))))))))))
+                               (return
+                                 (insert inserter
+                                         (make-instance 'cleavir-bir:mv-call
+                                           :inputs (list (first callee)
+                                                         c))))))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
   (let ((a
