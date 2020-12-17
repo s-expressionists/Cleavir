@@ -34,8 +34,7 @@
   (cleavir-set:nadjoinf (local-calls datum) use))
 
 (defmethod shared-initialize :before
-    ((inst instruction) slot-names &rest initargs
-     &key (inputs nil inputsp) &allow-other-keys)
+    ((inst instruction) slot-names &rest initargs &key (inputs nil inputsp))
   (declare (cl:ignore slot-names initargs))
   ;; Maintain uses
   ;; The initform for inputs is nil, so we don't need to do this updating unless
@@ -64,7 +63,7 @@
   (cleavir-set:nadjoinf (writers datum) definition))
 
 (defmethod shared-initialize :before
-    ((inst operation) slot-names &rest initargs &key outputs &allow-other-keys)
+    ((inst operation) slot-names &rest initargs &key outputs)
   (declare (cl:ignore initargs))
   ;; Maintain use lists
   (when (or (eq slot-names 't) (member '%outputs slot-names))
