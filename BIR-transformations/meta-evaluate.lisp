@@ -10,7 +10,7 @@
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
-  (dotimes (repeat 4)
+  (dotimes (repeat 3)
     (declare (ignore repeat))
     (cleavir-set:doset (function (cleavir-bir:functions module))
       (meta-evaluate-function function)))
@@ -63,16 +63,30 @@
 
 (defun meta-evaluate-function (function)
   (derive-function-argument-types function)
-  (dolist (iblock (cleavir-bir::iblocks-forward-flow-order function))
-    ;; Make sure not to look at a block that might have been
-    ;; deleted earlier in this forward pass.
-    (unless (cleavir-bir:deletedp iblock)
-      (loop while (cleavir-bir:merge-successor-if-possible iblock))
-      (unless (cleavir-bir:delete-iblock-if-empty iblock)
+  ;; The decision for what goes in the forward vs backward flow passes
+  ;; has to do with whether the effects of the optimization are on
+  ;; things that happen before vs after in the flow graph, and if that
+  ;; doesn't matter, which order makes it more likely to fire, so we
+  ;; can feed effects as much as possible in one pass.
+  (let ((forward-flow-order (cleavir-bir::iblocks-forward-flow-order function)))
+    (dolist (iblock forward-flow-order)
+      ;; Make sure not to look at a block that might have been
+      ;; deleted earlier in this forward pass.
+      (unless (cleavir-bir:deletedp iblock)
         ;; Make sure to merge the successors as much as possible so we can
         ;; trigger more optimizations.
-        (meta-evaluate-iblock iblock)
-        (flush-dead-code iblock)))))
+        (loop while (cleavir-bir:merge-successor-if-possible iblock))
+        (meta-evaluate-iblock iblock)))
+    (dolist (iblock (nreverse forward-flow-order)) ; careful, destructive
+      (unless (cleavir-bir:deletedp iblock)
+        (flush-dead-code iblock)
+        (let ((end (cleavir-bir:end iblock)))
+          (typecase end
+            (cleavir-bir:ifi
+             (or (eliminate-if-if end)
+                 (eliminate-degenerate-if end)))
+            (cleavir-bir:jump
+             (cleavir-bir:delete-iblock-if-empty iblock))))))))
 
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
@@ -96,7 +110,6 @@
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
     (meta-evaluate-instruction instruction)))
 
-;; Remove dead code.
 (defun flush-dead-code (iblock)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
     (typecase instruction
@@ -191,7 +204,7 @@
                (null (rest phis))
                (eq test (first phis)))
       #+(or)
-      (print "eliminating degenerate if!")
+      (print "eliminating if-if!")
       ;; We duplicate the IFI and replace the terminators for every
       ;; predecessor.
       (let ((next (cleavir-bir:next instruction))
@@ -227,9 +240,7 @@
         :next (list succ)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi))
-  (or (fold-ifi instruction)
-      (eliminate-if-if instruction)
-      (eliminate-degenerate-if instruction)))
+  (fold-ifi instruction))
 
 ;; Replace COMPUTATION with a constant reference to value.
 (defun replace-computation-by-constant-value (instruction value)
