@@ -14,11 +14,12 @@
     (when (cleavir-ctype:disjointp (cleavir-bir:asserted-type thei)
                                    (cleavir-bir:ctype input)
                                    nil)
-      (warn "The derived type of ~a is ~a but it is asserted as ~a by ~a."
-            input
-            (cleavir-bir:ctype input)
-            (cleavir-bir:asserted-type thei)
-            thei))))
+      (warn 'cleavir-bir:type-conflict
+            :datum input
+            :asserted-type (cleavir-bir:asserted-type thei)
+            :derived-type (cleavir-bir:ctype input)
+            :asserted-by thei
+            :origin (cleavir-bir:origin thei)))))
 
 (defun generate-type-check (thei)
   (let* ((input (first (cleavir-bir:inputs thei)))

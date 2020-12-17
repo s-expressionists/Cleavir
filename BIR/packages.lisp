@@ -55,4 +55,4 @@
            #:refresh-users #:refresh-local-users)
   (:export #:verify)
   (:export #:disassemble)
-  (:export #:unused-variable))
+  (:export #:unused-variable #:type-conflict))
