@@ -20,21 +20,20 @@
   ;; extracted early and no saving done. We don't have that information at this
   ;; moment, so an optimization pass could rewrite it. Alternately AST-to-BIR
   ;; could be rewritten to account for this kind of context.
-  (let* ((during (make-iblock inserter))
+  (let* ((during (make-iblock inserter :name '#:mv-prog1-body))
          (de (dynamic-environment inserter))
-         (alloca (make-instance 'cleavir-bir:alloca
-                   :rtype :multiple-values :next (list during)))
-         (write (make-instance 'cleavir-bir:writetemp
-                  :alloca alloca :inputs (list mv)))
-         (read (make-instance 'cleavir-bir:readtemp
-                 :alloca alloca :rtype :multiple-values)))
-    (setf (cleavir-bir:dynamic-environment during) alloca)
-    (terminate inserter alloca)
+         (save (make-instance 'cleavir-bir:values-save
+                 :inputs (list mv) :next (list during)))
+         (read (make-instance 'cleavir-bir:values-collect
+                 :inputs (list save))))
+    (setf (cleavir-bir:dynamic-environment during) save)
+    (terminate inserter save)
     (begin inserter during)
-    (insert inserter write)
     (cond ((compile-sequence-for-effect form-asts inserter system)
            (insert inserter read)
-           (let ((after (make-iblock inserter :dynamic-environment de)))
+           (let ((after (make-iblock inserter
+                                     :name '#:mv-prog1-after
+                                     :dynamic-environment de)))
              (terminate inserter (make-instance 'cleavir-bir:jump
                                    :inputs () :outputs ()
                                    :next (list after)))
@@ -67,11 +66,54 @@
                         inserter system)
   (with-compiled-ast (callee (cleavir-ast:function-form-ast ast)
                              inserter system)
-    (with-compiled-arguments (args (cleavir-ast:form-asts ast) inserter system
-                                   :multiple-values)
-      (insert inserter (make-instance 'cleavir-bir:mv-call
-                         :inputs (list* (first callee)
-                                        (mapcar #'first args)))))))
+    (let ((form-asts (cleavir-ast:form-asts ast)))
+      (cond ((null form-asts)
+             (insert inserter (make-instance 'cleavir-bir:call
+                                :inputs (list (first callee)))))
+            ((null (rest form-asts))
+             (with-compiled-arguments (args form-asts inserter system
+                                            :multiple-values)
+               (insert inserter (make-instance 'cleavir-bir:mv-call
+                                  :inputs (list* (first callee)
+                                                 (mapcar #'first args))))))
+            (t
+             (loop with orig-de = (dynamic-environment inserter)
+                   for form-ast in (butlast form-asts)
+                   for next = (make-iblock inserter :name '#:mv-call-temp)
+                   for rv = (compile-ast form-ast inserter system)
+                   for mv = (if (eq rv :no-return)
+                                (return-from compile-ast :no-return)
+                                (adapt inserter rv :multiple-values))
+                   for save = (terminate
+                               inserter
+                               (make-instance 'cleavir-bir:values-save
+                                 :inputs mv :next (list next)))
+                   collect save into saves
+                   do (setf (cleavir-bir:dynamic-environment next) save)
+                      (begin inserter next)
+                   finally (let* ((last-ast (first (last form-asts)))
+                                  (rv (compile-ast last-ast inserter system)))
+                             (when (eq rv :no-return)
+                               (return-from compile-ast :no-return))
+                             (let* ((mv (adapt inserter rv :multiple-values))
+                                    (c (make-instance
+                                           'cleavir-bir:values-collect
+                                         :inputs (nconc saves mv)))
+                                    (after
+                                      (make-iblock inserter
+                                                   :dynamic-environment orig-de
+                                                   :name '#:mv-call)))
+                               (insert inserter c)
+                               (terminate inserter
+                                          (make-instance 'cleavir-bir:jump
+                                            :inputs () :outputs ()
+                                            :next (list after)))
+                               (begin inserter after)
+                               (return
+                                 (insert inserter
+                                         (make-instance 'cleavir-bir:mv-call
+                                           :inputs (list (first callee)
+                                                         c))))))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
   (let ((a
@@ -79,79 +121,3 @@
     (if (eq a :no-return)
         a
         (mapcar #'first a))))
-
-(defun compile-m-v-extract (inserter system lhss mv form-asts)
-  (let* ((during (make-iblock inserter))
-         (de (dynamic-environment inserter))
-         (alloca (make-instance 'cleavir-bir:alloca
-                   :rtype :multiple-values :next (list during)))
-         (write (make-instance 'cleavir-bir:writetemp
-                  :alloca alloca :inputs (list mv)))
-         (read1 (make-instance 'cleavir-bir:readtemp
-                  :alloca alloca :rtype :multiple-values))
-         (rtypes (make-list (length lhss) :initial-element :object))
-         (read2 (make-instance 'cleavir-bir:readtemp
-                  :alloca alloca :rtype :multiple-values)))
-    (setf (cleavir-bir:dynamic-environment during) alloca)
-    (terminate inserter alloca)
-    (begin inserter during)
-    (insert inserter write)
-    (insert inserter read1)
-    ;; Set the variables.
-    (let ((fv (adapt inserter read1 rtypes)))
-      (loop for lhs in lhss
-            for var = (find-variable lhs)
-            for f in fv
-            for wv = (make-instance 'cleavir-bir:writevar
-                       :inputs (list f) :outputs (list var))
-            do (insert inserter wv)))
-    ;; Compile the body
-    (cond ((compile-sequence-for-effect form-asts inserter system)
-           (insert inserter read2)
-           (let ((after (make-iblock inserter :dynamic-environment de)))
-             (terminate inserter (make-instance 'cleavir-bir:jump
-                                   :inputs () :outputs ()
-                                   :next (list after)))
-             (begin inserter after))
-           read2)
-          (t
-           ;; the forms did not return.
-           ;; This makes our saving pointless, so hypothetically we could go back
-           ;; and change that stuff.
-           :no-return))))
-
-(defmethod compile-ast ((ast cleavir-ast:multiple-value-extract-ast)
-                        inserter system)
-  (let ((rv (compile-ast (cleavir-ast:first-form-ast ast) inserter system)))
-    (cond ((eq rv :no-return) rv)
-          ((listp rv)
-           ;; Write the variables.
-           (let ((vars (mapcar #'find-variable (cleavir-ast:lhs-asts ast)))
-                 (nvals (length rv)))
-             (loop for var in vars
-                   ;; If there are more variables than values, compensate
-                   for r = (or (pop rv)
-                               (insert inserter (cleavir-bir:make-constant-reference
-                                                 (cleavir-bir:constant-in-module 'nil *current-module*))))
-                   for wv = (make-instance 'cleavir-bir:writevar
-                              :inputs (list r) :outputs (list var))
-                   do (insert inserter wv))
-             ;; A bunch of values are returned, so we don't need to save.
-             (if (compile-sequence-for-effect (cleavir-ast:form-asts ast)
-                                              inserter system)
-                 ;; Return readvars plus any extra values, if there were
-                 ;; more values than variables.
-                 (append
-                  (loop repeat nvals ; cut out early if there are more vars
-                        for var in vars
-                        for rvar = (make-instance 'cleavir-bir:readvar
-                                     :inputs (list var))
-                        do (insert inserter rvar)
-                        collect rvar)
-                  rv)
-                 :no-return)))
-          (t
-           ;; Multiple values were returned. Save.
-           (compile-m-v-extract inserter system
-                                (cleavir-ast:lhs-asts ast)
-                                rv (cleavir-ast:form-asts ast))))))

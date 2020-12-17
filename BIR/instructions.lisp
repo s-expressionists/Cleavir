@@ -130,6 +130,14 @@
 
 (defclass returni (one-input no-output terminator0) ())
 
+(defclass values-save
+    (dynamic-environment one-input terminator1 computation)
+  ())
+(defmethod rtype ((v values-save)) :multiple-values)
+
+(defclass values-collect (computation) ())
+(defmethod rtype ((v values-collect)) :multiple-values)
+
 ;;; Allocate some temporary space for an object of the specified rtype.
 ;;; Within this dynamic environment, readtemp and writetemp can be used.
 ;;; It is expected that the memory is freed whenever the dynamic environment
@@ -137,7 +145,7 @@
 ;;; multiple-value-prog1.
 ;;; By "freed", I mean that (tagbody 0 (multiple-value-prog1 (f) (go 0))) and
 ;;; the like shouldn't eat the entire stack.
-(defclass alloca (dynamic-environment no-input no-output terminator1 operation)
+(defclass alloca (no-input no-output ssa dynamic-environment terminator1)
   ((%rtype :initarg :rtype :reader rtype)))
 
 ;;; Abstract.
