@@ -189,7 +189,7 @@
 ;;; We do this by generating a call to SYMBOL-VALUE.
 
 (defmethod convert-special-variable (cst info global-env system)
-  (declare (ignore cst global-env))
+  (declare (ignore global-env system))
   (let ((symbol (cleavir-env:name info))
         (origin (cst:source cst)))
     (cleavir-ast:make-symbol-value-ast

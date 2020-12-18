@@ -597,7 +597,7 @@
 ;;; This method is called when the environment is the global
 ;;; environment.
 (defmethod function-inline (environment defining-info)
-  (declare (cl:ignore environment))
+  (declare (cl:ignore environment defining-info))
   nil)
 
 ;;; This method is called when the entry is not related to the
@@ -750,6 +750,7 @@
 
 (defmethod make-info
     (environment (defining-info global-macro-info))
+  (declare (cl:ignore environment))
   (make-instance 'global-macro-info
     :name (name defining-info)
     :compiler-macro (compiler-macro defining-info)

@@ -103,7 +103,7 @@
             (inputs '()))
         (cleavir-bir:map-lambda-list
          (lambda (state item index)
-           (declare (ignore item index))
+           (declare (ignore index))
            (let ((arg (pop call-arguments)))
              (ecase state
                (:required
@@ -265,6 +265,7 @@
   (let ((too-hairy-p nil))
     (cleavir-bir:map-lambda-list
      (lambda (state item index)
+       (declare (ignore index))
        (case state
          ((:required &optional))
          (&rest
