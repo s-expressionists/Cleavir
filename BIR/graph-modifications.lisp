@@ -11,7 +11,7 @@
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
   (declare (cl:ignore use))
-  (slot-makunbound datum '%use))
+  (setf (%use datum) nil))
 (defmethod remove-use ((datum variable) use)
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
 (defmethod remove-use ((datum constant) use)
@@ -21,7 +21,7 @@
 
 (defgeneric add-use (datum use))
 (defmethod add-use ((datum linear-datum) use)
-  (assert (not (slot-boundp datum '%use))
+  (assert (null (use datum))
           ()
           "Tried to add a use ~a to datum ~a, which is already in use by ~a"
           use datum (use datum))
@@ -294,14 +294,14 @@
 (defmethod replace-uses ((new datum) (old linear-datum))
   (replace-input new old (use old)))
 (defmethod replace-uses ((new linear-datum) (old linear-datum))
-  (assert (not (slot-boundp new '%use)))
-  (when (slot-boundp old '%use)
+  (assert (null (use new)))
+  (when (use old)
     (setf (%use new) (%use old))
     (replace-input new old (%use old)))
   (values))
 (defmethod replace-uses :after ((new datum) (old linear-datum))
-  (when (slot-boundp old '%use)
-    (slot-makunbound old '%use)))
+  (when (use old)
+    (setf (%use old) nil)))
 
 ;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
 (defun replace-computation (computation replacement)

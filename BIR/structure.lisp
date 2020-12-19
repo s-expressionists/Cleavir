@@ -46,7 +46,7 @@
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
-  ((%use :initarg :use :reader use :accessor %use
+  ((%use :initarg :use :initform nil :reader use :accessor %use
          :type instruction)
    ;; A type the compiler has proven holds for this linear-datum.
    (%derived-type :initform (cleavir-ctype:top nil)
@@ -57,7 +57,7 @@
                   ;; proven about this datum.
                   :reader ctype)))
 (defmethod unused-p ((datum linear-datum))
-  (not (slot-boundp datum '%use)))
+  (null (use datum)))
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type)
@@ -170,8 +170,7 @@
   (or (call-next-method)
       (let ((use (cleavir-bir:use datum)))
         (and (typep use 'cleavir-bir:leti)
-             (cleavir-set:empty-set-p
-              (cleavir-bir:readers (first (cleavir-bir:outputs use))))))))
+             (unused-p (first (cleavir-bir:outputs use)))))))
 
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
