@@ -417,10 +417,8 @@
       (insert inserter
               (make-instance 'cleavir-bir:writevar
                 :inputs rv :outputs (list var)))
-      (if (eq rv :no-return)
-          :no-return
-          (list (insert inserter (make-instance 'cleavir-bir:readvar
-                                                :inputs (list var))))))))
+      (list (insert inserter (make-instance 'cleavir-bir:readvar
+                               :inputs (list var)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
