@@ -276,9 +276,9 @@
     too-hairy-p))
 
 (defun maybe-interpolate (function)
-  ;; When a function has no encloses and returns to a single control
+  ;; When a function has no enclose and returns to a single control
   ;; point, it is eligible for interpolation.
-  (when (and (cleavir-set:empty-set-p (cleavir-bir:encloses function))
+  (when (and (null (cleavir-bir:enclose function))
              (not (lambda-list-too-hairy-p
                    (cleavir-bir:lambda-list function))))
     ;; FIXME: We should respect inline and not inline declarations.

@@ -189,10 +189,7 @@
   (cleavir-set:nadjoinf (cleavir-bir:catches (cleavir-bir:function c)) c))
 
 (defmethod initialize-copy :after ((e cleavir-bir:enclose))
-  ;; Since a.t.m. each enclose copies the function, by definition it only
-  ;; has this as an enclose.
-  (setf (cleavir-bir:encloses (cleavir-bir:code e))
-        (cleavir-set:make-set e)))
+  (setf (cleavir-bir:enclose (cleavir-bir:code e)) e))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:instruction) stack map)

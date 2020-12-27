@@ -1,10 +1,11 @@
 (in-package #:cleavir-bir)
 
+;;; This instruction creates a first-class object from a FUNCTION.
 (defclass enclose (no-input computation)
   ((%code :initarg :code :reader code
           :type function)
    ;; Indicates the extent of the closure created by this
-   ;; instructions.
+   ;; instruction.
    (%extent :initarg :extent :accessor extent
             :initform :indefinite
             :type (member :dynamic :indefinite))))

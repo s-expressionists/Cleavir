@@ -32,7 +32,7 @@ An `ssa` datum that is identified with its definition is a `value`. An `ssa` tha
 
 `phi`s are linear data. They have an `iblock` they are an argument to. They have multiple definitions, which are computed from the iblock's predecessors and nonlocal entrances.
 
-`variable`s are data. They have `writers` and `readers`, which are identified with their `definitions` and `uses` but are mutable. They have an `extent` indicating whether they are local to one function, or shared across multiple functions, and if they are shared, whether they only have dynamic extent. They have an `owner`, the function in which they are defined, and a `binder`, the `lexical-bind` (below) that defines them. They also maintain a set, the `encloses`, of `enclose` instructions that enclose over them.
+`variable`s are data. They have `writers` and `readers`, which are identified with their `definitions` and `uses` but are mutable. They have an `extent` indicating whether they are local to one function, or shared across multiple functions, and if they are shared, whether they only have dynamic extent. They have an `owner`, the function in which they are defined, and a `binder`, the `lexical-bind` (below) that defines them.
 
 Instructions
 ============
@@ -66,7 +66,7 @@ Iblocks also maintain sets of `predecessors` and `entrances`, which are iblocks 
 Functions
 =========
 
-A `function` represents a target function. They have a set of `iblocks`, a `start` iblock, and an `end` iblock, except that the `end` may be `nil` if the function never returns. They have a `lambda-list`. They have a set of `variables` referenced within them, i.e. including both variables it owns and variables it closes over. They maintain the set of `encloses` over them.
+A `function` represents a function. They have a set of `iblocks`, a `start` iblock, a `returni` instruction, except that the `returni` may be `nil` if the function never returns. They have a `lambda-list`. They have a set of `variables` which are bound by the function. 
 
 Graph modifications
 ===================

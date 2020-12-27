@@ -7,8 +7,9 @@
     (let ((environment (cleavir-bir:environment access-function)))
       (unless (cleavir-set:presentp lexical environment)
         (cleavir-set:nadjoinf environment lexical)
-        (cleavir-set:doset (enclose (cleavir-bir:encloses access-function))
-          (close-over function (cleavir-bir:function enclose) lexical))
+        (let ((enclose (cleavir-bir:enclose access-function)))
+          (when enclose
+            (close-over function (cleavir-bir:function enclose) lexical)))
         (cleavir-set:doset (local-call (cleavir-bir:local-calls access-function))
           (close-over function (cleavir-bir:function local-call) lexical))))))
 
@@ -36,8 +37,8 @@
             (cleavir-bir:attributes call)
             :dx-call)))
     (cleavir-set:doset (function (cleavir-bir:functions module))
-      (cleavir-set:doset (enclose (cleavir-bir:encloses function))
-        (unless (cleavir-bir:unused-p enclose)
+      (let ((enclose (cleavir-bir:enclose function)))
+        (when enclose
           (let ((use (cleavir-bir:use enclose)))
             (typecase use
               (cleavir-bir:call
@@ -47,20 +48,20 @@
                (let ((variable (first (cleavir-bir:outputs use)))
                      (safe t))
                  (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                   (unless (cleavir-bir:unused-p reader)
-                     (let ((use (cleavir-bir:use reader)))
-                       (typecase use
-                         (cleavir-bir:call
-                          (setq safe (safe-call use)))
-                         (t (setq safe nil))))))
+                   (let ((use (cleavir-bir:use reader)))
+                     (typecase use
+                       (null)
+                       (cleavir-bir:call
+                        (setq safe (safe-call use)))
+                       (t (setq safe nil)))))
                  (when safe
                    (setf (cleavir-bir:extent enclose) :dynamic)))))))))))
 
 (defun function-extent (function)
-  (cleavir-set:doset (enclose (cleavir-bir:encloses function))
-    (when (eq (cleavir-bir:extent enclose) :indefinite)
-      (return-from function-extent :indefinite)))
-  :dynamic)
+  (let ((enclose (cleavir-bir:enclose function)))
+    (if enclose
+        (cleavir-bir:extent enclose)
+        :dynamic)))
 
 ;;; Determine the extent of every variable in a function based on the
 ;;; extent of any functions which close over it.

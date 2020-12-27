@@ -14,7 +14,7 @@
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi #:delete-phi
            #:output #:name #:ctype #:derived-type #:derive-type-for-linear-datum
            #:definitions #:use #:transitive-use #:unused-p)
-  (:export #:variable #:extent #:writers #:readers #:encloses #:binder
+  (:export #:variable #:extent #:writers #:readers #:binder
            #:use-status #:ignore
            #:record-variable-ref #:record-variable-set
            #:immutablep #:closed-over-p)

@@ -19,7 +19,7 @@
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
 (defun derive-function-argument-types (function)
-  (when (cleavir-set:empty-set-p (cleavir-bir:encloses function))
+  (unless (cleavir-bir:enclose function)
     ;; If there are no local calls either, don't bother doing
     ;; anything, especially since we're deriving the type from scratch
     ;; optimistically.
@@ -403,7 +403,7 @@
       (derive-type-for-variable variable))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni))
-  ;; Propagate the return type to local calls and encloses of the function.
+  ;; Propagate the return type to local calls and enclose of the function.
   (let ((function (cleavir-bir:function instruction))
         (return-type (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
@@ -412,11 +412,12 @@
        return-type))
     ;; Doesn't actually do anything useful.
     #+(or)
-    (cleavir-set:doset (enclose (cleavir-bir:encloses function))
-      (cleavir-bir:derive-type-for-linear-datum
-       enclose
-       (cleavir-ctype:function
-        nil nil (cleavir-ctype:top nil) nil nil nil return-type nil)))))
+    (let ((enclose (cleavir-bir:enclose function)))
+      (when enclose
+        (cleavir-bir:derive-type-for-linear-datum
+         enclose
+         (cleavir-ctype:function
+          nil nil (cleavir-ctype:top nil) nil nil nil return-type nil))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei))
   (let* ((input (first (cleavir-bir:inputs instruction)))

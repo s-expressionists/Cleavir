@@ -330,9 +330,10 @@
    ;; filled in by process-captured-variables.
    (%environment :initform (cleavir-set:empty-set) :accessor environment
                  :type cleavir-set:set)
-   ;; The set of ENCLOSE instructions with this as their CODE.
-   (%encloses :initform (cleavir-set:empty-set) :accessor encloses
-              :type cleavir-set:set)
+   ;; The ENCLOSE instruction which creates this function as a
+   ;; first-class value, or NIL if the function does not need to be
+   ;; treated as first-class.
+   (%enclose :initform nil :accessor enclose :type (or null enclose))
    ;; The set of local calls of this function.
    (%local-calls :initform (cleavir-set:empty-set) :accessor local-calls
                  :type cleavir-set:set)

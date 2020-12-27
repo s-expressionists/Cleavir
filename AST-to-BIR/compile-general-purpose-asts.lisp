@@ -50,7 +50,6 @@
          (when (eq state '&rest)
            (cleavir-bir:derive-type-for-linear-datum
             item
-            
             (let ((top-ctype (cleavir-ctype:top system)))
               ;; LIST is of course (or null cons)
               (cleavir-ctype:disjoin/2
@@ -385,7 +384,7 @@
                 (setf (gethash ast *function-info*)
                       (compile-function ast system))))
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
-    (cleavir-set:nadjoinf (cleavir-bir:encloses f) enclose)
+    (setf (cleavir-bir:enclose f) enclose)
     (list (insert inserter enclose))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

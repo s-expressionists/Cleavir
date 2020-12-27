@@ -46,35 +46,27 @@
 ;;; analysis" for functions, recording the result of the analysis
 ;;; directly into the IR.
 (defun find-function-local-calls (function)
-  (cleavir-set:doset (enclose (cleavir-bir:encloses function))
-    (when (cleavir-bir:unused-p enclose)
-      ;; FIXME: Note this dead code.
-      (cleavir-bir:delete-computation enclose)
-      (return-from find-function-local-calls))
-    (let ((use (cleavir-bir:use enclose)))
-      (typecase use
-        (cleavir-bir:call
-         (when (and (eq enclose (cleavir-bir:callee use))
-                    (check-argument-list-compatible
-                     (rest (cleavir-bir:inputs use))
-                     function))
-           (change-class use 'cleavir-bir:local-call)
-           (cleavir-bir:replace-computation enclose function))
-         (when (cleavir-bir:unused-p enclose)
-           (cleavir-bir:delete-computation enclose)))
-        (cleavir-bir:mv-call
-         (when (eq enclose (cleavir-bir:callee use))
-           (change-class use 'cleavir-bir:mv-local-call)
-           (cleavir-bir:replace-computation enclose function))
-         (when (cleavir-bir:unused-p enclose)
-           (cleavir-bir:delete-computation enclose)))
-        (cleavir-bir:writevar
-         (let ((variable (first (cleavir-bir:outputs use))))
-           ;; Variable needs to be immutable since we want to make
-           ;; sure this definition reaches the readers.
-           (when (cleavir-bir:immutablep variable)
-             (cleavir-set:doset (reader (cleavir-bir:readers variable))
-               (unless (cleavir-bir:unused-p reader)
+  (let ((enclose (cleavir-bir:enclose function)))
+    (when enclose
+      (let ((use (cleavir-bir:use enclose)))
+        (typecase use
+          (cleavir-bir:call
+           (when (and (eq enclose (cleavir-bir:callee use))
+                      (check-argument-list-compatible
+                       (rest (cleavir-bir:inputs use))
+                       function))
+             (change-class use 'cleavir-bir:local-call)
+             (cleavir-bir:replace-computation enclose function)))
+          (cleavir-bir:mv-call
+           (when (eq enclose (cleavir-bir:callee use))
+             (change-class use 'cleavir-bir:mv-local-call)
+             (cleavir-bir:replace-computation enclose function)))
+          (cleavir-bir:leti
+           (let ((variable (first (cleavir-bir:outputs use))))
+             ;; Variable needs to be immutable since we want to make
+             ;; sure this definition reaches the readers.
+             (when (cleavir-bir:immutablep variable)
+               (cleavir-set:doset (reader (cleavir-bir:readers variable))
                  (let ((use (cleavir-bir:use reader)))
                    (typecase use
                      (cleavir-bir:call
@@ -87,14 +79,14 @@
                      (cleavir-bir:mv-call
                       (when (eq reader (cleavir-bir:callee use))
                         (change-class use 'cleavir-bir:mv-local-call)
-                        (cleavir-bir:replace-computation reader function))))))))
-           ;; No more references to the variable means we can clean
-           ;; up the enclose. The writer might've already been
-           ;; cleaned up by any readvar deletion triggers.
-           (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
-             (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
-               (cleavir-bir:delete-instruction use))
-             (cleavir-bir:delete-computation enclose)))))))
+                        (cleavir-bir:replace-computation reader function)))))))
+             ;; No more references to the variable means we can clean
+             ;; up the enclose. The LETI might've already been
+             ;; cleaned up by any readvar deletion triggers.
+             (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+               (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
+                 (cleavir-bir:delete-instruction use))
+               (cleavir-bir:delete-computation enclose))))))))
   (post-find-local-calls function))
 
 (defun find-module-local-calls (module)

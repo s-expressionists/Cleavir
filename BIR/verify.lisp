@@ -217,10 +217,10 @@ has use-before-define on inputs ~a"
   ;; verify type decls
   (test (typep (code inst) 'function)
         "Enclose ~a has bad code ~a" inst (code inst))
-  ;; Make sure encloses set is correct
-  (test (cleavir-set:presentp inst (encloses (code inst)))
-        "Enclose ~a is not present in its CODE ~a's encloses ~a"
-        inst (code inst) (encloses (code inst)))
+  ;; Make sure enclose is correct
+  (test (eq inst (enclose (code inst)))
+        "Enclose ~a is not its CODE's ~a enclose ~a."
+        inst (code inst) (enclose (code inst)))
   ;; Make sure the function we are enclosing is in the module.
   (when (boundp '*verifying-module*)
     (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
