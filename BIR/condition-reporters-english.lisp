@@ -13,6 +13,6 @@
     ((condition type-conflict) stream (language acclimation:english))
   (format stream "The derived type of ~a~&is ~a~&but is asserted as ~a~&by ~a."
           (datum condition)
-          (asserted-type condition)
           (derived-type condition)
+          (asserted-type condition)
           (asserted-by condition)))
