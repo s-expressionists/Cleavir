@@ -24,7 +24,6 @@
                 (name ,gfunction) *problems*))
        (values))))
 
-(defvar *seen-iblocks*)
 ;;; KLUDGE: This is somewhat inexact; for example if two blocks share their
 ;;; only predecessor, one could have a computation in the other as an input,
 ;;; which is invalid, but if we happened to traverse the blocks in the wrong
@@ -331,10 +330,6 @@ has use-before-define on inputs ~a"
         mtf (rtype (first (inputs mtf))) :multiple-values))
 
 (defmethod verify progn ((iblock iblock))
-  ;; Iblock only appears in the graph once
-  (test (not (cleavir-set:presentp iblock *seen-iblocks*))
-        "Iblock ~a appears multiple times" iblock)
-  (cleavir-set:nadjoinf *seen-iblocks* iblock)
   ;; All predecessors truly have this as a successor
   (let ((non-successor-predecessors
           (cleavir-set:filter 'list
@@ -468,8 +463,7 @@ has use-before-define on inputs ~a"
                   function)))))))
 
 (defmethod verify progn ((module module))
-  (let ((*seen-iblocks* (cleavir-set:empty-set))
-        (*seen-instructions* (cleavir-set:empty-set))
+  (let ((*seen-instructions* (cleavir-set:empty-set))
         (*seen-lists* (cleavir-set:empty-set))
         (*seen-next* (cleavir-set:empty-set))
         (*verifying-module* module))
