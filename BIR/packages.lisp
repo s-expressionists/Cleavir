@@ -42,6 +42,7 @@
            #:leti #:dynamic-leti #:enclose #:code
            #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:vprimop #:nvprimop #:tprimop #:info)
+  (:export #:do-functions #:map-functions)
   (:export #:map-iblock-instructions #:map-iblock-instructions-backwards
            #:do-iblock-instructions)
   (:export #:map-iblocks #:map-local-instructions

@@ -1,5 +1,13 @@
 (in-package #:cleavir-bir)
 
+(defmacro do-functions ((function module) &body body)
+  `(cleavir-set:doset (,function (functions ,module))
+     ,@body))
+
+(defun map-functions (f module)
+  (do-functions (function module)
+    (funcall f function)))
+
 (defmacro do-iblock-instructions ((instruction from &optional (direction :forward))
                                   &body body)
   `(loop for ,instruction = ,from then (,(ecase direction
@@ -48,7 +56,7 @@
                  (mapc #'traverse (successors iblock))
                  (funcall f iblock))))
       (traverse (start function)))
-    (values)))
+    seen))
 
 ;;; Forward flow order is the preferred order for forward flow
 ;;; dataflow analyses, since predecessors are ordered before

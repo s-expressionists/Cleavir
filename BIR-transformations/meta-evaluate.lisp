@@ -12,7 +12,7 @@
   ;; types are more likely to get propagated interprocedurally.
   (dotimes (repeat 3)
     (declare (ignore repeat))
-    (cleavir-set:doset (function (cleavir-bir:functions module))
+    (cleavir-bir:do-functions (function module)
       (meta-evaluate-function function)))
   (cleavir-bir:refresh-iblocks module))
 

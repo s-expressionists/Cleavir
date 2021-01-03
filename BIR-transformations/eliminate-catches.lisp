@@ -28,5 +28,4 @@
       (eliminate-catch catch))))
 
 (defun module-eliminate-catches (module)
-  (cleavir-set:mapset nil #'eliminate-catches
-                      (cleavir-bir:functions module)))
+  (cleavir-bir:map-functions #'eliminate-catches module))

@@ -133,7 +133,7 @@
   (with-disassembly ()
     (cons (constants module)
           (cleavir-set:mapset 'list #'disassemble-function
-                              (cleavir-bir:functions module)))))
+                              (functions module)))))
 
 (defun print-iblock-disasm (iblock-disasm &key (show-dynenv t))
   (destructuring-bind ((label . args) dynenv entrances &rest insts)

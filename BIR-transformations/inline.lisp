@@ -90,8 +90,7 @@
   (post-find-local-calls function))
 
 (defun find-module-local-calls (module)
-  (cleavir-set:mapset nil #'find-function-local-calls
-                      (cleavir-bir:functions module))
+  (cleavir-bir:map-functions #'find-function-local-calls module)
   ;; Since contification depends on all non-tail local calls being in
   ;; the same function, it may be the case that contifying triggers
   ;; more contification. Therefore, we do a second pass/fixpoint loop
@@ -101,7 +100,7 @@
   ;; the module.
   (let ((did-something nil))
     (loop do (let ((changed nil))
-               (cleavir-set:doset (function (cleavir-bir:functions module))
+               (cleavir-bir:do-functions (function module)
                  (when (maybe-interpolate function)
                    (setq changed t)))
                (setq did-something changed))

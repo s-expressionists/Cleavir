@@ -55,4 +55,4 @@
     (mapc #'generate-type-check theis)))
 
 (defun module-generate-type-checks (module)
-  (cleavir-set:mapset nil #'generate-type-checks (cleavir-bir:functions module)))
+  (cleavir-bir:map-functions #'generate-type-checks module))

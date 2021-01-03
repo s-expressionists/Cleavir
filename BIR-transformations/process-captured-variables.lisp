@@ -15,7 +15,7 @@
 
 ;;; Fill in the environments of every function.
 (defun determine-function-environments (module)
-  (cleavir-set:doset (function (cleavir-bir:functions module) (values))
+  (cleavir-bir:do-functions (function module)
     (cleavir-set:doset (variable (cleavir-bir:variables function))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
         (close-over function (cleavir-bir:function reader) variable))
@@ -36,7 +36,7 @@
            (cleavir-attributes:has-boolean-attribute-p
             (cleavir-bir:attributes call)
             :dx-call)))
-    (cleavir-set:doset (function (cleavir-bir:functions module))
+    (cleavir-bir:do-functions (function module)
       (let ((enclose (cleavir-bir:enclose function)))
         (when enclose
           (let ((use (cleavir-bir:use enclose)))
@@ -69,11 +69,11 @@
 ;;; helps to also analyze closure extent beforehand.
 (defun determine-variable-extents (module)
   ;; First, initialize the extent of every variable.
-  (cleavir-set:doset (function (cleavir-bir:functions module))
+  (cleavir-bir:do-functions (function module)
     (cleavir-set:doset (variable (cleavir-bir:variables function))
       (setf (cleavir-bir:extent variable) :local)))
   ;; Fill in the extent of every closed over variable.
-  (cleavir-set:doset (function (cleavir-bir:functions module))
+  (cleavir-bir:do-functions (function module)
     (ecase (function-extent function)
       (:dynamic
        (cleavir-set:doset (lexical (cleavir-bir:environment function))
