@@ -50,37 +50,16 @@
   (check-argument-count cst 1 2)
   (cst:db origin (return-from-cst block-name-cst . rest-csts) cst
     (declare (ignore return-from-cst))
-    (let ((block-name (cst:raw block-name-cst)))
-      (unless (symbolp block-name)
-        (error 'block-name-must-be-a-symbol :cst block-name-cst))
-      (flet ((find-info (block-name)
-               (cleavir-env:block-info env block-name)))
-        (let ((info (find-info block-name))
-              (value-cst (if (cst:null rest-csts)
-                             (make-atom-cst nil origin)
-                             (cst:first rest-csts))))
-          (loop while (null info)
-                do (restart-case (error 'cleavir-env:no-block-info
-                                        :name block-name
-                                        :origin (cst:source block-name-cst))
-                     (substitute (new-block-name)
-                       :report (lambda (stream)
-                                 (format stream "Substitute a different name."))
-                       :interactive (lambda ()
-                                      (format *query-io* "Enter new name: ")
-                                      (list (read *query-io*)))
-                       (setq info (find-info new-block-name)))
-                     (continue ()
-                       ;; In order to recover from the error, we ignore
-                       ;; the RETURN-FROM form and only compile the return
-                       ;; value form (or NIL if no return value form was
-                       ;; present).
-                       (return-from convert-special
-                         (convert value-cst env system)))))
-          (cleavir-ast:make-return-from-ast
-           (cleavir-env:identity info)
-           (convert value-cst env system)
-           :origin origin))))))
+    (unless (symbolp (cst:raw block-name-cst))
+      (error 'block-name-must-be-a-symbol :cst block-name-cst))
+    (let ((info (block-info env block-name-cst))
+          (value-cst (if (cst:null rest-csts)
+                         (make-atom-cst nil origin)
+                         (cst:first rest-csts))))
+      (cleavir-ast:make-return-from-ast
+       (cleavir-env:identity info)
+       (convert value-cst env system)
+       :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

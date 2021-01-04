@@ -49,6 +49,11 @@
    (%expected-max :initarg :expected-max :initform nil :reader expected-max)
    (%observed :initarg :observed :reader observed)))
 
+;;; This class of conditions is signaled when the compiler runs into a
+;;; reference to a name not bound in the provided compilation environment.
+(define-condition no-info (compilation-program-error)
+  ((%name :initarg :name :reader name)))
+
 ;;; The class of conditions signaled when an odd number of
 ;;; arguments is passed to the &key portion of a lambda list.
 (define-condition odd-keyword-portion
@@ -58,6 +63,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Specific conditions.
+
+;;; This condition is signaled when a reference to a function not
+;;; known from the compilation environment is encountered.
+(define-condition no-function-info (no-info) ())
+
+;;; This condition is signaled when a reference to a variable not
+;;; known from the compilation environment is encountered.
+(define-condition no-variable-info (no-info) ())
+
+;;; This condition is signaled when a reference to a tagbody tag
+;;; not present in the lexical environment is encountered.
+(define-condition no-tag-info (no-info) ())
+
+;;; This condition is signaled when a reference to a block not
+;;; present in the lexical environment is encountered.
+(define-condition no-block-info (no-info) ())
 
 ;;; This condition is signaled by a call to ERROR that was introduced
 ;;; as a replacement of a form that triggered a compilation error.
@@ -204,13 +225,6 @@
     (compilation-program-error)
   ())
 
-;;; This condition is signaled when the first argument of RETURN-FROM
-;;; is a symbol, but there is no BLOCK form with that name in the
-;;; current context.
-(define-condition block-name-unknown
-    (compilation-program-error)
-  ())
-
 ;;; This condition is signaled when a SETQ form is encountered, but it
 ;;; does not have an even number of arguments.
 (define-condition setq-must-have-even-number-of-arguments
@@ -233,20 +247,6 @@
 ;;; encountered, but one of the variables it applies to is a symbol
 ;;; macro.
 (define-condition special-symbol-macro
-    (compilation-program-error)
-  ())
-
-;;; This condition is signaled when a symbol in a variable position is
-;;; encountered during compilation, but it does not have a definition
-;;; in the environment in which the symbol is compiled.
-(define-condition variable-name-unknown
-    (compilation-program-error)
-  ())
-
-;;; This condition is signaled when a function name is encountered
-;;; during compilation, but it does not have a definition in the
-;;; environment in which the function name is compiled.
-(define-condition function-name-unknown
     (compilation-program-error)
   ())
 

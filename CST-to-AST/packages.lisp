@@ -54,12 +54,12 @@
            #:binding-must-have-length-one-or-two
            #:variable-must-be-a-symbol
            #:read-only-p-must-be-boolean
-           #:block-name-unknown
            #:setq-must-have-even-number-of-arguments
            #:setq-var-must-be-symbol
            #:setq-constant-variable
-           #:variable-name-unknown
-           #:function-name-unknown
+           #:no-info
+           #:no-function-info #:no-variable-info
+           #:no-tag-info #:no-block-info
            #:function-name-names-global-macro
            #:function-name-names-local-macro
            #:function-name-names-special-operator
@@ -81,6 +81,7 @@
            ;; Condition readers.
            #:cst
            #:original-condition
+           #:name
            #:expected-min #:expected-max #:observed
            ;; Restart names.
            #:consider-global

@@ -196,7 +196,7 @@
 	  (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
-    ((condition block-name-unknown)
+    ((condition no-block-info)
      stream
      (language acclimation:english))
   (format stream
@@ -204,7 +204,18 @@
            must have been established by a BLOCK special form,~@
            but the following was found instead:~@
            ~s"
-	  (cst:raw (cst condition))))
+          (name condition)))
+
+(defmethod acclimation:report-condition
+    ((condition no-tag-info)
+     stream
+     (language acclimation:english))
+  (format stream
+          "In a GO special form, the go tag given should have been~@
+           established by a TAGBODY special form,~@
+           but the following was found instead:~@
+           ~s"
+          (name condition)))
 
 (defmethod acclimation:report-condition
     ((condition setq-must-have-even-number-of-arguments)
@@ -245,7 +256,7 @@
           (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
-    ((condition variable-name-unknown)
+    ((condition no-variable-info)
      stream
      (language acclimation:english))
   (format stream
@@ -254,10 +265,10 @@
            or some form such as LET or LET* for creating a local variable,~@
            but the following undefined variable was found:~@
            ~s"
-	  (cst:raw (cst condition))))
+          (name condition)))
 
 (defmethod acclimation:report-condition
-    ((condition function-name-unknown)
+    ((condition no-function-info)
      stream
      (language acclimation:english))
   (format stream
@@ -266,7 +277,7 @@
            or some form such as FLET or LABELS for creating a local function,~@
            but the following undefined function was found:~@
            ~s"
-	  (cst:raw (cst condition))))
+          (name condition)))
 
 (defmethod acclimation:report-condition
     ((condition function-name-names-global-macro)
