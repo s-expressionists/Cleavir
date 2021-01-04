@@ -5,8 +5,6 @@
   :serial t
   :components
   ((:file "packages")
-   (:file "conditions")
-   (:file "condition-reporters-english")
    (:file "query")
    (:file "augmentation-functions")
    (:file "default-augmentation-classes")

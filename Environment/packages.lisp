@@ -47,10 +47,6 @@
    #:expansion
    #:expander
    #:compiler-macro
-   #:no-variable-info
-   #:no-function-info
-   #:no-block-info
-   #:no-tag-info
    #:type-expand
    #:has-extended-char-p
    #:float-types
