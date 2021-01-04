@@ -425,27 +425,39 @@ has use-before-define on inputs ~a"
         (test (eq (module function) *verifying-module*)
               "Function ~a is in the wrong module" function))
       ;; Reachability etc
-      (let ((reachable (cleavir-set:empty-set)))
-        (flet ((iblock-verifier (iblock)
-                 (verify iblock)
-                 ;; A function has at most one return instruction
-                 (test (if (typep (end iblock) 'returni)
-                           (eq (end iblock) returni)
-                           t)
-                       "iblock ~a ends in a returni which is not the returni of the function."
-                       iblock)
-                 (cleavir-set:nadjoinf reachable iblock)))
-          (map-reachable-iblocks #'iblock-verifier start)
+      (let ((reachable (cleavir-set:empty-set))
+            (iblocks (cleavir-set:empty-set)))
+        (do-iblocks (iblock function)
+          (test (not (cleavir-set:presentp iblock iblocks))
+                "Iblock ~a is present in the iblock flow order of function ~a more than once."
+                iblock function)
+          (cleavir-set:nadjoinf iblocks iblock))
+        (labels ((iblock-verifier (iblock)
+                   (verify iblock)
+                   ;; A function has at most one return instruction
+                   (test (if (typep (end iblock) 'returni)
+                             (eq (end iblock) returni)
+                             t)
+                         "iblock ~a ends in a returni which is not the returni of the function."
+                         iblock)
+                   (cleavir-set:nadjoinf reachable iblock))
+                 (traverse (iblock)
+                   (unless (cleavir-set:presentp iblock reachable)
+                     (cleavir-set:nadjoinf reachable iblock)
+                     (iblock-verifier iblock)
+                     (dolist (successor (successors iblock))
+                       (traverse successor)))))
+          (traverse start)
           ;; All reachable blocks are in the iblocks set
-          (test (cleavir-set:set<= reachable (iblocks function))
+          (test (cleavir-set:set<= reachable iblocks)
                 "Some reachable iblocks ~a are not recorded by the function ~a"
-                (cleavir-set:difference 'list reachable (iblocks function))
+                (cleavir-set:difference 'list reachable iblocks)
                 function)
           ;; All members of the iblocks set are reachable
-          (test (cleavir-set:set<= (iblocks function) reachable)
+          (test (cleavir-set:set<= iblocks reachable)
                 "Some iblocks recorded by the function ~a are unreachable: ~a"
                 function
-                (cleavir-set:difference 'list (iblocks function) reachable)))
+                (cleavir-set:difference 'list iblocks reachable)))
         ;; Check that the catch instructions of this function were in
         ;; fact seen.
         (cleavir-set:doset (catch (catches function))
@@ -458,7 +470,7 @@ has use-before-define on inputs ~a"
             (test (cleavir-set:presentp end reachable)
                   "The return iblock of the function ~a is not reachable."
                   function)
-            (test (cleavir-set:presentp end (iblocks function))
+            (test (cleavir-set:presentp end iblocks)
                   "The return iblock of function ~a is not recorded."
                   function)))))))
 

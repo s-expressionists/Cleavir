@@ -180,22 +180,19 @@
   ;; Re-home iblocks (and indirectly, instructions), and if the
   ;; function unwinds to its target function, change it to a local
   ;; unwind.
-  (cleavir-bir:map-iblocks
-   (lambda (ib)
-     (let ((u (cleavir-bir:end ib)))
-       (when (typep (cleavir-bir:end ib) 'cleavir-bir:unwind)
-         (when (eq (cleavir-bir:function (cleavir-bir:destination u))
-                   target-function)
-           (replace-unwind u))))
-     (when (eq (cleavir-bir:dynamic-environment ib) function)
-       (setf (cleavir-bir:dynamic-environment ib)
-             dynenv))
-     (setf (cleavir-bir:function ib) target-function)
-     (cleavir-set:nadjoinf (cleavir-bir:iblocks target-function) ib))
-   function)
+  (cleavir-bir:do-iblocks (ib function)
+    (let ((u (cleavir-bir:end ib)))
+      (when (typep (cleavir-bir:end ib) 'cleavir-bir:unwind)
+        (when (eq (cleavir-bir:function (cleavir-bir:destination u))
+                  target-function)
+          (replace-unwind u))))
+    (when (eq (cleavir-bir:dynamic-environment ib) function)
+      (setf (cleavir-bir:dynamic-environment ib)
+            dynenv))
+    (setf (cleavir-bir:function ib) target-function))
   ;; FUNCTION no longer owns these blocks. Need to do this so triggers
   ;; don't accidentally clean them up.
-  (setf (cleavir-bir:iblocks function) (cleavir-set:empty-set)))
+  (setf (cleavir-bir:start function) nil))
 
 ;;; If there is a common return point, integrate FUNCTION into the
 ;;; graph of TARGET-OWNER and rewire the calls into the body of the
@@ -226,7 +223,8 @@
                    dummy-block))
                (if (eq return-point :unknown)
                    :unknown
-                   (cleavir-bir:iblock return-point)))))
+                   (cleavir-bir:iblock return-point))))
+         (start (cleavir-bir:start function)))
     (unless (and returni (eq return-point :unknown))
       (move-function-arguments-to-iblock function)
       (unless (eq return-point :unknown)
@@ -236,13 +234,14 @@
                             target-owner
                             common-dynenv)
       (cleavir-set:doset (call local-calls)
-        (rewire-call-into-body call (cleavir-bir:start function)))
+        (rewire-call-into-body call start))
+      ;; Recompute the flow order, as now the iblocks of the function
+      ;; have been integrated into that of TARGET-OWNER.
+      (cleavir-bir:compute-iblock-flow-order target-owner)
       ;; Merge the blocks. Merge the tail first since the
       ;; interpolated function might just be one block.
-      (if returni
-          (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni))
-          ;; The function doesn't return, so make sure later blocks are deleted
-          (cleavir-bir:refresh-local-iblocks target-owner))
+      (when returni
+        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni)))
       (when unique-call
         (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
         ;; TODO: can generalize this to the case of more than

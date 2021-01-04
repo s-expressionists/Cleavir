@@ -102,7 +102,6 @@
   (let ((ib (make-instance 'cleavir-bir:iblock
               :name name
               :function function :dynamic-environment dynamic-environment)))
-    (cleavir-set:nadjoinf (cleavir-bir:iblocks function) ib)
     (cleavir-set:nadjoinf (cleavir-bir:scope dynamic-environment) ib)
     ib))
 

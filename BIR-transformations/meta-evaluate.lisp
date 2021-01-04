@@ -13,8 +13,8 @@
   (dotimes (repeat 3)
     (declare (ignore repeat))
     (cleavir-bir:do-functions (function module)
-      (meta-evaluate-function function)))
-  (cleavir-bir:refresh-iblocks module))
+      (meta-evaluate-function function)
+      (cleavir-bir:compute-iblock-flow-order function))))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
@@ -68,25 +68,24 @@
   ;; things that happen before vs after in the flow graph, and if that
   ;; doesn't matter, which order makes it more likely to fire, so we
   ;; can feed effects as much as possible in one pass.
-  (let ((forward-flow-order (cleavir-bir::iblocks-forward-flow-order function)))
-    (dolist (iblock forward-flow-order)
-      ;; Make sure not to look at a block that might have been
-      ;; deleted earlier in this forward pass.
-      (unless (cleavir-bir:deletedp iblock)
-        ;; Make sure to merge the successors as much as possible so we can
-        ;; trigger more optimizations.
-        (loop while (cleavir-bir:merge-successor-if-possible iblock))
-        (meta-evaluate-iblock iblock)))
-    (dolist (iblock (nreverse forward-flow-order)) ; careful, destructive
-      (unless (cleavir-bir:deletedp iblock)
-        (flush-dead-code iblock)
-        (let ((end (cleavir-bir:end iblock)))
-          (typecase end
-            (cleavir-bir:ifi
-             (or (eliminate-if-if end)
-                 (eliminate-degenerate-if end)))
-            (cleavir-bir:jump
-             (cleavir-bir:delete-iblock-if-empty iblock))))))))
+  (cleavir-bir:do-iblocks (iblock function)
+    ;; Make sure not to look at a block that might have been
+    ;; deleted earlier in this forward pass.
+    (unless (cleavir-bir:deletedp iblock)
+      ;; Make sure to merge the successors as much as possible so we can
+      ;; trigger more optimizations.
+      (loop while (cleavir-bir:merge-successor-if-possible iblock))
+      (meta-evaluate-iblock iblock)))
+  (cleavir-bir:do-iblocks (iblock function :backward)
+    (unless (cleavir-bir:deletedp iblock)
+      (flush-dead-code iblock)
+      (let ((end (cleavir-bir:end iblock)))
+        (typecase end
+          (cleavir-bir:ifi
+           (or (eliminate-if-if end)
+               (eliminate-degenerate-if end)))
+          (cleavir-bir:jump
+           (cleavir-bir:delete-iblock-if-empty iblock)))))))
 
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the

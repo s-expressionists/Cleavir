@@ -20,7 +20,7 @@
     ;; Merge if able
     (cleavir-bir:merge-successor-if-possible fore)
     ;; Fix reachability
-    (cleavir-bir:refresh-local-iblocks (cleavir-bir:function fore))))
+    (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore))))
 
 (defun eliminate-catches (function)
   (cleavir-set:doset (catch (cleavir-bir:catches function))

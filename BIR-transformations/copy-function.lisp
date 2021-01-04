@@ -101,6 +101,8 @@
     (setf (copy-of iblock map) copy
           (cleavir-bir:inputs copy)
           (mapcar (phi-copier map) (cleavir-bir:inputs iblock)))
+    ;; FIXME:
+    #+(or)
     (cleavir-set:nadjoinf (cleavir-bir:iblocks function-copy) copy)
     copy))
 

@@ -118,10 +118,8 @@
   (with-disassembly ()
     (let ((iblocks nil))
       ;; sort blocks in forward flow order.
-      (map-iblocks-postorder
-       (lambda (block)
-         (push (disassemble-iblock block) iblocks))
-       function)
+      (do-iblocks (iblock function :backward)
+        (push (disassemble-iblock iblock) iblocks))
     (list* (list (disassemble-datum function) (iblock-id (start function))
                  (disassemble-lambda-list (lambda-list function))
                  (cleavir-set:mapset 'list #'disassemble-datum

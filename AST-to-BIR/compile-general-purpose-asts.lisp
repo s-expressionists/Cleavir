@@ -68,7 +68,7 @@
                           :inputs (adapt inserter rv :multiple-values))))
            (setf (cleavir-bir:returni function) returni)
            (terminate inserter returni)))))
-    (cleavir-bir:refresh-local-iblocks function)
+    (cleavir-bir:compute-iblock-flow-order function)
     function))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -43,12 +43,10 @@
 
 (defun generate-type-checks (function)
   (let ((theis '()))
-    (cleavir-bir:map-iblocks
-     (lambda (iblock)
-       (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
-         (when (typep instruction 'cleavir-bir:thei)
-           (push instruction theis))))
-     function)
+    (cleavir-bir:do-iblocks (iblock function)
+      (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
+        (when (typep instruction 'cleavir-bir:thei)
+          (push instruction theis))))
     ;; We first warn about type conflicts in case we lose derived
     ;; types when generating type checks.
     (mapc #'maybe-warn-type-conflict theis)

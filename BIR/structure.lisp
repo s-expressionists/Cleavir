@@ -285,6 +285,10 @@
    (%entrances :initarg :entrances :accessor entrances
                :initform (cleavir-set:empty-set)
                :type cleavir-set:set)
+   ;; The links for the doubly linked list of iblocks maintained in
+   ;; forward flow order.
+   (%next :initform nil :accessor next :type (or null iblock))
+   (%prev :initform nil :accessor prev :type (or null iblock))
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
                          :type dynamic-environment)
@@ -307,12 +311,13 @@
   (next (end iblock)))
 
 (defclass function (dynamic-environment value)
-  ((%iblocks :initarg :iblocks :accessor iblocks
-             :initform (cleavir-set:empty-set)
-             :type cleavir-set:set)
-   (%start :initarg :start :accessor start
-           :type iblock)
-   ;; The return instruction of this function.  If there isn't one,
+  (;; The starting iblock of the function. NIL if there are no iblocks
+   ;; in the function. This can happen when all the function's iblocks
+   ;; are moved out into another function.
+   (%start :initarg :start :accessor start :type (or null iblock))
+   ;; The last iblock in the forward flow order.
+   (%tail :initarg :tail :accessor tail :type (or null iblock))
+   ;; The return instruction of this function. If there isn't one,
    ;; i.e. the function never returns as the return is unreachable,
    ;; this is nil.
    (%returni :initarg :returni :accessor returni :type (or null returni))

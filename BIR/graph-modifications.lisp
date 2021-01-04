@@ -108,7 +108,7 @@
 (defgeneric clean-up-iblock (iblock)
   (:method-combination progn)
   (:method progn ((ib iblock))
-    (cleavir-set:nremovef (iblocks (function ib)) ib)
+    (setf (deletedp ib) t)
     (cleavir-set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
     (when (slot-boundp ib '%start)
@@ -276,6 +276,7 @@
         (cleavir-set:nremovef (predecessors s) iblock)
         (when (orphan-iblock-p s)
           (delete-iblock s)))))
+  (remove-iblock-from-flow-order iblock)
   (setf (deletedp iblock) t))
 
 (defun maybe-delete-iblock (iblock)
@@ -336,6 +337,15 @@
     (mapc #'replace-uses inputs outputs))
   (delete-instruction out-inst))
 
+;;; Remove IBLOCK from its flow ordering.
+(defun remove-iblock-from-flow-order (iblock)
+  (let ((prev (prev iblock))
+        (next (next iblock)))
+    (setf (next prev) next)
+    (if next
+        (setf (prev next) prev)
+        (setf (tail (function iblock)) prev))))
+
 ;;; Merge IBLOCK to its unique successor if possible, returning false
 ;;; if not.
 (defun merge-successor-if-possible (iblock)
@@ -389,9 +399,8 @@
         (dolist (succ (successors successor))
           (cleavir-set:nremovef (predecessors succ) successor)
           (cleavir-set:nadjoinf (predecessors succ) iblock)))
-    ;; Remove successor from the function.
-    (cleavir-set:nremovef (iblocks function) successor)
-    ;; and scope
+    (remove-iblock-from-flow-order successor)
+    ;; Delete from scope.
     (cleavir-set:nremovef (scope (dynamic-environment successor)) successor)
     ;; The successor block is now conceptually deleted.
     (setf (deletedp successor) t)
@@ -417,9 +426,8 @@
           (nsubstitute successor iblock (next end)))
         (cleavir-set:nadjoinf (predecessors successor) predecessor))
       (cleavir-set:nremovef (predecessors successor) iblock))
-    ;; Remove iblock from the function.
-    (cleavir-set:nremovef (iblocks (function iblock)) iblock)
-    ;; and scope
+    (remove-iblock-from-flow-order iblock)
+    ;; Remove from scope.
     (cleavir-set:nremovef (scope (dynamic-environment iblock)) iblock)
     (setf (deletedp iblock) t)
     iblock))
@@ -435,8 +443,14 @@
                 :predecessors (cleavir-set:make-set ib)
                 :dynamic-environment (dynamic-environment ib)))
          (new-start (successor inst)))
-    ;; Add the new block to the function
-    (cleavir-set:nadjoinf (iblocks function) new)
+    ;; Insert the new block into the flow order.
+    (let ((next (next ib)))
+      (setf (next ib) new)
+      (setf (prev new) ib)
+      (setf (next new) next)
+      (if next
+          (setf (prev next) new)
+          (setf (tail function) new)))
     ;; and scope
     (cleavir-set:nadjoinf (scope (dynamic-environment ib)) new)
     ;; Set the new start to lose its predecessor
@@ -463,29 +477,30 @@
             (cleavir-set:nadjoinf (predecessors n) new))))
     (values ib new)))
 
-(defun reachable-iblocks (function)
-  (check-type function function)
-  (let ((set (cleavir-set:empty-set))
-        (worklist (list (start function))))
-    (loop for work = (pop worklist)
-          until (null work)
-          unless (cleavir-set:presentp work set)
-            do (cleavir-set:nadjoinf set work)
-               (setf worklist (append (next (end work)) worklist)))
-    set))
-
-;;; make the iblocks field match the actually reachable blocks.
-(defun refresh-local-iblocks (function)
-  (check-type function function)
-  (let ((old (iblocks function))
-        (new (reachable-iblocks function)))
-    (setf (iblocks function) new)
-    (cleavir-set:doset (ib old)
-      (unless (cleavir-set:presentp ib new)
-        (clean-up-iblock ib)))))
-
-(defun refresh-iblocks (module)
-  (cleavir-set:mapset nil #'refresh-local-iblocks (functions module)))
+;;; Compute the forward flow order for the iblocks of FUNCTION and
+;;; clean up any existing unreachable iblocks.
+(defun compute-iblock-flow-order (function)
+  (let ((seen (cleavir-set:make-set))
+        (last nil)
+        (existing '()))
+    ;; FIXME: Is there a consless way of doing this?
+    (do-iblocks (iblock function)
+      (push iblock existing))
+    (labels ((traverse (iblock)
+               (unless (cleavir-set:presentp iblock seen)
+                 (cleavir-set:nadjoinf seen iblock)
+                 (dolist (successor (successors iblock))
+                   (traverse successor))
+                 (if last
+                     (setf (prev last) iblock)
+                     (setf (tail function) iblock))
+                 (setf (next iblock) last)
+                 (setf last iblock))))
+      (traverse (start function)))
+    (dolist (iblock existing)
+      (unless (cleavir-set:presentp iblock seen)
+        (clean-up-iblock iblock)))
+    (values)))
 
 (defun refresh-local-users (function)
   (check-type function function)
