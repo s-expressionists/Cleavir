@@ -29,9 +29,11 @@
 (defclass lexical (datum) ())
 
 (defmethod print-object ((o datum) stream)
-  (print-unreadable-object (o stream :type t)
-    (let ((name (name o)))
-      (when name (write name :stream stream)))))
+  (print-unreadable-object (o stream :type t :identity t)
+    ;; NAME is always bound normally, but this safety is useful when debugging.
+    (when (slot-boundp o '%name)
+      (let ((name (name o)))
+        (when name (write name :stream stream))))))
 
 (defgeneric unused-p (datum))
 (defgeneric ssa-p (datum))
