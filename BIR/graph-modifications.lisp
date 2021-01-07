@@ -41,13 +41,17 @@
   ;; an :inputs was provided.
   (when inputsp
     (when (slot-boundp inst '%inputs)
-      (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
-    (map nil (lambda (inp) (add-use inp inst)) inputs)))
+      (dolist (input (inputs inst))
+        (remove-use input inst)))
+    (dolist (input inputs)
+      (add-use input inst))))
 
 (defmethod (setf inputs) :before (new-inputs (inst instruction))
   (when (slot-boundp inst '%inputs)
-    (map nil (lambda (inp) (remove-use inp inst)) (inputs inst)))
-  (map nil (lambda (inp) (add-use inp inst)) new-inputs))
+    (dolist (input (inputs inst))
+      (remove-use input inst)))
+  (dolist (input new-inputs)
+    (add-use input inst)))
 
 (defgeneric remove-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
@@ -68,13 +72,17 @@
   ;; Maintain use lists
   (when (or (eq slot-names 't) (member '%outputs slot-names))
     (when (slot-boundp inst '%outputs)
-      (map nil (lambda (outp) (remove-definition outp inst)) (outputs inst)))
-    (map nil (lambda (outp) (add-definition outp inst)) outputs)))
+      (dolist (output (outputs inst))
+        (remove-definition output inst)))
+    (dolist (output outputs)
+      (add-definition output inst))))
 
 (defmethod (setf outputs) :before (new-outputs (inst operation))
   (when (slot-boundp inst '%outputs)
-    (map nil (lambda (outp) (remove-definition outp inst)) (outputs inst)))
-  (map nil (lambda (outp) (add-definition outp inst)) new-outputs))
+    (dolist (output (outputs inst))
+      (remove-definition output inst)))
+  (dolist (output new-outputs)
+    (add-definition output inst)))
 
 ;;; Control flow modification
 
