@@ -196,8 +196,6 @@
 ;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
 (defun transitive-use (linear-datum)
   (loop
-    (when (unused-p linear-datum)
-      (return nil))
     (let ((use (use linear-datum)))
       (unless (typep use 'jump)
         (return use))

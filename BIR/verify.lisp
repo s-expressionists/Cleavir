@@ -82,8 +82,7 @@
       (local-call
        (assert (typep (first inputs) 'function))
        (assert (every (lambda (i)
-                        (and (not (unused-p i))
-                             (eq (use i) instruction)))
+                        (eq (use i) instruction))
                       (rest inputs))))
       (mv-local-call
        (assert (typep (first inputs) 'function)))
@@ -108,8 +107,7 @@ has use-before-define on inputs ~a"
                  instruction inputs
                  (remove-if #'validp inputs)))
        (flet ((used-input-p (input)
-                (and (not (unused-p input))
-                     (eq (use input) instruction))))
+                (eq (use input) instruction)))
          (test (every #'used-input-p inputs)
                "Instruction ~a is not the use of its inputs ~a"
                instruction
@@ -321,7 +319,7 @@ has use-before-define on inputs ~a"
 
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
-  (test (or (unused-p instruction) (typep (use instruction) 'ifi))
+  (test (typep (use instruction) '(or null ifi))
         "conditional test ~a is not used by an ifi instruction" instruction))
 
 (defmethod verify progn ((mtf multiple-to-fixed))

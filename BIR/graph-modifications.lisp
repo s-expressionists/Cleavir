@@ -311,7 +311,7 @@
 ;;; Delete a computation with unused result.
 (defun delete-computation (computation)
   (check-type computation computation)
-  (assert (unused-p computation))
+  (assert (null (use computation)))
   (delete-instruction computation)
   (values))
 
