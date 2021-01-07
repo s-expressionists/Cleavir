@@ -116,7 +116,7 @@
        (when (every #'cleavir-bir:unused-p (cleavir-bir:outputs instruction))
          (cleavir-bir:delete-instruction instruction)))
       (cleavir-bir:computation
-       (when (cleavir-bir:unused-p instruction)
+       (when (null (cleavir-bir:use instruction))
          (typecase instruction
            ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
             #+(or)
@@ -141,7 +141,7 @@
                 (format t "~&meta-evaluate: flushing primop ~a" name)
                 (cleavir-bir:delete-computation instruction)))))))))
   (dolist (phi (cleavir-bir:inputs iblock))
-    (when (cleavir-bir:unused-p phi)
+    (when (null (cleavir-bir:use phi))
       (cleavir-bir:delete-phi phi))))
 
 (defgeneric meta-evaluate-instruction (instruction))
@@ -278,10 +278,10 @@
              (unless (cleavir-ctype:top-p values-type nil)
                (let ((required-type (cleavir-ctype:values-required values-type nil))
                      (optional-type (cleavir-ctype:values-optional values-type nil))
-                     (rest-type (cleavir-ctype:disjoin
-                                 nil
+                     (rest-type (cleavir-ctype:disjoin/2
                                  (cleavir-ctype:values-rest values-type nil)
-                                 (cleavir-ctype:null-type nil))))
+                                 (cleavir-ctype:null-type nil)
+                                 nil)))
                  (dolist (output (cleavir-bir:outputs instruction))
                    (cleavir-bir:derive-type-for-linear-datum
                     output

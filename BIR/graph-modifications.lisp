@@ -217,7 +217,7 @@
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))
   (typecase instruction
-    (computation (assert (unused-p instruction)))
+    (computation (assert (null (use instruction))))
     (operation
      (assert (every #'unused-p (outputs instruction)))))
   (clean-up-instruction instruction)
