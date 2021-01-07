@@ -105,7 +105,7 @@
    (%successor :initarg :successor :accessor successor
                ;; NIL indicates this is a terminator.
                :type (or instruction null))
-   (%inputs :initarg :inputs :accessor inputs
+   (%inputs :initform nil :initarg :inputs :accessor inputs
             ;; Sequence of DATA.
             :type sequence)
    ;; The iblock this instruction belongs to.
@@ -143,7 +143,8 @@
 (defclass no-input (instruction)
   ((%inputs :initform nil :type null)))
 (defclass one-input (instruction)
-  ((%inputs :type (cons value null))))
+  ((%inputs :initform nil
+            :type (cons value null))))
 (defclass no-output (operation)
   ((%outputs :initform nil :type null)))
 

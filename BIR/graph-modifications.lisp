@@ -47,9 +47,8 @@
       (add-use input inst))))
 
 (defmethod (setf inputs) :before (new-inputs (inst instruction))
-  (when (slot-boundp inst '%inputs)
-    (dolist (input (inputs inst))
-      (remove-use input inst)))
+  (dolist (input (inputs inst))
+    (remove-use input inst))
   (dolist (input new-inputs)
     (add-use input inst)))
 
@@ -109,9 +108,8 @@
 (defgeneric clean-up-instruction (instruction)
   (:method-combination progn)
   (:method progn ((instruction instruction))
-    (when (slot-boundp instruction '%inputs)
-      (dolist (in (inputs instruction))
-        (remove-use in instruction)))))
+    (dolist (in (inputs instruction))
+      (remove-use in instruction))))
 
 (defgeneric clean-up-iblock (iblock)
   (:method-combination progn)
@@ -337,7 +335,7 @@
     (assert (every #'ssa-p outputs))
     (assert (>= (length inputs) (length outputs)))
     ;; Prevent it from cleaning up its inputs when it's deleted.
-    (slot-makunbound in-inst '%inputs)
+    (setf (slot-value in-inst '%inputs) '())
     ;; Clean up its inputs.
     ;; (This is a separate loop in case inputs is longer than outputs.)
     (loop for inp in inputs do (remove-use inp in-inst))
