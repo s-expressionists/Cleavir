@@ -55,12 +55,12 @@
 (defgeneric remove-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
 (defmethod remove-definition ((datum output) (definition instruction))
-  (slot-makunbound datum '%definition))
+  (setf (%definition datum) nil))
 
 (defgeneric add-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
 (defmethod add-definition ((datum output) (definition instruction))
-  (assert (not (slot-boundp datum '%definition)))
+  (assert (null (%definition datum)))
   (setf (%definition datum) definition))
 (defmethod add-definition ((datum variable) (definition instruction))
   (cleavir-set:nadjoinf (writers datum) definition))
@@ -77,9 +77,8 @@
       (add-definition output inst))))
 
 (defmethod (setf outputs) :before (new-outputs (inst operation))
-  (when (slot-boundp inst '%outputs)
-    (dolist (output (outputs inst))
-      (remove-definition output inst)))
+  (dolist (output (outputs inst))
+    (remove-definition output inst))
   (dolist (output new-outputs)
     (add-definition output inst)))
 

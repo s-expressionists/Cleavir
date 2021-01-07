@@ -129,13 +129,13 @@
 ;;; or a fixed number (that is not one) of them.
 (defclass operation (instruction)
   (;; Sequence of data.
-   (%outputs :initarg :outputs :accessor outputs
+   (%outputs :initform '() :initarg :outputs :accessor outputs
              :type sequence)))
 
 ;;; Data output by an OPERATION.
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
-  ((%definition :initarg :definition
+  ((%definition :initform nil :initarg :definition
                 :reader definition :accessor %definition)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
@@ -143,10 +143,10 @@
 (defclass no-input (instruction)
   ((%inputs :initform nil :type null)))
 (defclass one-input (instruction)
-  ((%inputs :initform nil
+  ((%inputs :initform '()
             :type (cons value null))))
 (defclass no-output (operation)
-  ((%outputs :initform nil :type null)))
+  ((%outputs :initform '() :type null)))
 
 ;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
