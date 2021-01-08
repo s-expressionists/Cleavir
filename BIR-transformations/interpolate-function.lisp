@@ -288,8 +288,12 @@
                    local-calls))
         (multiple-value-bind (return-point common-use common-dynenv target-owner)
             (common-return-cont function local-calls)
-          (assert (not (eq return-point :uncalled)))
           ;; Per BIR rules we can't really interpolate any function
           ;; when it's ambiguous what its dynenv or owners should be.
           (when (and common-dynenv target-owner)
-            (contify function local-calls return-point common-use common-dynenv target-owner)))))))
+            ;; FIXME: We should really be deleting functions which are
+            ;; only local called by themselves, but the BIR invariants
+            ;; are hard to maintain from outside the BIR system
+            ;; itself.
+            (unless (eq function target-owner)
+              (contify function local-calls return-point common-use common-dynenv target-owner))))))))
