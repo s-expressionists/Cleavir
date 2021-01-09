@@ -34,22 +34,21 @@
               (let ((type (cleavir-ctype:bottom nil))
                     (suppliedp (cleavir-ctype:bottom nil)))
                 (cleavir-set:doset (local-call local-calls)
-                  (unless (cleavir-bir:deletedp (cleavir-bir:iblock local-call))
-                    (let ((arg (nth index (rest (cleavir-bir:inputs local-call)))))
-                      (setq type
-                            (cleavir-ctype:disjoin/2
-                             type
-                             (if arg
-                                 (cleavir-bir:ctype arg)
-                                 (cleavir-ctype:null-type nil))
-                             nil))
-                      (setq suppliedp
-                            (cleavir-ctype:disjoin/2
-                             suppliedp
-                             (if arg
-                                 (cleavir-ctype:member nil t)
-                                 (cleavir-ctype:null-type nil))
-                             nil)))))
+                  (let ((arg (nth index (rest (cleavir-bir:inputs local-call)))))
+                    (setq type
+                          (cleavir-ctype:disjoin/2
+                           type
+                           (if arg
+                               (cleavir-bir:ctype arg)
+                               (cleavir-ctype:null-type nil))
+                           nil))
+                    (setq suppliedp
+                          (cleavir-ctype:disjoin/2
+                           suppliedp
+                           (if arg
+                               (cleavir-ctype:member nil t)
+                               (cleavir-ctype:null-type nil))
+                           nil))))
                 (ecase state
                   (:required
                    (setf (cleavir-bir:derived-type item) type))
@@ -69,23 +68,19 @@
   ;; doesn't matter, which order makes it more likely to fire, so we
   ;; can feed effects as much as possible in one pass.
   (cleavir-bir:do-iblocks (iblock function)
-    ;; Make sure not to look at a block that might have been
-    ;; deleted earlier in this forward pass.
-    (unless (cleavir-bir:deletedp iblock)
-      ;; Make sure to merge the successors as much as possible so we can
-      ;; trigger more optimizations.
-      (loop while (cleavir-bir:merge-successor-if-possible iblock))
-      (meta-evaluate-iblock iblock)))
+    ;; Make sure to merge the successors as much as possible so we can
+    ;; trigger more optimizations.
+    (loop while (cleavir-bir:merge-successor-if-possible iblock))
+    (meta-evaluate-iblock iblock))
   (cleavir-bir:do-iblocks (iblock function :backward)
-    (unless (cleavir-bir:deletedp iblock)
-      (flush-dead-code iblock)
-      (let ((end (cleavir-bir:end iblock)))
-        (typecase end
-          (cleavir-bir:ifi
-           (or (eliminate-if-if end)
-               (eliminate-degenerate-if end)))
-          (cleavir-bir:jump
-           (cleavir-bir:delete-iblock-if-empty iblock)))))))
+    (flush-dead-code iblock)
+    (let ((end (cleavir-bir:end iblock)))
+      (typecase end
+        (cleavir-bir:ifi
+         (or (eliminate-if-if end)
+             (eliminate-degenerate-if end)))
+        (cleavir-bir:jump
+         (cleavir-bir:delete-iblock-if-empty iblock))))))
 
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
@@ -94,14 +89,13 @@
   (dolist (phi (cleavir-bir:inputs iblock))
     (let ((type (cleavir-ctype:bottom nil)))
       (dolist (definition (cleavir-bir:definitions phi))
-        (unless (cleavir-bir:deletedp (cleavir-bir:iblock definition))
-          (setq type
-                (cleavir-ctype:disjoin/2
-                 type
-                 (cleavir-bir:ctype
-                  (nth (position phi (cleavir-bir:outputs definition))
-                       (cleavir-bir:inputs definition)))
-                 nil))))
+        (setq type
+              (cleavir-ctype:disjoin/2
+               type
+               (cleavir-bir:ctype
+                (nth (position phi (cleavir-bir:outputs definition))
+                     (cleavir-bir:inputs definition)))
+               nil)))
       (setf (cleavir-bir:derived-type phi) type))))
 
 (defun meta-evaluate-iblock (iblock)

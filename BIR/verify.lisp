@@ -371,9 +371,12 @@ has use-before-define on inputs ~a"
              (dynamic-environment iblock) *seen-instructions*))
         "iblock ~a has invalid dynamic environment ~a"
         iblock (dynamic-environment iblock))
+  (test (function iblock)
+        "iblock ~a has no function. it may have been deleted."
+        iblock)
   ;; Function is the right function
   (test (eq (function iblock) *verifying-function*)
-        "iblock ~a is in the wrong function"
+        "iblock ~a is in the wrong function."
         iblock)
   ;; Check entrances actually end in unwind.
   (cleavir-set:doset (entrance (entrances iblock))

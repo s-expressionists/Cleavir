@@ -113,7 +113,6 @@
 (defgeneric clean-up-iblock (iblock)
   (:method-combination progn)
   (:method progn ((ib iblock))
-    (setf (deletedp ib) t)
     (cleavir-set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
     (when (slot-boundp ib '%start)
@@ -282,7 +281,7 @@
         (when (orphan-iblock-p s)
           (delete-iblock s)))))
   (remove-iblock-from-flow-order iblock)
-  (setf (deletedp iblock) t))
+  (setf (function iblock) nil))
 
 (defun maybe-delete-iblock (iblock)
   (when (orphan-iblock-p iblock)
@@ -409,7 +408,7 @@
     ;; Delete from scope.
     (cleavir-set:nremovef (scope (dynamic-environment successor)) successor)
     ;; The successor block is now conceptually deleted.
-    (setf (deletedp successor) t)
+    (setf (function successor) nil)
     iblock))
 
 (defun empty-iblock-p (iblock)
@@ -436,7 +435,7 @@
     (remove-iblock-from-flow-order iblock)
     ;; Remove from scope.
     (cleavir-set:nremovef (scope (dynamic-environment iblock)) iblock)
-    (setf (deletedp iblock) t)
+    (setf (function iblock) nil)
     iblock))
 
 ;;; Split a iblock into two iblocks.
