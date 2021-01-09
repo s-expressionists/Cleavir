@@ -418,7 +418,8 @@
          (null (cleavir-bir:inputs iblock))
          (null (cleavir-bir:outputs start))
          (not (eq (start (function iblock)) iblock))
-         (not (eq iblock (first (next start)))))))
+         (not (eq iblock (first (next start))))
+         (cleavir-set:empty-set-p (entrances iblock)))))
 
 ;;; Forward the predecessors of iblock to the successor of iblock if
 ;;; it is empty.
