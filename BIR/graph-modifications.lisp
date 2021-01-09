@@ -507,22 +507,3 @@
       (unless (cleavir-set:presentp iblock seen)
         (clean-up-iblock iblock)))
     (values)))
-
-(defun refresh-local-users (function)
-  (check-type function function)
-  ;;; First zero out existing uses
-  (map-local-instructions
-   (lambda (inst)
-     (dolist (input (inputs inst))
-       (remove-use input inst)))
-   function)
-  ;;; Now add em back
-  (map-local-instructions
-   (lambda (inst)
-     (dolist (input (inputs inst))
-       (add-use input inst)))
-   function)
-  (values))
-
-(defun refresh-users (module)
-  (cleavir-set:mapset nil #'refresh-local-users module))

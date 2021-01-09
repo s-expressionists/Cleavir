@@ -54,7 +54,6 @@
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)
-  (:export #:refresh-users #:refresh-local-users)
   (:export #:verify)
   (:export #:disassemble)
   (:export #:unused-variable #:type-conflict))
