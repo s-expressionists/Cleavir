@@ -149,9 +149,12 @@
         (when outs
           (format t " -> "))
         (format t "~{~a~^, ~}" (mapcar #'first outs))
-        (let ((types (mapcar #'second outs)))
-          (unless (every (lambda (ctype) (cleavir-ctype:top-p ctype nil)) types)
-            (format t "~45T; ~{ctype: ~a~^, ~}" types)))))))
+        (let* ((type-specs (mapcar #'cdr outs))
+               (types (mapcar #'first type-specs)))
+          (unless (or (every (lambda (ctype) (cleavir-ctype:top-p ctype nil)) types)
+                      (every (lambda (type-spec) (eq type-spec nil)) type-specs))
+            (format t "~45T; ")
+            (format t "~{ctype: ~a~^, ~}" types)))))))
 
 (defun print-function-disasm (function-disasm &key (show-dynenv t))
   (destructuring-bind ((name start args env) . iblocks)
