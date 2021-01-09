@@ -320,27 +320,28 @@
   (delete-instruction computation)
   (values))
 
-;;; Deletes a pair of instructions that pass values along.
-;;; That is, given inputs -> in-inst ... out-inst -> outputs, we
-;;; replace the outputs with the inputs and delete the output
-;;; instruction. We rely on other triggers to clean up the in-inst.
-;;; This is a separate function because for one thing it's reasonably
-;;; common, and for two it internally messes with several invariants
-;;; of the IR, which would be tricky to deal with outside of the BIR
-;;; system.
-(defun delete-transmission (in-inst out-inst)
-  (let ((outputs (outputs out-inst))
-        (inputs (inputs in-inst)))
-    (assert (every #'ssa-p outputs))
-    (assert (>= (length inputs) (length outputs)))
+;;; Delete a pair of fixed-to-multiple and multiple-to-fixed instructions.
+(defun delete-ftm-mtf-pair (ftm mtf)
+  (let ((outputs (outputs mtf))
+        (inputs (inputs ftm)))
     ;; Prevent it from cleaning up its inputs when it's deleted.
-    (setf (slot-value in-inst '%inputs) '())
+    (setf (slot-value ftm '%inputs) '())
     ;; Clean up its inputs.
     ;; (This is a separate loop in case inputs is longer than outputs.)
-    (loop for inp in inputs do (remove-use inp in-inst))
-    ;; Replace.
-    (mapc #'replace-uses inputs outputs))
-  (delete-instruction out-inst))
+    (loop for inp in inputs do (remove-use inp ftm))
+    ;; Replace and default values.
+    (do ((inputs inputs (rest inputs))
+         (outputs outputs (rest outputs)))
+        ((null inputs)
+         (dolist (output outputs)
+           (let ((nil-ref (make-constant-reference
+                           (constant-in-module nil (module (function ftm))))))
+             (insert-instruction-before nil-ref ftm)
+             (replace-uses nil-ref output))))
+      (when outputs
+        (replace-uses (first inputs) (first outputs)))))
+  (delete-instruction mtf)
+  (delete-instruction ftm))
 
 ;;; Remove IBLOCK from its flow ordering.
 (defun remove-iblock-from-flow-order (iblock)

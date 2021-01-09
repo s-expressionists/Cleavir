@@ -269,8 +269,7 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:multiple-to-fixed))
   (let ((definition (first (cleavir-bir:inputs instruction))))
     (cond ((typep definition 'cleavir-bir:fixed-to-multiple)
-           (cleavir-bir:delete-transmission definition instruction)
-           (cleavir-bir:delete-instruction definition))
+           (cleavir-bir:delete-ftm-mtf-pair definition instruction))
           ;; Derive the type of the outputs (fixed values) from the
           ;; definition.
           (t
@@ -357,13 +356,16 @@
   (let ((readers (cleavir-bir:readers variable)))
     (when (and (cleavir-bir:immutablep variable)
                (= (cleavir-set:size readers) 1))
-      (let ((writer (cleavir-bir:binder variable))
+      (let ((binder (cleavir-bir:binder variable))
             (reader (cleavir-set:arb readers)))
-        (when (eq (cleavir-bir:function writer)
+        (when (eq (cleavir-bir:function binder)
                   (cleavir-bir:function reader))
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
-          (cleavir-bir:delete-transmission writer reader)
+          (let ((input (first (cleavir-bir:inputs binder))))
+            (setf (cleavir-bir:inputs binder) nil)
+            (cleavir-bir:replace-uses input reader))
+          (cleavir-bir:delete-computation reader)
           t)))))
 
 ;;; Variable bound to constant can get propagated.

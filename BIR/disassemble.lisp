@@ -148,15 +148,10 @@
         (format t "~{~(~a~)~}" rest)
         (when outs
           (format t " -> "))
-        (dolist (out outs)
-          (destructuring-bind (value &optional (ctype nil suppliedp))
-              out
-            (format t "~a " value)
-            (when suppliedp
-              (format t "~45T; "))
-            (when suppliedp
-              (unless (cleavir-ctype:top-p ctype nil)
-                (format t "ctype: ~(~a~) " ctype)))))))))
+        (format t "~{~a~^, ~}" (mapcar #'first outs))
+        (let ((types (mapcar #'second outs)))
+          (unless (every (lambda (ctype) (cleavir-ctype:top-p ctype nil)) types)
+            (format t "~45T; ~{ctype: ~a~^, ~}" types)))))))
 
 (defun print-function-disasm (function-disasm &key (show-dynenv t))
   (destructuring-bind ((name start args env) . iblocks)

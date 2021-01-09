@@ -251,8 +251,7 @@
                    (typep common-use 'cleavir-bir:multiple-to-fixed))
           (let ((definition (first (cleavir-bir:inputs common-use))))
             (when (typep definition 'cleavir-bir:fixed-to-multiple)
-              (cleavir-bir:delete-transmission definition common-use)
-              (cleavir-bir:delete-instruction definition)))))
+              (cleavir-bir:delete-ftm-mtf-pair definition common-use)))))
       ;; We've interpolated and there are potentially useless
       ;; catches in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.
