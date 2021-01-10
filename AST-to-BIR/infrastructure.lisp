@@ -3,7 +3,6 @@
 (defvar *variables*)
 (defvar *block-info*)
 (defvar *go-info*)
-(defvar *function-info*)
 (defvar *current-module*)
 
 ;;; KLUDGE: We need to write the following two functions this way
@@ -167,7 +166,6 @@
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*function-info* (make-hash-table :test #'eq))
         (*current-module* (make-module)))
     (compile-function ast system)))
 

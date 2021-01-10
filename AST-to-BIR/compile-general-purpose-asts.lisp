@@ -380,9 +380,7 @@
 ;;; FUNCTION-AST
 
 (defmethod compile-ast ((ast cleavir-ast:function-ast) inserter system)
-  (let* ((f (or (gethash ast *function-info*)
-                (setf (gethash ast *function-info*)
-                      (compile-function ast system))))
+  (let* ((f (compile-function ast system))
          (enclose (make-instance 'cleavir-bir:enclose :code f)))
     (setf (cleavir-bir:enclose f) enclose)
     (list (insert inserter enclose))))
