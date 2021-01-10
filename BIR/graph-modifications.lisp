@@ -484,15 +484,14 @@
 ;;; Compute the forward flow order for the iblocks of FUNCTION and
 ;;; clean up any existing unreachable iblocks.
 (defun compute-iblock-flow-order (function)
-  (let ((seen (cleavir-set:make-set))
-        (last nil)
+  (let ((last nil)
         (existing '()))
     ;; FIXME: Is there a consless way of doing this?
     (do-iblocks (iblock function)
       (push iblock existing))
     (labels ((traverse (iblock)
-               (unless (cleavir-set:presentp iblock seen)
-                 (cleavir-set:nadjoinf seen iblock)
+               (unless (reachedp iblock)
+                 (setf (reachedp iblock) t)
                  (dolist (successor (successors iblock))
                    (traverse successor))
                  (if last
@@ -502,6 +501,9 @@
                  (setf last iblock))))
       (traverse (start function)))
     (dolist (iblock existing)
-      (unless (cleavir-set:presentp iblock seen)
-        (clean-up-iblock iblock)))
+      (if (reachedp iblock)
+          (setf (reachedp iblock) nil)
+          (clean-up-iblock iblock)))
+    (do-iblocks (iblock function)
+      (setf (reachedp iblock) nil))
     (values)))
