@@ -480,4 +480,9 @@ has use-before-define on inputs ~a"
         (*seen-lists* (cleavir-set:empty-set))
         (*seen-next* (cleavir-set:empty-set))
         (*verifying-module* module))
-    (cleavir-set:mapset nil #'verify (functions module))))
+    (cleavir-set:mapset nil #'verify (functions module))
+    ;; Check for dangling references.
+    (cleavir-set:doset (constant (constants module))
+      (test (not (cleavir-set:empty-set-p (readers constant)))
+            "Module records a constant with no references ~a."
+            constant))))
