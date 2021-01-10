@@ -280,8 +280,7 @@
         (cleavir-set:nremovef (predecessors s) iblock)
         (when (orphan-iblock-p s)
           (delete-iblock s)))))
-  (remove-iblock-from-flow-order iblock)
-  (setf (function iblock) nil))
+  (remove-iblock-from-flow-order iblock))
 
 (defun maybe-delete-iblock (iblock)
   (when (orphan-iblock-p iblock)
@@ -435,7 +434,6 @@
     (remove-iblock-from-flow-order iblock)
     ;; Remove from scope.
     (cleavir-set:nremovef (scope (dynamic-environment iblock)) iblock)
-    (setf (function iblock) nil)
     iblock))
 
 ;;; Split a iblock into two iblocks.

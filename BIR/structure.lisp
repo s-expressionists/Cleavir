@@ -291,8 +291,8 @@
    (%dynamic-environment :initarg :dynamic-environment
                          :accessor dynamic-environment
                          :type dynamic-environment)
-   ;; The function this belongs to. NIL when the iblock gets deleted.
-   (%function :initarg :function :accessor function :type (or null function))
+   ;; The function this belongs to.
+   (%function :initarg :function :accessor function :type function)
    ;; For debug/introspection
    (%name :initarg :name :reader name :initform nil)))
 
