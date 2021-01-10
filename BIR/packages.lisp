@@ -9,7 +9,7 @@
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
-  (:export #:iblock #:predecessors #:entrances #:iblock-started-p #:deletedp)
+  (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi #:delete-phi
            #:output #:name #:ctype #:derived-type #:derive-type-for-linear-datum
