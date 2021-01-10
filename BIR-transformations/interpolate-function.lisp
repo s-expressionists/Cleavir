@@ -182,7 +182,7 @@
   ;; unwind.
   (cleavir-bir:do-iblocks (ib function)
     (let ((u (cleavir-bir:end ib)))
-      (when (typep (cleavir-bir:end ib) 'cleavir-bir:unwind)
+      (when (typep u 'cleavir-bir:unwind)
         (when (eq (cleavir-bir:function (cleavir-bir:destination u))
                   target-function)
           (replace-unwind u))))
