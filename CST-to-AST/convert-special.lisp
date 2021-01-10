@@ -274,11 +274,7 @@
                          new-env system canonical-declaration-specifiers)))
         (process-progn
          (append init-asts
-                 ;; So that flet with empty body works.
-                 (list
-                  (process-progn
-                   (convert-sequence forms-cst final-env system)
-                   origin)))
+                 (convert-sequence forms-cst final-env system))
          origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -304,10 +300,7 @@
                          new-env system canonical-declaration-specifiers)))
         (process-progn
          (append init-asts
-                 (list
-                  (process-progn
-                   (convert-sequence forms-cst final-env system)
-                   origin)))
+                 (convert-sequence forms-cst final-env system))
          origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
