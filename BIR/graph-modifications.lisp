@@ -350,6 +350,16 @@
         (setf (prev next) prev)
         (setf (tail (function iblock)) prev))))
 
+;;; Insert the new iblock into the flow order after AFTER.
+(defun insert-iblock-into-flow-order (new after)
+  (let ((next (next after)))
+    (setf (next after) new)
+    (setf (prev new) after)
+    (setf (next new) next)
+    (if next
+        (setf (prev next) new)
+        (setf (tail (function after)) new))))
+
 ;;; Merge IBLOCK to its unique successor if possible, returning false
 ;;; if not.
 (defun merge-successor-if-possible (iblock)
@@ -447,14 +457,7 @@
                 :predecessors (cleavir-set:make-set ib)
                 :dynamic-environment (dynamic-environment ib)))
          (new-start (successor inst)))
-    ;; Insert the new block into the flow order.
-    (let ((next (next ib)))
-      (setf (next ib) new)
-      (setf (prev new) ib)
-      (setf (next new) next)
-      (if next
-          (setf (prev next) new)
-          (setf (tail function) new)))
+    (insert-iblock-into-flow-order new ib)
     ;; and scope
     (cleavir-set:nadjoinf (scope (dynamic-environment ib)) new)
     ;; Set the new start to lose its predecessor
