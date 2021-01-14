@@ -36,8 +36,16 @@
 ;;; copying the CONS and calling FINALIZE-SUBSTRUCTURE on the CAR and
 ;;; the CDR.
 (defmethod finalize-substructure ((object cons) dictionary)
-  (cons (finalize-substructure (car object) dictionary)
-	(finalize-substructure (cdr object) dictionary)))
+  ;; Don't make a new CONS if the finalized substructures are both the
+  ;; same as in the original object.
+  (let* ((car (car object))
+         (cdr (cdr object))
+         (car-clone (finalize-substructure car dictionary))
+         (cdr-clone (finalize-substructure cdr dictionary)))
+    (if (and (eq car car-clone)
+             (eq cdr cdr-clone))
+        object
+        (cons car-clone cdr-clone))))
 
 ;;; If the substructure of an AST is another AST, then the
 ;;; corresponding substructure of the new AST is obtained from the
