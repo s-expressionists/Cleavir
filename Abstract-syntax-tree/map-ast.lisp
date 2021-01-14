@@ -3,6 +3,5 @@
 (defun map-ast-depth-first-preorder (function ast)
   (labels ((visit (ast)
              (funcall function ast)
-             (dolist (child (children ast))
-               (visit child))))
+             (cleavir-ast:map-children #'visit ast)))
     (visit ast)))
