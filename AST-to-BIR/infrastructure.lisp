@@ -8,8 +8,8 @@
 ;;; KLUDGE: We need to write the following two functions this way
 ;;; because mutually referential functions can cause lexical-binds to
 ;;; occur after the name they bind is referenced.
-(defun bind-variable (lexical-ast ignore)
-  (let ((variable (gethash lexical-ast *variables*)))
+(defun bind-variable (lexical-variable ignore)
+  (let ((variable (gethash lexical-variable *variables*)))
     (cond (variable
            ;; Tie the knot for mutually referential functions.
            (assert (not (slot-boundp variable 'cleavir-bir::%binder))
@@ -17,18 +17,18 @@
                    "Cannot bind variable more than once.")
            variable)
           (t
-           (setf (gethash lexical-ast *variables*)
+           (setf (gethash lexical-variable *variables*)
                  (make-instance 'cleavir-bir:variable
-                                :name (cleavir-ast:name lexical-ast)
+                                :name (cleavir-ast:name lexical-variable)
                                 :rtype :object
                                 :ignore ignore))))))
 
-(defun find-variable (lexical-ast)
-  (check-type lexical-ast cleavir-ast:lexical-ast)
-  (or (gethash lexical-ast *variables*)
+(defun find-variable (lexical-variable)
+  (check-type lexical-variable cleavir-ast:lexical-variable)
+  (or (gethash lexical-variable *variables*)
       ;; Normally this should never happen but mutually referential
       ;; functions create a circularity we must tie.
-      (bind-variable lexical-ast nil)))
+      (bind-variable lexical-variable nil)))
 
 (defclass inserter ()
   ((%iblock :initarg :iblock :accessor iblock)

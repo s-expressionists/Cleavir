@@ -45,8 +45,8 @@
    #:body-asts
    #:progn-ast #:make-progn-ast #:form-asts
    #:return-from-ast #:make-return-from-ast #:form-ast
-   #:setq-ast #:make-setq-ast #:lhs-ast #:value-ast
-   #:multiple-value-setq-ast #:make-multiple-value-setq-ast #:lhs-asts
+   #:setq-ast #:make-setq-ast #:value-ast
+   #:multiple-value-setq-ast #:make-multiple-value-setq-ast #:lexical-variables
    #:tagbody-ast #:make-tagbody-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
    #:the-ast #:make-the-ast #:ctype
@@ -62,6 +62,7 @@
    #:rplaca-ast #:make-rplaca-ast #:object-ast
    #:rplacd-ast #:make-rplacd-ast
    #:coerce-ast #:from-type #:to-type #:arg-ast
+   #:lexical-variable #:make-lexical-variable
    #:variable-ast #:operation-ast #:normal-ast #:overflow-ast
    #:fixnum-add-ast #:make-fixnum-add-ast
    #:fixnum-sub-ast #:make-fixnum-sub-ast

@@ -37,7 +37,7 @@
       ;; the function.
       (let ((new-env (augment-environment-with-declarations environment system rdspecs)))
 	(process-progn (convert-sequence body-forms-cst new-env system)))
-      (destructuring-bind (variable-cst . lexical-ast) (first bindings)
+      (destructuring-bind (variable-cst . lexical-variable) (first bindings)
 	(let* (;; We enter the new variable into the environment and
 	       ;; then we process remaining parameters and ultimately
 	       ;; the body of the function.
@@ -57,7 +57,7 @@
 	  ;; All that is left to do now, is to construct the AST to
 	  ;; return by using the new variable and the AST of the
 	  ;; remaining computation as components.
-	  (set-or-bind-variable variable-cst lexical-ast next-ast new-env system)))))
+	  (set-or-bind-variable variable-cst lexical-variable next-ast new-env system)))))
 
 ;;; We convert a LET form CST by lexically binding every variable.
 (defmethod convert-let (cst environment system)

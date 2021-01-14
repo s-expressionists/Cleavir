@@ -2,7 +2,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast)
                         inserter system)
-  (let ((vars (loop for as in (cleavir-ast:lhs-asts ast)
+  (let ((vars (loop for as in (cleavir-ast:lexical-variables ast)
                     collect (find-variable as))))
     (with-compiled-ast (vals (cleavir-ast:form-ast ast) inserter system
                              (make-list (length vars)

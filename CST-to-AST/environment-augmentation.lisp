@@ -255,11 +255,10 @@
           (unless globally-p
             (setf new-env
                   (cleavir-env:add-special-variable new-env raw-variable)))
-          (let ((var-ast (cleavir-ast:make-lexical-ast raw-variable
-                                                       :origin origin)))
+          (let ((lexical-variable (cleavir-ast:make-lexical-variable raw-variable :origin origin)))
             (setf new-env
                   (cleavir-env:add-lexical-variable
-                   new-env raw-variable var-ast)))))
+                   new-env raw-variable lexical-variable)))))
     (let* ((type (declared-type declarations))
            ;; FIXME system arguments
            (ptype (cleavir-env:parse-type-specifier type env system)))
@@ -296,5 +295,5 @@
 (defun augment-environment-with-local-function-name (name-cst environment)
   (let* ((name (cst:raw name-cst))
          (origin (cst:source name-cst))
-         (var-ast (cleavir-ast:make-lexical-ast name :origin origin)))
-    (cleavir-env:add-local-function environment name var-ast)))
+         (lexical-variable (cleavir-ast:make-lexical-variable name :origin origin)))
+    (cleavir-env:add-local-function environment name lexical-variable)))

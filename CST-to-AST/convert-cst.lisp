@@ -209,7 +209,10 @@
     (cst (info cleavir-env:lexical-variable-info) env system)
   (when (eq (cleavir-env:ignore info) 'ignore)
     (warn 'ignored-variable-referenced :cst cst))
-  (let ((type (cleavir-ctype:coerce-to-values
-               (cleavir-env:type info) system))
-        (lex (cleavir-env:identity info)))
-    (type-wrap lex type (cst:source cst) env system)))
+  (let ((origin (cst:source cst)))
+    (type-wrap (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
+                 :origin origin)
+               (cleavir-ctype:coerce-to-values (cleavir-env:type info) system)
+               origin
+               env
+               system)))

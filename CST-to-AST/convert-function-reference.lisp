@@ -16,7 +16,8 @@
 (defmethod convert-function-reference
     (cst (info cleavir-env:local-function-info) env system)
   (declare (ignore cst env system))
-  (cleavir-env:identity info))
+  (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
+    :origin (cst:source cst)))
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:global-macro-info) env system)
@@ -43,16 +44,15 @@
   (when (not (eq (cleavir-env:inline info) 'cl:notinline))
     (let ((ast (cleavir-env:ast info)))
       (when ast
-        (return-from convert-called-function-reference
-          ;; The AST must be cloned because hoisting is destructive.
-          (cleavir-ast-transformations:clone-ast ast)))))
+        (return-from convert-called-function-reference ast))))
   (convert-global-function-reference
    cst info (cleavir-env:global-environment env) system))
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:local-function-info) env system)
   (declare (ignore cst env system))
-  (cleavir-env:identity info))
+  (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
+    :origin (cst:source cst)))
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:global-macro-info) env system)

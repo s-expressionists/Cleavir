@@ -196,9 +196,9 @@
         finally (return result)))
 
 ;;; Given an environment and the name of a function, return the
-;;; LEXICAL-AST that will have the function with that name as a value.
-;;; It is known that the environment contains an entry corresponding
-;;; to the name given as an argument.
+;;; LEXICAL-VARIABLE that will have the function with that name as a
+;;; value.  It is known that the environment contains an entry
+;;; corresponding to the name given as an argument.
 (defun function-lexical (environment name)
   (cleavir-env:identity (cleavir-env:function-info environment name)))
 
@@ -233,10 +233,10 @@
                        (name (cst:raw name-cst)))
                   (cons name fun))))
 
-;;; Compute and return a list of LEXICAL-BIND-ASTs that will assign the AST of
-;;; each function in a list of function ASTs to its associated
-;;; LEXICAL-AST.  FUNCTIONS is a list of CONS cells.  Each CONS cell
-;;; has a function name in its CAR and an AST in its CDR.
+;;; Compute and return a list of LEXICAL-BIND-ASTs that will bind the
+;;; AST of each function in a list of function ASTs to its associated
+;;; LEXICAL-VARIABLE.  FUNCTIONS is a list of CONS cells.  Each CONS
+;;; cell has a function name in its CAR and an AST in its CDR.
 (defun compute-function-init-asts (functions env)
   (loop for (name . fun-ast) in functions
         collect (cleavir-ast:make-lexical-bind-ast

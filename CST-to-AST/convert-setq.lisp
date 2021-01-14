@@ -32,15 +32,15 @@
     (var-cst form-ast info global-env system)
   (declare (ignore global-env system))
   (let* ((origin (cst:source var-cst))
-         (temp (cleavir-ast:make-lexical-ast (gensym) :origin origin)))
+         (temp (cleavir-ast:make-lexical-variable (gensym) :origin origin)))
     (process-progn
      (list (cleavir-ast:make-lexical-bind-ast temp form-ast :origin origin)
 	   (cleavir-ast:make-set-symbol-value-ast
 	    (cleavir-ast:make-constant-ast (cleavir-env:name info)
               :origin origin)
-	    temp
+	    (cleavir-ast:make-lexical-ast temp :origin origin)
 	    :origin origin)
-	   temp)
+           (cleavir-ast:make-lexical-ast temp :origin origin))
      origin)))
 
 (defmethod convert-setq

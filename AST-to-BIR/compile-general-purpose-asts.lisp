@@ -4,11 +4,14 @@
 ;;;
 ;;; COMPILE-FUNCTION
 
-(defun bind-lexical-ast-as-argument (lexical-ast)
-  (assert (not (nth-value 1 (gethash lexical-ast *variables*))))
-  (setf (gethash lexical-ast *variables*)
+(defun bind-lexical-as-argument (lexical-variable)
+  (assert (not (nth-value 1 (gethash lexical-variable *variables*)))
+          ()
+          "Lexical variable ~a bound to ~a already."
+          lexical-variable (gethash lexical-variable *variables*))
+  (setf (gethash lexical-variable *variables*)
         (make-instance 'cleavir-bir:argument
-                       :name (cleavir-ast:name lexical-ast)
+                       :name (cleavir-ast:name lexical-variable)
                        :rtype :object)))
 
 (defun bind-lambda-list-arguments (lambda-list)
@@ -18,11 +21,11 @@
                       ((consp item)
                        (if (= (length item) 3)
                            (list (first item)
-                                 (bind-lexical-ast-as-argument (second item))
-                                 (bind-lexical-ast-as-argument (third item)))
-                           (list (bind-lexical-ast-as-argument (first item))
-                                 (bind-lexical-ast-as-argument (second item)))))
-                      (t (bind-lexical-ast-as-argument item)))))
+                                 (bind-lexical-as-argument (second item))
+                                 (bind-lexical-as-argument (third item)))
+                           (list (bind-lexical-as-argument (first item))
+                                 (bind-lexical-as-argument (second item)))))
+                      (t (bind-lexical-as-argument item)))))
 
 (defmethod compile-function ((ast cleavir-ast:function-ast) system)
   (let* ((module *current-module*)
@@ -393,7 +396,7 @@
   (let ((rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (cond ((eq rv :no-return) rv)
           (t
-           (let* ((var (bind-variable (cleavir-ast:lhs-ast ast) (cleavir-ast:ignore ast)))
+           (let* ((var (bind-variable (cleavir-ast:lexical-variable ast) (cleavir-ast:ignore ast)))
                   (leti (make-instance 'cleavir-bir:leti
                           :inputs (adapt inserter rv '(:object))
                           :outputs (list var))))
@@ -408,7 +411,7 @@
 ;;; SETQ-AST
 
 (defmethod compile-ast ((ast cleavir-ast:setq-ast) inserter system)
-  (let ((var (find-variable (cleavir-ast:lhs-ast ast))))
+  (let ((var (find-variable (cleavir-ast:lexical-variable ast))))
     (cleavir-bir:record-variable-set var)
     (with-compiled-ast (rv (cleavir-ast:value-ast ast) inserter system)
       (insert inserter
@@ -584,7 +587,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-ast) inserter system)
   (declare (ignore system))
-  (let ((var (find-variable ast)))
+  (let ((var (find-variable (cleavir-ast:lexical-variable ast))))
     ;; FIXME: We probably want to make a new AST class to distinguish between
     ;; these two cases more cleanly.
     (typecase var

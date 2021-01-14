@@ -173,24 +173,42 @@
   (declare (ignorable ast))
   '())
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Class representing a lexical variable
+
+(defclass lexical-variable (ast)
+  (;; Only used for debugging purposes.
+   (%name :initarg :name :reader name)))
+
+(defun make-lexical-variable (name &key origin (policy *policy*))
+  (make-instance 'lexical-variable
+    :origin origin :policy policy
+    :name name))
+
+(cleavir-io:define-save-info lexical-variable
+    (:name name))
+
+(defmethod children ((ast lexical-variable))
+  (declare (ignorable ast))
+  '())
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class LEXICAL-AST.
 ;;; 
-;;; A LEXICAL-AST represents a reference to a lexical variable.  Such
-;;; a reference contains the name of the variable, but it is used only
-;;; for debugging purposes and for the purpose of error reporting.
+;;; A LEXICAL-AST represents a reference to a lexical variable.
 
 (defclass lexical-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
-  ((%name :initarg :name :reader name)))
+  ((%lexical-variable :initarg :lexical-variable :reader lexical-variable)))
 
-(defun make-lexical-ast (name &key origin (policy *policy*))
+(defun make-lexical-ast (lexical-variable &key origin (policy *policy*))
   (make-instance 'lexical-ast
     :origin origin :policy policy
-    :name name))
+    :lexical-variable lexical-variable))
 
 (cleavir-io:define-save-info lexical-ast
-  (:name name))
+  (:lexical-variable lexical-variable))
 
 (defmethod children ((ast lexical-ast))
   (declare (ignorable ast))
@@ -378,38 +396,38 @@
 ;;;
 ;;; where: 
 ;;;
-;;;   - Each ri is a LEXICAL-AST. 
+;;;   - Each ri is a LEXICAL-VARIABLE.
 ;;;
-;;;   - r is a LEXICAL-AST.
+;;;   - r is a LEXICAL-VARIABLE.
 ;;;
-;;;   - Each oi is a list of two LEXICAL-ASTs.  The second of the 
+;;;   - Each oi is a list of two LEXICAL-VARIABLEs.  The second of the
 ;;;     two conceptually contains a Boolean value indicating whether
 ;;;     the first one contains a value supplied by the caller.  
 ;;;
-;;;   - Each ki is a list of a symbol and two LEXICAL-ASTs.  The
+;;;   - Each ki is a list of a symbol and two LEXICAL-VARIABLEs.  The
 ;;;     symbol is the keyword-name that a caller must supply in order
 ;;;     to pass the corresponding argument.  The second of the two
-;;;     LEXICAL-ASTs conceptually contains a Boolean value indicating
-;;;     whether the first LEXICAL-AST contains a value supplied by the
+;;;     LEXICAL-VARIABLEs conceptually contains a Boolean value indicating
+;;;     whether the first LEXICAL-VARIABLE contains a value supplied by the
 ;;;     caller.
 ;;;
-;;; The LEXICAL-ASTs in the lambda list are potentially unrelated to
+;;; The LEXICAL-VARIABLEs in the lambda list are potentially unrelated to
 ;;; the variables that were given in the original lambda expression,
-;;; and they are LEXICAL-ASTs independently of whether the
+;;; and they are LEXICAL-VARIABLEs independently of whether the
 ;;; corresponding variable that was given in the original lambda
 ;;; expression is a lexical variable or a special variable.
 ;;;
 ;;; The body of the FUNCTION-AST must contain code that tests the
-;;; second of the two LEXICAL-ASTs and initializes variables if
-;;; needed.  The if the second LEXICAL-AST in any oi contains FALSE,
+;;; second of the two LEXICAL-VARIABLEs and initializes variables if
+;;; needed.  The if the second LEXICAL-VARIABLE in any oi contains FALSE,
 ;;; then the code in the body is not allowed to test the second
-;;; LEXICAL-ASTs of any of the ki because they may not be set
+;;; LEXICAL-VARIABLEs of any of the ki because they may not be set
 ;;; correctly (conceptually, they all have the value FALSE then).
 
 (defclass function-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
   ((%lambda-list :initarg :lambda-list :reader lambda-list)
    (%body-ast :initarg :body-ast :reader body-ast)
-   ;; An alist from lexical ASTs to lists of pertinent declaration specifiers.
+   ;; An alist from lexical VARIABLEs to lists of pertinent declaration specifiers.
    ;; Since SPECIAL is otherwise handled, these are for optimization use only
    ;; and may be discarded at will.
    (%bound-declarations :initarg :bound-declarations :initform nil
@@ -571,21 +589,21 @@
 ;;; Class SETQ-AST.
 
 (defclass setq-ast (ast)
-  ((%lhs-ast :initarg :lhs-ast :reader lhs-ast)
+  ((%lexical-variable :initarg :lexical-variable :reader lexical-variable)
    (%value-ast :initarg :value-ast :reader value-ast)))
 
-(defun make-setq-ast (lhs-ast value-ast &key origin (policy *policy*))
+(defun make-setq-ast (lexical-variable value-ast &key origin (policy *policy*))
   (make-instance 'setq-ast
     :origin origin :policy policy
-    :lhs-ast lhs-ast
+    :lexical-variable lexical-variable
     :value-ast value-ast))
 
 (cleavir-io:define-save-info setq-ast
-  (:lhs-ast lhs-ast)
+  (:lexical-variable lexical-variable)
   (:value-ast value-ast))
 
 (defmethod children ((ast setq-ast))
-  (list (lhs-ast ast) (value-ast ast)))
+  (list (value-ast ast)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -594,24 +612,24 @@
 ;;; This AST represents the binding of a lexical variable.
 
 (defclass lexical-bind-ast (ast)
-  ((%lhs-ast :initarg :lhs-ast :reader lhs-ast)
+  ((%lexical-variable :initarg :lexical-variable :reader lexical-variable)
    (%value-ast :initarg :value-ast :reader value-ast)
    (%ignore :initarg :ignore :reader ignore)))
 
-(defun make-lexical-bind-ast (lhs-ast value-ast &key ignore origin (policy *policy*))
+(defun make-lexical-bind-ast (lexical-variable value-ast &key ignore origin (policy *policy*))
   (make-instance 'lexical-bind-ast
     :origin origin :policy policy
-    :lhs-ast lhs-ast
+    :lexical-variable lexical-variable
     :value-ast value-ast
     :ignore ignore))
 
 (cleavir-io:define-save-info lexical-bind-ast
-  (:lhs-ast lhs-ast)
+  (:lexical-variable lexical-variable)
   (:value-ast value-ast)
   (:ignore ignore))
 
 (defmethod children ((ast lexical-bind-ast))
-  (list (lhs-ast ast) (value-ast ast)))
+  (list (lexical-variable ast) (value-ast ast)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -619,13 +637,13 @@
 ;;; 
 ;;; This AST can be used to represent MULTIPLE-VALUE-BIND.  
 ;;;
-;;; The LHS-ASTS is a list of lexical locations to be assigned to.
+;;; The LEXICAL-VARIABLES is a list of lexical variables to be assigned to.
 ;;; FORM-AST represents a form to be evaluated, and the values of
-;;; which will be assigned to the lexical locations in LHS-ASTS.  If
+;;; which will be assigned to the lexical variables.  If
 ;;; the FORM-AST produces fewer values than there are lexical
-;;; locations in LHS-ASTS, then NIL is assigned to the remaining
-;;; lexical locations.  If there are more values there are lexical
-;;; locations in LHS-ASTS, then the additional values are not
+;;; variables, then NIL is assigned to the remaining
+;;; lexical variables.  If there are more values there are lexical
+;;; variables, then the additional values are not
 ;;; assigned anywhere.
 ;;;
 ;;; Unlike the special operator, this AST returns all values from
@@ -634,21 +652,21 @@
 ;;; type checks, and potentially other things.
 
 (defclass multiple-value-setq-ast (ast)
-  ((%lhs-asts :initarg :lhs-asts :reader lhs-asts)
+  ((%lexical-variables :initarg :lexical-variables :reader lexical-variables)
    (%form-ast :initarg :form-ast :reader form-ast)))
 
-(defun make-multiple-value-setq-ast (lhs-asts form-ast &key origin (policy *policy*))
+(defun make-multiple-value-setq-ast (lexical-variables form-ast &key origin (policy *policy*))
   (make-instance 'multiple-value-setq-ast
     :origin origin :policy policy
-    :lhs-asts lhs-asts
+    :lexical-variables lexical-variables
     :form-ast form-ast))
 
 (cleavir-io:define-save-info multiple-value-setq-ast
-  (:lhs-asts lhs-asts)
+  (:lexical-variables lexical-variables)
   (:form-ast form-ast))
 
 (defmethod children ((ast multiple-value-setq-ast))
-  (cons (form-ast ast) (lhs-asts ast)))
+  (list (form-ast ast)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
