@@ -27,8 +27,7 @@
   (:simple-p simple-p)
   (:boxed-p boxed-p))
 
-(defmethod children ((ast aref-ast))
-  (list (array-ast ast) (index-ast ast)))
+(define-children aref-ast (array-ast index-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -60,5 +59,4 @@
   (:simple-p simple-p)
   (:boxed-p boxed-p))
 
-(defmethod children ((ast aset-ast))
-  (list (array-ast ast) (index-ast ast) (element-ast ast)))
+(define-children aset-ast (array-ast index-ast element-ast))

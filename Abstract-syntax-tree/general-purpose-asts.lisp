@@ -15,7 +15,32 @@
 ;;;; in particular for PROCEDURE INTEGRATION (sometimes called
 ;;;; INLINING).
 
+(defgeneric map-children (function ast)
+  (:argument-precedence-order ast function))
+
 (defgeneric children (ast))
+
+(defmacro define-children (ast-class children-spec)
+  (multiple-value-bind (children rest-child)
+      (if (symbolp children-spec)
+          (values nil children-spec)
+          (let* ((last (last children-spec))
+                 (last-cdr (cdr last)))
+            (if last-cdr
+                (values (append (butlast children-spec) (list (car last))) last-cdr)
+                (values children-spec nil))))
+    `(progn
+       (defmethod children ((ast ,ast-class))
+         ,(let ((access (loop for child in children
+                              collect `(,child ast))))
+            (if rest-child
+                `(list* ,@access (,rest-child ast))
+                `(list ,@access))))
+       (defmethod map-children (function (ast ,ast-class))
+         ,@(loop for child in children
+                 collect `(funcall function (,child ast)))
+         ,(when rest-child
+            `(mapc function (,rest-child ast)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -141,9 +166,7 @@
 (cleavir-io:define-save-info immediate-ast
   (:value value))
 
-(defmethod children ((ast immediate-ast))
-  (declare (ignorable ast))
-  '())
+(define-children immediate-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -169,9 +192,7 @@
 (cleavir-io:define-save-info constant-ast
   (:value value))
 
-(defmethod children ((ast constant-ast))
-  (declare (ignorable ast))
-  '())
+(define-children constant-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -189,9 +210,7 @@
 (cleavir-io:define-save-info lexical-variable
     (:name name))
 
-(defmethod children ((ast lexical-variable))
-  (declare (ignorable ast))
-  '())
+(define-children lexical-variable ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -210,9 +229,7 @@
 (cleavir-io:define-save-info lexical-ast
   (:lexical-variable lexical-variable))
 
-(defmethod children ((ast lexical-ast))
-  (declare (ignorable ast))
-  '())
+(define-children lexical-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -231,8 +248,7 @@
 (cleavir-io:define-save-info symbol-value-ast
   (:symbol-ast symbol-ast))
 
-(defmethod children ((ast symbol-value-ast))
-  (list (symbol-ast ast)))
+(define-children symbol-value-ast (symbol-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -249,8 +265,7 @@
 (cleavir-io:define-save-info constant-symbol-value-ast
   (:name name))
 
-(defmethod children ((ast constant-symbol-value-ast))
-  '())
+(define-children constant-symbol-value-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -272,8 +287,7 @@
   (:symbol-ast symbol-ast)
   (:value-ast value-ast))
 
-(defmethod children ((ast set-symbol-value-ast))
-  (list (symbol-ast ast) (value-ast ast)))
+(define-children set-symbol-value-ast (symbol-ast value-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -293,8 +307,7 @@
   (:name name)
   (:value-ast value-ast))
 
-(defmethod children ((ast set-constant-symbol-value-ast))
-  (list (value-ast ast)))
+(define-children set-constant-symbol-value-ast (value-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -320,8 +333,7 @@
   (:name-ast name-ast)
   (:attributes attributes))
 
-(defmethod children ((ast fdefinition-ast))
-  (list (name-ast ast)))
+(define-children fdefinition-ast (name-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -343,8 +355,7 @@
 (cleavir-io:define-save-info constant-fdefinition-ast
   (:name name))
 
-(defmethod children ((ast constant-fdefinition-ast))
-  '())
+(define-children constant-fdefinition-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -379,8 +390,7 @@
   (:inline inline-declaration)
   (:attributes attributes))
 
-(defmethod children ((ast call-ast))
-  (list* (callee-ast ast) (argument-asts ast)))
+(define-children call-ast (callee-ast . argument-asts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -475,6 +485,16 @@
                             (t
                              (list entry))))))
 
+(defmethod map-children (function (ast function-ast))
+  (funcall function (body-ast ast))
+  (dolist (entry (lambda-list ast))
+    (cond ((symbolp entry))
+          ((consp entry)
+           (if (= (length entry) 2)
+               (mapc function entry)
+               (mapc function (cdr entry))))
+          (t (funcall function entry)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class TOP-LEVEL-FUNCTION-AST.
@@ -521,8 +541,7 @@
   (:argument-asts argument-asts)
   (:attributes attributes))
 
-(defmethod children ((ast primop-ast))
-  (argument-asts ast))
+(define-children primop-ast argument-asts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -539,8 +558,7 @@
 (cleavir-io:define-save-info progn-ast
   (:form-asts form-asts))
 
-(defmethod children ((ast progn-ast))
-  (form-asts ast))
+(define-children progn-ast form-asts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -560,8 +578,7 @@
   (:name name)
   (:body-ast body-ast))
 
-(defmethod children ((ast block-ast))
-  (list (body-ast ast)))
+(define-children block-ast (body-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -581,8 +598,7 @@
   (:block-ast block-ast)
   (:form-ast form-ast))
 
-(defmethod children ((ast return-from-ast))
-  (list (form-ast ast)))
+(define-children return-from-ast (form-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -602,8 +618,7 @@
   (:lexical-variable lexical-variable)
   (:value-ast value-ast))
 
-(defmethod children ((ast setq-ast))
-  (list (value-ast ast)))
+(define-children setq-ast (value-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -628,8 +643,7 @@
   (:value-ast value-ast)
   (:ignore ignore))
 
-(defmethod children ((ast lexical-bind-ast))
-  (list (lexical-variable ast) (value-ast ast)))
+(define-children lexical-bind-ast (lexical-variable value-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -665,8 +679,7 @@
   (:lexical-variables lexical-variables)
   (:form-ast form-ast))
 
-(defmethod children ((ast multiple-value-setq-ast))
-  (list (form-ast ast)))
+(define-children multiple-value-setq-ast (form-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -683,9 +696,7 @@
 (cleavir-io:define-save-info tag-ast
   (:name name))
 
-(defmethod children ((ast tag-ast))
-  (declare (ignorable ast))
-  '())
+(define-children tag-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -702,8 +713,7 @@
 (cleavir-io:define-save-info tagbody-ast
   (:item-asts item-asts))
 
-(defmethod children ((ast tagbody-ast))
-  (item-asts ast))
+(define-children tagbody-ast item-asts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -720,7 +730,7 @@
 (cleavir-io:define-save-info go-ast
   (:tag-ast tag-ast))
 
-(defmethod children ((ast go-ast)) nil)
+(define-children go-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -758,6 +768,15 @@
         (list form-ast)
         (list form-ast type-check-function-ast))))
 
+(defmethod map-children (function (ast the-ast))
+  (let ((form-ast (form-ast ast))
+        (type-check-function-ast (type-check-function-ast ast)))
+    (cond ((symbolp type-check-function-ast)
+           (funcall function form-ast))
+          (t
+           (funcall function form-ast)
+           (funcall function type-check-function-ast)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class TYPEQ-AST.
@@ -784,8 +803,7 @@
   (:test-ctype test-ctype)
   (:form-ast form-ast))
 
-(defmethod children ((ast typeq-ast))
-  (list (form-ast ast)))
+(define-children typeq-ast (form-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -815,8 +833,7 @@
   (:ctype ctype)
   (:test-ast test-ast))
 
-(defmethod children ((ast typew-ast))
-  (list (form-ast ast) (test-ast ast)))
+(define-children typew-ast (form-ast test-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -842,8 +859,7 @@
   (:ctype ctype)
   (:else-ast else-ast))
 
-(defmethod children ((ast the-typew-ast))
-  (list (form-ast ast) (else-ast ast)))
+(define-children the-typew-ast (form-ast else-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -872,8 +888,7 @@
   (:form form)
   (:read-only-p read-only-p))
 
-(defmethod children ((ast load-time-value-ast))
-  '())
+(define-children load-time-value-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -900,8 +915,7 @@
   (:then-ast then-ast)
   (:else-ast else-ast))
 
-(defmethod children ((ast if-ast))
-  (list (test-ast ast) (then-ast ast) (else-ast ast)))
+(define-children if-ast (test-ast then-ast else-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -931,8 +945,7 @@
   (:branch-asts branch-asts)
   (:default-ast default-ast))
 
-(defmethod children ((ast branch-ast))
-  (list* (test-ast ast) (default-ast ast) (branch-asts ast)))
+(define-children branch-ast (test-ast default-ast . branch-asts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -958,8 +971,7 @@
   (:form-asts form-asts)
   (:attributes attributes))
 
-(defmethod children ((ast multiple-value-call-ast))
-  (list* (function-form-ast ast) (form-asts ast)))
+(define-children multiple-value-call-ast (function-form-ast . form-asts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -980,8 +992,7 @@
 (cleavir-io:define-save-info values-ast
   (:argument-asts argument-asts))
 
-(defmethod children ((ast values-ast))
-  (argument-asts ast))
+(define-children values-ast argument-asts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1002,9 +1013,7 @@
   (:first-form-ast first-form-ast)
   (:form-asts form-asts))
 
-(defmethod children ((ast multiple-value-prog1-ast))
-  (cons (first-form-ast ast)
-	(form-asts ast)))
+(define-children multiple-value-prog1-ast (first-form-ast . form-asts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1029,8 +1038,7 @@
 (cleavir-io:define-save-info dynamic-allocation-ast
   (:form-ast form-ast))
 
-(defmethod children ((ast dynamic-allocation-ast))
-  (list (form-ast ast)))
+(define-children dynamic-allocation-ast (form-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1045,7 +1053,7 @@
 (defun make-unreachable-ast (&key origin (policy *policy*))
   (make-instance 'unreachable-ast :origin origin :policy policy))
 
-(defmethod children ((ast unreachable-ast)) nil)
+(define-children unreachable-ast ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1073,8 +1081,7 @@
   (:value-ast value-ast)
   (:body-ast body-ast))
 
-(defmethod children ((ast bind-ast))
-  (list (value-ast ast) (body-ast ast)))
+(define-children bind-ast (value-ast body-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1098,8 +1105,7 @@
   (:arg1-ast arg1-ast)
   (:arg2-ast arg2-ast))
 
-(defmethod children ((ast eq-ast))
-  (list (arg1-ast ast) (arg2-ast ast)))
+(define-children eq-ast (arg1-ast arg2-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1124,8 +1130,7 @@
   (:arg1-ast arg1-ast)
   (:arg2-ast arg2-ast))
 
-(defmethod children ((ast neq-ast))
-  (list (arg1-ast ast) (arg2-ast ast)))
+(define-children neq-ast (arg1-ast arg2-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -1153,5 +1158,4 @@
   (:arg-ast arg-ast)
   (:comparees comparees))
 
-(defmethod children ((ast case-ast))
-  (list (arg-ast ast)))
+(define-children case-ast (arg-ast))

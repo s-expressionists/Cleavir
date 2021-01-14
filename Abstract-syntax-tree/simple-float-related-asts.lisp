@@ -10,8 +10,7 @@
        (:subtype subtype)
        (:arg-ast arg-ast))
 
-     (defmethod children ((ast ,name))
-       (list (arg-ast ast)))))
+     (define-children ,name (arg-ast))))
 
 (defmacro define-simple-two-arg-float-ast (name)
   `(progn 
@@ -25,8 +24,7 @@
        (:arg1-ast arg1-ast)
        (:arg2-ast arg2-ast))
 
-     (defmethod children ((ast ,name))
-       (list (arg1-ast ast) (arg2-ast ast)))))
+     (define-children ,name (arg1-ast arg2-ast))))
 
 (defmacro define-simple-float-comparison-ast (name)
   `(progn 
@@ -40,8 +38,7 @@
        (:arg1-ast arg1-ast)
        (:arg2-ast arg2-ast))
 
-     (defmethod children ((ast ,name))
-       (list (arg1-ast ast) (arg2-ast ast)))))
+     (define-children ,name (arg1-ast arg2-ast))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -221,5 +218,4 @@
   (:to to-type)
   (:arg-ast arg-ast))
 
-(defmethod children ((ast coerce-ast))
-  (list (arg-ast ast)))
+(define-children coerce-ast (arg-ast))

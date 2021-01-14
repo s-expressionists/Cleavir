@@ -24,8 +24,7 @@
   (:object-ast object-ast)
   (:slot-number-ast slot-number-ast))
 
-(defmethod children ((ast slot-read-ast))
-  (list (object-ast ast) (slot-number-ast ast)))
+(define-children slot-read-ast (object-ast slot-number-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -56,8 +55,7 @@
   (:slot-number-ast slot-number-ast)
   (:value-ast value-ast))
 
-(defmethod children ((ast slot-write-ast))
-  (list (object-ast ast) (slot-number-ast ast) (value-ast ast)))
+(define-children slot-write-ast (object-ast slot-number-ast value-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -84,8 +82,7 @@
   (:object-ast object-ast)
   (:slot-number-ast slot-number-ast))
 
-(defmethod children ((ast funcallable-slot-read-ast))
-  (list (object-ast ast) (slot-number-ast ast)))
+(define-children funcallable-slot-read-ast (object-ast slot-number-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -117,5 +114,4 @@
   (:slot-number-ast slot-number-ast)
   (:value-ast value-ast))
 
-(defmethod children ((ast funcallable-slot-write-ast))
-  (list (object-ast ast) (slot-number-ast ast) (value-ast ast)))
+(define-children funcallable-slot-write-ast (object-ast slot-number-ast value-ast))

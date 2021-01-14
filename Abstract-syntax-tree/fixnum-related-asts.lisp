@@ -39,8 +39,7 @@
   (:arg2-ast arg2-ast)
   (:variable-ast variable-ast))
 
-(defmethod children ((ast fixnum-add-ast))
-  (list (arg1-ast ast) (arg2-ast ast) (variable-ast ast)))
+(define-children fixnum-add-ast (arg1-ast arg2-ast variable-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -74,8 +73,7 @@
   (:arg2-ast arg2-ast)
   (:variable-ast variable-ast))
 
-(defmethod children ((ast fixnum-sub-ast))
-  (list (arg1-ast ast) (arg2-ast ast) (variable-ast ast)))
+(define-children fixnum-sub-ast (arg1-ast arg2-ast variable-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
