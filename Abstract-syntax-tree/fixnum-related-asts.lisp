@@ -89,8 +89,7 @@
        (:arg1-ast arg1-ast)
        (:arg2-ast arg2-ast))
 
-     (defmethod children ((ast ,name))
-       (list (arg1-ast ast) (arg2-ast ast)))))
+     (define-children ,name (arg1-ast arg2-ast))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

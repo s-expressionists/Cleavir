@@ -16,9 +16,11 @@
 ;;;; INLINING).
 
 (defgeneric map-children (function ast)
-  (:argument-precedence-order ast function))
+  (:argument-precedence-order ast function)
+  (:method-combination progn))
 
-(defgeneric children (ast))
+(defgeneric children (ast)
+  (:method-combination append))
 
 (defmacro define-children (ast-class children-spec)
   (multiple-value-bind (children rest-child)
@@ -30,13 +32,13 @@
                 (values (append (butlast children-spec) (list (car last))) last-cdr)
                 (values children-spec nil))))
     `(progn
-       (defmethod children ((ast ,ast-class))
+       (defmethod children append ((ast ,ast-class))
          ,(let ((access (loop for child in children
                               collect `(,child ast))))
             (if rest-child
                 `(list* ,@access (,rest-child ast))
                 `(list ,@access))))
-       (defmethod map-children (function (ast ,ast-class))
+       (defmethod map-children progn (function (ast ,ast-class))
          ,@(when (and (null children) (not rest-child))
              `((declare (ignore function))))
          ,@(loop for child in children
@@ -475,7 +477,7 @@
   (:original-lambda-list original-lambda-list)
   (:attributes attributes))
 
-(defmethod children ((ast function-ast))
+(defmethod children append ((ast function-ast))
   (list* (body-ast ast)
          (loop for entry in (lambda-list ast)
                append (cond ((symbolp entry)
@@ -487,7 +489,7 @@
                             (t
                              (list entry))))))
 
-(defmethod map-children (function (ast function-ast))
+(defmethod map-children progn (function (ast function-ast))
   (funcall function (body-ast ast))
   (dolist (entry (lambda-list ast))
     (cond ((symbolp entry))
@@ -763,14 +765,14 @@
   (:ctype ctype)
   (:type-check-function-ast type-check-function-ast))
 
-(defmethod children ((ast the-ast))
+(defmethod children append ((ast the-ast))
   (let ((form-ast (form-ast ast))
         (type-check-function-ast (type-check-function-ast ast)))
     (if (symbolp type-check-function-ast)
         (list form-ast)
         (list form-ast type-check-function-ast))))
 
-(defmethod map-children (function (ast the-ast))
+(defmethod map-children progn (function (ast the-ast))
   (let ((form-ast (form-ast ast))
         (type-check-function-ast (type-check-function-ast ast)))
     (cond ((symbolp type-check-function-ast)
