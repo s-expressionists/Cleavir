@@ -37,6 +37,8 @@
                 `(list* ,@access (,rest-child ast))
                 `(list ,@access))))
        (defmethod map-children (function (ast ,ast-class))
+         ,@(when (and (null children) (not rest-child))
+             `((declare (ignore function))))
          ,@(loop for child in children
                  collect `(funcall function (,child ast)))
          ,(when rest-child
