@@ -8,16 +8,9 @@
    ;; instruction.
    (%extent :initarg :extent :accessor extent
             :initform :indefinite
-            :type (member :dynamic :indefinite))))
+            :type (member :dynamic :indefinite))
+   (%derived-type :initform (current-top-function-ctype))))
 (defmethod rtype ((d enclose)) :object)
-
-(defmethod initialize-instance :after
-    ((i enclose) &rest initargs &key inputs)
-  (declare (cl:ignore initargs))
-  (derive-type-for-linear-datum
-   i
-   (cleavir-ctype:function-top nil))
-  i)
 
 (defclass unreachable (no-input no-output terminator0) ())
 

@@ -46,12 +46,24 @@
 ;;; making inferences.
 (defgeneric ctype (linear-datum))
 
+;;; Default for ctypes.
+(defvar *top-ctype*)
+(defun current-top-ctype ()
+  (if (boundp '*top-ctype*)
+      *top-ctype*
+      (cleavir-ctype:top nil)))
+(defvar *top-function-ctype*)
+(defun current-top-function-ctype ()
+  (if (boundp '*top-function-ctype*)
+      *top-function-ctype*
+      (cleavir-ctype:function-top nil)))
+
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
          :type instruction)
    ;; A type the compiler has proven holds for this linear-datum.
-   (%derived-type :initform (cleavir-ctype:top nil)
+   (%derived-type :initform (current-top-ctype)
                   :initarg :derived-type
                   :writer (setf derived-type)
                   ;; For a generic linear datum, the type we use to
@@ -62,11 +74,11 @@
   (null (use datum)))
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
-(defun derive-type-for-linear-datum (linear-datum derived-type)
+(defun derive-type-for-linear-datum (linear-datum derived-type system)
   (setf (derived-type linear-datum)
         (cleavir-ctype:conjoin/2 (ctype linear-datum)
                                  derived-type
-                                 nil)))
+                                 system)))
 
 ;;; A datum with one definition and one use.
 (defclass transfer (ssa linear-datum) ())

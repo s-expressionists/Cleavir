@@ -58,7 +58,8 @@
               (cleavir-ctype:disjoin/2
                (cleavir-ctype:null-type system)
                (cleavir-ctype:cons top-ctype top-ctype system)
-               system)))))
+               system))
+            system)))
        lambda-list))
     (setf (cleavir-bir:start function) start)
     (begin inserter start)

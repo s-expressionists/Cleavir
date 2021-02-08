@@ -166,7 +166,9 @@
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*current-module* (make-module)))
+        (*current-module* (make-module))
+        (cleavir-bir:*top-ctype* (cleavir-ctype:top system))
+        (cleavir-bir:*top-function-ctype* (cleavir-ctype:function-top system)))
     (compile-function ast system)))
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
