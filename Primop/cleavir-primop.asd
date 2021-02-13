@@ -29,4 +29,5 @@
   :depends-on (:cleavir-attributes)
   :components
   ((:file "packages")
-   (:file "info" :depends-on ("packages"))))
+   (:file "info" :depends-on ("packages"))
+   (:file "definitions" :depends-on ("packages" "info"))))
