@@ -40,7 +40,7 @@
                 `(list ,@access))))
        (defmethod map-children progn (function (ast ,ast-class))
          ,@(when (and (null children) (not rest-child))
-             `((declare (ignore function))))
+             `((declare (cl:ignore function))))
          ,@(loop for child in children
                  collect `(funcall function (,child ast)))
          ,(when rest-child
