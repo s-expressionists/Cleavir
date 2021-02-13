@@ -4,12 +4,12 @@
 ;;;; only Common Lisp code, but also the low-level operations that we
 ;;;; use to implement the Common Lisp operators that can not be
 ;;;; portably implemented using other Common Lisp operators.
-;;;; 
+;;;;
 ;;;; The AST is a very close representation of the source code, except
 ;;;; that the environment is no longer present, so that there are no
 ;;;; longer any different namespaces for functions and variables.  And
 ;;;; of course, operations such as MACROLET are not present because
-;;;; they only alter the environment.  
+;;;; they only alter the environment.
 ;;;;
 ;;;; The AST form is the preferred representation for some operations;
 ;;;; in particular for PROCEDURE INTEGRATION (sometimes called
@@ -40,7 +40,7 @@
                 `(list ,@access))))
        (defmethod map-children progn (function (ast ,ast-class))
          ,@(when (and (null children) (not rest-child))
-             `((declare (ignore function))))
+             `((declare (cl:ignore function))))
          ,@(loop for child in children
                  collect `(funcall function (,child ast)))
          ,(when rest-child
@@ -110,7 +110,7 @@
 (defgeneric side-effect-free-p (ast))
 
 (defmethod side-effect-free-p (ast)
-  (declare (ignore ast))
+  (declare (cl:ignore ast))
   nil)
 
 (defmethod side-effect-free-p ((ast side-effect-free-ast-mixin))
@@ -119,7 +119,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; AST classes for standard common lisp features. 
+;;; AST classes for standard common lisp features.
 ;;;
 ;;; There is mostly a different type of AST for each Common Lisp
 ;;; special operator, but there are some exceptions.  Here are the
@@ -136,7 +136,7 @@
 ;;; FLET and LABELS are like LET except that the symbols the bind are
 ;;; in the function namespace, but the distinciton between namespeces
 ;;; no longer exists in the AST.
-;;; 
+;;;
 ;;; A LAMBDA expression, either inside (FUNCTION (LAMBDA ...)) or when
 ;;; it is the CAR of a compound form, compiles into a FUNCTION-AST.
 ;;; The FUNCTION special form does not otherwise require an AST
@@ -176,7 +176,7 @@
 ;;;
 ;;; Class CONSTANT-AST.
 ;;;
-;;; This class represents Lisp constants in source code.  
+;;; This class represents Lisp constants in source code.
 ;;;
 ;;; If the constant that was found was wrapped in QUOTE, then the
 ;;; QUOTE is not part of the value here, because it was stripped off.
@@ -219,7 +219,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class LEXICAL-AST.
-;;; 
+;;;
 ;;; A LEXICAL-AST represents a reference to a lexical variable.
 
 (defclass lexical-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
@@ -363,9 +363,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class CALL-AST. 
+;;; Class CALL-AST.
 ;;;
-;;; A CALL-AST represents a function call.  
+;;; A CALL-AST represents a function call.
 
 (defclass call-ast (ast)
   ((%callee-ast :initarg :callee-ast :reader callee-ast)
@@ -405,10 +405,10 @@
 ;;; LABELS.
 ;;;
 ;;; The lambda list is not a normal lambda list.  It has the following
-;;; form: 
+;;; form:
 ;;; ([r1 .. rl [&optional o1 ..om] [&rest r] [&key k1 .. kn &allow-other-keys]]])
 ;;;
-;;; where: 
+;;; where:
 ;;;
 ;;;   - Each ri is a LEXICAL-VARIABLE.
 ;;;
@@ -416,7 +416,7 @@
 ;;;
 ;;;   - Each oi is a list of two LEXICAL-VARIABLEs.  The second of the
 ;;;     two conceptually contains a Boolean value indicating whether
-;;;     the first one contains a value supplied by the caller.  
+;;;     the first one contains a value supplied by the caller.
 ;;;
 ;;;   - Each ki is a list of a symbol and two LEXICAL-VARIABLEs.  The
 ;;;     symbol is the keyword-name that a caller must supply in order
@@ -577,7 +577,7 @@
   (make-instance 'block-ast
     :origin origin :policy policy :name name
     :body-ast body-ast))
-  
+
 (cleavir-io:define-save-info block-ast
   (:name name)
   (:body-ast body-ast))
@@ -652,8 +652,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class MULTIPLE-VALUE-SETQ-AST.
-;;; 
-;;; This AST can be used to represent MULTIPLE-VALUE-BIND.  
+;;;
+;;; This AST can be used to represent MULTIPLE-VALUE-BIND.
 ;;;
 ;;; The LEXICAL-VARIABLES is a list of lexical variables to be assigned to.
 ;;; FORM-AST represents a form to be evaluated, and the values of
@@ -874,7 +874,7 @@
 ;;;
 ;;; The optional argument READ-ONLY-P is not a child of the AST
 ;;; because it can only be a Boolean which is not evaluated, so we
-;;; know at AST creation time whether it is true or false. 
+;;; know at AST creation time whether it is true or false.
 
 (defclass load-time-value-ast (one-value-ast-mixin ast)
   ((%form :initarg :form :reader form)
@@ -887,7 +887,7 @@
     :read-only-p read-only-p))
 
 ;;; Even though READ-ONLY-P is not a child of the AST, it needs to be
-;;; saved when the AST is saved. 
+;;; saved when the AST is saved.
 (cleavir-io:define-save-info load-time-value-ast
   (:form form)
   (:read-only-p read-only-p))
@@ -1066,7 +1066,7 @@
 ;;; This AST is used to create a dynamic binding for a symbol for the
 ;;; duration of the execution of the body.  It is generated as a
 ;;; result of a binding of a special variable in a LET, LET*, or a
-;;; lambda list of a function. 
+;;; lambda list of a function.
 
 (defclass bind-ast (ast)
   ((%symbol :initarg :symbol :reader symbol)
