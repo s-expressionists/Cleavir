@@ -43,7 +43,6 @@
    #:first-form-ast
    #:load-time-value-ast #:make-load-time-value-ast #:read-only-p
    #:form
-   #:body-asts
    #:progn-ast #:make-progn-ast #:form-asts
    #:return-from-ast #:make-return-from-ast #:form-ast
    #:setq-ast #:make-setq-ast #:value-ast
