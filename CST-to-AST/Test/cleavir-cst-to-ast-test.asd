@@ -17,4 +17,6 @@
                    (find-symbol "*POLICY*" (find-package "CLEAVIR-AST")))
              (list (symbol-value (find-symbol "*IO-READTABLE*" (find-package "CLEAVIR-IO")))
                    nil)
-        (funcall thunk))))))
+        (funcall thunk)))))
+  :perform (test-op (operation component)
+             (uiop:symbol-call '#:cleavir-cst-to-ast-test '#:test)))
