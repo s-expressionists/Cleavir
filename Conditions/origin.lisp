@@ -13,5 +13,5 @@
 ;;;
 ;;; ORIGIN is a convenience mixin for condition types that directly store their
 ;;; origin in a slot.
-(defclass origin (acclimation:condition)
+(define-condition origin (acclimation:condition)
   ((%origin :initarg :origin :reader origin)))

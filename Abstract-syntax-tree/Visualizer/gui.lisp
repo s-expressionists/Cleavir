@@ -160,7 +160,7 @@
     ;; (clim:with-output-as-presentation (pane layout 'layout)
     ;;   (clim:draw-rectangle* pane 500 500 600 600 :ink clim:+red+))
     layout))
-                 
+
 (defun visualize (ast)
   (clim:run-frame-top-level
    (clim:make-application-frame 'visualizer :ast ast)))
@@ -170,8 +170,8 @@
 
 (define-visualizer-command (com-inspect-ast :name t)
     ((ast 'cleavir-ast:ast))
-  (clouseau:inspector ast))
+  (clouseau:inspect ast :new-process t))
 
 (define-visualizer-command (com-inspect-layout :name t)
     ((layout 'layout))
-  (clouseau:inspector layout))
+  (clouseau:inspect layout :new-process t))

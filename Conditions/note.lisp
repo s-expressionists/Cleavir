@@ -11,7 +11,7 @@
 ;;; Essentially, there is no problem with the code itself per se, but the
 ;;; compiler is not doing its best with it.
 
-(defclass program-note (program-condition) ())
+(define-condition program-note (program-condition) ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

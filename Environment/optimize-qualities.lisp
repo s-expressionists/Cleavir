@@ -13,7 +13,7 @@
 ;;; implementation-specific method has been defined.  It returns the
 ;;; optimize qualities defined in the HyperSpec.
 (defmethod optimize-qualities (environment)
-  (declare (ignore environment))
+  (declare (cl:ignore environment))
   '((speed (integer 0 3) 3)
     (debug (integer 0 3) 3)
     (space (integer 0 3) 3)
