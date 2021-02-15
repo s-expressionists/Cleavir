@@ -88,78 +88,65 @@
   (with-preserved-toplevel-ness
     (cst:db s (eval-when-cst situations-cst . body-cst) cst
       (declare (ignore eval-when-cst))
-      (let ((situations (cst:raw situations-cst)))
+      (let* ((situations (cst:raw situations-cst))
+             ;; These correspond to the abbreviations in CLHS Figure 3-7.
+             (ct (or (member :compile-toplevel situations)
+                     (member 'cl:compile situations)))
+             (lt (or (member :load-toplevel situations)
+                     (member 'cl:load situations)))
+             (e  (or (member :execute situations)
+                     (member 'cl:eval situations))))
         (if (or (eq *compiler* 'cl:compile)
                 (eq *compiler* 'cl:eval)
                 (not *current-form-is-top-level-p*))
-            (if (or (member :execute situations)
-                    (member 'cl:eval situations))
+            ;; If we're not in the file compiler, or we're not top-level,
+            ;; eval-when is simple: it's progn if :execute is included, or
+            ;; otherwise the whole form is discarded.
+            (if e
                 (process-progn
                  (convert-sequence body-cst environment system)
                  s)
                 (convert (make-atom-cst nil s) environment system))
-            (cond ((or
+            ;; If we ARE in the file compiler, process according to Figure 3-7
+            ;; in CLHS 3.2.3.1, "Processing of Top Level Forms".
+            (cond (;; Process in compile-time-too mode
+                   (or
                     ;; CT   LT   E    Mode
                     ;; Yes  Yes  ---  ---
-                    (and (or (member :compile-toplevel situations)
-                             (member 'cl:compile situations))
-                         (or (member :load-toplevel situations)
-                             (member 'cl:load situations)))
-                    ;; CT   LT   E    Mode
                     ;; No   Yes  Yes  CTT
-                    (and (not (or (member :compile-toplevel situations)
-                                  (member 'compile situations)))
-                         (or (member :load-toplevel situations)
-                             (member 'load situations))
-                         (or (member :execute situations)
-                             (member 'eval situations))
-                         *compile-time-too*))
+                    (and ct lt)
+                    (and (not ct) lt e *compile-time-too*))
                    (let ((*compile-time-too* t))
                      (process-progn
                       (convert-sequence body-cst environment system))))
-                  ((or
+                  (;; Process in not-compile-time mode
+                   (or
                     ;; CT   LT   E    Mode
                     ;; No   Yes  Yes  NCT
-                    (and (not (or (member :compile-toplevel situations)
-                                  (member 'compile situations)))
-                         (or (member :load-toplevel situations)
-                             (member 'load situations))
-                         (or (member :execute situations)
-                             (member 'eval situations))
-                         (not *compile-time-too*))
-                    ;; CT   LT   E    Mode
                     ;; No   Yes  No   ---
-                    (and (not (or (member :compile-toplevel situations)
-                                  (member 'compile situations)))
-                         (or (member :load-toplevel situations)
-                             (member 'load situations))
-                         (not (or (member :execute situations)
-                                  (member 'eval situations)))))
+                    (and (not ct) lt e (not *compile-time-too*))
+                    (and (not ct) lt (not e)))
                    (let ((*compile-time-too* nil))
                      (process-progn
                       (convert-sequence body-cst environment system))))
-                  ((or
+                  (;; Evaluate (and don't process)
+                   (or
                     ;; CT   LT   E    Mode
                     ;; Yes  No   ---  ---
-                    (and (or (member :compile-toplevel situations)
-                             (member 'compile situations))
-                         (not (or (member :load-toplevel situations)
-                                  (member 'load situations))))
-                    ;; CT   LT   E    Mode
                     ;; No   No   Yes  CTT
-                    (and (not (or (member :compile-toplevel situations)
-                                  (member 'compile situations)))
-                         (not (or (member :load-toplevel situations)
-                                  (member 'load situations)))
-                         (or (member :execute situations)
-                             (member 'eval situations))
-                         *compile-time-too*))
+                    (and ct (not lt))
+                    (and (not ct) (not lt) e *compile-time-too*))
                    (cst-eval
                     (cst:cons (make-atom-cst 'progn s) body-cst
                               :source s)
                     environment system)
                    (convert (make-atom-cst nil s) environment system))
-                  (t
+                  (;; Discard
+                   ;; CT   LT    E    Mode
+                   ;; No   No    Yes  NCT
+                   ;; No   No    No   ---
+                   ;; (But we've exhausted the cases at this point.)
+                   t
                    (convert (make-atom-cst nil s) environment system))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
