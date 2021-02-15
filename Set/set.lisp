@@ -180,6 +180,18 @@
        (doset (e minuend result)
          (unless (presentp e subtrahend) (push e result)))))))
 
+;;; Different name from "difference" to reflect the different lambda list.
+;;; FIXME: That's kind of ugly.
+(defun nsubtract (minuend subtrahend)
+  (doset (s subtrahend) (nremovef minuend s)))
+
+(defmacro nsubtractf (minuend subtrahend &environment env)
+  (multiple-value-bind (temps values stores write read)
+      (get-setf-expansion minuend env)
+    `(let* (,@(mapcar #'list temps values))
+       (multiple-value-bind (,@stores) (nsubtract ,read ,subtrahend)
+         ,write))))
+
 (defmethod print-object ((s set) stream)
   (print-unreadable-object (s stream :type t)
     (format stream "{~{~a~^ ~}}" (set-to-list s))))
