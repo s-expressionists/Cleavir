@@ -125,7 +125,7 @@
 (defun proper-function-name-p (name-cst)
   (let ((name (cst:raw name-cst)))
     (or (symbolp name)
-        (and (cleavir-code-utilities:proper-list-p name)
+        (and (cst:proper-list-p name-cst)
              (= (length name) 2)
              (eq (car name) 'setf)
              (symbolp (cadr name))))))
