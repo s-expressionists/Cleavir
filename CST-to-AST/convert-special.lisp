@@ -5,7 +5,7 @@
              *current-form-is-top-level-p*
              (not (member operator
                           '(progn locally macrolet symbol-macrolet eval-when))))
-    (cst-eval cst environment system)))
+    (cst-eval-for-effect cst environment system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -136,7 +136,7 @@
                     ;; No   No   Yes  CTT
                     (and ct (not lt))
                     (and (not ct) (not lt) e *compile-time-too*))
-                   (cst-eval
+                   (cst-eval-for-effect
                     (cst:cons (make-atom-cst 'progn s) body-cst
                               :source s)
                     environment system)

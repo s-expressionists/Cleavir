@@ -93,6 +93,9 @@
       (cst eval-error eval-warning eval-style-warning)
     (cleavir-env:cst-eval cst environment environment system)))
 
+(defmethod cst-eval-for-effect (cst environment system)
+  (cst-eval cst environment system))
+
 (defun make-atom-cst (object &optional origin)
   (make-instance 'cst:atom-cst :raw object :source origin))
 

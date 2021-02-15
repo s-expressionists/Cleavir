@@ -152,7 +152,7 @@
   ;; we are in COMPILE-TIME-TOO mode.  In that case, we must first
   ;; evaluate the form.
   (when (and *current-form-is-top-level-p* *compile-time-too*)
-    (cst-eval cst env system))
+    (cst-eval-for-effect cst env system))
   (let ((compiler-macro (cleavir-env:compiler-macro info))
         (notinline (eq 'notinline (cleavir-env:inline info))))
     (if (or notinline (null compiler-macro))

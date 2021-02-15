@@ -50,6 +50,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic function CST-EVAL-FOR-EFFECT.
+;;;
+;;; This generic function is called in order on every CST that is
+;;; evaluated for compile-time-too mode. The default method just
+;;; calls CLEAVIR-ENV:CST-EVAL.
+;;; A client could, for example, specialize this function to produce
+;;; a "CFASL" file recording only compile time side effects.
+
+(defgeneric cst-eval-for-effect (cst environment system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function TYPE-WRAP.
 ;;;
 ;;; Given an AST and a values ctype, returns a new AST that incorporates

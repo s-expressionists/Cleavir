@@ -18,6 +18,7 @@
            #:convert-setq
            #:convert-let
            #:convert-let*
+           #:cst-eval-for-effect
            #:type-wrap #:type-wrap-argument #:type-wrap-return-values
            #:process-parameter-groups
            #:process-parameter-group
