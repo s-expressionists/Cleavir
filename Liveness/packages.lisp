@@ -1,3 +1,4 @@
 (defpackage #:cleavir-liveness
   (:use #:cl)
-  (:shadow #:liveness))
+  (:shadow #:liveness)
+  (:export #:liveness #:live-before #:live-after))
