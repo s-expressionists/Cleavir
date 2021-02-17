@@ -8,7 +8,7 @@
 (defmacro with-graph ((graph) &body body)
   (let ((root (gensym "ROOT")) (size (gensym "SIZE"))
         (map-nodes (gensym "MAP-NODES"))
-        (map-depth-first-preorder (gensym "MAP-DF-PRE"))
+        (map-nodes-depth-first-preorder (gensym "MAP-DF-PRE"))
         (map-inputs (gensym "MAP-INPUTS")) (map-outputs (gensym "MAP-OUTPUTS"))
         (map-predecessors (gensym "MAP-PREDECESSORS"))
         (map-successors (gensym "MAP-SUCCESSORS")))
