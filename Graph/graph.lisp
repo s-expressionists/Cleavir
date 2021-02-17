@@ -17,13 +17,13 @@
                          ,map-predecessors ,map-successors)
        (graph-functions ,graph)
      (declare (type (function () t) ,root)
-              (type (function (t) (integer 0)) ,size)
+              (type (function () (integer 0)) ,size)
               (type graph-mapper ,map-nodes ,map-nodes-depth-first-preorder)
               (type node-mapper ,map-inputs  ,map-outputs
                     ,map-predecessors ,map-successors))
      (flet ((root () (funcall ,root))
             (size () (funcall ,size))
-            (map-nodes (function) (funcall ,map-nodes))
+            (map-nodes (function) (funcall ,map-nodes function))
             (map-nodes-depth-first-preorder (function)
               (funcall ,map-nodes-depth-first-preorder function))
             (depth-first-preorder ()
@@ -42,6 +42,7 @@
                         map-predecessors map-successors)
                 (ignorable #'root #'size
                            #'map-nodes #'map-nodes-depth-first-preorder
+                           #'depth-first-preorder
                            #'map-inputs #'map-outputs
                            #'map-predecessors #'map-successors))
        ,@body))))
@@ -59,7 +60,7 @@
   `(block nil
      (map-inputs (lambda (,name) (tagbody ,@body)) ,node)
      ,result))
-(defmacro do-outputs ((name node) &body body)
+(defmacro do-outputs ((name node &optional result) &body body)
   `(block nil
      (map-outputs (lambda (,name) (tagbody ,@body)) ,node)
      ,result))
