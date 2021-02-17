@@ -82,7 +82,7 @@
   (cleavir-meter:with-meter (m *immediate-dominators-meter*)
     (cleavir-graph:with-graph (graph)
       (let* ((parent (make-hash-table :test #'eq))
-             (vertex (make-array (node-count graph)))
+             (vertex (make-array (cleavir-graph:size)))
              (semi (make-hash-table :test #'eq))
              (dom (make-hash-table :test #'eq))
              (bucket (make-hash-table :test #'eq))
@@ -117,7 +117,7 @@
                        (when (zerop (semi-default w))
                          (setf (parent w) v)
                          (dfs w)))))
-            (dfs start-node))
+            (dfs (cleavir-graph:root)))
           (labels ((evaluate (v)
                      (if (null (ancestor v))
                          v
