@@ -20,14 +20,14 @@
 ;;; Default implementation: Serially processed stack.
 
 (defclass worklist (traversal)
-  ((%list :initform nil :reader worklist-list)))
+  ((%list :initform nil :accessor worklist-list)))
 
 (defmethod mark ((traversal worklist) node)
   (pushnew node (worklist-list traversal) :test #'eq))
 
 (defmethod work ((traversal worklist) graph)
   (loop for work = (pop (worklist-list traversal))
-        do (flow (traversal-flow traversal) graph work)
+        do (flow (%flow traversal) graph work)
         until (null (worklist-list traversal))))
 
 (defmethod initialize ((traversal traversal) graph)
