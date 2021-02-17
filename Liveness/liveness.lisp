@@ -7,7 +7,7 @@
                 :initform (cleavir-set:empty-set))))
 
 (defmethod cleavir-flow:flow ((flow liveness) graph node)
-  (cleavir-flow:with-graph (graph)
+  (cleavir-graph:with-graph (graph)
     (let ((live-before (%live-before node flow)))
       (unless (cleavir-graph:do-inputs (input node t) ; every
                 (unless (cleavir-set:presentp input live-before) (return nil)))
