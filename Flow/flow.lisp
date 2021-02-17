@@ -12,7 +12,7 @@
              (setf (gethash node table)
                    (funcall (,initf-reader flow) node)))))))
 (defun gen-writer (name table-reader)
-  `(defun (setf ,name) (new node flow)
+  `(defun ,name (new node flow)
      (setf (gethash node (,table-reader flow)) new)))
 
 (defstruct pslotd name table-reader readers writers initf-name initf-form)
@@ -30,7 +30,7 @@
                do (setf initfunction
                         (if initfunction
                             (error "Cannot specify more than one initfunction/initform in slotd ~a" slotd)
-                            ,value))
+                            value))
         else if (eq key :reader)
                collect value into readers
         else if (eq key :writer)
@@ -111,11 +111,12 @@
           ,@(loop for pslotd in pslotds
                   for initf-name = (pslotd-initf-name pslotd)
                   for initf-form = (pslotd-initf-form pslotd)
-                  `(,initf-name :initform ,initf-form :allocation :class
-                                :reader ,initf-name))))
+                  collect `(,initf-name :initform ,initf-form
+                                        :allocation :class
+                                        :reader ,initf-name))))
        ,@(loop for pslotd in pslotds
                for table-reader = (pslotd-table-reader pslotd)
-               for initf-reader = (pslotd-initf-name plsotd)
+               for initf-reader = (pslotd-initf-name pslotd)
                nconc (loop for reader in (pslotd-readers pslotd)
                            collect (gen-reader
                                     reader table-reader initf-reader))
