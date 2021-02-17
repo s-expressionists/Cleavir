@@ -24,8 +24,9 @@
 		       (setf (gethash node table) t)
 		       (unless (cleavir-graph:do-outputs (out node nil)
                                  (when (eq var out) (return t)))
-                         (cleavir-graph:do-successors (succ node)
-                           (traverse succ (cons node path))))))))
+                         (let ((new-path (cons node path)))
+                           (cleavir-graph:do-successors (succ node)
+                             (traverse succ new-path))))))))
         (cleavir-graph:do-successors (succ node) (traverse succ '())))
       table)))
 
@@ -33,26 +34,20 @@
   (let ((reaching-definitions
 	  (cleavir-reaching-definitions:reaching-definitions graph)))
     (cleavir-graph:with-graph (graph)
-      (cleavir-graph:do-nodes (node)
-        (cleavir-graph:do-outputs (var node)
-          (let ((nodes-reached (nodes-reached-by-definition graph node var)))
+      (cleavir-graph:do-nodes (definer)
+        (cleavir-graph:do-outputs (var definer)
+          (let ((nodes-reached
+                  (nodes-reached-by-definition graph definer var)))
 	    (loop for n being each hash-key of nodes-reached
-		  do (assert (member (cons node var)
-				     (cleavir-reaching-definitions:reaching
-                                      n reaching-definitions)
-				     :test #'equal)))
-	    (loop for n being each hash-key of reaching-definitions
-		  do (if (gethash n nodes-reached)
-			 (assert (member
-				  (cons node var)
-				  (cleavir-reaching-definitions:reaching
-                                   n reaching-definitions)
-				  :test #'equal))
-			 (assert (not (member
-				       (cons node var)
-                                       (cleavir-reaching-definitions:reaching
-                                        n reaching-definitions)
-				       :test #'equal)))))))))))
+                  for ntable = (cleavir-reaching-definitions:reaching
+                                n reaching-definitions)
+		  do (assert (eq definer (gethash var ntable))))
+            (cleavir-graph:do-nodes (user)
+              (let ((utable (cleavir-reaching-definitions:reaching
+                             user reaching-definitions)))
+                (if (gethash user nodes-reached)
+                    (assert (eq definer (gethash var utable)))
+                    (assert (not (eq definer (gethash var utable)))))))))))))
 
 (defun test-reaching-definitions (&optional (n 10000))
   (loop repeat n
