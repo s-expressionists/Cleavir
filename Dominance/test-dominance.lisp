@@ -136,3 +136,5 @@
     (loop repeat n
 	  do (test-dominance-frontiers-one-flow-chart
 	      (cleavir-graph-test-utilities:random-flow-chart)))))
+
+(defun test (&optional (n 10000)) (test-dominance-frontiers n))
