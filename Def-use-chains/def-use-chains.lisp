@@ -4,22 +4,18 @@
 ;;; represented by a list whose CAR is the DEFINITION (i.e, a CONS of
 ;;; a NODE and a VARIABLE), and whose CDR is a list of nodes where the
 ;;; definition is used.
-(defun def-use-chains (start-node successor-fun in-fun out-fun)
+(defun def-use-chains (graph)
   (let ((reaching-definitions
-	  (cleavir-reaching-definitions:reaching-definitions
-	   start-node successor-fun out-fun))
+	  (cleavir-reaching-definitions:reaching-definitions graph))
 	(def-use-chains (make-hash-table :test #'eq)))
-    (cleavir-utilities:map-nodes
-     start-node
-     successor-fun
-     (lambda (node)
-       (loop for reaching in (gethash node reaching-definitions)
-	     do (when (member (cdr reaching) (funcall in-fun node))
-		  (push node (gethash reaching def-use-chains))))))
+    (cleavir-graph:with-graph (graph)
+      (cleavir-graph:do-nodes (node)
+        (loop for reaching in (cleavir-reaching-definitions:reaching
+                               reaching-definitions node)
+	      do (when (cleavir-graph:input-present-p node (cdr reaching))
+		   (push node (gethash reaching def-use-chains))))))
     (let ((result '()))
       (maphash (lambda (definition nodes)
 		 (push (cons definition nodes) result))
 	       def-use-chains)
       result)))
-
-	       

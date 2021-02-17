@@ -1,4 +1,4 @@
-(cl:in-package #:cleavir-test-utilities)
+(in-package #:cleavir-graph-test-utilities)
 
 ;;;; This file contains code for generating a random flowchart and for
 ;;;; drawing such a chart as a Graphviz file.
@@ -8,6 +8,18 @@
    (%inputs :initform '() :accessor inputs)
    (%outputs :initform '() :accessor outputs)
    (%successors :initform '() :accessor successors)))
+
+(defun map-inputs (f node) (mapc f (inputs node)))
+(defun map-outputs (f node) (mapc f (outputs node)))
+(defun map-successors (f node) (mapc f (successors node)))
+
+(defmethod graph-functions ((node node))
+  (let ((df-preorder (depth-first-preorder-thunk node #'map-successors)))
+    (values (lambda () node) (size-thunk node #'map-successors)
+            df-preorder df-preorder
+            #'map-inputs #'map-outputs
+            (map-predecessors-thunk node #'map-successors)
+            #'map-successors)))
 
 (defun make-node (&optional successors)
   (make-instance 'node :successors successors))
@@ -59,16 +71,15 @@
 		  (v2 (elt (remove v1 vars) (random (1- (length vars))))))
 	     (list v1 v2))))))
 
-(defun assign-random-inputs/outputs (start-node)
-  (let* ((node-count (cleavir-utilities:count-nodes
-		      start-node #'successors))
-	 (variables (loop repeat (+ (round (* node-count 1)) 2)
-			  collect (gensym))))
-    (cleavir-utilities:map-nodes
-     start-node #'successors
-     (lambda (node)
-       (setf (inputs node) (random-inputs variables))
-       (setf (outputs node) (random-outputs variables))))))
+(defun assign-random-inputs/outputs (graph)
+  (with-graph (graph)
+    (let* ((node-count (size))
+	   (variables (loop repeat (+ (round (* node-count 1)) 2)
+			    collect (gensym))))
+      (map-nodes
+       (lambda (node)
+         (setf (inputs node) (random-inputs variables))
+         (setf (outputs node) (random-outputs variables)))))))
 
 (defun random-flow-chart
     (&optional
@@ -119,54 +130,48 @@
 		 (setf layer next-layer)
 		 (setf next-layer '()))))
     (assign-random-inputs/outputs initial)
-    (values initial #'successors #'inputs #'outputs)))
+    initial))
 
-(defun draw-flow-chart (initial-node filename)
+(defun draw-flow-chart (graph filename)
   (with-open-file (stream filename
 			  :direction :output
 			  :if-exists :supersede)
-    (format stream "digraph G {~%")
-    ;; First draw all the nodes.
-    (cleavir-utilities:map-nodes
-     initial-node #'successors
-     (lambda (node)
-       (format stream
-	       "   ~a [shape = box, label = \"~a\"];~%"
-	       (name node) (name node))))
-    ;; Next draw all the links between nodes
-    (cleavir-utilities:map-nodes
-     initial-node #'successors
-     (lambda (node)
-       (loop for succ in (successors node)
-	     do (format stream
-			"   ~a -> ~a [style = bold];~%"
-			(name node)
-			(name succ)))))
+    (with-graph (graph)
+      (format stream "digraph G {~%")
+      ;; First draw all the nodes.
+      (do-nodes (node)
+        (format stream
+	        "   ~a [shape = box, label = \"~a\"];~%"
+	        (name node) (name node)))
+      
+      ;; Next draw all the links between nodes
+      (do-nodes (node)
+        (loop for succ in (successors node)
+	      do (format stream
+			 "   ~a -> ~a [style = bold];~%"
+			 (name node)
+			 (name succ))))
     
      ;; Draw all the variables.
      (let ((table (make-hash-table :test #'eq)))
-       (cleavir-utilities:map-nodes
-	initial-node #'successors
-	(lambda (node)
-	  (loop for var in (append (inputs node) (outputs node))
-		do (unless (gethash var table)
-		     (setf (gethash var table) t)
-		     (format stream
-			     "   ~a [shape = ellipse, label = \"~a\"];~%"
-			     var var))))))
-    ;; Draw all the inputs and outputs.
-    (cleavir-utilities:map-nodes
-     initial-node #'successors
-     (lambda (node)
-       (loop for var in (inputs node)
-	     do (format stream
-			"   ~a -> ~a [color = red, style = dashed];~%"
-			var (name node)))
-       (loop for var in (outputs node)
-	     do (format stream
-			"   ~a -> ~a [color = blue, style = dashed];~%"
-			(name node) var))))
-    (format stream "}~%")))
+       (do-nodes (node)
+	 (loop for var in (append (inputs node) (outputs node))
+	       do (unless (gethash var table)
+		    (setf (gethash var table) t)
+		    (format stream
+			    "   ~a [shape = ellipse, label = \"~a\"];~%"
+			    var var)))))
+      ;; Draw all the inputs and outputs.
+      (do-nodes (node)
+        (loop for var in (inputs node)
+	      do (format stream
+		         "   ~a -> ~a [color = red, style = dashed];~%"
+		         var (name node)))
+        (loop for var in (outputs node)
+	      do (format stream
+		         "   ~a -> ~a [color = blue, style = dashed];~%"
+		         (name node) var)))
+      (format stream "}~%"))))
 
 (defun draw-preorder (preorder filename)
   (with-open-file (stream filename

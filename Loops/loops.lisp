@@ -43,25 +43,19 @@
 ;;; (represented as a list) of strongly connected components, each
 ;;; represented as a list of nodes.  A trivial component will be
 ;;; represented as a list of a single element.
-(defun kosaraju (start-node successor-fun)
-  (let ((pre (cleavir-utilities:depth-first-search-preorder
-	      start-node successor-fun))
-	(table (make-hash-table :test #'eq))
-	(result '())
-	(temp '()))
-    (let ((predecessor-fun (cleavir-utilities:predecessor-function
-			    start-node successor-fun)))
+(defun kosaraju (graph)
+  (cleavir-graph:with-graph (graph)
+    (let ((table (make-hash-table :test #'eq))
+	  (result '())
+	  (temp '()))
       (labels ((traverse (node)
-		 (unless (gethash node table)
+	         (unless (gethash node table)
 		   (setf (gethash node table) t)
-		   (loop for pred in (funcall predecessor-fun node)
-			 do (traverse pred))
+                   (cleavir-graph:map-predecessors #'traverse node)
 		   (push node temp))))
-	(loop until (null pre)
-	      for initial = (pop pre)
-	      unless (gethash initial table)
-		do (setf temp '())
-		   (traverse initial)
-		   (push temp result))
+        (cleavir-graph:do-nodes-depth-first-preorder (initial graph)
+	  (unless (gethash initial table)
+	    (setf temp '())
+	    (traverse initial)
+	    (push temp result)))
 	result))))
-
