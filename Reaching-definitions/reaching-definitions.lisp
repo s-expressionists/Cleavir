@@ -8,7 +8,7 @@
     (let ((before (before node)))
       (cleavir-graph:do-successors (succ node)
         (let ((sbefore (before succ)) (changep nil))
-          (cleavir-graph:do-outputs (out)
+          (cleavir-graph:do-outputs (out node)
             (unless (gethash out sbefore)
               (setf (gethash out sbefore) node changep t)))
           (maphash (lambda (out definer)
