@@ -11,8 +11,9 @@
     (cleavir-graph:with-graph (graph)
       (cleavir-graph:do-nodes (node)
         (loop for reaching in (cleavir-reaching-definitions:reaching
-                               reaching-definitions node)
-	      do (when (cleavir-graph:input-present-p node (cdr reaching))
+                               node reaching-definitions)
+	      do (when (cleavir-graph:do-inputs (input nil)
+                         (when (eq input (cdr reaching)) (return t)))
 		   (push node (gethash reaching def-use-chains))))))
     (let ((result '()))
       (maphash (lambda (definition nodes)
