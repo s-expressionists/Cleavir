@@ -72,3 +72,20 @@
   `(block nil
      (map-successors (lambda (,name) (tagbody ,@body)) ,node)
      ,result))
+
+;;;
+
+(macrolet ((defdummy (name lambda-list)
+             `(defun ,name (,@lambda-list)
+                (declare (ignore ,@lambda-list))
+                (error "~a can only be used within a ~a form."
+                       ',name 'with-graph))))
+  (defdummy root ())
+  (defdummy size ())
+  (defdummy map-nodes (function))
+  (defdummy map-nodes-depth-first-preorder (function))
+  (defdummy depth-first-preorder ())
+  (defdummy map-inputs (function node))
+  (defdummy map-outputs (function node))
+  (defdummy map-predecessors (function node))
+  (defdummy map-successors (function node)))
