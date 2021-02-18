@@ -90,8 +90,17 @@
        (test (typep (first inputs) 'constant)
              "Constant reference ~a has non-constant input ~a"
              instruction (first inputs))
-       (test (cleavir-set:presentp (first inputs) (constants *verifying-module*))
+       (test (cleavir-set:presentp (first inputs)
+                                   (constants *verifying-module*))
              "Referenced constant ~a not in its module."
+             (first inputs)))
+      (load-time-value-reference
+       (test (typep (first inputs) 'load-time-value)
+             "LTV reference ~a has non-LTV input ~a"
+             instruction (first inputs))
+       (test (cleavir-set:presentp (first inputs)
+                                   (load-time-values *verifying-module*))
+             "Referenced LTV ~a is not in its module."
              (first inputs)))
       (t (flet ((validp (v)
                   (etypecase v

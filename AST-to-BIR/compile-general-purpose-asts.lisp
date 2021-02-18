@@ -648,7 +648,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;;
+;;; CONSTANT-AST
 
 (defmethod compile-ast ((ast cleavir-ast:constant-ast) inserter system)
   (declare (ignore system))
@@ -660,12 +660,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; LOAD-TIME-VALUE-AST. Needs work.
+;;; LOAD-TIME-VALUE-AST
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)
   (declare (ignore system))
-  (let ((inst (make-instance 'cleavir-bir:load-time-value
-                :form (cleavir-ast:form ast)
-                :read-only-p (cleavir-ast:read-only-p ast))))
-    (cleavir-set:nadjoinf (cleavir-bir:load-time-values *current-module*) inst)
-    (list (insert inserter inst))))
+  (list
+   (insert inserter
+           (cleavir-bir:make-load-time-value-reference
+            (cleavir-bir:load-time-value-in-module
+             (cleavir-ast:form ast) (cleavir-ast:read-only-p ast)
+             *current-module*)))))

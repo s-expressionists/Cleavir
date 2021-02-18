@@ -4,7 +4,8 @@
   (:use #:cl)
   (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
            #:disassemble #:ignore)
-  (:export #:module #:functions #:constants #:constant-in-module #:load-time-values)
+  (:export #:module #:functions #:constants #:constant-in-module
+           #:load-time-values #:load-time-value-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
@@ -28,6 +29,7 @@
   (:export #:multiple-to-fixed #:fixed-to-multiple
            #:accessvar #:writevar #:readvar #:cast
            #:constant-reference #:make-constant-reference
+           #:load-time-value-reference #:make-load-time-value-reference
            #:returni #:unreachable #:eqi #:jump #:unwindp
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test

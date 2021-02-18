@@ -91,6 +91,12 @@
    (%readers :initform (cleavir-set:empty-set) :accessor readers)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
+(defclass load-time-value (value)
+  ((%form :initarg :form :reader form)
+   (%read-only-p :initarg :read-only-p :reader read-only-p)
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)
+   (%rtype :initarg :rtype :initform :object :reader rtype)))
+
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
 ;;; however; default values are NIL. (TODO: Is that right for policy?)
@@ -400,6 +406,17 @@
           (cleavir-set:nadjoinf (constants module) constant)
           (setf (gethash constant-value constant-table) constant)
           constant))))
+
+;;; Find the L-T-V object for the given load-time-value form, allocating
+;;; a new one in the module if necessary.
+(defun load-time-value-in-module (form read-only-p module)
+  ;; Actually we always make a new one. The standard mentions the possibility
+  ;; of coalescing if the forms are identical, but that's pretty marginal.
+  ;; We can look into it later if we need to.
+  (let ((ltv (make-instance 'load-time-value
+               :form form :read-only-p read-only-p)))
+    (cleavir-set:nadjoinf (load-time-values module) ltv)
+    ltv))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))

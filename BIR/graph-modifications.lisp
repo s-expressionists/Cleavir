@@ -30,6 +30,8 @@
   (cleavir-set:nadjoinf (readers datum) use))
 (defmethod add-use ((datum constant) use)
   (cleavir-set:nadjoinf (readers datum) use))
+(defmethod add-use ((datum load-time-value) use)
+  (cleavir-set:nadjoinf (readers datum) use))
 (defmethod add-use ((datum function) (use abstract-local-call))
   (cleavir-set:nadjoinf (local-calls datum) use))
 
