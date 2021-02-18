@@ -252,9 +252,13 @@
   (cond ((function-ctype-p fctype)
          (function-returns fctype))
         ((intersection-ctype-p fctype)
-         (cl:apply #'conjoin system (intersection-ctypes fctype)))
+         (cl:apply #'conjoin system
+                   (loop for fc in (intersection-ctypes fctype)
+                         collect (general-function-returns fc system))))
         ((union-ctype-p fctype)
-         (cl:apply #'disjoin system (union-ctypes fctype)))
+         (cl:apply #'disjoin system
+                   (loop for fc in (intersection-ctypes fctype)
+                         collect (general-function-returns fc system))))
         ;; give up
         (t `(cl:values &rest t))))
 
