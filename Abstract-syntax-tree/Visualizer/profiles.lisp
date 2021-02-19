@@ -29,7 +29,7 @@
 (defun combine-vertical-profiles-case-2 (upper lower)
   (combine-profiles-with-dy-and-width
    lower (profile-height upper) (profile-width upper)))
-  
+
 (defun combine-vertical-profiles-case-3a (upper lower suffix)
   (let ((suffix-y (y (first suffix))))
     (combine-profiles-with-dy-and-width
@@ -71,7 +71,7 @@
            (combine-vertical-profiles-case-1 upper lower))
           ((null (rest suffix))
            (combine-vertical-profiles-case-2 upper lower))
-           
+
           (t
            (combine-vertical-profiles-case-3 upper lower suffix)))))
 
