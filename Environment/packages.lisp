@@ -4,18 +4,18 @@
   (:nicknames #:cleavir-env)
   (:use #:common-lisp)
   (:shadow #:identity
-	   #:type
-	   #:ignore
-	   #:dynamic-extent
-	   #:compiler-macro
-	   #:eval
-	   #:macro-function
-	   #:compiler-macro-function
+           #:type
+           #:ignore
+           #:dynamic-extent
+           #:compiler-macro
+           #:eval
+           #:macro-function
+           #:compiler-macro-function
            #:find-class
-	   #:function
-	   #:block
-	   #:inline
-	   #:optimize)
+           #:function
+           #:block
+           #:inline
+           #:optimize)
   (:export
    #:variable-info
    #:lexical-variable-info

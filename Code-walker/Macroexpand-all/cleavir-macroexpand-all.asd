@@ -4,7 +4,8 @@
   :depends-on (:cleavir-primop
 	       :cleavir-code-utilities
 	       :cleavir-environment
-	       :cleavir-compilation-policy)
+	       :cleavir-compilation-policy
+               :cleavir-cst-to-ast)
   :serial t
   :components
   ((:file "packages")
