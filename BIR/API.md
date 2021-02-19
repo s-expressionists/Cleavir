@@ -1,17 +1,17 @@
 Sets
 ====
 
-Sets are an abstract set datatype defined by the `cleavir-set` subsystem. They are of class `set`.
+Sets are an abstract set datatype defined by the `cleavir-set` subsystem. They are of class `cleavir-set:set`.
 
 At the moment sets only test elements by `eql`, i.e. an element is present in the set if it is `eql` to a member of the set.
 
-Sets can be constructed with `empty-set`, or by `make-set` which puts its arguments in the new set. `copy-set` makes a new set with the same elements as an old set.
+Sets can be constructed by calling `empty-set`, or by calling `make-set`. The latter puts its arguments in the new set. `copy-set` makes a new set with the same elements as an old set.
 
-`nadjoin`, `nremove`, can be used to add and remove elements respectively, and `nunion` performs the union operation. `nadjoinf`, `nremovef`, and `nunionf` are modify macro versions of these.
+`nadjoin`, `nremove`, can be used to add and remove elements by destructively modifying the given set respectively. `cleavir-set:nunion` performs the destructive union operation. `nadjoinf`, `nremovef`, and `nunionf` are modify macro versions of these.
 
-`presentp` determines if an element is present in a set. `size` returns how many elements are in a set; `empty-set-p` can be used for the special case of determining whether there are no elements. `arb` returns an arbitrary element from th eset and `set=` determines if two sets have the same elements.
+`presentp` determines if an element is present in a set. `size` returns how many elements are in a set; `empty-set-p` can be used for the special case of determining whether there are no elements. `arb` returns an arbitrary element from the set and `set=` determines if two sets have the same elements.
 
-The operators `doset`, `mapset`, `set-to-list`, `filter`, and `every` can map behavior over sets. `doset` is like `dolist`. `mapset` is like `map`, except that rather than full types, only `nil`, `list`, and `cleavir-set:set` are the allowed return types. `filter` is like `remove-if-not`, but takes a return type argument as well, which works the same as with `mapset`. None of these operators guarantee any kind of order, but only hit each element in the set once. Adjoining or removing set elements while iterating over a set has undefined consequences.
+The operators `doset`, `mapset`, `set-to-list`, `filter`, and `cleavir-set:every` can map behavior over sets. `doset` is like `dolist`. `mapset` is like `map`, except that rather than full types, only `nil`, `list`, and `cleavir-set:set` are the allowed return types. `filter` is like `remove-if-not`, but takes a return type argument as well, which works the same as with `mapset`. None of these operators guarantee any kind of order, but only hit each element in the set once. Adjoining or removing set elements while iterating over a set has undefined consequences.
 
 Data
 ====
@@ -20,7 +20,7 @@ The top class is `datum`, which is abstract, i.e. it is not intended that direct
 
 All data have a `name`, `rtype`, `definitions`, and `uses`, read (not, in general, written) with generic functions of the same names. The `name` is a symbol (`nil` indicating no name), while `definitions` and `uses` are sets of instructions. The `name` is a slot, but the others can be stored in other ways, and any new subclass of `datum` itself will need to define methods on the readers.
 
-Definitions are uses are not directly writable by clients: graph modifications will update them appropriately when edits to the graph are made.
+Definitions and uses are not directly writable by clients: graph modifications will update them appropriately when edits to the graph are made.
 
 Under `datum` there is the abstract `linear-datum` class. `linear-datum` defines an additional slot and reader, `use`, which is the sole use of the datum. `uses` is specialized to make a set of this one use.
 
@@ -66,7 +66,12 @@ Iblocks also maintain sets of `predecessors` and `entrances`, which are iblocks 
 Functions
 =========
 
-A `function` represents a function. They have a set of `iblocks`, a `start` iblock, a `returni` instruction, except that the `returni` may be `nil` if the function never returns. They have a `lambda-list`. They have a set of `variables` which are bound by the function. 
+A `function` represents a function. They have a set of `iblocks`, a `start` iblock, a `returni` instruction, except that the `returni` may be `nil` if the function never returns. They have a `lambda-list`. They have a set of `variables` which are bound by the function.
+
+Modules
+=======
+
+TODO
 
 Graph modifications
 ===================
