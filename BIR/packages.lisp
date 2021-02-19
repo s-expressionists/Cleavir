@@ -30,7 +30,7 @@
            #:accessvar #:writevar #:readvar #:cast
            #:constant-reference #:make-constant-reference
            #:load-time-value-reference #:make-load-time-value-reference
-           #:returni #:unreachable #:eqi #:jump #:unwindp
+           #:returni #:unreachable #:jump #:unwindp
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
            #:typew #:ctype #:choke
