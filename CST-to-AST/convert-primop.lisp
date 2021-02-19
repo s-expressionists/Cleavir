@@ -67,7 +67,7 @@
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (cleavir-env:parse-values-type-specifier
+    (let ((vctype (parse-values-type-specifier
                    (cst:raw value-type-cst)
                    env system)))
       (cleavir-ast:make-the-ast
@@ -87,7 +87,7 @@
     (declare (ignore typeq-cst))
     (cleavir-ast:make-typeq-ast
      (convert arg1-cst env system)
-     (cleavir-env:parse-type-specifier (cst:raw arg2-cst) env system)
+     (parse-type-specifier (cst:raw arg2-cst) env system)
      :origin origin)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

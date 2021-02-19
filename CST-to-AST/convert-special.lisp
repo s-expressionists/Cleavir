@@ -548,7 +548,7 @@
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
     (type-wrap (convert form-cst environment system)
-               (cleavir-env:parse-values-type-specifier
+               (parse-values-type-specifier
                 (cst:raw value-type-cst)
                 environment system)
                origin environment system)))

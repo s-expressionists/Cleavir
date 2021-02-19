@@ -47,7 +47,7 @@
   (declare (ignore declaration-identifier-cst))
   (trucler:add-function-type
    system environment (cst:raw (cst:second declaration-data-cst))
-   (cleavir-env:parse-type-specifier
+   (parse-type-specifier
     (cst:raw (cst:first declaration-data-cst))
     environment system)))
 
@@ -129,8 +129,7 @@
   (cst:db source (type-cst variable-cst) declaration-data-cst
     (trucler:add-variable-type
      system environment (cst:raw variable-cst)
-     (cleavir-env:parse-type-specifier (cst:raw type-cst)
-                                       environment system))))
+     (parse-type-specifier (cst:raw type-cst) environment system))))
 
 (defmethod augment-environment-with-declaration
     ((declaration-identifier (eql 'optimize))
@@ -256,7 +255,7 @@
                    system new-env raw-variable lexical-variable)))))
     (let* ((type (declared-type declarations))
            ;; FIXME system arguments
-           (ptype (cleavir-env:parse-type-specifier type env system)))
+           (ptype (parse-type-specifier type env system)))
       (unless (cleavir-ctype:top-p ptype nil)
         (setf new-env
               (trucler:add-variable-type system new-env raw-variable ptype))))

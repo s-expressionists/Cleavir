@@ -16,6 +16,7 @@
   ((:file "packages")
    (:file "conditions")
    (:file "condition-reporters-english")
+   (:file "type-specifier")
    (:file "environment-augmentation")
    (:file "environment-query")
    (:file "variables")
