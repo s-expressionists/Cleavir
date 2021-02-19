@@ -1,0 +1,12 @@
+*.aux
+*.bbl
+*.blg
+*.cb
+*.cb2
+*.idx
+*.ilg
+*.ind
+*.log
+*.toc
+fig*.pdf
+fig*.pdf_t
