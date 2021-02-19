@@ -10,8 +10,11 @@
    (:file "ast-from-string")
    (:file "ast-equal-p")
    (:file "assign-sources")
-   (:file "test" :around-compile
-          (lambda (thunk)
-            (let ((*readtable* cleavir-io:*io-readtable*)
-                  (cleavir-ast:*policy* nil))
-              (funcall thunk))))))
+   (:file "test"
+    :around-compile
+    (lambda (thunk)
+      (progv (list '*readtable*
+                   (find-symbol "*POLICY*" (find-package "CLEAVIR-AST")))
+             (list (symbol-value (find-symbol "*IO-READTABLE*" (find-package "CLEAVIR-IO")))
+                   nil)
+        (funcall thunk))))))
