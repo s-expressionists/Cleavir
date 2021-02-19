@@ -11,16 +11,16 @@
 ;;; LEXICAL-BIND-AST that assigns the value to the variable, and the second
 ;;; one is the NEXT-AST.
 (defun set-or-bind-variable (variable-cst value-ast next-ast env system)
-  (let ((info (cleavir-env:variable-info env (cst:raw variable-cst))))
+  (let ((info (trucler:describe-variable system env (cst:raw variable-cst))))
     (assert (not (null info)))
-    (if (typep info 'cleavir-env:special-variable-info)
+    (if (typep info 'trucler:special-variable-description)
         (convert-special-binding
          variable-cst value-ast next-ast env system)
 	(cleavir-ast:make-progn-ast
 	 (list (cleavir-ast:make-lexical-bind-ast
-		(cleavir-env:identity info)
+		(trucler:identity info)
 		value-ast
                 :origin (cst:source variable-cst)
-                :ignore (cleavir-env:ignore info))
+                :ignore (trucler:ignore info))
 	       next-ast)
          :origin (cst:source variable-cst)))))

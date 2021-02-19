@@ -5,20 +5,20 @@
 ;;; Converting SETQ.
 
 (defmethod convert-setq
-    (var-cst form-cst (info cleavir-env:constant-variable-info) env system)
+    (var-cst form-cst (info trucler:constant-variable-description) env system)
   (declare (ignore var-cst env system))
   (error 'setq-constant-variable :cst form-cst))
 
 (defmethod convert-setq
-    (var-cst form-cst (info cleavir-env:lexical-variable-info) env system)
+    (var-cst form-cst (info trucler:lexical-variable-description) env system)
   (let ((origin (cst:source var-cst)))
-    (cleavir-ast:make-setq-ast (cleavir-env:identity info)
+    (cleavir-ast:make-setq-ast (trucler:identity info)
                                (convert form-cst env system)
                                :origin origin)))
 
 (defmethod convert-setq
-    (var-cst form-cst (info cleavir-env:symbol-macro-info) env system)
-  (let* ((expansion (cleavir-env:expansion info))
+    (var-cst form-cst (info trucler:symbol-macro-description) env system)
+  (let* ((expansion (trucler:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-variable (expand-macro expander var-cst env))
          (expanded-cst (cst:reconstruct expanded-variable var-cst system))
@@ -36,7 +36,7 @@
     (process-progn
      (list (cleavir-ast:make-lexical-bind-ast temp form-ast :origin origin)
 	   (cleavir-ast:make-set-symbol-value-ast
-	    (cleavir-ast:make-constant-ast (cleavir-env:name info)
+	    (cleavir-ast:make-constant-ast (trucler:name info)
               :origin origin)
 	    (cleavir-ast:make-lexical-ast temp :origin origin)
 	    :origin origin)
@@ -44,8 +44,8 @@
      origin)))
 
 (defmethod convert-setq
-    (var-cst form-cst (info cleavir-env:special-variable-info) env system)
-  (let ((global-env (cleavir-env:global-environment env)))
+    (var-cst form-cst (info trucler:special-variable-description) env system)
+  (let ((global-env (trucler:global-environment system env)))
     (convert-setq-special-variable var-cst
                                    (convert form-cst env system)
 				   info

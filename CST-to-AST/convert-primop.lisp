@@ -198,11 +198,11 @@
 ;;; the variables to be lexical.
 
 ;;; Internal helper
-(defun find-lexical-variable (var env)
+(defun find-lexical-variable (var env system)
   (assert (symbolp var))
-  (let ((info (cleavir-env:variable-info env var)))
-    (assert (typep info 'cleavir-env:lexical-variable-info))
-    (cleavir-env:identity info)))
+  (let ((info (trucler:describe-variable system env var)))
+    (assert (typep info 'trucler:local-variable-description))
+    (trucler:identity info)))
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:multiple-value-setq)) cst env system)
@@ -213,7 +213,7 @@
     (assert (cst:proper-list-p variables-cst))
     (let ((lexes
             (loop for var in (cst:raw variables-cst)
-                  collect (find-lexical-variable var env))))
+                  collect (find-lexical-variable var env system))))
       (cleavir-ast:make-multiple-value-setq-ast
        lexes
        (convert form-cst env system)
@@ -240,7 +240,7 @@
     (cleavir-ast:make-fixnum-add-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
-                                      (cst:raw variable-cst) env)
+                                      (cst:raw variable-cst) env system)
                                      :origin origin)))
 
 
@@ -256,7 +256,7 @@
     (cleavir-ast:make-fixnum-sub-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
-                                      (cst:raw variable-cst) env)
+                                      (cst:raw variable-cst) env system)
                                      :origin origin)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -352,8 +352,8 @@
                                      variable
                                      :origin (cst:source variable-cst))))
                  (setf new-env
-                       (cleavir-env:add-lexical-variable
-                        new-env variable variable-ast))))
+                       (trucler:add-lexical-variable
+                        system new-env variable variable-ast))))
       (process-progn (convert-sequence body-cst new-env system)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

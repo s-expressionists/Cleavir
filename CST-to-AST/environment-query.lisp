@@ -1,8 +1,8 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defun variable-info (environment var-name-cst)
+(defun variable-info (system environment var-name-cst)
   (let* ((symbol (cst:raw var-name-cst))
-         (info (cleavir-env:variable-info environment symbol)))
+         (info (trucler:describe-variable system environment symbol)))
     (loop while (null info)
 	  do (restart-case (error 'no-variable-info
 				  :name symbol
@@ -11,14 +11,14 @@
 		 :report (lambda (stream)
 			   (format stream "Consider the variable as special."))
                  (setf info
-                       (make-instance 'cleavir-env:special-variable-info
+                       (make-instance 'trucler:special-variable-description
                          :name symbol)))
                ;; This is identical to CONTINUE, but more specifically named.
 	       (consider-special ()
 		 :report (lambda (stream)
 			   (format stream "Consider the variable as special."))
                  (setf info
-                       (make-instance 'cleavir-env:special-variable-info
+                       (make-instance 'trucler:special-variable-description
                          :name symbol)))
 	       (substitute (new-symbol)
 		 :report (lambda (stream)
@@ -26,12 +26,13 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq info (cleavir-env:variable-info environment new-symbol)))))
+		 (setq info (trucler:describe-variable
+                             system environment new-symbol)))))
     info))
 
-(defun function-info (environment function-name-cst)
+(defun function-info (system environment function-name-cst)
   (let* ((function-name (cst:raw function-name-cst))
-         (result (cleavir-env:function-info environment function-name)))
+         (result (trucler:describe-function system environment function-name)))
     (loop while (null result)
 	  do (restart-case (error 'no-function-info
 				  :name function-name
@@ -41,7 +42,7 @@
 			   (format stream
 				   "Treat it as the name of a global function."))
 		 (return-from function-info
-		   (make-instance 'cleavir-env:global-function-info
+		   (make-instance 'trucler:global-function-description
 		     :name function-name)))
 	       (substitute (new-function-name)
 		 :report (lambda (stream)
@@ -49,12 +50,13 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq result (cleavir-env:function-info environment new-function-name)))))
+		 (setq result (trucler:describe-function
+                               system environment new-function-name)))))
     result))
 
-(defun tag-info (environment tag-name-cst)
+(defun tag-info (system environment tag-name-cst)
   (let* ((tag-name (cst:raw tag-name-cst))
-         (result (cleavir-env:tag-info environment tag-name)))
+         (result (trucler:describe-tag system environment tag-name)))
     (loop while (null result)
 	  do (restart-case (error 'no-tag-info
 				  :name tag-name
@@ -65,12 +67,13 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq result (cleavir-env:tag-info environment new-tag-name)))))
+		 (setq result (trucler:describe-tag
+                               system environment new-tag-name)))))
     result))
 
-(defun block-info (environment block-name-cst)
+(defun block-info (system environment block-name-cst)
   (let* ((block-name (cst:raw block-name-cst))
-         (info (cleavir-env:block-info environment block-name)))
+         (info (trucler:describe-block system environment block-name)))
     (loop while (null info)
           do (restart-case (error 'no-block-info
                                   :name block-name
@@ -81,5 +84,6 @@
                  :interactive (lambda ()
                                 (format *query-io* "Enter new name: ")
                                 (list (read *query-io*)))
-                 (setq info (cleavir-env:block-info environment new-block-name)))))
+                 (setq info (trucler:describe-block
+                             system environment new-block-name)))))
     info))

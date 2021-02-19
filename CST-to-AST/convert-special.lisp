@@ -34,7 +34,7 @@
         (error 'block-name-must-be-a-symbol :cst name-cst))
       (let* ((ast (cleavir-ast:make-block-ast
                    nil :name name :origin origin))
-             (new-env (cleavir-env:add-block env name ast)))
+             (new-env (trucler:add-block system env name ast)))
         (setf (cleavir-ast:body-ast ast)
               (process-progn (convert-sequence body-cst new-env system)
                              origin))
@@ -52,12 +52,12 @@
     (declare (ignore return-from-cst))
     (unless (symbolp (cst:raw block-name-cst))
       (error 'block-name-must-be-a-symbol :cst block-name-cst))
-    (let ((info (block-info env block-name-cst))
+    (let ((info (block-info system env block-name-cst))
           (value-cst (if (cst:null rest-csts)
                          (make-atom-cst nil origin)
                          (cst:first rest-csts))))
       (cleavir-ast:make-return-from-ast
-       (cleavir-env:identity info)
+       (trucler:identity info)
        (convert value-cst env system)
        :origin origin))))
 
@@ -165,29 +165,29 @@
 ;;; definition.  Return a new environment which is like the one passed
 ;;; as an argument, except the it has been augmented by the name of
 ;;; the local function.
-(defun augment-environment-from-fdef (environment definition-cst)
+(defun augment-environment-from-fdef (system environment definition-cst)
   (let ((name-cst (cst:first definition-cst)))
-    (augment-environment-with-local-function-name name-cst environment)))
+    (augment-environment-with-local-function-name name-cst environment system)))
 
 ;;; Take an environment, a CST representing a list of function
 ;;; definitions, and return a new environment which is like the one
 ;;; passed as an argument, except that is has been augmented by the
 ;;; local function names in the list.
-(defun augment-environment-from-fdefs (environment definitions-cst)
+(defun augment-environment-from-fdefs (system environment definitions-cst)
   (loop with result = environment
         for remaining = definitions-cst then (cst:rest remaining)
         until (cst:null remaining)
         do (let ((definition-cst (cst:first remaining)))
              (setf result
-                   (augment-environment-from-fdef result definition-cst)))
+                   (augment-environment-from-fdef system result definition-cst)))
         finally (return result)))
 
 ;;; Given an environment and the name of a function, return the
 ;;; LEXICAL-VARIABLE that will have the function with that name as a
 ;;; value.  It is known that the environment contains an entry
 ;;; corresponding to the name given as an argument.
-(defun function-lexical (environment name)
-  (cleavir-env:identity (cleavir-env:function-info environment name)))
+(defun function-lexical (system environment name)
+  (trucler:identity (trucler:describe-function system environment name)))
 
 ;;; Convert a local function definition.
 (defun convert-local-function (definition-cst operator environment system)
@@ -224,10 +224,10 @@
 ;;; AST of each function in a list of function ASTs to its associated
 ;;; LEXICAL-VARIABLE.  FUNCTIONS is a list of CONS cells.  Each CONS
 ;;; cell has a function name in its CAR and an AST in its CDR.
-(defun compute-function-init-asts (functions env)
+(defun compute-function-init-asts (functions env system)
   (loop for (name . fun-ast) in functions
         collect (cleavir-ast:make-lexical-bind-ast
-                 (function-lexical env name)
+                 (function-lexical system env name)
                  fun-ast
                  ;; TODO: propagate ignore declaration
                  )))
@@ -254,9 +254,10 @@
                (cst:canonicalize-declarations
                 system (cleavir-env:declarations env) declaration-csts))
              (defs (convert-local-functions definitions-cst symbol env system))
-             (new-env (augment-environment-from-fdefs env definitions-cst))
+             (new-env (augment-environment-from-fdefs
+                       system env definitions-cst))
              (init-asts
-               (compute-function-init-asts defs new-env))
+               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
                          new-env system canonical-declaration-specifiers)))
         (process-progn
@@ -279,10 +280,11 @@
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
                 system (cleavir-env:declarations env) declaration-csts))
-             (new-env (augment-environment-from-fdefs env definitions-cst))
+             (new-env (augment-environment-from-fdefs
+                       system env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
              (init-asts
-               (compute-function-init-asts defs new-env))
+               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
                          new-env system canonical-declaration-specifiers)))
         (process-progn
@@ -320,8 +322,8 @@
                                :origin (cst:source tag-cst)))))
           (new-env env))
       (loop for ast in tag-asts
-            do (setf new-env (cleavir-env:add-tag
-                              new-env (cleavir-ast:name ast) ast)))
+            do (setf new-env (trucler:add-tag
+                              system new-env (cleavir-ast:name ast) ast)))
       (let ((item-asts (loop for rest = body-cst then (cst:rest rest)
                              until (cst:null rest)
                              collect (let ((item-cst (cst:first rest)))
@@ -346,7 +348,7 @@
     (declare (ignore go-cst))
     (let ((info (tag-info env tag-cst)))
       (cleavir-ast:make-go-ast
-       (cleavir-env:identity info)
+       (trucler:identity info)
        :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -462,7 +464,7 @@
                       (name (cst:raw name-cst))
                       (expander (expander definition-cst env system)))
                  (setf new-env
-                       (cleavir-env:add-local-macro new-env name expander))))
+                       (trucler:add-local-macro system new-env name expander))))
       (with-preserved-toplevel-ness
         (convert (cst:cons (make-atom-cst 'locally origin) body-cst
                            :source origin)
@@ -487,8 +489,8 @@
                  (let ((name (cst:raw name-cst))
                        (expansion (cst:raw expansion-cst)))
                    (setf new-env
-                         (cleavir-env:add-local-symbol-macro
-                          new-env name expansion)))))
+                         (trucler:add-local-symbol-macro
+                          system new-env name expansion)))))
       (with-preserved-toplevel-ness
         (convert (cst:cons (make-atom-cst 'locally origin)
                            body-cst
