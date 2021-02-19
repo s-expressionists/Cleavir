@@ -10,7 +10,7 @@
    (:file "ast-from-string")
    (:file "ast-equal-p")
    (:file "assign-sources")
-   (:file "test"
+   #+dont (:file "test"
     :around-compile
     (lambda (thunk)
       (progv (list '*readtable*
