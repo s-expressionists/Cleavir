@@ -147,8 +147,7 @@
 ;;; Fold the IFI if we can determine whether or not the test will
 ;;; evaluate to NIL.
 (defun fold-ifi (instruction system)
-  (let* ((iblock (cleavir-bir:iblock instruction))
-         (test (first (cleavir-bir:inputs instruction)))
+  (let* ((test (first (cleavir-bir:inputs instruction)))
          (next (cleavir-bir:next instruction))
          (then (first next))
          (else (second next)))

@@ -43,6 +43,7 @@
           return suffix))
 
 (defun combine-vertical-profiles-case-3b (upper lower suffix)
+  (declare (ignore upper))
   (let* ((suffix-y (y (first suffix)))
          (y-sum (+ (profile-height lower) (y (first suffix))))
          (suffix-suffix (find-suffix-2 suffix y-sum)))
