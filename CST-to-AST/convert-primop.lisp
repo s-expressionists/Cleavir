@@ -585,5 +585,6 @@
                           'cl:compile-file
                           'cl:compile)))
       (cleavir-ast:make-constant-ast
-       (convert form-cst (cleavir-env:compile-time env) system)
+       (convert form-cst (trucler:restrict-for-macrolet-expander system env)
+                system)
        :origin (cst:source form-cst)))))

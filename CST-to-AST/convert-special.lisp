@@ -411,7 +411,9 @@
                (not (constantp form env)))
           (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
           (cleavir-ast:make-constant-ast
-           (cst-eval form-cst (cleavir-env:compile-time env) system)
+           (cst-eval form-cst
+                     (trucler:restrict-for-macrolet-expander system env)
+                     system)
            :origin origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -446,7 +448,8 @@
                                               (cst:raw body-cst)
                                               environment)))
       (cleavir-env:eval lambda-expression
-                        (cleavir-env:compile-time environment)
+                        (trucler:restrict-for-macrolet-expander
+                         system environment)
                         environment))))
 
 (defmethod convert-special
