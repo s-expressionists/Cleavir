@@ -5,9 +5,9 @@
 
 (defmethod cleavir-flow:flow ((flow reaching-definitions) graph node)
   (cleavir-graph:with-graph (graph)
-    (let ((before (before node)))
+    (let ((before (before node flow)))
       (cleavir-graph:do-successors (succ node)
-        (let ((sbefore (before succ)) (changep nil))
+        (let ((sbefore (before succ flow)) (changep nil))
           (cleavir-graph:do-outputs (out node)
             (unless (gethash out sbefore)
               (setf (gethash out sbefore) node changep t)))
