@@ -404,9 +404,10 @@
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (let ((variable (first (cleavir-bir:outputs instruction))))
-    (unless (or (substitute-single-read-variable-if-possible variable)
-                (constant-propagate-variable-if-possible variable))
-      (derive-type-for-variable variable system))))
+    (when variable
+      (unless (or (substitute-single-read-variable-if-possible variable)
+                  (constant-propagate-variable-if-possible variable))
+        (derive-type-for-variable variable system)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni) system)
   ;; Propagate the return type to local calls and enclose of the function.
