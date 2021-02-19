@@ -454,6 +454,8 @@
            (if (symbolp type-check-function-ast)
                type-check-function-ast
                (compile-function type-check-function-ast system))))
+    (unless (cl:typep ctype 'clasp-cleavir::ctype)
+      (error "Bad ctype ~a" ctype))
     (cond ((or (eq rv :no-return))
            :no-return)
           ((some (lambda (ctype)

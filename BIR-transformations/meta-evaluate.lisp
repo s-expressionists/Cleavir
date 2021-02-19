@@ -429,20 +429,41 @@
           nil nil (cleavir-ctype:top nil) nil nil nil return-type system)
          system)))))
 
+(defmethod meta-evaluate-instruction
+    ((instruction cleavir-bir:constant-reference) system)
+  (let* ((constant (first (cleavir-bir:inputs instruction)))
+         (value (cleavir-bir:constant-value constant))
+         (mtype (cleavir-ctype:member system value)))
+    (cleavir-bir:derive-type-for-linear-datum instruction mtype system)))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
   (let* ((input (first (cleavir-bir:inputs instruction)))
+         (asserted (cleavir-bir:asserted-type instruction))
          (ctype (cleavir-bir:ctype input)))
     ;; Remove THEI when its input's type is a subtype of the
     ;; THEI's asserted type.
-    (if (cleavir-ctype:values-subtypep ctype
-                                       (cleavir-bir:asserted-type instruction)
-                                       system)
+    (if (cleavir-ctype:values-subtypep ctype asserted system)
         (cleavir-bir:delete-thei instruction)
         (let ((type-check-function
                 (cleavir-bir:type-check-function instruction)))
+          ;; Derive the type of the THEI itself.
+          ;; The type we use to make inferences is the intersection
+          ;; of what the compiler has proven about the input and what is
+          ;; explicitly asserted when we are trusting THEI or explicitly type
+          ;; checking. However, when the type check is marked as being done
+          ;; externally, that means the compiler has not yet proven that the
+          ;; asserted type holds, and so it must return the type of the
+          ;; input.
+          (cleavir-bir:derive-type-for-linear-datum
+           instruction
+           (if (eq type-check-function :external)
+               (cleavir-bir:ctype input)
+               (cleavir-ctype:conjoin/2
+                asserted (cleavir-bir:ctype input) system))
+           system)
+          ;; Propagate the type of the input into the type check function.
+          ;; FIXME: Extend this to values types.
           (unless (symbolp type-check-function)
-            ;; Propagate the type of the input into function.
-            ;; FIXME: Extend this to values types.
             (cleavir-bir:derive-type-for-linear-datum
              (first (cleavir-bir:lambda-list type-check-function))
              ctype system))))))

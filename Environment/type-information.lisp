@@ -115,23 +115,38 @@
 ;;; constructors.
 
 (defun parse-type-specifier (type-specifier environment system)
-  (parse-expanded-type-specifier
-   (type-expand environment type-specifier)
-   environment system))
+  (let ((r (parse-expanded-type-specifier
+            (type-expand environment type-specifier)
+            environment system)))
+    (unless (cl:typep r 'clasp-cleavir::ctype)
+      (error "bad parsed ctype ~a" r))
+    r))
 
 (defgeneric parse-expanded-type-specifier
     (type-specifier environment system)
   (:argument-precedence-order system environment type-specifier))
 
+#+(or)
 (defmethod parse-expanded-type-specifier
     ((type-specifier symbol) environment system)
   (or (find-class type-specifier environment system nil)
       type-specifier))
 
+(defmethod parse-expanded-type-specifier ((ts (eql 'array)) environment system)
+  (declare (cl:ignore environment))
+  (cleavir-ctype:array '* '* ts system))
+
+(defmethod parse-expanded-type-specifier ((ts (eql 'cons)) environment system)
+  (declare (cl:ignore environment))
+  (cleavir-ctype:cons (cleavir-ctype:top system)
+                      (cleavir-ctype:top system)
+                      system))
+
 (defmethod parse-expanded-type-specifier
     ((type-specifier (eql 'cl:function)) environment system)
   (cleavir-ctype:function-top system))
 
+#+(or)
 (defmethod parse-expanded-type-specifier
     ((type-specifier class) environment system)
   (declare (cl:ignore environment system))
@@ -218,10 +233,15 @@
     (cleavir-ctype:range head low high system)))
 
 (macrolet ((defreal (head)
-             `(defmethod parse-compound-type-specifier
-                  ((head (eql ',head)) rest environment system)
-                (declare (cl:ignore environment))
-                (parse-range head rest system)))
+             `(progn
+                (defmethod parse-expanded-type-specifier
+                    ((ts (eql ',head)) environment system)
+                  (declare (cl:ignore environment))
+                  (cleavir-ctype:range ts '* '* system))
+                (defmethod parse-compound-type-specifier
+                    ((head (eql ',head)) rest environment system)
+                  (declare (cl:ignore environment))
+                  (parse-range head rest system))))
            (defreals (&rest heads)
              `(progn
                 ,@(loop for head in heads
@@ -318,15 +338,20 @@
 
 (defun parse-values-type-specifier (type-specifier
                                     environment system)
-  (let ((spec (type-expand environment type-specifier)))
-    (if (and (consp spec) (eql (car spec) 'values))
-        (multiple-value-call #'cleavir-ctype:values
-          (parse-values-type-lambda-list
-           (rest spec) environment system)
-          system)
-        (cleavir-ctype:coerce-to-values
-         (parse-expanded-type-specifier spec environment system)
-         system))))
+  (let* ((spec (type-expand environment type-specifier))
+         (r
+           (if (and (consp spec) (eql (car spec) 'values))
+               (multiple-value-call #'cleavir-ctype:values
+                 (parse-values-type-lambda-list
+                  (rest spec) environment system)
+                 system)
+               (let ((r (parse-expanded-type-specifier spec environment system)))
+                 (unless (cl:typep r 'clasp-cleavir::ctype)
+                   (error "bad expandparsed ctype ~a" r))
+                 (cleavir-ctype:coerce-to-values r system)))))
+    (unless (cl:typep r 'clasp-cleavir::ctype)
+      (error "bad parsed ctype ~a" r))
+    r))
 
 (defun parse-values-type-lambda-list (lambda-list env sys)
   (loop with state = nil
