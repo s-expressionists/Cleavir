@@ -73,8 +73,8 @@
                          collect `(setq ,(decompile-datum out)
                                         ,(decompile-datum in))))))
 
-(defmethod decompile-instruction ((inst cleavir-bir:eqi))
-  (list `(if (eq ,@(mapcar #'decompile-datum (cleavir-bir:inputs inst)))
+(defmethod decompile-instruction ((inst cleavir-bir:ifi))
+  (list `(if ,@(cleavir-bir:inputs inst)
              (go ,(find-iblock (first (cleavir-bir:next inst))))
              (go ,(find-iblock (second (cleavir-bir:next inst)))))))
 

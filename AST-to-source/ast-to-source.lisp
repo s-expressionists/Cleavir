@@ -42,7 +42,7 @@
        ,(to-source (cleavir-ast:body-ast ast) (append entries dictionary)))))
 
 (defmethod to-source ((ast cleavir-ast:setq-ast) dictionary)
-  `(setq ,(to-source (cleavir-ast:lhs-ast ast) dictionary)
+  `(setq ,(to-source (cleavir-ast:lexical-variable ast) dictionary)
 	 ,(to-source (cleavir-ast:value-ast ast) dictionary)))
 
 (defmethod to-source ((ast cleavir-ast:if-ast) dictionary)
@@ -53,7 +53,7 @@
 (defmethod to-source ((ast cleavir-ast:typeq-ast) dictionary)
   `(cleavir-primop:typeq
     ,(to-source (cleavir-ast:form-ast ast) dictionary)
-    ,(to-source (cleavir-ast:type-specifier-ast ast) dictionary)))
+    ,(to-source (cleavir-ast:test-ctype ast) dictionary))) ; TODO ctype unparsing is not implemented
 
 (defmethod to-source ((ast cleavir-ast:constant-ast) dictionary)
   (declare (ignore dictionary))
@@ -96,13 +96,8 @@
     ,(to-source (cleavir-ast:symbol-ast ast) dictionary)))
 
 (defmethod to-source ((ast cleavir-ast:the-ast) dictionary)
-  (let ((req (cleavir-ast:required-types ast))
-	(opt (cleavir-ast:optional-types ast))
-	(rest (cleavir-ast:rest-type ast)))
-    (when opt (setf opt `(&optional ,@opt)))
-    (when rest (setf rest `(&rest ,rest)))
-    `(the (values ,@req ,@opt ,@rest)
-	  ,(to-source (cleavir-ast:form-ast ast) dictionary))))
+  `(the ,(to-source (cleavir-ast:ctype ast) dictionary) ; TODO ctype unparsing not implemented
+	,(to-source (cleavir-ast:form-ast ast) dictionary)))
 
 (defmethod to-source ((ast cleavir-ast:go-ast) dictionary)
   `(go ,(cleavir-ast:name (cleavir-ast:tag-ast ast))))

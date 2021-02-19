@@ -122,7 +122,7 @@
                                                       ;; FIXME: Use a
                                                       ;; condition
                                                       ;; class here.
-                                                      (warn "A call to ~a was passed a number of arguments incompatible with its declared type."
+                                                      (warn "A call to ~a was passed a number of arguments incompatible with its declared type ~a."
                                                             (cst:raw name-cst) ftype)
                                                       ;; Without this
                                                       ;; we'll get a

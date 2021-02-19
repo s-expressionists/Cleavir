@@ -4,8 +4,7 @@
   (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
                                  inserter system)
     (let* ((info (cleavir-ast:info ast))
-           (out (cleavir-primop-info:out-rtypes info))
-           (in (cleavir-primop-info:in-rtypes info)))
+           (out (cleavir-primop-info:out-rtypes info)))
       (cond ((null out)
              (insert inserter
                      (make-instance 'cleavir-bir:nvprimop

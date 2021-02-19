@@ -24,10 +24,10 @@ that contain the name of the function or variable.  Since different
 lexical variables with different names are represented by different
 instances, there is no need for scoping operators such as
 \texttt{let} or \texttt{let*}, which is why there are no classes that
-correspond to these source constructs.  
+correspond to these source constructs.
 
 Macros and symbol macros have been expanded so that the only operators
-that remain are special operators and global functions.  
+that remain are special operators and global functions.
 
 There are no classes that correspond to declarations.  Implementations
 should replace type declarations by the use of instances of the
@@ -49,7 +49,7 @@ Implementations are free to create subclasses of the AST classes
 listed here, for instance in order to add additional information to
 AST nodes.  In that case, it might be necessary to provide overriding
 or extending methods on the generic functions that handle the abstract
-syntax tree, in particular when it is translated into MIR.  
+syntax tree, in particular when it is translated into MIR.
 
 Implementations are also free to create entirely new AST classes.
 Then it might be necessary to provide primary methods on some generic
@@ -109,7 +109,7 @@ the value of a constant variable, or a quoted object.
 At this point, there is no discrimination between the different types
 of constant, nor between integers of different magnitude.  Later on
 in the compilation process, some backend may replace small integer
-constants by immediate values. 
+constants by immediate values.
 
 \subsubsection{\texttt{fdefinition-ast}}
 \label{fdefinition-ast}
@@ -118,7 +118,7 @@ constants by immediate values.
 \hline
 Initarg & Reader & Description\\
 \hline\hline
-\texttt{:name-ast} & \texttt{name-ast} & The name of the function.\\  
+\texttt{:name-ast} & \texttt{name-ast} & The name of the function.\\
 \hline
 \end{tabular}
 
@@ -142,7 +142,7 @@ a result of a name in the functional position of a form, then the
 \hline
 Initarg & Reader & Description\\
 \hline\hline
-\texttt{:symbol-ast} & \texttt{symbol-ast} & The name of the variable.\\  
+\texttt{:symbol-ast} & \texttt{symbol-ast} & The name of the variable.\\
 \hline
 \end{tabular}
 
@@ -166,9 +166,9 @@ always a \texttt{constant-ast}.
 \hline
 Initarg & Reader & Description\\
 \hline\hline
-\texttt{:symbol-ast} & \texttt{symbol-ast} & The name of the variable.\\  
+\texttt{:symbol-ast} & \texttt{symbol-ast} & The name of the variable.\\
 \hline
-\texttt{:value-ast} & \texttt{value-ast} & The value to be assigned.\\  
+\texttt{:value-ast} & \texttt{value-ast} & The value to be assigned.\\
 \hline
 \end{tabular}
 
@@ -197,12 +197,12 @@ last form of a \texttt{progn-ast} \seesec{progn-ast}.
 \hline
 Initarg & Reader & Description\\
 \hline\hline
-\texttt{:name} & \texttt{name} & The name of the variable.\\  
+\texttt{:name} & \texttt{name} & The name of the variable.\\
 \hline
 \end{tabular}
 
 A \texttt{lexical-ast} is produced whenever the compiler sees a
-reference to a \emph{lexical variable}. 
+reference to a \emph{lexical variable}.
 
 \subsubsection{\texttt{call-ast}}
 \label{call-ast}
@@ -212,7 +212,7 @@ reference to a \emph{lexical variable}.
 Initarg & Reader & Description\\
 \hline\hline
 \texttt{:callee-ast} & \texttt{callee-ast} & The AST of the function
-to be called\\  
+to be called\\
 \hline
 \texttt{:argument-asts} & \texttt{argument-asts} & A list of ASTs, one
 for each argument\\
@@ -255,7 +255,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 The \texttt{function-ast} is one of the more complicated ones, because
-it hides all the implementation details of how arguments are parsed. 
+it hides all the implementation details of how arguments are parsed.
 
 \subsubsection{\texttt{go-ast}}
 \label{go-ast}
@@ -284,7 +284,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 The \texttt{if-ast} corresponds directly to the \commonlisp{} special operator
-\texttt{if}. 
+\texttt{if}.
 
 \subsubsection{\texttt{load-time-value-ast}}
 \label{load-time-value-ast}
@@ -301,11 +301,11 @@ Initarg & Reader & Description\\
 A \texttt{load-time-value-ast} is produced whenever the compiler sees
 a \texttt{load-time-value} special form, but also when it sees a
 \emph{constant} and processing is done by \texttt{compile-file},
-rather than by \texttt{compile} or \texttt{eval}.  
+rather than by \texttt{compile} or \texttt{eval}.
 
 This AST always contains a \emph{form}, so that if it is the result of
 a \emph{constant}, then it is wrapped in a \texttt{quote} special
-form. 
+form.
 
 \subsubsection{\texttt{progn-ast}}
 \label{progn-ast}
@@ -343,7 +343,7 @@ corresponding block.\\
 \hline
 Initarg & Reader & Description\\
 \hline\hline
-\texttt{:lhs-ast} & \texttt{lhs-ast} & The AST of the left-hand side.\\
+\texttt{:lexical-variable} & \texttt{lexical-variable} & The lexical variable to which the value is assigned.\\
 \hline
 \texttt{:value-ast} & \texttt{value-ast} & The AST of the value form.\\
 \hline
@@ -366,7 +366,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 An item can either be a \texttt{tag-ast} or an AST corresponding to
-some \texttt{statement}. 
+some \texttt{statement}.
 
 \subsubsection{\texttt{tag-ast}}
 \label{tag-ast}
@@ -449,7 +449,7 @@ Initarg & Reader & Description\\
 
 This AST can be used by implementations that represent fixnums in a
 way that allows them to be added directly without first unboxing
-them.  
+them.
 
 This AST can only occur as the first child of an \texttt{if-ast}
 \seesec{if-ast}.  It has three children.
@@ -526,13 +526,13 @@ them.
 
 This AST can only occur as the first child (i.e., the \emph{test}) of
 an \texttt{if-ast} \seesec{if-ast}.  It has two children that
-represent the arguments to the comparison.  
+represent the arguments to the comparison.
 
 Semantically, this AST returns \emph{true} if an only if the first
 argument is strictly less than the second (and \emph{false}
 otherwise), except that since this AST can only occur in the test
 position of an \texttt{if-ast}, no value will ever be returned.
-Instead this AST translates to a test and a branch. 
+Instead this AST translates to a test and a branch.
 
 \subsubsection{\texttt{fixnum-not-less-ast}}
 \label{fixnum-not-less-ast}
@@ -553,13 +553,13 @@ them.
 
 This AST can only occur as the first child (i.e., the \emph{test}) of
 an \texttt{if-ast} \seesec{if-ast}.  It has two children that
-represent the arguments to the comparison.  
+represent the arguments to the comparison.
 
 Semantically, this AST returns \emph{true} if an only if the first
 argument is not strictly less than the second (and \emph{false}
 otherwise), except that since this AST can only occur in the test
 position of an \texttt{if-ast}, no value will ever be returned.
-Instead this AST translates to a test and a branch. 
+Instead this AST translates to a test and a branch.
 
 \subsubsection{\texttt{fixnum-greater-ast}}
 \label{fixnum-greater-ast}
@@ -580,13 +580,13 @@ them.
 
 This AST can only occur as the first child (i.e., the \emph{test}) of
 an \texttt{if-ast} \seesec{if-ast}.  It has two children that
-represent the arguments to the comparison.  
+represent the arguments to the comparison.
 
 Semantically, this AST returns \emph{true} if an only if the first
 argument is strictly greater than the second (and \emph{false}
 otherwise), except that since this AST can only occur in the test
 position of an \texttt{if-ast}, no value will ever be returned.
-Instead this AST translates to a test and a branch. 
+Instead this AST translates to a test and a branch.
 
 \subsubsection{\texttt{fixnum-not-greater-ast}}
 \label{fixnum-not-greater-ast}
@@ -607,13 +607,13 @@ them.
 
 This AST can only occur as the first child (i.e., the \emph{test}) of
 an \texttt{if-ast} \seesec{if-ast}.  It has two children that
-represent the arguments to the comparison.  
+represent the arguments to the comparison.
 
 Semantically, this AST returns \emph{true} if an only if the first
 argument is not strictly greater than the second (and \emph{false}
 otherwise), except that since this AST can only occur in the test
 position of an \texttt{if-ast}, no value will ever be returned.
-Instead this AST translates to a test and a branch. 
+Instead this AST translates to a test and a branch.
 
 \subsubsection{\texttt{fixnum-equal-ast}}
 \label{fixnum-equal-ast}
@@ -634,7 +634,7 @@ them.
 
 This AST can only occur as the first child (i.e., the \emph{test}) of
 an \texttt{if-ast} \seesec{if-ast}.  It has two children that
-represent the arguments to the comparison.  
+represent the arguments to the comparison.
 
 Semantically, this AST returns \emph{true} if an only if the first
 argument is equal to the second (and \emph{false} otherwise), except
@@ -663,7 +663,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value of this AST is the short-float value
@@ -683,7 +683,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value of this AST is the short-float value
@@ -703,7 +703,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value of this AST is the short-float value
@@ -723,7 +723,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value of this AST is the short-float value
@@ -743,7 +743,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value is a Boolean indicating whether the first argument
@@ -763,7 +763,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value is a Boolean indicating whether the first argument
@@ -783,7 +783,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value is a Boolean indicating whether the first argument
@@ -803,7 +803,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value is a Boolean indicating whether the first argument
@@ -823,7 +823,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the short-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to short-float
 values.  The value is a Boolean indicating whether the first argument
@@ -996,7 +996,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value of this AST is the double-float value
@@ -1016,7 +1016,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value of this AST is the double-float value
@@ -1036,7 +1036,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value of this AST is the double-float value
@@ -1056,7 +1056,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value of this AST is the double-float value
@@ -1076,7 +1076,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1096,7 +1096,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1116,7 +1116,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1136,7 +1136,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1156,7 +1156,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the double-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to double-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1176,7 +1176,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value of this AST is the long-float value
@@ -1196,7 +1196,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value of this AST is the long-float value
@@ -1216,7 +1216,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value of this AST is the long-float value
@@ -1236,7 +1236,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value of this AST is the long-float value
@@ -1256,7 +1256,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1276,7 +1276,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1296,7 +1296,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1316,7 +1316,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value is a Boolean indicating whether the first argument
@@ -1336,7 +1336,7 @@ Initarg & Reader & Description\\
 \end{tabular}
 
 This AST can be used by implementation that support the long-float
-floating-point data type.  
+floating-point data type.
 
 The arguments of this AST must evaluate to long-float
 values.  The value is a Boolean indicating whether the first argument

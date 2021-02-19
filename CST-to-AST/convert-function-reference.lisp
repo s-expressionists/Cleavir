@@ -15,7 +15,7 @@
 
 (defmethod convert-function-reference
     (cst (info cleavir-env:local-function-info) env system)
-  (declare (ignore cst env system))
+  (declare (ignore env system))
   (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
     :origin (cst:source cst)))
 
@@ -50,7 +50,7 @@
 
 (defmethod convert-called-function-reference
     (cst (info cleavir-env:local-function-info) env system)
-  (declare (ignore cst env system))
+  (declare (ignore env system))
   (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
     :origin (cst:source cst)))
 

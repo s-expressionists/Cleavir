@@ -167,10 +167,10 @@ jump
 
 Perform a local control transfer. Inputs are passed to the `phi`s of the destination iblock.
 
-eqi
+iqi
 ---
 
-Determine if two inputs are `cl:eq` or not. Jump to the first iblock if they are and the second otherwise.
+Jump to the first iblock if the test input is true and the second otherwise.
 
 typeq
 -----
@@ -233,6 +233,8 @@ Multiple values
 Branch
 ------
 
+Note: this is outdated due to `ifi` replacing `eqi`.
+
 ```
 (lambda (x y z) (if x y z))
 
@@ -264,7 +266,7 @@ Loop
   (loop-begin (%y)
    (:= (%pv) (call %predicate %y))
    (:= (%pe) (multiple-to-fixed %pv))
-   (eqi %pe 'nil (loop-next loop-finish)))
+   (eqi %pe 'nil (loop-next loop-finish))) ; outdated, should use ifi
   (loop-next ()
    (:= (%fr) (call %f %y))
    (:= (%y) (jump %fr (loop-begin))))

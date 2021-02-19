@@ -15,7 +15,7 @@
 (defun block-info (environment block-name)
   (let ((result (cleavir-env:block-info environment block-name)))
     (loop while (null result)
-	  do (restart-case (error 'cleavir-env:no-block-info
+	  do (restart-case (error 'cleavir-cst-to-ast:no-block-info
 				  :name block-name)
 	       (substitute (new-block-name)
 		 :report (lambda (stream)
@@ -29,7 +29,7 @@
 (defun tag-info (environment tag-name)
   (let ((result (cleavir-env:tag-info environment tag-name)))
     (loop while (null result)
-	  do (restart-case (error 'cleavir-env:no-tag-info
+	  do (restart-case (error 'cleavir-cst-to-ast:no-tag-info
 				  :name tag-name)
 	       (substitute (new-tag-name)
 		 :report (lambda (stream)

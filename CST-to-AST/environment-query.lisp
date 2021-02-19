@@ -26,7 +26,7 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq info (cleavir-env:variable-info env new-symbol)))))
+		 (setq info (cleavir-env:variable-info environment new-symbol)))))
     info))
 
 (defun function-info (environment function-name-cst)

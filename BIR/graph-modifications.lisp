@@ -389,7 +389,6 @@
          (successor (first (successors iblock)))
          (end-predecessor (predecessor jump))
          (start (start successor))
-         (function (function successor))
          (end (end successor)))
     (cond (end-predecessor
            (setf (successor end-predecessor) start)
@@ -453,7 +452,6 @@
   (check-type inst (and instruction (not terminator)))
   ;; the new block is the block after, because there's a little less to update.
   (let* ((ib (iblock inst))
-         (function (function ib))
          (new (make-instance 'iblock
                 :function (function ib) :inputs nil
                 :predecessors (cleavir-set:make-set ib)

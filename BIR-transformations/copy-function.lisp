@@ -15,7 +15,7 @@
   (multiple-value-bind (old presentp) (gethash thing map)
     (when presentp
       (error "BUG: Tried to copy ~a twice: Old ~a new ~a"
-             thing (gethash thing map) old copy)))
+             thing old copy)))
   (setf (gethash thing map) copy))
 
 (defun copy-variable (variable stack map)
@@ -80,9 +80,8 @@
          (when (eq ib (cleavir-bir:start function))
            (setf (cleavir-bir:start copy) copy-ib))))
      function)
-    (mapc
-     (lambda (ib) (fill-iblock-copy ib stack map))
-     (cleavir-bir::iblocks-forward-flow-order function))
+    (cleavir-bir:do-iblocks (ib function)
+      (fill-iblock-copy ib stack map))
     copy))
 
 (defun copy-phi (datum map)
