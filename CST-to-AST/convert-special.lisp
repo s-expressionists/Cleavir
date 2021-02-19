@@ -5,7 +5,7 @@
              *current-form-is-top-level-p*
              (not (member operator
                           '(progn locally macrolet symbol-macrolet eval-when))))
-    (cst-eval-for-effect cst environment system)))
+    (cst-eval-for-effect-encapsulated cst environment system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -136,7 +136,7 @@
                     ;; No   No   Yes  CTT
                     (and ct (not lt))
                     (and (not ct) (not lt) e *compile-time-too*))
-                   (cst-eval-for-effect
+                   (cst-eval-for-effect-encapsulated
                     (cst:cons (make-atom-cst 'progn s) body-cst
                               :source s)
                     environment system)
@@ -411,9 +411,8 @@
                (not (constantp form env)))
           (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
           (cleavir-ast:make-constant-ast
-           (cst-eval form-cst
-                     (trucler:restrict-for-macrolet-expander system env)
-                     system)
+           (cst-eval-encapsulated
+            form-cst (trucler:restrict-for-macrolet-expander system env) system)
            :origin origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -447,10 +446,11 @@
                                               lambda-list-cst
                                               (cst:raw body-cst)
                                               environment)))
-      (cleavir-env:eval lambda-expression
-                        (trucler:restrict-for-macrolet-expander
-                         system environment)
-                        environment))))
+      ;; FIXME: CST:PARSE-MACRO should operate on and return CSTs.
+      (cst-eval (cst:cst-from-expression lambda-expression)
+                (trucler:restrict-for-macrolet-expander
+                 system environment)
+                environment))))
 
 (defmethod convert-special
     ((symbol (eql 'macrolet)) cst env system)

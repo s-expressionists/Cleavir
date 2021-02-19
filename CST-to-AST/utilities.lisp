@@ -88,13 +88,15 @@
         :report "Ignore compiler macro."
         (return-from expand-compiler-macro form)))))
 
-(defun cst-eval (cst environment system)
+(defun cst-eval-encapsulated (cst environment system)
   (with-encapsulated-conditions
       (cst eval-error eval-warning eval-style-warning)
-    (cleavir-env:cst-eval cst environment environment system)))
+    (cst-eval cst environment environment system)))
 
-(defmethod cst-eval-for-effect (cst environment system)
-  (cst-eval cst environment system))
+(defmethod cst-eval-for-effect-encapsulated (cst environment system)
+  (with-encapsulated-conditions
+      (cst eval-error eval-warning eval-style-warning)
+    (cst-eval cst environment system)))
 
 (defun make-atom-cst (object &optional origin)
   (make-instance 'cst:atom-cst :raw object :source origin))

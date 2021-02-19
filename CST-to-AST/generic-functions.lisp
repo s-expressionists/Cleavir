@@ -50,15 +50,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic function CST-EVAL.
+;;;
+;;; Evaluate a CST. This is used both for effect, and to compute
+;;; macroexpansion functions and load time values.
+
+(defgeneric cst-eval (cst environment system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function CST-EVAL-FOR-EFFECT.
 ;;;
 ;;; This generic function is called in order on every CST that is
 ;;; evaluated for compile-time-too mode. The default method just
-;;; calls CLEAVIR-ENV:CST-EVAL.
+;;; calls CST-EVAL.
 ;;; A client could, for example, specialize this function to produce
 ;;; a "CFASL" file recording only compile time side effects.
 
-(defgeneric cst-eval-for-effect (cst environment system))
+(defgeneric cst-eval-for-effect (cst environment system)
+  (:method (cst env system) (cst-eval cst env system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

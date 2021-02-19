@@ -151,7 +151,7 @@
   ;; we are in COMPILE-TIME-TOO mode.  In that case, we must first
   ;; evaluate the form.
   (when (and *current-form-is-top-level-p* *compile-time-too*)
-    (cst-eval-for-effect cst env system))
+    (cst-eval-for-effect-encapsulated cst env system))
   (let ((compiler-macro (trucler:compiler-macro info))
         (notinline (eq 'notinline (trucler:inline info))))
     (if (or notinline (null compiler-macro))
