@@ -34,7 +34,7 @@
   ((%iblock :initarg :iblock :accessor iblock)
    (%insert-point :initarg :insert-point :accessor insert-point
                   ;; null means no instructions have been added yet.
-                  :type (or null instruction))))
+                  :type (or null cleavir-bir:instruction))))
 
 (defun function (inserter) (cleavir-bir:function (iblock inserter)))
 (defun dynamic-environment (inserter)

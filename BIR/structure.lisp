@@ -23,7 +23,9 @@
 
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name :type (or symbol null))))
+   (%name :initarg :name :initform nil :reader name :type (or symbol
+                                                              (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
+                                                              null))))
 
 ;;; A lexical is a datum that can be bound in an environment.
 (defclass lexical (datum) ())
@@ -61,7 +63,7 @@
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
-         :type instruction)
+         :type (or null instruction))
    ;; A type the compiler has proven holds for this linear-datum.
    (%derived-type :initform (current-top-ctype)
                   :initarg :derived-type
@@ -161,8 +163,8 @@
 (defclass no-input (instruction)
   ((%inputs :initform nil :type null)))
 (defclass one-input (instruction)
-  ((%inputs :initform '()
-            :type (cons value null))))
+  ((%inputs :initform nil
+            :type (or null (cons datum null)))))
 (defclass no-output (operation)
   ((%outputs :initform '() :type null)))
 
@@ -312,7 +314,7 @@
                          :accessor dynamic-environment
                          :type dynamic-environment)
    ;; The function this belongs to.
-   (%function :initarg :function :accessor function :type function)
+   (%function :initarg :function :accessor function :type (or null function)) ; null is for deleted blocks
    ;; For debug/introspection
    (%name :initarg :name :reader name :initform nil)))
 
@@ -332,7 +334,7 @@
    ;; are moved out into another function.
    (%start :initarg :start :accessor start :type (or null iblock))
    ;; The last iblock in the forward flow order.
-   (%tail :initarg :tail :accessor tail :type (or null iblock))
+   (%tail :initarg :tail :accessor tail :accessor end :type (or null iblock))
    ;; The return instruction of this function. If there isn't one,
    ;; i.e. the function never returns as the return is unreachable,
    ;; this is nil.
@@ -361,7 +363,7 @@
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%policy :initarg :policy :initform nil :reader policy)
-   (%name :initarg :name :initform nil :reader name)
+   (%name :initarg :name :initform nil :reader name) ; TODO inherited from datum
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil
                           :reader original-lambda-list)
