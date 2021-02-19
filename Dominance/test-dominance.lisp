@@ -46,7 +46,7 @@
 (defun test-dominance (&optional (n 10000))
   (loop repeat n
 	do (let ((f (cleavir-graph-test-utilities:random-flow-chart)))
-             (cleavir-graph:with-graph (graph)
+             (cleavir-graph:with-graph (f)
 	       (when (< (cleavir-graph:size) 50)
 	         (test-one-chart f))))))
 
@@ -88,7 +88,7 @@
 			       "   ~a -> ~a;~%"
 			       (name node)
 			       (name succ))))))
-	  (draw-node start-node))
+	  (draw-node graph))
 	(loop for node being each hash-key of dominance-frontiers
 	      do (let ((f (gethash node dominance-frontiers)))
 		   (loop for ff in f
@@ -96,7 +96,7 @@
 				    "   ~a -> ~a [style = bold, color = red];"
 				    (name node) (name ff)))))
 	(format stream "}~%")))))
-    
+
 ;;; The dominance frontier of a node X is defined to be the set of all
 ;;; nodes Y such that 1: there exists a predecessor Z of Y such that X
 ;;; dominates Z, and 2: X does not strictly dominate Y.
@@ -117,7 +117,7 @@
 		       (not (strictly-dominates x y)))
 	      (push y (gethash x result)))))))
     result))
-    
+
 (defun test-dominance-frontiers-one-flow-chart (graph)
   (flet ((same-set-p (s1 s2)
 	   (and (null (set-difference s1 s2 :test #'eq))
@@ -126,10 +126,10 @@
 	  (f2 (slow-dominance-frontiers graph)))
       (loop for node being each hash-key of f1
 	    do (unless (same-set-p (gethash node f1) (gethash node f2))
-		 (throw 'discrepancy (values start-node f1 f2))))
+		 (throw 'discrepancy (values graph f1 f2))))
       (loop for node being each hash-key of f2
 	    do (unless (same-set-p (gethash node f1) (gethash node f2))
-		 (throw 'discrepancy (values start-node f1 f2)))))))
+		 (throw 'discrepancy (values graph f1 f2)))))))
 
 (defun test-dominance-frontiers (&optional (n 10000))
   (catch 'discrepancy
