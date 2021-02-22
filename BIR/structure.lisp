@@ -90,14 +90,14 @@
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
+(defmethod rtype ((d constant)) :object)
 
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
+(defmethod rtype ((d load-time-value)) :object)
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -184,8 +184,8 @@
   ((%next :type (cons iblock null))))
 
 ;;; An argument to a function.
-(defclass argument (value transfer)
-  ((%rtype :initarg :rtype :initform :object :reader rtype)))
+(defclass argument (value transfer) ())
+(defmethod rtype ((d argument)) :object)
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.
@@ -256,8 +256,9 @@
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
    ;; What kind of ignore declaration is on this variable?
-   (%ignore :initarg :ignore :reader ignore)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%ignore :initarg :ignore :reader ignore)))
+
+(defmethod rtype ((datum variable)) :object)
 
 (defmethod unused-p ((datum variable))
   (cleavir-set:empty-set-p (readers datum)))

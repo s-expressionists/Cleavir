@@ -11,8 +11,7 @@
           lexical-variable (gethash lexical-variable *variables*))
   (setf (gethash lexical-variable *variables*)
         (make-instance 'cleavir-bir:argument
-                       :name (cleavir-ast:name lexical-variable)
-                       :rtype :object)))
+                       :name (cleavir-ast:name lexical-variable))))
 
 (defun bind-lambda-list-arguments (lambda-list)
   (loop for item in lambda-list
