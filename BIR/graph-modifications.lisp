@@ -16,6 +16,8 @@
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
 (defmethod remove-use ((datum constant) use)
   (cleavir-set:nremovef (cleavir-bir:readers datum) use))
+(defmethod remove-use ((datum load-time-value) use)
+  (cleavir-set:nremovef (cleavir-bir:readers datum) use))
 (defmethod remove-use ((datum function) (use abstract-local-call))
   (cleavir-set:nremovef (local-calls datum) use))
 
