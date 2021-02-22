@@ -71,12 +71,22 @@
              (insert inserter (make-instance 'cleavir-bir:call
                                 :inputs (list (first callee)))))
             ((null (rest form-asts))
-             (with-compiled-arguments (args form-asts inserter system
-                                            :multiple-values)
-               (insert inserter (make-instance 'cleavir-bir:mv-call
-                                  :inputs (list* (first callee)
-                                                 (mapcar #'first args))))))
+             (let ((arv (compile-ast (first form-asts) inserter system)))
+               (cond ((eq arv :no-return) (return-from compile-ast :no-return))
+                     ((listp arv)
+                      ;; argument evaluates to a fixed number of values,
+                      ;; so only a normal call is required
+                      (insert inserter
+                              (make-instance 'cleavir-bir:call
+                                :inputs (list* (first callee) arv))))
+                     (t ; multiple value call
+                      (insert inserter
+                              (make-instance 'cleavir-bir:mv-call
+                                :inputs (list (first callee) arv)))))))
             (t
+             ;; Multiple argument forms. This is rather more involved, as we
+             ;; have to save values from early arguments while evaluating
+             ;; the later ones.
              (loop with orig-de = (dynamic-environment inserter)
                    for form-ast in (butlast form-asts)
                    for next = (make-iblock inserter :name '#:mv-call-temp)
