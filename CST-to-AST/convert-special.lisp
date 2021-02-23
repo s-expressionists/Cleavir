@@ -261,7 +261,9 @@
                          new-env system canonical-declaration-specifiers)))
         (process-progn
          (append init-asts
-                 (convert-sequence forms-cst final-env system))
+                 (list
+                  (process-progn (convert-sequence forms-cst final-env system)
+                                 origin)))
          origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -287,7 +289,10 @@
                          new-env system canonical-declaration-specifiers)))
         (process-progn
          (append init-asts
-                 (convert-sequence forms-cst final-env system))
+                 (list
+                  (process-progn
+                   (convert-sequence forms-cst final-env system)
+                   origin)))
          origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
