@@ -147,7 +147,14 @@
    (output            output-pane :display-function   'display-output
                                   :end-of-page-action :allow)
    (disassembly       output-pane :display-function   'display-disassembly
-                                  :end-of-page-action :allow))
+                                  :end-of-page-action :allow)
+   (tabs              (clim-tab-layout:with-tab-layout ('clim-tab-layout:tab-page)
+                        ("Output"
+                         (clim:scrolling () output))
+                        ("Intermediate Representation"
+                         (clim:scrolling (:scroll-bars :both) ir))
+                        ("Disassembly"
+                         (clim:scrolling () disassembly)))))
   (:layouts
    (default
     (clim:spacing (:thickness 4)
@@ -166,13 +173,7 @@
             (clim:horizontally (:spacing 8)
               safe default fast)
             :fill))
-        (:fill (clim-tab-layout:with-tab-layout ('clim-tab-layout:tab-page)
-                 ("Output"
-                  (clim:scrolling () output))
-                 ("Intermediate Representation"
-                  (clim:scrolling (:scroll-bars :both) ir))
-                 ("Disassembly"
-                  (clim:scrolling () disassembly))))))))
+        (:fill tabs)))))
   (:menu-bar nil)
   (:pointer-documentation t)
   (:command-table (ir-inspector-command-table
@@ -181,15 +182,22 @@
 
 (defun update (frame cst policy transforms)
   (a:when-let ((ir (clim:find-pane-named frame 'ir)))
-    (handler-bind
-        ((error (lambda (condition)
-                  (a:appendf (output frame)
-                             (list (cons :error (princ-to-string condition))))
-                  (return-from update))))
+    (let ((first-error? t))
+      (handler-bind
+          ((error (lambda (condition)
+                    (let ((error (list (cons :error (princ-to-string condition)))))
+                      (cond (first-error?
+                             (setf (output frame) error
+                                   first-error?   nil))
+                            (t
+                             (a:appendf (output frame) error))))
+                    (setf (clouseau:root-object ir :run-hook-p t) nil
+                          (disassembly frame) nil)
+                    (return-from update))))
         (setf (values (clouseau:root-object ir :run-hook-p t)
                       (output frame)
                       (disassembly frame))
-              (module<-cst cst policy transforms))))
+              (module<-cst cst policy transforms)))))
   nil)
 
 (defmethod (setf cst) :after ((new-value t) (frame ir-inspector))
@@ -218,7 +226,12 @@
 
 (defmethod (setf output) :after ((new-value t) (frame ir-inspector))
   (a:when-let ((output (clim:find-pane-named frame 'output)))
-    (clim:redisplay-frame-pane frame output :force-p t)))
+    (clim:redisplay-frame-pane frame output :force-p t)
+    (let ((errors? (some (a:of-type '(cons (eql :error))) new-value)))
+      (a:when-let* ((tabs   (clim:find-pane-named frame 'tabs))
+                    (output (clim-tab-layout:find-tab-page-named 'output tabs)))
+        (setf (clim-tab-layout:tab-page-drawing-options output)
+              (if errors? `(:ink ,clim:+dark-red+) '()))))))
 
 (defun display-output (frame pane)
   (a:if-let ((output (output frame)))
