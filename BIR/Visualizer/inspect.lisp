@@ -97,6 +97,39 @@
   (let ((*print-right-margin* most-positive-fixnum))
     (format stream " ~A ~S" (bir:name object) (bir:lambda-list object))))
 
+(defun draw-control-arc (stream from to x1 y1 x2 y2
+                         &rest args &key &allow-other-keys)
+  (cond ((< x2 x1)
+         (multiple-value-bind (x2 y2)
+             (clim:with-bounding-rectangle* (x1 y1 x2 y2) from
+               (declare (ignore y2))
+               (values (/ (+ x1 x2) 2) y1))
+           (multiple-value-bind (x1 y1)
+               (clim:with-bounding-rectangle* (x1 y1 x2 y2) to
+                 (declare (ignore y2))
+                 (values (/ (+ x1 x2) 2) y1))
+             (let* ((margin 100)
+                    (y0     (- (min y1 y2) margin)))
+               (apply #'clim:draw-line* stream x2 y2 x2 y0 args)
+               (apply #'clim:draw-line* stream x1 y0 x2 y0 args)
+               (apply #'clim:draw-arrow* stream  x1 y0 x1 y1 args)))))
+        (t
+         (apply #'clim:draw-arrow* stream x1 y1 x2 y2
+                :line-thickness 2 args))))
+
+(defun draw-bir-control-arc (stream from to x1 y1 x2 y2)
+  (let* ((from* (clim:graph-node-object from))
+         (to*   (clim:graph-node-object to))
+         (last  (bir:end from*))
+         (ink   (cond ((not (typep last 'bir:ifi))
+                       nil)
+                      ((eq (first (bir:next last)) to*)
+                       clim:+dark-green+)
+                      ((eq (second (bir:next last)) to*)
+                       clim:+dark-red+))))
+    (apply #'draw-control-arc stream from to x1 y1 x2 y2
+           (when ink (list :ink ink)))))
+
 (defmethod clouseau:inspect-object-using-state ((object bir:function)
                                                 (state  clouseau:inspected-instance)
                                                 (style  (eql :expanded-body))
@@ -112,7 +145,8 @@
        (a:ensure-list (bir:next (bir:end node))))
      :merge-duplicates t :duplicate-test #'eq
      :maximize-generations t
-     :stream stream))
+     :stream stream
+     :arc-drawer 'draw-bir-control-arc))
   ;; Instance slots
   (call-next-method))
 
