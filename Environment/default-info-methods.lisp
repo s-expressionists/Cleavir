@@ -616,7 +616,7 @@
 ;;; names are not the same, we continue the search.
 
 (defmethod function-inline ((environment function)
-			  (defining-info local-function-info))
+			    (defining-info local-function-info))
   (if (equal (name environment) (name defining-info))
       nil
       (function-inline (next environment) defining-info)))
@@ -634,6 +634,12 @@
 
 (defmethod function-inline ((environment inline)
 			    (defining-info global-function-info))
+  (if (equal (name environment) (name defining-info))
+      environment
+      (function-inline (next environment) defining-info)))
+
+(defmethod function-inline ((environment inline)
+			    (defining-info global-macro-info))
   (if (equal (name environment) (name defining-info))
       environment
       (function-inline (next environment) defining-info)))
@@ -750,10 +756,12 @@
 
 (defmethod make-info
     (environment (defining-info global-macro-info))
-  (declare (cl:ignore environment))
   (make-instance 'global-macro-info
     :name (name defining-info)
     :compiler-macro (compiler-macro defining-info)
+    :inline
+    (let ((entry (function-inline environment defining-info)))
+      (inline (or entry defining-info)))
     :expander (expander defining-info)))
 
 (defmethod make-info

@@ -218,6 +218,15 @@
    (%name :initarg :name :reader name)
    ;; A macro function allowing tools to expand the macro.
    (%expander :initarg :expander :reader expander)
+   ;; There are three possible values here, namely NIL, INLINE and
+   ;; NOTINLINE.  NIL means that there is neither an INLINE nor a
+   ;; NOTINLINE declaration in scope.  INLINE means that there is an
+   ;; INLINE declaration in scope, and NOTINLINE means that there is a
+   ;; NOTINLINE declaration in scope.
+   ;; For macros, INLINE definitions control whether compiler macros
+   ;; are used or not, rather than inlining per se.
+   (%inline :initform nil :initarg :inline :reader inline
+	    :type (member nil inline notinline))
    ;; If the value of this slot is NIL, it means that there is no
    ;; compiler macro associated with this macro.  If not, the value
    ;; must be a compiler macro function.

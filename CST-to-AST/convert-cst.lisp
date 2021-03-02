@@ -58,11 +58,13 @@
 (defmethod convert-cst
     (cst (info cleavir-env:global-macro-info) env system)
   (let ((compiler-macro (cleavir-env:compiler-macro info))
+        (notinline (eq 'notinline (cleavir-env:inline info)))
         (expander (cleavir-env:expander info)))
     (with-preserved-toplevel-ness
-      (if (null compiler-macro)
-          ;; There is no compiler macro, so we just apply the macro
-          ;; expander, and then convert the resulting form.
+      (if (or notinline (null compiler-macro))
+          ;; There is no compiler macro, or its use has been disabled,
+          ;; so we just apply the macro expander, and then convert
+          ;; the resulting form.
           (let* ((expanded-form (expand-macro expander cst env))
                  (expanded-cst (cst:reconstruct expanded-form cst system)))
             (convert expanded-cst env system))
