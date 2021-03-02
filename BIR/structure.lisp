@@ -124,7 +124,10 @@
                  :type (or instruction null))
    (%successor :initarg :successor :accessor successor
                ;; NIL indicates this is a terminator.
-               :type (or instruction null))
+               ;; FIXME: This type declaration causes crashes-to-LDB in SBCL
+               ;; under unclear circumstances.
+               :type #-sbcl (or instruction null)
+                     #+sbcl (or standard-object null))
    (%inputs :initform nil :initarg :inputs :accessor inputs
             ;; Sequence of DATA.
             :type sequence)
