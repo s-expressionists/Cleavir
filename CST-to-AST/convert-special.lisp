@@ -489,8 +489,25 @@
             until (cst:null remaining)
             do (cst:db definition-origin (name-cst expansion-cst)
                    (cst:first remaining)
-                 (let ((name (cst:raw name-cst))
-                       (expansion (cst:raw expansion-cst)))
+                 (let* ((name (cst:raw name-cst))
+                        ;; We use cleavir-env directly, because it's
+                        ;; okay if the variable is unbound.
+                        (info (cleavir-env:variable-info env name))
+                        (expansion (cst:raw expansion-cst)))
+                   (typecase info
+                     (cleavir-env:constant-variable-info
+                      (cerror "Bind it anyway."
+                              'symbol-macro-names-constant :cst name-cst))
+                     (cleavir-env:special-variable-info
+                      ;; Rebinding a local special is okay.
+                      ;; Maybe? CLHS is a little ambiguous here - it
+                      ;; says "global variable"s can't be rebound, but
+                      ;; defines "global variable" to include all specials,
+                      ;; possibly including local specials.
+                      (when (cleavir-env:global-p info)
+                        (cerror "Bind it anyway."
+                                'symbol-macro-names-global-special
+                                :cst name-cst))))
                    (setf new-env
                          (cleavir-env:add-local-symbol-macro
                           new-env name expansion)))))

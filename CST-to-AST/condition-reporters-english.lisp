@@ -256,6 +256,26 @@
           (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
+    ((condition symbol-macro-names-constant)
+     stream
+     (language acclimation:english))
+  (format stream
+          "The symbol bound by SYMBOL-MACROLET must not be a global variable,~@
+           but the following constant variable was found:~@
+           ~s"
+          (cst:raw (cst condition))))
+
+(defmethod acclimation:report-condition
+    ((condition symbol-macro-names-global-special)
+     stream
+     (language acclimation:english))
+  (format stream
+          "The symbol bound by SYMBOL-MACROLET must not be a global variable,~@
+           but the following special variable was found:~@
+           ~s"
+          (cst:raw (cst condition))))
+
+(defmethod acclimation:report-condition
     ((condition no-variable-info)
      stream
      (language acclimation:english))
