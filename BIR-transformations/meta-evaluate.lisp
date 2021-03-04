@@ -102,7 +102,8 @@
 (defun meta-evaluate-iblock (iblock system)
   (derive-iblock-input-types iblock system)
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
-    (meta-evaluate-instruction instruction system)))
+    (unless (meta-evaluate-instruction instruction system)
+      (derive-types instruction system))))
 
 (defgeneric maybe-flush-instruction (instruction))
 
@@ -149,8 +150,13 @@
 
 (defgeneric meta-evaluate-instruction (instruction system))
 
+(defgeneric derive-types (instruction system))
+
 (defmethod meta-evaluate-instruction (instruction system)
   ;; Without particular knowledge, we have nothing to do.
+  (declare (ignore instruction system)))
+
+(defmethod derive-types (instruction system)
   (declare (ignore instruction system)))
 
 ;;; Fold the IFI if we can determine whether or not the test will
@@ -273,35 +279,38 @@
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:multiple-to-fixed) system)
+  (declare (ignore system))
   (let ((definition (first (cleavir-bir:inputs instruction))))
-    (cond ((typep definition 'cleavir-bir:fixed-to-multiple)
-           (cleavir-bir:delete-ftm-mtf-pair definition instruction))
-          ;; Derive the type of the outputs (fixed values) from the
-          ;; definition.
-          (t
-           (let ((values-type (cleavir-bir:ctype definition)))
-             (unless (cleavir-ctype:top-p values-type system)
-               (let ((required-type
-                       (cleavir-ctype:values-required values-type system))
-                     (optional-type
-                       (cleavir-ctype:values-optional values-type system))
-                     (rest-type (cleavir-ctype:disjoin/2
-                                 (cleavir-ctype:values-rest values-type system)
-                                 (cleavir-ctype:member system nil)
-                                 system)))
-                 (dolist (output (cleavir-bir:outputs instruction))
-                   (cleavir-bir:derive-type-for-linear-datum
-                    output
-                    (cond (required-type (pop required-type))
-                          (optional-type (cleavir-ctype:disjoin/2
-                                          (pop optional-type)
-                                          (cleavir-ctype:member system nil)
-                                          system))
-                          (t rest-type))
-                    system)))))))))
+    (when (typep definition 'cleavir-bir:fixed-to-multiple)
+      (cleavir-bir:delete-ftm-mtf-pair definition instruction)
+      t)))
 
-(defmethod meta-evaluate-instruction
-    ((instruction cleavir-bir:fixed-to-multiple) system)
+(defmethod derive-types ((instruction cleavir-bir:multiple-to-fixed) system)
+  ;; Derive the type of the outputs (fixed values) from the
+  ;; definition.
+  (let* ((definition (first (cleavir-bir:inputs instruction)))
+         (values-type (cleavir-bir:ctype definition)))
+    (unless (cleavir-ctype:top-p values-type system)
+      (let ((required-type
+              (cleavir-ctype:values-required values-type system))
+            (optional-type
+              (cleavir-ctype:values-optional values-type system))
+            (rest-type (cleavir-ctype:disjoin/2
+                        (cleavir-ctype:values-rest values-type system)
+                        (cleavir-ctype:member system nil)
+                        system)))
+        (dolist (output (cleavir-bir:outputs instruction))
+          (cleavir-bir:derive-type-for-linear-datum
+           output
+           (cond (required-type (pop required-type))
+                 (optional-type (cleavir-ctype:disjoin/2
+                                 (pop optional-type)
+                                 (cleavir-ctype:member system nil)
+                                 system))
+                 (t rest-type))
+           system))))))
+
+(defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
   (cleavir-bir:derive-type-for-linear-datum
    instruction
    (cleavir-ctype:values
@@ -314,36 +323,7 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test) system)
   (declare (ignore system))
   (let ((inputs (cleavir-bir:inputs instruction)))
-    (unless (constant-fold-instruction instruction inputs #'eq)
-      ;; The tautology stuff doesn't help yet. We'd need EQL
-      ;; constraints to actually do anything useful.
-      #+(or)
-      (let ((input1 (first inputs))
-            (input2 (second inputs)))
-        ;; (EQ <readvar <var X>> <readvar <var X>>) => T
-        (when (and (typep input1 'cleavir-bir:readvar)
-                   (typep input2 'cleavir-bir:readvar)
-                   (eq (first (cleavir-bir:inputs input1))
-                       (first (cleavir-bir:inputs input2))))
-          #+(or)
-          (print "folding tautalogy")
-          (replace-computation-by-constant-value
-           instruction
-           t))
-        ;; Do the transformation (if (eq <e> nil) <f> <g>) => (if <e> <g> <f>).
-        ;; Really doesn't work yet.
-        #+(or)
-        (progn
-          (when (typep input1 'cleavir-bir:constant-reference)
-            (psetq input1 input2
-                   input2 input1))
-          (when (eq (cleavir-bir:constant-value (first (cleavir-bir:inputs input2))) nil)
-            (let ((ifi (cleavir-bir:use instruction)))
-              (assert (typep ifi 'cleavir-bir:ifi))
-              (cleavir-bir::remove-use instruction ifi)
-              (cleavir-bir:delete-computation instruction)
-              (setf (cleavir-bir:inputs ifi) (list input1))
-              (setf (cleavir-bir:next ifi) (nreverse (cleavir-bir:next ifi))))))))))
+    (constant-fold-instruction instruction inputs #'eq)))
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:typeq-test) system)
@@ -351,17 +331,11 @@
          (ctype (cleavir-bir:ctype object))
          (test-ctype (cleavir-bir:test-ctype instruction)))
     (cond ((cleavir-ctype:values-subtypep ctype test-ctype system)
-           #+(or)
-           (format t "~&folding typeq test ~a as true since testing ~a" test-ctype ctype)
-           (replace-computation-by-constant-value
-            instruction
-            t))
+           (replace-computation-by-constant-value instruction t)
+           t)
           ((cleavir-ctype:disjointp ctype test-ctype system)
-           #+(or)
-           (format t "~&folding typeq test ~a as false since testing ~a " test-ctype ctype)
-           (replace-computation-by-constant-value
-            instruction
-            nil)))))
+           (replace-computation-by-constant-value instruction nil)
+           t))))
 
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
@@ -399,7 +373,7 @@
            (cleavir-bir:delete-instruction writer)
            (cleavir-bir:delete-instruction input))
          t)
-        (t)))))
+        (t nil)))))
 
 ;;; For an immutable variable, we prove that the type of its readers
 ;;; is just the type of its definition.
@@ -414,11 +388,14 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (let ((variable (first (cleavir-bir:outputs instruction))))
     (when variable
-      (unless (or (substitute-single-read-variable-if-possible variable)
-                  (constant-propagate-variable-if-possible variable))
-        (derive-type-for-variable variable system)))))
+      (or (substitute-single-read-variable-if-possible variable)
+          (constant-propagate-variable-if-possible variable)))))
 
-(defmethod meta-evaluate-instruction ((instruction cleavir-bir:returni) system)
+(defmethod derive-types ((instruction cleavir-bir:leti) system)
+  (let ((variable (first (cleavir-bir:outputs instruction))))
+    (when variable (derive-type-for-variable variable system))))
+
+(defmethod derive-types ((instruction cleavir-bir:returni) system)
   ;; Propagate the return type to local calls and enclose of the function.
   (let ((function (cleavir-bir:function instruction))
         (return-type
@@ -427,31 +404,26 @@
       (cleavir-bir:derive-type-for-linear-datum
        local-call
        return-type
-       system))
-    ;; Doesn't actually do anything useful.
-    #+(or)
-    (let ((enclose (cleavir-bir:enclose function)))
-      (when enclose
-        (cleavir-bir:derive-type-for-linear-datum
-         enclose
-         (cleavir-ctype:function
-          nil nil (cleavir-ctype:top nil) nil nil nil return-type system)
-         system)))))
+       system))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
   (let* ((input (first (cleavir-bir:inputs instruction)))
          (ctype (cleavir-bir:ctype input)))
     ;; Remove THEI when its input's type is a subtype of the
     ;; THEI's asserted type.
-    (if (cleavir-ctype:values-subtypep ctype
-                                       (cleavir-bir:asserted-type instruction)
-                                       system)
-        (cleavir-bir:delete-thei instruction)
-        (let ((type-check-function
-                (cleavir-bir:type-check-function instruction)))
-          (unless (symbolp type-check-function)
-            ;; Propagate the type of the input into function.
-            ;; FIXME: Extend this to values types.
-            (cleavir-bir:derive-type-for-linear-datum
-             (first (cleavir-bir:lambda-list type-check-function))
-             ctype system))))))
+    (when (cleavir-ctype:values-subtypep
+           ctype (cleavir-bir:asserted-type instruction) system)
+      (cleavir-bir:delete-thei instruction)
+      t)))
+
+(defmethod derive-types ((instruction cleavir-bir:thei) system)
+  (let* ((type-check-function
+           (cleavir-bir:type-check-function instruction))
+         (input (first (cleavir-bir:inputs instruction)))
+         (ctype (cleavir-bir:ctype input)))
+    (unless (symbolp type-check-function)
+      ;; Propagate the type of the input into function.
+      ;; FIXME: Extend this to values types.
+      (cleavir-bir:derive-type-for-linear-datum
+       (first (cleavir-bir:lambda-list type-check-function))
+       ctype system))))
