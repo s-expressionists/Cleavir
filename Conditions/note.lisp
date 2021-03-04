@@ -21,7 +21,7 @@
 ;;; reporting from being done. Otherwise, the note will be displayed on
 ;;; *error-output*.
 ;;; We have no simple-program-note class for reasons of internal hygeine,
-;;; so unlike cl:error and cl:warn,  we only accept condition type specifiers
+;;; so unlike cl:error and cl:warn, we only accept condition type specifiers
 ;;; as DATUM.
 
 (defun note (datum &rest arguments)
