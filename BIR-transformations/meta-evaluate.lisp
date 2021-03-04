@@ -104,37 +104,45 @@
   (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
     (meta-evaluate-instruction instruction system)))
 
+(defgeneric maybe-flush-instruction (instruction))
+
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:instruction)))
+
+(defmethod maybe-flush-instruction
+    ((instruction cleavir-bir:multiple-to-fixed))
+  (when (every #'cleavir-bir:unused-p (cleavir-bir:outputs instruction))
+    (cleavir-bir:delete-instruction instruction)))
+
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:readvar))
+  (when (cleavir-bir:unused-p instruction)
+    (cleavir-bir:delete-computation instruction)))
+(defmethod maybe-flush-instruction
+    ((instruction cleavir-bir:constant-reference))
+  (when (cleavir-bir:unused-p instruction)
+    (cleavir-bir:delete-computation instruction)))
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:enclose))
+  (when (cleavir-bir:unused-p instruction)
+    (cleavir-bir:delete-computation instruction)))
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:conditional-test))
+  (when (cleavir-bir:unused-p instruction)
+    (cleavir-bir:delete-computation instruction)))
+
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:abstract-call))
+  (when (and (cleavir-bir:unused-p instruction)
+             (cleavir-attributes:has-boolean-attribute-p
+              (cleavir-bir:attributes instruction)
+              :flushable))
+    (cleavir-bir:delete-computation instruction)))
+
+(defmethod maybe-flush-instruction ((instruction cleavir-bir:vprimop))
+  (let ((name (cleavir-primop-info:name (cleavir-bir:info instruction))))
+    (when (and (member name '(fdefinition car cdr symbol-value))
+               (cleavir-bir:unused-p instruction))
+      (cleavir-bir:delete-computation instruction))))
+
 (defun flush-dead-code (iblock)
-  (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:end iblock) :backward)
-    (typecase instruction
-      (cleavir-bir:multiple-to-fixed
-       (when (every #'cleavir-bir:unused-p (cleavir-bir:outputs instruction))
-         (cleavir-bir:delete-instruction instruction)))
-      (cleavir-bir:computation
-       (when (null (cleavir-bir:use instruction))
-         (typecase instruction
-           ((or cleavir-bir:readvar cleavir-bir:constant-reference cleavir-bir:enclose)
-            #+(or)
-            (format t "~&meta-evaluate: flushing ~a" instruction)
-            (cleavir-bir:delete-computation instruction))
-           (cleavir-bir:abstract-call
-            (when (cleavir-attributes:has-boolean-attribute-p
-                   (cleavir-bir:attributes instruction)
-                   :flushable)
-              #+(or)
-              (format t "~&meta-evaluate: flushing computation")
-              (cleavir-bir:delete-computation instruction)))
-           (cleavir-bir:conditional-test
-            #+(or)
-            (format t "~&meta-evaluate: flushing conditional test ~a" instruction)
-            (cleavir-bir:delete-computation instruction))
-           (cleavir-bir:vprimop
-            (let ((name (cleavir-primop-info:name (cleavir-bir:info instruction))))
-              (when (member name
-                            '(fdefinition car cdr symbol-value))
-                #+(or)
-                (format t "~&meta-evaluate: flushing primop ~a" name)
-                (cleavir-bir:delete-computation instruction)))))))))
+  (cleavir-bir:map-iblock-instructions-backwards #'maybe-flush-instruction
+                                                 (cleavir-bir:end iblock))
   (dolist (phi (cleavir-bir:inputs iblock))
     (when (null (cleavir-bir:use phi))
       (cleavir-bir:delete-phi phi))))
