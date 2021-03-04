@@ -24,8 +24,12 @@
 
 (defun eliminate-catches (function)
   (cleavir-set:doset (catch (cleavir-bir:catches function))
-    (when (catch-eliminable-p catch)
-      (eliminate-catch catch))))
+    (with-simple-restart (continue "Skip attempted elimination of catch ~a ~
+in function ~a"
+                                   catch function)
+      (when (catch-eliminable-p catch)
+        (eliminate-catch catch)))))
 
 (defun module-eliminate-catches (module)
-  (cleavir-bir:map-functions #'eliminate-catches module))
+  (with-simple-restart (continue "Skip this optimization.")
+    (cleavir-bir:map-functions #'eliminate-catches module)))

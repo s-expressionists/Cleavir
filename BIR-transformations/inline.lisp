@@ -46,62 +46,69 @@
 ;;; analysis" for functions, recording the result of the analysis
 ;;; directly into the IR.
 (defun find-function-local-calls (function)
-  (let ((enclose (cleavir-bir:enclose function)))
-    (when enclose
-      (let ((use (cleavir-bir:use enclose)))
-        (typecase use
-          (cleavir-bir:call
-           (when (and (eq enclose (cleavir-bir:callee use))
-                      (check-argument-list-compatible
-                       (rest (cleavir-bir:inputs use))
-                       function))
-             (change-class use 'cleavir-bir:local-call)
-             (cleavir-bir:replace-computation enclose function)))
-          (cleavir-bir:mv-call
-           (when (eq enclose (cleavir-bir:callee use))
-             (change-class use 'cleavir-bir:mv-local-call)
-             (cleavir-bir:replace-computation enclose function)))
-          (cleavir-bir:leti
-           (let ((variable (first (cleavir-bir:outputs use))))
-             ;; Variable needs to be immutable since we want to make
-             ;; sure this definition reaches the readers.
-             (when (cleavir-bir:immutablep variable)
-               (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                 (let ((use (cleavir-bir:use reader)))
-                   (typecase use
-                     (cleavir-bir:call
-                      (when (and (eq reader (cleavir-bir:callee use))
-                                 (check-argument-list-compatible
-                                  (rest (cleavir-bir:inputs use))
-                                  function))
-                        (change-class use 'cleavir-bir:local-call)
-                        (cleavir-bir:replace-computation reader function)))
-                     (cleavir-bir:mv-call
-                      (when (eq reader (cleavir-bir:callee use))
-                        (change-class use 'cleavir-bir:mv-local-call)
-                        (cleavir-bir:replace-computation reader function)))))))
-             ;; No more references to the variable means we can clean
-             ;; up the enclose. The LETI might've already been
-             ;; cleaned up by any readvar deletion triggers.
-             (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
-               (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
-                 (cleavir-bir:delete-instruction use))
-               (cleavir-bir:delete-computation enclose))))))))
-  (post-find-local-calls function))
+  (with-simple-restart (continue "Skip optimizing calls to ~a" function)
+    (let ((enclose (cleavir-bir:enclose function)))
+      (when enclose
+        (let ((use (cleavir-bir:use enclose)))
+          (typecase use
+            (cleavir-bir:call
+             (when (and (eq enclose (cleavir-bir:callee use))
+                        (check-argument-list-compatible
+                         (rest (cleavir-bir:inputs use))
+                         function))
+               (change-class use 'cleavir-bir:local-call)
+               (cleavir-bir:replace-computation enclose function)))
+            (cleavir-bir:mv-call
+             (when (eq enclose (cleavir-bir:callee use))
+               (change-class use 'cleavir-bir:mv-local-call)
+               (cleavir-bir:replace-computation enclose function)))
+            (cleavir-bir:leti
+             (let ((variable (first (cleavir-bir:outputs use))))
+               ;; Variable needs to be immutable since we want to make
+               ;; sure this definition reaches the readers.
+               (when (cleavir-bir:immutablep variable)
+                 (cleavir-set:doset (reader (cleavir-bir:readers variable))
+                   (let ((use (cleavir-bir:use reader)))
+                     (with-simple-restart (continue
+                                           "Skip optimizing use ~a of ~a"
+                                           use function)
+                       (typecase use
+                         (cleavir-bir:call
+                          (when (and (eq reader (cleavir-bir:callee use))
+                                     (check-argument-list-compatible
+                                      (rest (cleavir-bir:inputs use))
+                                      function))
+                            (change-class use 'cleavir-bir:local-call)
+                            (cleavir-bir:replace-computation reader function)))
+                         (cleavir-bir:mv-call
+                          (when (eq reader (cleavir-bir:callee use))
+                            (change-class use 'cleavir-bir:mv-local-call)
+                            (cleavir-bir:replace-computation reader
+                                                             function))))))))
+               ;; No more references to the variable means we can clean
+               ;; up the enclose. The LETI might've already been
+               ;; cleaned up by any readvar deletion triggers.
+               (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+                 (unless (cleavir-set:empty-set-p
+                          (cleavir-bir:writers variable))
+                   (cleavir-bir:delete-instruction use))
+                 (cleavir-bir:delete-computation enclose))))))))
+    (post-find-local-calls function)))
 
 (defun find-module-local-calls (module)
-  (cleavir-bir:map-functions #'find-function-local-calls module)
-  ;; Since contification depends on all non-tail local calls being in
-  ;; the same function, it may be the case that contifying triggers
-  ;; more contification. Therefore, we do a second pass/fixpoint loop
-  ;; to make sure everything gets contified. This also ensures that we
-  ;; contify deterministically, since the result of a single pass
-  ;; depends on the order of iteration over the set of functions in
-  ;; the module.
-  (let ((did-something nil))
-    (loop do (let ((changed nil))
-               (cleavir-bir:do-functions (function module)
-                 (when (maybe-interpolate function)
-                   (setq changed t)))
-               (setq did-something changed))
-          while did-something)))
+  (with-simple-restart (continue "Skip this optimization.")
+    (cleavir-bir:map-functions #'find-function-local-calls module)
+    ;; Since contification depends on all non-tail local calls being in
+    ;; the same function, it may be the case that contifying triggers
+    ;; more contification. Therefore, we do a second pass/fixpoint loop
+    ;; to make sure everything gets contified. This also ensures that we
+    ;; contify deterministically, since the result of a single pass
+    ;; depends on the order of iteration over the set of functions in
+    ;; the module.
+    (let ((did-something nil))
+      (loop do (let ((changed nil))
+                 (cleavir-bir:do-functions (function module)
+                   (when (maybe-interpolate function)
+                     (setq changed t)))
+                 (setq did-something changed))
+            while did-something))))

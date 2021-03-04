@@ -10,6 +10,8 @@
         (cleavir-bir:delete-instruction writer)))))
 
 (defun module-optimize-variables (module)
-  (cleavir-bir:do-functions (function module)
-    (cleavir-set:doset (variable (cleavir-bir:variables function))
-      (optimize-variable variable))))
+  (with-simple-restart (continue "Skip this optimization.")
+    (cleavir-bir:do-functions (function module)
+      (with-simple-restart (continue "Skip optimizing variables in ~a" function)
+        (cleavir-set:doset (variable (cleavir-bir:variables function))
+          (optimize-variable variable))))))

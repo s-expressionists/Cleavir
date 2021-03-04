@@ -7,14 +7,16 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun meta-evaluate-module (module system)
-  ;; Obviously this should actually be a worklist algorithm and not
-  ;; just two or three passes. We repeat on the module level so that
-  ;; types are more likely to get propagated interprocedurally.
-  (dotimes (repeat 3)
-    (declare (ignore repeat))
-    (cleavir-bir:do-functions (function module)
-      (meta-evaluate-function function system)
-      (cleavir-bir:compute-iblock-flow-order function))))
+  (with-simple-restart (continue "Skip this optimization.")
+    ;; Obviously this should actually be a worklist algorithm and not
+    ;; just two or three passes. We repeat on the module level so that
+    ;; types are more likely to get propagated interprocedurally.
+    (dotimes (repeat 3)
+      (declare (ignore repeat))
+      (cleavir-bir:do-functions (function module)
+        (with-simple-restart (continue "Skip optimizing ~a" function)
+          (meta-evaluate-function function system)
+          (cleavir-bir:compute-iblock-flow-order function))))))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
