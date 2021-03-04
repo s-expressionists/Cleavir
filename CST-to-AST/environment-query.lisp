@@ -8,21 +8,18 @@
 				  :name symbol
                                   :cst var-name-cst)
 	       (continue ()
-		 :report (lambda (stream)
-			   (format stream "Consider the variable as special."))
+		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
                          :name symbol)))
                ;; This is identical to CONTINUE, but more specifically named.
 	       (consider-special ()
-		 :report (lambda (stream)
-			   (format stream "Consider the variable as special."))
+		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
                          :name symbol)))
 	       (substitute (new-symbol)
-		 :report (lambda (stream)
-			   (format stream "Substitute a different name."))
+		 :report "Substitute a different name."
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
@@ -37,15 +34,12 @@
 				  :name function-name
                                   :cst function-name-cst)
 	       (consider-global ()
-		 :report (lambda (stream)
-			   (format stream
-				   "Treat it as the name of a global function."))
+		 :report "Treat it as the name of a global function."
 		 (return-from function-info
 		   (make-instance 'cleavir-env:global-function-info
 		     :name function-name)))
 	       (substitute (new-function-name)
-		 :report (lambda (stream)
-			   (format stream "Substitute a different name."))
+		 :report "Substitute a different name."
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
@@ -60,8 +54,7 @@
 				  :name tag-name
                                   :cst tag-name-cst)
 	       (substitute (new-tag-name)
-		 :report (lambda (stream)
-			   (format stream "Substitute a different name."))
+		 :report "Substitute a different name."
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
@@ -76,8 +69,7 @@
                                   :name block-name
                                   :cst block-name-cst)
                (substitute (new-block-name)
-                 :report (lambda (stream)
-                           (format stream "Substitute a different name."))
+                 :report "Substitute a different name."
                  :interactive (lambda ()
                                 (format *query-io* "Enter new name: ")
                                 (list (read *query-io*)))
