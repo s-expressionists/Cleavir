@@ -19,11 +19,15 @@
     (cleavir-bir:map-lambda-list
      (lambda (state item index)
        (declare (ignore item index))
-       (ecase state
+       (case state
          (:required (incf nrequired))
          (&optional (incf noptional))
          ((&rest &key) (setf restp t))
-         (&allow-other-keys)))
+         (&allow-other-keys)
+         (otherwise
+          ;; Implementation-specific keyword. We don't know how to deal
+          ;; with this, so silently give up. KLUDGEy.
+          (return-from check-argument-list-compatible nil))))
      lambda-list)
     (let ((nfixed (+ nrequired noptional)))
       (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
