@@ -292,10 +292,6 @@
   (declare (ignore sys))
   `(cl:member ,@elems))
 
-(defmethod null-type (sys)
-  (declare (ignore sys))
-  'cl:null)
-
 (defmethod satisfies (fname sys)
   (declare (ignore sys))
   `(cl:satisfies ,fname))

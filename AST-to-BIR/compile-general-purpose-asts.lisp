@@ -56,7 +56,7 @@
             (let ((top-ctype (cleavir-ctype:top system)))
               ;; LIST is of course (or null cons)
               (cleavir-ctype:disjoin/2
-               (cleavir-ctype:null-type system)
+               (cleavir-ctype:member system nil)
                (cleavir-ctype:cons top-ctype top-ctype system)
                system))
             system)))

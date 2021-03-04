@@ -40,14 +40,14 @@
                            type
                            (if arg
                                (cleavir-bir:ctype arg)
-                               (cleavir-ctype:null-type system))
+                               (cleavir-ctype:member system nil))
                            system))
                     (setq suppliedp
                           (cleavir-ctype:disjoin/2
                            suppliedp
                            (if arg
                                (cleavir-ctype:member system t)
-                               (cleavir-ctype:null-type system))
+                               (cleavir-ctype:member system nil))
                            system))))
                 (ecase state
                   (:required
@@ -158,13 +158,13 @@
                    (values then else)
                    (values else then)))
               ((cleavir-ctype:disjointp (cleavir-bir:ctype test)
-                                        (cleavir-ctype:null-type system)
+                                        (cleavir-ctype:member system nil)
                                         system)
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
                (values then else))
               ((cleavir-ctype:values-subtypep (cleavir-bir:ctype test)
-                                              (cleavir-ctype:null-type system)
+                                              (cleavir-ctype:member system nil)
                                               system)
                #+(or)
                (print "folding ifi based on type NULL")
@@ -278,7 +278,7 @@
                        (cleavir-ctype:values-optional values-type system))
                      (rest-type (cleavir-ctype:disjoin/2
                                  (cleavir-ctype:values-rest values-type system)
-                                 (cleavir-ctype:null-type system)
+                                 (cleavir-ctype:member system nil)
                                  system)))
                  (dolist (output (cleavir-bir:outputs instruction))
                    (cleavir-bir:derive-type-for-linear-datum
@@ -286,7 +286,7 @@
                     (cond (required-type (pop required-type))
                           (optional-type (cleavir-ctype:disjoin/2
                                           (pop optional-type)
-                                          (cleavir-ctype:null-type system)
+                                          (cleavir-ctype:member system nil)
                                           system))
                           (t rest-type))
                     system)))))))))
