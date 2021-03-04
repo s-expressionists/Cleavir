@@ -24,9 +24,10 @@
     ;; anything, especially since we're deriving the type from scratch
     ;; optimistically.
     (let ((local-calls (cleavir-bir:local-calls function)))
-      (unless (null
+      (unless (cleavir-set:every
                ;; Dunno how to mess with mv-local-call yet.
-               (cleavir-set:filter 'list (lambda (call) (typep call 'cleavir-bir:local-call)) local-calls))
+               (lambda (call) (typep call 'cleavir-bir:local-call))
+               local-calls)
         (cleavir-bir:map-lambda-list
          (lambda (state item index)
            (case state
