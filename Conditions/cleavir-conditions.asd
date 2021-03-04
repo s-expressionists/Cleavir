@@ -6,4 +6,5 @@
   ((:file "packages")
    (:file "program-condition" :depends-on ("packages"))
    (:file "origin" :depends-on ("packages"))
-   (:file "note" :depends-on ("program-condition" "packages"))))
+   (:file "note" :depends-on ("program-condition" "packages"))
+   (:file "continue" :depends-on ("packages"))))

@@ -202,61 +202,62 @@
 ;;; When the function does return normally, wire the return value of
 ;;; the function into the common ``transitive'' use of the local calls.
 (defun contify (function local-calls return-point common-use common-dynenv target-owner)
-  (let* ((returni (cleavir-bir:returni function))
-         ;; If the return-point has a predecessor, it does not start a
-         ;; block and will be the unique outside call to this
-         ;; function, which means we should normalize the return point
-         ;; to be a dummy block.
-         (unique-call
-           (and (not (eq return-point :unknown))
-                (cleavir-bir:predecessor return-point)))
-         (return-point
-           (if unique-call
-               (progn
-                 (check-type unique-call cleavir-bir:local-call)
-                 (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call))))
-                   (unless (cleavir-bir:unused-p unique-call)
-                     (let ((phi (make-instance 'cleavir-bir:phi :iblock dummy-block)))
-                       (setf (cleavir-bir:inputs dummy-block) (list phi))
-                       ;; Replace the call-as-datum with the return-values.
-                       (cleavir-bir:replace-uses phi unique-call)))
-                   dummy-block))
-               (if (eq return-point :unknown)
-                   :unknown
-                   (cleavir-bir:iblock return-point))))
-         (start (cleavir-bir:start function)))
-    (unless (and returni (eq return-point :unknown))
-      (move-function-arguments-to-iblock function)
-      (unless (eq return-point :unknown)
+  (cleavir-conditions:with-inconsistent-state ()
+    (let* ((returni (cleavir-bir:returni function))
+           ;; If the return-point has a predecessor, it does not start a
+           ;; block and will be the unique outside call to this
+           ;; function, which means we should normalize the return point
+           ;; to be a dummy block.
+           (unique-call
+             (and (not (eq return-point :unknown))
+                  (cleavir-bir:predecessor return-point)))
+           (return-point
+             (if unique-call
+                 (progn
+                   (check-type unique-call cleavir-bir:local-call)
+                   (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call))))
+                     (unless (cleavir-bir:unused-p unique-call)
+                       (let ((phi (make-instance 'cleavir-bir:phi :iblock dummy-block)))
+                         (setf (cleavir-bir:inputs dummy-block) (list phi))
+                         ;; Replace the call-as-datum with the return-values.
+                         (cleavir-bir:replace-uses phi unique-call)))
+                     dummy-block))
+                 (if (eq return-point :unknown)
+                     :unknown
+                     (cleavir-bir:iblock return-point))))
+           (start (cleavir-bir:start function)))
+      (unless (and returni (eq return-point :unknown))
+        (move-function-arguments-to-iblock function)
+        (unless (eq return-point :unknown)
+          (when returni
+            (rewire-return function return-point)))
+        (interpolate-function function
+                              target-owner
+                              common-dynenv)
+        (cleavir-set:doset (call local-calls)
+          (rewire-call-into-body call start))
+        ;; Recompute the flow order, as now the iblocks of the function
+        ;; have been integrated into that of TARGET-OWNER.
+        (cleavir-bir:compute-iblock-flow-order target-owner)
+        ;; Merge the blocks. Merge the tail first since the
+        ;; interpolated function might just be one block.
         (when returni
-          (rewire-return function return-point)))
-      (interpolate-function function
-                            target-owner
-                            common-dynenv)
-      (cleavir-set:doset (call local-calls)
-        (rewire-call-into-body call start))
-      ;; Recompute the flow order, as now the iblocks of the function
-      ;; have been integrated into that of TARGET-OWNER.
-      (cleavir-bir:compute-iblock-flow-order target-owner)
-      ;; Merge the blocks. Merge the tail first since the
-      ;; interpolated function might just be one block.
-      (when returni
-        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni)))
-      (when unique-call
-        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
-        ;; TODO: can generalize this to the case of more than
-        ;; one outside call.
-        ;; If we have a FTM->MTF sequence, clear it out.
-        (when (and common-use
-                   (typep common-use 'cleavir-bir:multiple-to-fixed))
-          (let ((definition (first (cleavir-bir:inputs common-use))))
-            (when (typep definition 'cleavir-bir:fixed-to-multiple)
-              (cleavir-bir:delete-ftm-mtf-pair definition common-use)))))
-      ;; We've interpolated and there are potentially useless
-      ;; catches in TARGET-OWNER, so now that the IR is in a
-      ;; consistent state, eliminate them.
-      (eliminate-catches target-owner)
-      t)))
+          (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni)))
+        (when unique-call
+          (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
+          ;; TODO: can generalize this to the case of more than
+          ;; one outside call.
+          ;; If we have a FTM->MTF sequence, clear it out.
+          (when (and common-use
+                     (typep common-use 'cleavir-bir:multiple-to-fixed))
+            (let ((definition (first (cleavir-bir:inputs common-use))))
+              (when (typep definition 'cleavir-bir:fixed-to-multiple)
+                (cleavir-bir:delete-ftm-mtf-pair definition common-use))))))))
+  ;; We've interpolated and there are potentially useless
+  ;; catches in TARGET-OWNER, so now that the IR is in a
+  ;; consistent state, eliminate them.
+  (eliminate-catches target-owner)
+  t)
 
 ;;; We can inline required, optional, and ignored &rest parameters.
 (defun lambda-list-too-hairy-p (lambda-list)

@@ -36,6 +36,40 @@
                       (t "between ~d and ~d"))
                 nrequired nfixed)))))
 
+(defun fflc-use (use function enclose)
+  (typecase use
+    (cleavir-bir:call
+     (when (and (eq enclose (cleavir-bir:callee use))
+                (check-argument-list-compatible
+                 (rest (cleavir-bir:inputs use))
+                 function))
+       (cleavir-conditions:with-inconsistent-state ()
+         (change-class use 'cleavir-bir:local-call)
+         (cleavir-bir:replace-computation enclose function))))
+    (cleavir-bir:mv-call
+     (when (eq enclose (cleavir-bir:callee use))
+       (cleavir-conditions:with-inconsistent-state ()
+         (change-class use 'cleavir-bir:mv-local-call)
+         (cleavir-bir:replace-computation enclose function))))
+    (cleavir-bir:leti
+     (let ((variable (first (cleavir-bir:outputs use))))
+       ;; Variable needs to be immutable since we want to make
+       ;; sure this definition reaches the readers.
+       (when (cleavir-bir:immutablep variable)
+         (cleavir-set:doset (reader (cleavir-bir:readers variable))
+           (let ((use (cleavir-bir:use reader)))
+             (cleavir-conditions:with-optionality
+                 (continue "Skip optimizing use ~a of ~a" use function)
+               (fflc-use use function enclose)))))
+       ;; No more references to the variable means we can clean
+       ;; up the enclose. The LETI might've already been
+       ;; cleaned up by any readvar deletion triggers.
+       (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+         (unless (cleavir-set:empty-set-p
+                  (cleavir-bir:writers variable))
+           (cleavir-bir:delete-instruction use))
+         (cleavir-bir:delete-computation enclose))))))
+
 ;;; Detect calls to a function via its closure and mark them as direct
 ;;; local calls to the function, doing compile time argument
 ;;; checking. If there are no more references to the closure, we can
@@ -46,57 +80,16 @@
 ;;; analysis" for functions, recording the result of the analysis
 ;;; directly into the IR.
 (defun find-function-local-calls (function)
-  (with-simple-restart (continue "Skip optimizing calls to ~a" function)
+  (cleavir-conditions:with-optionality
+      (continue "Skip optimizing calls to ~a" function)
     (let ((enclose (cleavir-bir:enclose function)))
       (when enclose
         (let ((use (cleavir-bir:use enclose)))
-          (typecase use
-            (cleavir-bir:call
-             (when (and (eq enclose (cleavir-bir:callee use))
-                        (check-argument-list-compatible
-                         (rest (cleavir-bir:inputs use))
-                         function))
-               (change-class use 'cleavir-bir:local-call)
-               (cleavir-bir:replace-computation enclose function)))
-            (cleavir-bir:mv-call
-             (when (eq enclose (cleavir-bir:callee use))
-               (change-class use 'cleavir-bir:mv-local-call)
-               (cleavir-bir:replace-computation enclose function)))
-            (cleavir-bir:leti
-             (let ((variable (first (cleavir-bir:outputs use))))
-               ;; Variable needs to be immutable since we want to make
-               ;; sure this definition reaches the readers.
-               (when (cleavir-bir:immutablep variable)
-                 (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                   (let ((use (cleavir-bir:use reader)))
-                     (with-simple-restart (continue
-                                           "Skip optimizing use ~a of ~a"
-                                           use function)
-                       (typecase use
-                         (cleavir-bir:call
-                          (when (and (eq reader (cleavir-bir:callee use))
-                                     (check-argument-list-compatible
-                                      (rest (cleavir-bir:inputs use))
-                                      function))
-                            (change-class use 'cleavir-bir:local-call)
-                            (cleavir-bir:replace-computation reader function)))
-                         (cleavir-bir:mv-call
-                          (when (eq reader (cleavir-bir:callee use))
-                            (change-class use 'cleavir-bir:mv-local-call)
-                            (cleavir-bir:replace-computation reader
-                                                             function))))))))
-               ;; No more references to the variable means we can clean
-               ;; up the enclose. The LETI might've already been
-               ;; cleaned up by any readvar deletion triggers.
-               (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
-                 (unless (cleavir-set:empty-set-p
-                          (cleavir-bir:writers variable))
-                   (cleavir-bir:delete-instruction use))
-                 (cleavir-bir:delete-computation enclose))))))))
+          (fflc-use use function enclose))))
     (post-find-local-calls function)))
 
 (defun find-module-local-calls (module)
-  (with-simple-restart (continue "Skip this optimization.")
+  (cleavir-conditions:with-optionality (continue "Skip this optimization.")
     (cleavir-bir:map-functions #'find-function-local-calls module)
     ;; Since contification depends on all non-tail local calls being in
     ;; the same function, it may be the case that contifying triggers

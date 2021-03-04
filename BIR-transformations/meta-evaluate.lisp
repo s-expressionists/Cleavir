@@ -7,16 +7,16 @@
 (in-package #:cleavir-bir-transformations)
 
 (defun meta-evaluate-module (module system)
-  (with-simple-restart (continue "Skip this optimization.")
+  (cleavir-conditions:with-optionality (continue "Skip this optimization.")
     ;; Obviously this should actually be a worklist algorithm and not
     ;; just two or three passes. We repeat on the module level so that
     ;; types are more likely to get propagated interprocedurally.
     (dotimes (repeat 3)
       (declare (ignore repeat))
       (cleavir-bir:do-functions (function module)
-        (with-simple-restart (continue "Skip optimizing ~a" function)
-          (meta-evaluate-function function system)
-          (cleavir-bir:compute-iblock-flow-order function))))))
+        (cleavir-conditions:with-optionality
+            (continue "Skip optimizing ~a" function)
+          (meta-evaluate-function function system))))))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
@@ -63,26 +63,29 @@
          (cleavir-bir:lambda-list function))))))
 
 (defun meta-evaluate-function (function system)
-  (derive-function-argument-types function system)
-  ;; The decision for what goes in the forward vs backward flow passes
-  ;; has to do with whether the effects of the optimization are on
-  ;; things that happen before vs after in the flow graph, and if that
-  ;; doesn't matter, which order makes it more likely to fire, so we
-  ;; can feed effects as much as possible in one pass.
-  (cleavir-bir:do-iblocks (iblock function)
-    ;; Make sure to merge the successors as much as possible so we can
-    ;; trigger more optimizations.
-    (loop while (cleavir-bir:merge-successor-if-possible iblock))
-    (meta-evaluate-iblock iblock system))
-  (cleavir-bir:do-iblocks (iblock function :backward)
-    (flush-dead-code iblock)
-    (let ((end (cleavir-bir:end iblock)))
-      (typecase end
-        (cleavir-bir:ifi
-         (or (eliminate-if-if end)
-             (eliminate-degenerate-if end)))
-        (cleavir-bir:jump
-         (cleavir-bir:delete-iblock-if-empty iblock))))))
+  (cleavir-conditions:with-optionality (continue "Skip optimizing ~a" function)
+    (derive-function-argument-types function system)
+    ;; The decision for what goes in the forward vs backward flow passes
+    ;; has to do with whether the effects of the optimization are on
+    ;; things that happen before vs after in the flow graph, and if that
+    ;; doesn't matter, which order makes it more likely to fire, so we
+    ;; can feed effects as much as possible in one pass.
+    (cleavir-bir:do-iblocks (iblock function)
+      ;; Make sure to merge the successors as much as possible so we can
+      ;; trigger more optimizations.
+      (loop while (cleavir-bir:merge-successor-if-possible iblock))
+      (meta-evaluate-iblock iblock system))
+    (cleavir-bir:do-iblocks (iblock function :backward)
+      (flush-dead-code iblock)
+      (let ((end (cleavir-bir:end iblock)))
+        (typecase end
+          (cleavir-bir:ifi
+           (or (eliminate-if-if end)
+               (eliminate-degenerate-if end)))
+          (cleavir-bir:jump
+           (cleavir-bir:delete-iblock-if-empty iblock)))))
+    ;; We may have shuffled blocks around, so recompute
+    (cleavir-bir:compute-iblock-flow-order function)))
 
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
@@ -141,6 +144,11 @@
       (cleavir-bir:delete-phi phi))))
 
 (defgeneric meta-evaluate-instruction (instruction system))
+
+(defmethod meta-evaluate-instruction :around (instruction system)
+  (cleavir-conditions:with-optionality
+      (continue "Skip optimizing ~a" instruction)
+    (call-next-method)))
 
 (defmethod meta-evaluate-instruction (instruction system)
   ;; Without particular knowledge, we have nothing to do.
@@ -217,11 +225,12 @@
                          (eq (first (cleavir-bir:outputs end)) test))
                     ()
                     "Jump/phi pair inconsistent.")
-            (let ((ifi (make-instance 'cleavir-bir:ifi
-                         :next (copy-list next)
-                         :origin origin)))
-              (cleavir-bir:replace-terminator ifi end)
-              (setf (cleavir-bir:inputs ifi) (list input))))))
+            (cleavir-conditions:with-inconsistent-state ()
+              (let ((ifi (make-instance 'cleavir-bir:ifi
+                           :next (copy-list next)
+                           :origin origin)))
+                (cleavir-bir:replace-terminator ifi end)
+                (setf (cleavir-bir:inputs ifi) (list input)))))))
       ;; Now we clean up the original IFI block.
       (cleavir-bir:delete-iblock iblock)
       t)))
@@ -233,8 +242,9 @@
     (when (eq succ (second next))
       #+(or)
       (print "ifi same block -> jump optimization")
-      (change-class ifi 'cleavir-bir:jump :outputs () :inputs ()
-        :next (list succ)))))
+      (cleavir-conditions:with-inconsistent-state ()
+        (change-class ifi 'cleavir-bir:jump :outputs () :inputs ()
+                                            :next (list succ))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:ifi) system)
   (fold-ifi instruction system))

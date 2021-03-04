@@ -1,7 +1,7 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-bir-transformations
-  :depends-on (:cleavir-bir :cleavir-set
+  :depends-on (:cleavir-bir :cleavir-set :cleavir-conditions
                :cleavir-attributes :cleavir-ctype)
   :components
   ((:file "packages")

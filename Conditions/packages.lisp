@@ -6,4 +6,5 @@
   (:export #:program-condition
            #:program-error #:program-warning #:program-style-warning)
   (:export #:origin)
-  (:export #:program-note #:note #:muffle-note))
+  (:export #:program-note #:note #:muffle-note)
+  (:export #:with-optionality #:with-inconsistent-state))

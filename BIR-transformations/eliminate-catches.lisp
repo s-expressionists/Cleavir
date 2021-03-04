@@ -8,28 +8,29 @@
         (fore (cleavir-bir:iblock catch))
         (normal-next (first (cleavir-bir:next catch)))
         (other-next (rest (cleavir-bir:next catch))))
-    (cleavir-set:doset (s (cleavir-bir:scope catch))
-      (setf (cleavir-bir:dynamic-environment s) nde))
-    ;; Replace the instruction
-    (cleavir-bir:replace-terminator
-     (make-instance 'cleavir-bir:jump
-       :inputs () :outputs () :next (list normal-next))
-     catch)
-    ;; Other blocks might be unreachable now
-    (mapc #'cleavir-bir:maybe-delete-iblock other-next)
-    ;; Merge if able
-    (cleavir-bir:merge-successor-if-possible fore)
-    ;; Fix reachability
-    (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore))))
+    (cleavir-conditions:with-inconsistent-state ()
+      (cleavir-set:doset (s (cleavir-bir:scope catch))
+        (setf (cleavir-bir:dynamic-environment s) nde))
+      ;; Replace the instruction
+      (cleavir-bir:replace-terminator
+       (make-instance 'cleavir-bir:jump
+         :inputs () :outputs () :next (list normal-next))
+       catch)
+      ;; Other blocks might be unreachable now
+      (mapc #'cleavir-bir:maybe-delete-iblock other-next)
+      ;; Merge if able
+      (cleavir-bir:merge-successor-if-possible fore)
+      ;; Fix reachability
+      (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore)))))
 
 (defun eliminate-catches (function)
   (cleavir-set:doset (catch (cleavir-bir:catches function))
-    (with-simple-restart (continue "Skip attempted elimination of catch ~a ~
-in function ~a"
-                                   catch function)
+    (cleavir-conditions:with-optionality
+        (continue "Skip attempted elimination of catch ~a in function ~a"
+                  catch function)
       (when (catch-eliminable-p catch)
         (eliminate-catch catch)))))
 
 (defun module-eliminate-catches (module)
-  (with-simple-restart (continue "Skip this optimization.")
+  (cleavir-conditions:with-optionality (continue "Skip this optimization.")
     (cleavir-bir:map-functions #'eliminate-catches module)))
