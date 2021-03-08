@@ -24,7 +24,7 @@
     ;; anything, especially since we're deriving the type from scratch
     ;; optimistically.
     (let ((local-calls (cleavir-bir:local-calls function)))
-      (unless (cleavir-set:every
+      (unless (cleavir-set:notany
                ;; Dunno how to mess with mv-local-call yet.
                (lambda (call) (typep call 'cleavir-bir:local-call))
                local-calls)
