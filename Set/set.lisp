@@ -102,6 +102,14 @@
   (doset (i set t)
     (unless (funcall p i) (return nil))))
 
+(defun notany (p set)
+  (doset (i set t)
+    (when (funcall p i) (return nil))))
+
+(defun notevery (p set)
+  (doset (i set nil)
+    (unless (funcall p i) (return t))))
+
 (defun nadjoin (item set)
   #+hashset
   (setf (gethash item (%hash set)) t)
