@@ -393,18 +393,24 @@ has use-before-define on inputs ~a"
           "entrance ~a of iblock ~a does not end in unwind"
           entrance iblock))
   ;; inputs are all phis, and all phis have only terminators as definitions
-  (flet ((phip (p) (typep p 'phi)))
-    (test (every #'phip (inputs iblock))
-          "iblock ~a has non-phi inputs ~a"
-          iblock (remove-if #'phip (inputs iblock))))
-  (flet ((terminatord (p)
-           (every (lambda (inst)
-                    (and (typep inst 'terminator)
-                         (member p (outputs inst))))
-                  (definitions p))))
-    (test (every #'terminatord (inputs iblock))
-          "phis ~a have some invalid definitions"
-          (remove-if #'terminatord (inputs iblock))))
+  (let ((inputs (inputs iblock)))
+    (flet ((phip (p) (typep p 'phi)))
+      (test (every #'phip inputs)
+            "iblock ~a has non-phi inputs ~a"
+            iblock (remove-if #'phip inputs)))
+    (flet ((terminatord (p)
+             (every (lambda (inst)
+                      (and (typep inst 'terminator)
+                           (member p (outputs inst))))
+                    (definitions p))))
+      (test (every #'terminatord inputs)
+            "phis ~a have some invalid definitions"
+            (remove-if #'terminatord inputs)))
+    ;; Inputs lists are not shared, so we can destroy them
+    (unless (null inputs)
+      (test (not (cleavir-set:presentp inputs *seen-lists*))
+            "Inputs list of iblock ~a is shared" iblock)
+      (cleavir-set:nadjoinf *seen-lists* inputs)))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
     (do-iblock-instructions (i (start iblock))

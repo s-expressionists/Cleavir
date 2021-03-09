@@ -224,7 +224,7 @@
         (terminate inserter
                    (make-instance 'cleavir-bir:jump
                      :inputs (adapt inserter normal-rv :multiple-values)
-                     :outputs (cleavir-bir:inputs mergeb)
+                     :outputs (copy-list (cleavir-bir:inputs mergeb))
                      :next (list mergeb)))))
     (begin inserter mergeb)
     phi))
@@ -244,12 +244,12 @@
              inserter
              (make-instance 'cleavir-bir:jump
                :inputs (adapt inserter rv :multiple-values)
-               :outputs (cleavir-bir:inputs mergeb)
+               :outputs (copy-list (cleavir-bir:inputs mergeb))
                :next (list mergeb)))
             ;; nonlocal
             (insert-unwind inserter catch mergeb
                            (adapt inserter rv :multiple-values)
-                           (cleavir-bir:inputs mergeb))))))
+                           (copy-list (cleavir-bir:inputs mergeb)))))))
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

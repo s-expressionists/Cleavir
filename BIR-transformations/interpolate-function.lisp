@@ -90,7 +90,7 @@
       (cleavir-bir:split-block-after call)
     (let ((jump (make-instance 'cleavir-bir:jump
                                :next (list start)
-                               :outputs (cleavir-bir:inputs start)))
+                               :outputs (copy-list (cleavir-bir:inputs start))))
           (lambda-list (cleavir-bir:lambda-list (cleavir-bir:callee call))))
       (cleavir-bir:replace-terminator
        jump
@@ -135,7 +135,7 @@
   (let* ((returni (cleavir-bir:returni function))
          (outputs (cleavir-bir:inputs return-point-block))
          (jump (make-instance 'cleavir-bir:jump
-                              :outputs outputs
+                              :outputs (copy-list outputs)
                               :next (list return-point-block))))
     ;; THis assertion is sort of guaranteed by LOGICAL-CONTINUATION.
     (assert (<= (length (cleavir-bir:inputs return-point-block))
