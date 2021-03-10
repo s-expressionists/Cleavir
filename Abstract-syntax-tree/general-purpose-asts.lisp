@@ -811,62 +811,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class TYPEW-AST.
-;;;
-;;; This AST is used to communicate type information to inference passes.
-;;; The TEST-AST is what will actually evaluate the form and determine
-;;; which branch of code to proceed down; the form-ast and ctype are only
-;;; meaningful to inference passes. This allows the computation of type
-;;; tests to be done in a client-dependent way and independently of the
-;;; inference annotations.
-;;; In other words, the typew-ast could be replaced with its form-ast
-;;; and this would have no effect on semantics, just weaken inference.
-
-(defclass typew-ast (boolean-ast-mixin ast)
-  ((%form-ast :initarg :form-ast :reader form-ast)
-   (%ctype :initarg :ctype :reader ctype)
-   (%test-ast :initarg :test-ast :reader test-ast)))
-
-(defun make-typew-ast (form-ast ctype test-ast &key origin (policy *policy*))
-  (make-instance 'typew-ast
-    :origin origin :policy policy
-    :form-ast form-ast :ctype ctype :test-ast test-ast))
-
-(cleavir-io:define-save-info typew-ast
-    (:form-ast form-ast)
-  (:ctype ctype)
-  (:test-ast test-ast))
-
-(define-children typew-ast (form-ast test-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Class THE-TYPEW-AST.
-;;;
-;;; This is like TYPEW-AST for the situation in which the form's value
-;;; has been declared to be of the given type. The ELSE-AST is only
-;;; used if type inference determines that the declaration is incorrect.
-
-(defclass the-typew-ast (one-value-ast-mixin ast)
-  ((%form-ast :initarg :form-ast :reader form-ast)
-   (%ctype :initarg :ctype :reader ctype)
-   (%else-ast :initarg :else-ast :reader else-ast)))
-
-(defun make-the-typew-ast (form-ast ctype else-ast
-                           &key origin (policy *policy*))
-  (make-instance 'the-typew-ast
-    :origin origin :policy policy
-    :form-ast form-ast :ctype ctype :else-ast else-ast))
-
-(cleavir-io:define-save-info the-typew-ast
-    (:form-ast form-ast)
-  (:ctype ctype)
-  (:else-ast else-ast))
-
-(define-children the-typew-ast (form-ast else-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class LOAD-TIME-VALUE-AST.
 ;;;
 ;;; This AST corresponds directly to the LOAD-TIME-VALUE special

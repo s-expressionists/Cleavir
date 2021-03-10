@@ -33,7 +33,6 @@
            #:returni #:unreachable #:jump #:unwindp
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
-           #:typew #:ctype #:choke
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:values-save #:values-collect

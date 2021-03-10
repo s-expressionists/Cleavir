@@ -519,62 +519,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; TYPEW-AST
-
-(defmethod compile-test-ast ((ast cleavir-ast:typew-ast) inserter system)
-  (let ((rv (compile-ast (cleavir-ast:form-ast ast) inserter system)))
-    (when (eq rv :no-return) (return-from compile-test-ast rv))
-    (let ((old-iblock (iblock inserter))
-          (tblock (make-iblock inserter :name '#:typew-then))
-          (eblock (make-iblock inserter :name '#:typew-else))
-          (test-iblock (make-iblock inserter :name '#:typew-test)))
-      (begin inserter test-iblock)
-      (let ((testrv (compile-test-ast (cleavir-ast:test-ast ast)
-                                      inserter system)))
-        (proceed inserter old-iblock)
-        (cond ((eq testrv :no-return)
-               (terminate inserter (make-instance 'cleavir-bir:jump
-                                     :inputs () :outputs ()
-                                     :next (list test-iblock)))
-               (return-from compile-test-ast testrv))
-              (t
-               (terminate inserter (make-instance 'cleavir-bir:typew
-                                     :inputs (adapt inserter rv '(:object))
-                                     :ctype (cleavir-ast:ctype ast)
-                                     :next (list tblock eblock test-iblock)))))
-        (destructuring-bind (realtblock realeblock) testrv
-          (proceed inserter realtblock)
-          (terminate inserter (make-instance 'cleavir-bir:choke
-                                :next (list tblock)))
-          (proceed inserter realeblock)
-          (terminate inserter (make-instance 'cleavir-bir:choke
-                                :next (list eblock)))))
-      (list tblock eblock))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; THE-TYPEW-AST
-
-(defmethod compile-ast ((ast cleavir-ast:the-typew-ast) inserter system)
-  (with-compiled-ast (rv (cleavir-ast:form-ast ast) inserter system)
-    (let ((then-iblock (make-iblock inserter :name '#:the-typew-then))
-          (else-iblock (make-iblock inserter :name '#:the-typew-else)))
-      (terminate inserter (make-instance 'cleavir-bir:typew
-                            :inputs rv
-                            :ctype (cleavir-ast:ctype ast)
-                            :next (list then-iblock else-iblock then-iblock)))
-      (begin inserter else-iblock)
-      (compile-ast (cleavir-ast:else-ast ast) inserter system)
-      (begin inserter then-iblock))
-    ;; if the value of the-typew is used, we'd have to introduce a variable,
-    ;; since the form's value is used twice (as an input to typew, and as the
-    ;; result of the-typew). But this is unlikely with the basic usage of using
-    ;; the-typew in concert with multiple-value-extract. So we punt and return
-    ;; no values.
-    ()))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; UNREACHABLE-AST
 
 (defmethod compile-ast ((ast cleavir-ast:unreachable-ast) inserter system)

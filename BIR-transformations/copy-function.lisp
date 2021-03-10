@@ -257,11 +257,6 @@
   (list :ctype (cleavir-bir:test-ctype instruction)))
 
 (defmethod clone-initargs append
-    ((instruction cleavir-bir:typew) stack map)
-  (declare (ignore stack map))
-  (list :ctype (cleavir-bir:ctype instruction)))
-
-(defmethod clone-initargs append
     ((instruction cleavir-bir:case) stack map)
   (declare (ignore stack map))
   (list :comparees (cleavir-bir:comparees instruction)))

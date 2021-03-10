@@ -51,9 +51,7 @@
    #:tag-ast #:make-tag-ast #:name
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype
-   #:typew-ast #:make-typew-ast
    #:type-check-function-ast
-   #:the-typew-ast #:make-the-typew-ast
    #:bind-ast #:make-bind-ast
    #:eq-ast #:make-eq-ast #:neq-ast #:make-neq-ast
    #:case-ast #:make-case-ast #:comparees
