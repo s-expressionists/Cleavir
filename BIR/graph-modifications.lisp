@@ -120,7 +120,7 @@
     (cleavir-set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
     (when (slot-boundp ib '%start)
-      (map-iblock-instructions #'clean-up-instruction (start ib)))))
+      (map-iblock-instructions #'clean-up-instruction ib))))
 
 (defgeneric clean-up-function (function)
   (:method-combination progn)
@@ -398,9 +398,8 @@
           (t
            (setf (start iblock) start)))
     (setf (end iblock) end)
-    (do-iblock-instructions (instruction start)
-      (setf (cleavir-bir:iblock instruction)
-            iblock))
+    (do-iblock-instructions (instruction iblock)
+      (setf (cleavir-bir:iblock instruction) iblock))
     ;; Propagate the inputs of the jump into the uses of the second
     ;; block's phis.
     (mapc (lambda (input phi)

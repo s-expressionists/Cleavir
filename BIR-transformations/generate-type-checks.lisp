@@ -44,7 +44,7 @@
 (defun generate-type-checks (function)
   (let ((theis '()))
     (cleavir-bir:do-iblocks (iblock function)
-      (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
+      (cleavir-bir:do-iblock-instructions (instruction iblock)
         (when (typep instruction 'cleavir-bir:thei)
           (push instruction theis))))
     ;; We first warn about type conflicts in case we lose derived

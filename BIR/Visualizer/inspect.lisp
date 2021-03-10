@@ -152,7 +152,7 @@
                                                 (style  (eql :expanded-body))
                                                 (stream clim:extended-output-stream))
   (clouseau:with-section (stream) "Instructions"
-    (bir:do-iblock-instructions (instruction (bir:start object))
+    (bir:do-iblock-instructions (instruction object)
       (fresh-line stream)
       (clouseau:formatting-place
           (object 'clouseau:pseudo-place instruction nil present-object)

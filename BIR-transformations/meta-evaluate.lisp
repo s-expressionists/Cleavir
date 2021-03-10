@@ -101,7 +101,7 @@
 
 (defun meta-evaluate-iblock (iblock system)
   (derive-iblock-input-types iblock system)
-  (cleavir-bir:do-iblock-instructions (instruction (cleavir-bir:start iblock))
+  (cleavir-bir:do-iblock-instructions (instruction iblock)
     (unless (meta-evaluate-instruction instruction system)
       (derive-types instruction system))))
 
@@ -143,7 +143,7 @@
 
 (defun flush-dead-code (iblock)
   (cleavir-bir:map-iblock-instructions-backwards #'maybe-flush-instruction
-                                                 (cleavir-bir:end iblock))
+                                                 iblock)
   (dolist (phi (cleavir-bir:inputs iblock))
     (when (null (cleavir-bir:use phi))
       (cleavir-bir:delete-phi phi))))

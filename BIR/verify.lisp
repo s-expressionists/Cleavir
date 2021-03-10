@@ -413,7 +413,7 @@ has use-before-define on inputs ~a"
       (cleavir-set:nadjoinf *seen-lists* inputs)))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
-    (do-iblock-instructions (i (start iblock))
+    (do-iblock-instructions (i iblock)
       ;; Ensure each instruction is only in the graph once
       (test (not (cleavir-set:presentp i *seen-instructions*))
             "Instruction ~a is in the graph multiple times" i)

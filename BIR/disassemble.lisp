@@ -94,7 +94,7 @@
   (check-type iblock iblock)
   (with-disassembly ()
     (let ((insts nil))
-      (do-iblock-instructions (i (start iblock))
+      (do-iblock-instructions (i iblock)
         (push (disassemble-instruction i) insts))
       (list* (list* (iblock-id iblock)
                     (mapcar #'disassemble-datum (inputs iblock)))

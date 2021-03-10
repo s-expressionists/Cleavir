@@ -21,31 +21,31 @@
   (do-iblocks (iblock function)
     (funcall f iblock)))
 
-(defmacro do-iblock-instructions ((instruction from &optional (direction :forward))
+(defmacro do-iblock-instructions ((instruction iblock
+                                   &optional (direction :forward))
                                   &body body)
-  `(loop for ,instruction = ,from then (,(ecase direction
-                                           (:forward 'successor)
-                                           (:backward 'predecessor))
-                                        ,instruction)
-         until (null ,instruction)
-         do (progn ,@body)))
+  (multiple-value-bind (from to)
+      (ecase direction
+        (:forward (values 'start 'successor))
+        (:backward (values 'end 'predecessor)))
+    `(do ((,instruction (,from ,iblock) (,to ,instruction)))
+         ((null ,instruction) (values))
+       ,@body)))
 
-(defun map-iblock-instructions (f start-instruction)
-  (check-type start-instruction instruction)
-  (do-iblock-instructions (instruction start-instruction)
-    (funcall f instruction))
-  (values))
+(defun map-iblock-instructions (f iblock)
+  (check-type iblock iblock)
+  (do-iblock-instructions (instruction iblock)
+    (funcall f instruction)))
 
-(defun map-iblock-instructions-backwards (f end-instruction)
-  (check-type end-instruction instruction)
-  (do-iblock-instructions (instruction end-instruction :backward)
-    (funcall f instruction))
-  (values))
+(defun map-iblock-instructions-backwards (f iblock)
+  (check-type iblock iblock)
+  (do-iblock-instructions (instruction iblock :backward)
+    (funcall f instruction)))
 
 ;;; Map all instructions owned by the given function
 (defun map-local-instructions (f function)
   (do-iblocks (iblock function)
-    (map-iblock-instructions f (start iblock))))
+    (map-iblock-instructions f iblock)))
 
 ;;; This utility parses BIR lambda lists. FUNCTION takes three
 ;;; arguments: The state of the parse (e.g. &OPTIONAL), the current
