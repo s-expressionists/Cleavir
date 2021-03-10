@@ -219,24 +219,3 @@
 
 ;;; The RTYPE should just be whatever the input's RTYPE is.
 (defmethod rtype ((datum thei)) (rtype (first (inputs datum))))
-
-(defmethod (setf derived-type) (new-value (linear-datum thei))
-  (declare (cl:ignore new-value))
-  (error "Should not set the derived type of a THEI."))
-
-;;; For THEI, the type we use to make inferences is the intersection
-;;; of what the compiler has proven about the input and what is
-;;; explicitly asserted when we are trusting THEI or explicitly type
-;;; checking. However, when the type check is marked as being done
-;;; externally, that means the compiler has not yet proven that the
-;;; asserted type holds, and so it must return the type of the
-;;; input. This gives us freedom to trust or explicitly check the
-;;; assertion as needed while making this decision transparent to
-;;; inference, and also type conflict when the type is checked
-;;; externally.
-(defmethod ctype ((linear-datum thei))
-  (if (eq (type-check-function linear-datum) :external)
-      (ctype (first (inputs linear-datum)))
-      (cleavir-ctype:conjoin/2 (asserted-type linear-datum)
-                               (ctype (first (inputs linear-datum)))
-                               nil)))
