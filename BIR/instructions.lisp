@@ -17,27 +17,13 @@
 (defclass nop (no-input no-output operation) ())
 
 ;;; Abstract. An instruction dealing with a variable.
-;;; It is assumed the variable is passed to make-instance rather
-;;; than set later, and also that the instruction isn't reinitialized.
 (defclass accessvar (instruction) ())
 
 (defclass writevar (one-input accessvar operation) ())
 
-(defmethod initialize-instance :after
-    ((i writevar) &rest initargs &key outputs)
-  (declare (cl:ignore initargs))
-  (cleavir-set:nadjoinf (writers (first outputs)) i)
-  i)
-
 (defclass readvar (one-input accessvar computation) ())
 
 (defmethod rtype ((rv readvar)) (rtype (first (inputs rv))))
-
-(defmethod initialize-instance :after
-    ((i readvar) &rest initargs &key inputs)
-  (declare (cl:ignore initargs))
-  (cleavir-set:nadjoinf (readers (first inputs)) i)
-  i)
 
 ;;; Constants
 
@@ -51,8 +37,8 @@
   (declare (cl:ignore initargs slot-names))
   (when inputs-supplied-p
     (let ((constant (first inputs)))
-      (cleavir-set:nadjoinf (readers constant) i)
-      (setf (derived-type i) (cleavir-ctype:member nil (constant-value constant)))))
+      (setf (derived-type i)
+            (cleavir-ctype:member nil (constant-value constant)))))
   i)
 
 (defmethod (setf inputs) :after (new-inputs (i constant-reference))
@@ -65,13 +51,6 @@
 (defclass load-time-value-reference (one-input computation) ())
 
 (defmethod rtype ((inst load-time-value-reference)) :object)
-
-(defmethod shared-initialize :after
-    ((i load-time-value-reference) slot-names &rest initargs &key inputs)
-  (declare (cl:ignore initargs slot-names))
-  (let ((ltv (first inputs)))
-    (cleavir-set:nadjoinf (readers ltv) i))
-  i)
 
 (defun make-load-time-value-reference (load-time-value)
   (make-instance 'load-time-value-reference :inputs (list load-time-value)))
