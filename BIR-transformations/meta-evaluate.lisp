@@ -16,50 +16,76 @@
       (meta-evaluate-function function system)
       (cleavir-bir:compute-iblock-flow-order function))))
 
+;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
+(defun derive-type-for-linear-datum (linear-datum derived-type system)
+  (setf (cleavir-bir:derived-type linear-datum)
+        (cleavir-ctype:conjoin/2 (cleavir-bir:ctype linear-datum)
+                                 derived-type
+                                 system)))
+
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
 (defun derive-function-argument-types (function system)
-  (unless (cleavir-bir:enclose function)
-    ;; If there are no local calls either, don't bother doing
-    ;; anything, especially since we're deriving the type from scratch
-    ;; optimistically.
-    (let ((local-calls (cleavir-bir:local-calls function)))
-      (unless (cleavir-set:notany
-               ;; Dunno how to mess with mv-local-call yet.
-               (lambda (call) (typep call 'cleavir-bir:local-call))
-               local-calls)
-        (cleavir-bir:map-lambda-list
-         (lambda (state item index)
-           (case state
-             ((:required &optional)
-              (let ((type (cleavir-ctype:bottom system))
-                    (suppliedp (cleavir-ctype:bottom system)))
-                (cleavir-set:doset (local-call local-calls)
-                  (let ((arg (nth index (rest (cleavir-bir:inputs local-call)))))
-                    (setq type
-                          (cleavir-ctype:disjoin/2
-                           type
-                           (if arg
-                               (cleavir-bir:ctype arg)
-                               (cleavir-ctype:member system nil))
-                           system))
-                    (setq suppliedp
-                          (cleavir-ctype:disjoin/2
-                           suppliedp
-                           (if arg
-                               (cleavir-ctype:member system t)
-                               (cleavir-ctype:member system nil))
-                           system))))
-                (ecase state
-                  (:required
-                   (setf (cleavir-bir:derived-type item) type))
-                  (&optional
-                   (setf (cleavir-bir:derived-type (first item)) type)
-                   (setf (cleavir-bir:derived-type (second item)) suppliedp)))))
-             (&key
-              ;; too hairy for me to handle
-              )))
-         (cleavir-bir:lambda-list function))))))
+  (if (cleavir-bir:enclose function)
+      ;; If there is an enclose, we can be called from pretty much anywhere,
+      ;; so there's not much we can determine about the arguments. We can mark
+      ;; &rest arguments as being lists, at least.
+      (cleavir-bir:map-lambda-list
+       (lambda (state item index)
+         (declare (ignore index))
+         (when (eq state '&rest)
+           (derive-type-for-linear-datum
+            item
+            (let ((top-ctype (cleavir-ctype:top system)))
+              ;; LIST is of course (or null cons)
+              (cleavir-ctype:disjoin/2
+               (cleavir-ctype:member system nil)
+               (cleavir-ctype:cons top-ctype top-ctype system)
+               system))
+            system)))
+       (cleavir-bir:lambda-list function))
+      ;; If there are no local calls either, don't bother doing
+      ;; anything, especially since we're deriving the type from scratch
+      ;; optimistically.
+      (let ((local-calls (cleavir-bir:local-calls function)))
+        (unless (cleavir-set:notany
+                 ;; Dunno how to mess with mv-local-call yet.
+                 (lambda (call) (typep call 'cleavir-bir:local-call))
+                 local-calls)
+          (cleavir-bir:map-lambda-list
+           (lambda (state item index)
+             (case state
+               ((:required &optional)
+                (let ((type (cleavir-ctype:bottom system))
+                      (suppliedp (cleavir-ctype:bottom system)))
+                  (cleavir-set:doset (local-call local-calls)
+                    (let ((arg
+                            (nth index (rest (cleavir-bir:inputs local-call)))))
+                      (setq type
+                            (cleavir-ctype:disjoin/2
+                             type
+                             (if arg
+                                 (cleavir-bir:ctype arg)
+                                 (cleavir-ctype:member system nil))
+                             system))
+                      (setq suppliedp
+                            (cleavir-ctype:disjoin/2
+                             suppliedp
+                             (if arg
+                                 (cleavir-ctype:member system t)
+                                 (cleavir-ctype:member system nil))
+                             system))))
+                  (ecase state
+                    (:required
+                     (setf (cleavir-bir:derived-type item) type))
+                    (&optional
+                     (setf (cleavir-bir:derived-type (first item)) type)
+                     (setf (cleavir-bir:derived-type (second item))
+                           suppliedp)))))
+               (&key
+                ;; too hairy for me to handle
+                )))
+           (cleavir-bir:lambda-list function))))))
 
 (defun meta-evaluate-function (function system)
   (derive-function-argument-types function system)
@@ -300,7 +326,7 @@
                         (cleavir-ctype:member system nil)
                         system)))
         (dolist (output (cleavir-bir:outputs instruction))
-          (cleavir-bir:derive-type-for-linear-datum
+          (derive-type-for-linear-datum
            output
            (cond (required-type (pop required-type))
                  (optional-type (cleavir-ctype:disjoin/2
@@ -311,7 +337,7 @@
            system))))))
 
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
-  (cleavir-bir:derive-type-for-linear-datum
+  (derive-type-for-linear-datum
    instruction
    (cleavir-ctype:values
     (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction))
@@ -338,7 +364,7 @@
            t))))
 
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
-  (cleavir-bir:derive-type-for-linear-datum
+  (derive-type-for-linear-datum
    instruction
    (cleavir-ctype:member system (cleavir-bir:constant-value
                                  (first (cleavir-bir:inputs instruction))))
@@ -390,7 +416,7 @@
              (first (cleavir-bir:inputs (cleavir-bir:binder variable))))
            (type (cleavir-bir:ctype definition)))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
-        (cleavir-bir:derive-type-for-linear-datum reader type system)))))
+        (derive-type-for-linear-datum reader type system)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (let ((variable (first (cleavir-bir:outputs instruction))))
@@ -408,7 +434,7 @@
         (return-type
           (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
-      (cleavir-bir:derive-type-for-linear-datum
+      (derive-type-for-linear-datum
        local-call
        return-type
        system))))
@@ -439,7 +465,7 @@
     ;; assertion as needed while making this decision transparent to
     ;; inference, and also type conflict when the type is checked
     ;; externally.
-    (cleavir-bir:derive-type-for-linear-datum
+    (derive-type-for-linear-datum
      instruction
      (if (eq type-check-function :external)
          ctype
@@ -450,6 +476,6 @@
     ;; Propagate the type of the input into function.
     ;; FIXME: Extend this to values types.
     (unless (symbolp type-check-function)
-      (cleavir-bir:derive-type-for-linear-datum
+      (derive-type-for-linear-datum
        (first (cleavir-bir:lambda-list type-check-function))
        ctype system))))

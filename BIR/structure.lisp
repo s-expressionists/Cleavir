@@ -75,13 +75,6 @@
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
-;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
-(defun derive-type-for-linear-datum (linear-datum derived-type system)
-  (setf (derived-type linear-datum)
-        (cleavir-ctype:conjoin/2 (ctype linear-datum)
-                                 derived-type
-                                 system)))
-
 ;;; A datum with one definition and one use.
 (defclass transfer (ssa linear-datum) ())
 

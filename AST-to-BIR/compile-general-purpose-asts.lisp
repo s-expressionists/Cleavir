@@ -45,22 +45,7 @@
     (cleavir-set:nadjoinf (cleavir-bir:functions module) function)
     (let ((lambda-list (bind-lambda-list-arguments
                         (cleavir-ast:lambda-list ast))))
-      (setf (cleavir-bir:lambda-list function) lambda-list)
-      ;; Derive the type of the &rest argument to be LIST.
-      (cleavir-bir:map-lambda-list
-       (lambda (state item index)
-         (declare (ignore index))
-         (when (eq state '&rest)
-           (cleavir-bir:derive-type-for-linear-datum
-            item
-            (let ((top-ctype (cleavir-ctype:top system)))
-              ;; LIST is of course (or null cons)
-              (cleavir-ctype:disjoin/2
-               (cleavir-ctype:member system nil)
-               (cleavir-ctype:cons top-ctype top-ctype system)
-               system))
-            system)))
-       lambda-list))
+      (setf (cleavir-bir:lambda-list function) lambda-list))
     (setf (cleavir-bir:start function) start)
     (begin inserter start)
     (let ((rv (compile-ast (cleavir-ast:body-ast ast) inserter system)))

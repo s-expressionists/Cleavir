@@ -12,8 +12,8 @@
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
   (:export #:rtype #:rtype=)
-  (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi #:delete-phi
-           #:output #:name #:ctype #:derived-type #:derive-type-for-linear-datum
+  (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
+           #:delete-phi #:output #:name #:ctype #:derived-type
            #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:binder
            #:use-status #:ignore
