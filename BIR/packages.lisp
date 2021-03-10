@@ -2,7 +2,7 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:set #:variable #:load-time-value #:case
+  (:shadow #:function #:catch #:variable #:load-time-value #:case
            #:disassemble #:ignore)
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
