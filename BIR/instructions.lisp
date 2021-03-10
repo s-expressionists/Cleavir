@@ -31,20 +31,6 @@
 
 (defmethod rtype ((inst constant-reference)) :object)
 
-(defmethod shared-initialize :after
-    ((i constant-reference) slot-names
-     &rest initargs &key (inputs nil inputs-supplied-p))
-  (declare (cl:ignore initargs slot-names))
-  (when inputs-supplied-p
-    (let ((constant (first inputs)))
-      (setf (derived-type i)
-            (cleavir-ctype:member nil (constant-value constant)))))
-  i)
-
-(defmethod (setf inputs) :after (new-inputs (i constant-reference))
-  (setf (derived-type i)
-        (cleavir-ctype:member nil (constant-value (first new-inputs)))))
-
 (defun make-constant-reference (constant)
   (make-instance 'constant-reference :inputs (list constant)))
 

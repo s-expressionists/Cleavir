@@ -337,6 +337,13 @@
            (replace-computation-by-constant-value instruction nil)
            t))))
 
+(defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
+  (cleavir-bir:derive-type-for-linear-datum
+   instruction
+   (cleavir-ctype:member system (cleavir-bir:constant-value
+                                 (first (cleavir-bir:inputs instruction))))
+   system))
+
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
 (defun substitute-single-read-variable-if-possible (variable)
