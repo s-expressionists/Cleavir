@@ -359,7 +359,6 @@
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%policy :initarg :policy :initform nil :reader policy)
-   (%name :initarg :name :initform nil :reader name) ; TODO inherited from datum
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil
                           :reader original-lambda-list)
