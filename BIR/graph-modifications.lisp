@@ -347,21 +347,21 @@
 
 ;;; Remove IBLOCK from its flow ordering.
 (defun remove-iblock-from-flow-order (iblock)
-  (let ((prev (prev iblock))
-        (next (next iblock)))
-    (setf (next prev) next)
+  (let ((prev (%prev iblock))
+        (next (%next iblock)))
+    (setf (%next prev) next)
     (if next
-        (setf (prev next) prev)
+        (setf (%prev next) prev)
         (setf (tail (function iblock)) prev))))
 
 ;;; Insert the new iblock into the flow order after AFTER.
 (defun insert-iblock-into-flow-order (new after)
-  (let ((next (next after)))
-    (setf (next after) new)
-    (setf (prev new) after)
-    (setf (next new) next)
+  (let ((next (%next after)))
+    (setf (%next after) new)
+    (setf (%prev new) after)
+    (setf (%next new) next)
     (if next
-        (setf (prev next) new)
+        (setf (%prev next) new)
         (setf (tail (function after)) new))))
 
 ;;; Merge IBLOCK to its unique successor if possible, returning false
@@ -500,9 +500,9 @@
                  (dolist (successor (successors iblock))
                    (traverse successor))
                  (if last
-                     (setf (prev last) iblock)
+                     (setf (%prev last) iblock)
                      (setf (tail function) iblock))
-                 (setf (next iblock) last)
+                 (setf (%next iblock) last)
                  (setf last iblock))))
       (traverse (start function)))
     (dolist (iblock existing)

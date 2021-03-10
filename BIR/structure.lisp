@@ -309,8 +309,8 @@
                :type cleavir-set:set)
    ;; The links for the doubly linked list of iblocks maintained in
    ;; forward flow order.
-   (%next :initform nil :accessor next :type (or null iblock))
-   (%prev :initform nil :accessor prev :type (or null iblock))
+   (%next :initform nil :accessor %next :type (or null iblock))
+   (%prev :initform nil :accessor %prev :type (or null iblock))
    ;; Slot used for flow order computation.
    (%reachedp :initform nil :accessor reachedp)
    (%dynamic-environment :initarg :dynamic-environment

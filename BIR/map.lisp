@@ -11,8 +11,8 @@
 (defmacro do-iblocks ((iblock function &optional (direction :forward)) &body body)
   (multiple-value-bind (from to)
       (ecase direction
-        (:forward (values 'start 'next))
-        (:backward (values 'tail 'prev)))
+        (:forward (values 'start '%next))
+        (:backward (values 'tail '%prev)))
     `(do ((,iblock (,from ,function) (,to ,iblock)))
          ((null ,iblock))
        ,@body)))
