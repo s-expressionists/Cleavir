@@ -192,9 +192,7 @@
 
 ;;; Represents a type assertion on the first input.
 (defclass thei (one-input computation)
-  ((%asserted-type :initarg :asserted-type
-                   :initform (cleavir-ctype:top nil)
-                   :accessor asserted-type)
+  ((%asserted-type :initarg :asserted-type :accessor asserted-type)
    ;; This slot holds either a function which checks the input,
    ;; :TRUSTED if we want to treat this as trusted type assertion with
    ;; no check needed, or :EXTERNAL if a type check is needed but done
