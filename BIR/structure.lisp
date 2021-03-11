@@ -158,6 +158,8 @@
   ((%outputs :initform nil
              :type (or null (cons datum null)))))
 
+(defmethod output ((inst one-output)) (first (outputs inst)))
+
 ;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
   ((%successor :initform nil :type null)

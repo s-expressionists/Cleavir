@@ -268,9 +268,9 @@ has use-before-define on inputs ~a"
 (defmethod verify progn ((wv writevar))
   ;; match types
   (test (rtype= (rtype (first (inputs wv)))
-                (rtype (first (outputs wv))))
+                (rtype (output wv)))
         "Writevar ~a has input rtype ~a but output rtype ~a"
-        wv (rtype (first (inputs wv))) (rtype (first (outputs wv)))))
+        wv (rtype (first (inputs wv))) (rtype (output wv))))
 
 (defmethod verify progn ((rv readvar))
   (let ((var (first (inputs rv))))
@@ -332,9 +332,9 @@ has use-before-define on inputs ~a"
 
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
-  (test (typep (use (first (outputs instruction))) '(or null ifi))
+  (test (typep (use (output instruction)) '(or null ifi))
         "conditional test ~a is used by ~a, not an ifi instruction"
-        instruction (use (first (outputs instruction)))))
+        instruction (use (output instruction))))
 
 (defmethod verify progn ((mtf multiple-to-fixed))
   (test (rtype= (rtype (first (inputs mtf))) :multiple-values)

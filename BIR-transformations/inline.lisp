@@ -52,7 +52,7 @@
 (defun find-function-local-calls (function)
   (let ((enclose (cleavir-bir:enclose function)))
     (when enclose
-      (let* ((eout (first (cleavir-bir:outputs enclose)))
+      (let* ((eout (cleavir-bir:output enclose))
              (use (cleavir-bir:use eout)))
         (typecase use
           (cleavir-bir:call
@@ -69,12 +69,12 @@
              (cleavir-bir:replace-uses function eout)
              (cleavir-bir:delete-instruction enclose)))
           (cleavir-bir:leti
-           (let ((variable (first (cleavir-bir:outputs use))))
+           (let ((variable (cleavir-bir:output use)))
              ;; Variable needs to be immutable since we want to make
              ;; sure this definition reaches the readers.
              (when (cleavir-bir:immutablep variable)
                (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                 (let* ((rout (first (cleavir-bir:outputs reader)))
+                 (let* ((rout (cleavir-bir:output reader))
                         (use (cleavir-bir:use rout)))
                    (typecase use
                      (cleavir-bir:call

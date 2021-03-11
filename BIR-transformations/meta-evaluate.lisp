@@ -141,21 +141,21 @@
     (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:readvar))
-  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+  (when (cleavir-bir:unused-p (cleavir-bir:output instruction))
     (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction
     ((instruction cleavir-bir:constant-reference))
-  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+  (when (cleavir-bir:unused-p (cleavir-bir:output instruction))
     (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:enclose))
-  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+  (when (cleavir-bir:unused-p (cleavir-bir:output instruction))
     (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:conditional-test))
-  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+  (when (cleavir-bir:unused-p (cleavir-bir:output instruction))
     (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:abstract-call))
-  (when (and (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+  (when (and (cleavir-bir:unused-p (cleavir-bir:output instruction))
              (cleavir-attributes:has-boolean-attribute-p
               (cleavir-bir:attributes instruction)
               :flushable))
@@ -345,7 +345,7 @@
 
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
   (derive-type-for-linear-datum
-   (first (cleavir-bir:outputs instruction))
+   (cleavir-bir:output instruction)
    (cleavir-ctype:values
     (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction))
     nil
@@ -372,7 +372,7 @@
 
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
   (derive-type-for-linear-datum
-   (first (cleavir-bir:outputs instruction))
+   (cleavir-bir:output instruction)
    (cleavir-ctype:member system (cleavir-bir:constant-value
                                  (first (cleavir-bir:inputs instruction))))
    system))
@@ -385,7 +385,7 @@
                (= (cleavir-set:size readers) 1))
       (let* ((binder (cleavir-bir:binder variable))
              (reader (cleavir-set:arb readers))
-             (reader-out (first (cleavir-bir:outputs reader))))
+             (reader-out (cleavir-bir:output reader)))
         (when (eq (cleavir-bir:function binder)
                   (cleavir-bir:function reader))
           #+(or)
@@ -426,17 +426,17 @@
              (first (cleavir-bir:inputs (cleavir-bir:binder variable))))
            (type (cleavir-bir:ctype definition)))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
-        (let ((out (first (cleavir-bir:outputs reader))))
+        (let ((out (cleavir-bir:output reader)))
           (derive-type-for-linear-datum out type system))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
-  (let ((variable (first (cleavir-bir:outputs instruction))))
+  (let ((variable (cleavir-bir:output instruction)))
     (when variable
       (or (substitute-single-read-variable-if-possible variable)
           (constant-propagate-variable-if-possible variable)))))
 
 (defmethod derive-types ((instruction cleavir-bir:leti) system)
-  (let ((variable (first (cleavir-bir:outputs instruction))))
+  (let ((variable (cleavir-bir:output instruction)))
     (when variable (derive-type-for-variable variable system))))
 
 (defmethod derive-types ((instruction cleavir-bir:returni) system)
@@ -446,7 +446,7 @@
           (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
       (derive-type-for-linear-datum
-       (first (cleavir-bir:outputs local-call))
+       (cleavir-bir:output local-call)
        return-type
        system))))
 
@@ -477,7 +477,7 @@
     ;; inference, and also type conflict when the type is checked
     ;; externally.
     (derive-type-for-linear-datum
-     (first (cleavir-bir:outputs instruction))
+     (cleavir-bir:output instruction)
      (if (eq type-check-function :external)
          ctype
          (cleavir-ctype:conjoin/2 (cleavir-bir:asserted-type instruction)

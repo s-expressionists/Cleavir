@@ -10,7 +10,7 @@
   ;; significance. If the jump is carrying a value via phi that is not
   ;; the value of the local-call, we also quit.
   (let ((successor (cleavir-bir:successor local-call))
-        (linear-datum (first (cleavir-bir:outputs local-call))))
+        (linear-datum (cleavir-bir:output local-call)))
     (loop (typecase successor
             (cleavir-bir:jump
              ;; Make sure no dynamic environment actions happen.
@@ -20,19 +20,17 @@
                  (progn
                    (let ((inputs (cleavir-bir:inputs successor)))
                      (case (length inputs)
-                       (0 ; nothing is fine; no value or control signficance
-                        )
+                       (0) ; nothing is fine; no value or control signficance
                        (1
-                        (if (cleavir-bir:unused-p linear-datum)
-                            (return successor) ; value significance
-                            (if (eq linear-datum (first inputs))
-                                ;; can keep looking
-                                (setq linear-datum
-                                      (first (cleavir-bir:outputs successor)))
-                                (return successor) ; value significance
-                                )))
-                       (t (return successor)) ; value significance
-                       )
+                        (cond ((cleavir-bir:unused-p linear-datum)
+                               (return successor)) ; value significance
+                              ((eq linear-datum (first inputs))
+                               ;; can keep looking
+                               (setq linar-datum
+                                     (first (cleavir-bir:outputs successor))))
+                              (t ; value significance
+                               (return successor))))
+                       (t (return successor))) ; value significance
                      (setq successor (cleavir-bir:start
                                       (first (cleavir-bir:next successor))))))))
             (cleavir-bir:returni
@@ -56,7 +54,7 @@
     (cleavir-set:doset (call calls)
       (let* ((cont (logical-continuation call))
              (dynenv (cleavir-bir:dynamic-environment call))
-             (call-out (first (cleavir-bir:outputs call)))
+             (call-out (cleavir-bir:output call))
              (use (cleavir-bir:transitive-use call-out))
              (owner (cleavir-bir:function call)))
         ;; Check which properties every user shares.
@@ -232,7 +230,7 @@
                (progn
                  (check-type unique-call cleavir-bir:local-call)
                  (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call)))
-                       (ucall-out (first (cleavir-bir:outputs unique-call))))
+                       (ucall-out (cleavir-bir:output unique-call)))
                    (unless (cleavir-bir:unused-p ucall-out)
                      (let ((phi (make-instance 'cleavir-bir:phi :iblock dummy-block)))
                        (setf (cleavir-bir:inputs dummy-block) (list phi))

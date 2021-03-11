@@ -73,7 +73,7 @@
   (cleavir-set:nadjoinf seen function)
   (let ((enclose (cleavir-bir:enclose function)))
     (when enclose
-      (let* ((eout (first (cleavir-bir:outputs enclose)))
+      (let* ((eout (cleavir-bir:output enclose))
              (user (cleavir-bir:use eout)))
         (when (and user
                    (not (and (eq (cleavir-bir:dynamic-environment user)

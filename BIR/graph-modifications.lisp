@@ -146,7 +146,7 @@
       (cleavir-set:doset (writer (writers variable))
         (delete-instruction writer)))))
 (defmethod clean-up-instruction progn ((inst writevar))
-  (let ((variable (first (outputs inst))))
+  (let ((variable (output inst)))
     (cleavir-set:nremovef (writers variable) inst)
     ;; When the variable no longer has any writers or readers, clean it
     ;; up.
@@ -196,7 +196,7 @@
 (defun delete-thei (thei)
   (let ((input (first (inputs thei))))
     (setf (inputs thei) '())
-    (replace-uses input (first (outputs thei)))
+    (replace-uses input (output thei))
     (delete-instruction thei)))
 
 (defun delete-phi (phi)
