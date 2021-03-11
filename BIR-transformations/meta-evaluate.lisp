@@ -188,22 +188,18 @@
 ;;; Fold the IFI if we can determine whether or not the test will
 ;;; evaluate to NIL.
 (defun fold-ifi (instruction system)
-  (let* ((test (cleavir-bir:input instruction))
+  (let* ((in (cleavir-bir:input instruction))
          (next (cleavir-bir:next instruction))
          (then (first next))
          (else (second next)))
     (multiple-value-bind (next dead)
-        (cond ((typep test 'cleavir-bir:constant-reference)
-               (if (cleavir-bir:constant-value (cleavir-bir:input test))
-                   (values then else)
-                   (values else then)))
-              ((cleavir-ctype:disjointp (cleavir-bir:ctype test)
+        (cond ((cleavir-ctype:disjointp (cleavir-bir:ctype in)
                                         (cleavir-ctype:member system nil)
                                         system)
                #+(or)
-               (format t "folding ifi based on type ~a" (cleavir-bir:ctype test))
+               (format t "folding ifi based on type ~a" (cleavir-bir:ctype in))
                (values then else))
-              ((cleavir-ctype:values-subtypep (cleavir-bir:ctype test)
+              ((cleavir-ctype:values-subtypep (cleavir-bir:ctype in)
                                               (cleavir-ctype:member system nil)
                                               system)
                #+(or)
@@ -295,17 +291,20 @@
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
 (defun constant-fold-instruction (instruction inputs folder)
-  (when (every (lambda (input)
-                 (typep input 'cleavir-bir:constant-reference))
-               inputs)
-    (replace-computation-by-constant-value
-     instruction
-     (apply folder
-            (mapcar (lambda (input)
-                      (cleavir-bir:constant-value
-                       (cleavir-bir:input input)))
-                    inputs)))
-    t))
+  (let ((definers (loop for inp in inputs
+                        if (typep inp 'cleavir-bir:output)
+                          collect (cleavir-bir:definition inp)
+                        else do (return-from constant-fold-instruction nil))))
+    (when (every (lambda (definer)
+                   (typep definer 'cleavir-bir:constant-reference))
+                 definers)
+      (replace-computation-by-constant-value
+       instruction
+       (apply folder
+              (mapcar (lambda (def)
+                        (cleavir-bir:constant-value (cleavir-bir:input def)))
+                      definers)))
+      t)))
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:multiple-to-fixed) system)
@@ -320,8 +319,7 @@
 (defmethod derive-types ((instruction cleavir-bir:multiple-to-fixed) system)
   ;; Derive the type of the outputs (fixed values) from the
   ;; definition.
-  (let* ((definition (cleavir-bir:input instruction))
-         (values-type (cleavir-bir:ctype definition)))
+  (let ((values-type (cleavir-bir:ctype (cleavir-bir:input instruction))))
     (unless (cleavir-ctype:top-p values-type system)
       (let ((required-type
               (cleavir-ctype:values-required values-type system))
@@ -359,9 +357,8 @@
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:typeq-test) system)
-  (let* ((object (cleavir-bir:input instruction))
-         (ctype (cleavir-bir:ctype object))
-         (test-ctype (cleavir-bir:test-ctype instruction)))
+  (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction)))
+        (test-ctype (cleavir-bir:test-ctype instruction)))
     (cond ((cleavir-ctype:values-subtypep ctype test-ctype system)
            (replace-computation-by-constant-value instruction t)
            t)
@@ -450,8 +447,7 @@
        system))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
-  (let* ((input (cleavir-bir:input instruction))
-         (ctype (cleavir-bir:ctype input)))
+  (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction))))
     ;; Remove THEI when its input's type is a subtype of the
     ;; THEI's asserted type.
     (when (cleavir-ctype:values-subtypep
