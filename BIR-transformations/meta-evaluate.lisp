@@ -115,7 +115,7 @@
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (cleavir-bir:inputs iblock))
     (let ((type (cleavir-ctype:bottom system)))
-      (dolist (definition (cleavir-bir:definitions phi))
+      (cleavir-set:doset (definition (cleavir-bir:definitions phi))
         (setq type
               (cleavir-ctype:disjoin/2
                type

@@ -142,7 +142,7 @@ has use-before-define on inputs ~a"
          (test (every #'phi-p outputs)
                "Terminator ~a has non-phi outputs ~a"
                instruction (remove-if #'phi-p outputs)))
-       (flet ((presentp (o) (member instruction (definitions o))))
+       (flet ((presentp (o) (cleavir-set:presentp instruction (definitions o))))
          (test (every #'presentp outputs)
                "Terminator ~a is not a definition of its outputs ~a"
                instruction (remove-if #'presentp outputs))))
@@ -404,10 +404,10 @@ has use-before-define on inputs ~a"
             "iblock ~a has non-phi inputs ~a"
             iblock (remove-if #'phip inputs)))
     (flet ((terminatord (p)
-             (every (lambda (inst)
-                      (and (typep inst 'terminator)
-                           (member p (outputs inst))))
-                    (definitions p))))
+             (cleavir-set:every (lambda (inst)
+                                  (and (typep inst 'terminator)
+                                       (member p (outputs inst))))
+                                (definitions p))))
       (test (every #'terminatord inputs)
             "phis ~a have some invalid definitions"
             (remove-if #'terminatord inputs)))

@@ -207,7 +207,7 @@
   (let ((iblock (iblock phi)))
     (setf (cleavir-bir:inputs iblock)
           (delete phi (cleavir-bir:inputs iblock)))
-    (dolist (def (definitions phi))
+    (cleavir-set:doset (def (definitions phi))
       (let ((pos (position phi (cleavir-bir:outputs def))))
         (setf (cleavir-bir:outputs def)
               (list-sans-index (cleavir-bir:outputs def) pos))

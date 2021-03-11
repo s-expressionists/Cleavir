@@ -137,6 +137,8 @@
 (defmethod dynamic-environment ((instruction instruction))
   (dynamic-environment (iblock instruction)))
 
+(defgeneric definitions (datum))
+
 ;;; Data output by an instruction.
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
@@ -144,7 +146,8 @@
                 :reader definition :accessor %definition)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
-(defmethod definitions ((datum output)) (list (definition datum)))
+(defmethod definitions ((datum output))
+  (cleavir-set:make-set (definition datum)))
 
 ;;; some useful mixins
 (defclass no-input (instruction)
@@ -193,17 +196,15 @@
             :type iblock)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
-(defgeneric definitions (datum))
-
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
-        (definitions '()))
+        (definitions (cleavir-set:empty-set)))
     (cleavir-set:doset (predecessor (predecessors ib))
       (let ((end (end predecessor)))
         (unless (typep end 'catch)
-          (pushnew end definitions))))
+          (cleavir-set:nadjoinf definitions end))))
     (cleavir-set:doset (entrance (entrances ib))
-      (pushnew (end entrance) definitions))
+      (cleavir-set:nadjoinf definitions (end entrance)))
     definitions))
 
 ;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
