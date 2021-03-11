@@ -5,17 +5,15 @@
                                  inserter system)
     (let* ((info (cleavir-ast:info ast))
            (out (cleavir-primop-info:out-rtypes info)))
-      (cond ((null out)
-             (insert inserter
-                     (make-instance 'cleavir-bir:nvprimop
-                       :info info :inputs (mapcar #'first args))))
-            ((integerp out)
-             (error "BUG: Test primop in invalid context: ~a" ast))
-            (t
-             (list
-              (insert inserter
-                      (make-instance 'cleavir-bir:vprimop
-                        :info info :inputs (mapcar #'first args)))))))))
+      (when (integerp out)
+        (error "BUG: Test primop in invalid context: ~a" ast))
+      (let ((outputs (loop for o in out
+                           collect (make-instance 'cleavir-bir:output
+                                     :rtype o))))
+        (insert inserter
+                (make-instance 'cleavir-bir:vprimop
+                  :info info :inputs (mapcar #'first args) :outputs outputs))
+        (copy-list outputs)))))
 
 (defmethod compile-test-ast ((ast cleavir-ast:primop-ast) inserter system)
   (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
@@ -26,7 +24,7 @@
       (let ((ibs (loop repeat out collect (make-iblock inserter))))
         (terminate
          inserter
-         (make-instance 'cleavir-bir:nvprimop
+         (make-instance 'cleavir-bir:tprimop
            :info info :next ibs :inputs args))
         (copy-list ibs)))))
 
@@ -34,12 +32,8 @@
   (let* ((info (cleavir-primop-info:info primop))
          (out (cleavir-primop-info:out-rtypes info))
          (in (cleavir-primop-info:in-rtypes info))
-         (kind
-           (cond ((null out) 'cleavir-bir:nvprimop)
-                 ((integerp out) 'cleavir-bir:tprimop)
-                 (t 'cleavir-bir:vprimop)))
          (ca `(,@(loop for reader in readers collect `(,reader ast)))))
-    (if (eq kind 'cleavir-bir:tprimop)
+    (if (integerp out)
         `(defmethod compile-test-ast ((ast ,ast) inserter system)
            (with-compiled-asts (rv ,ca inserter system (,@in))
              (let ((ibs
@@ -47,14 +41,19 @@
                                    collect `(make-iblock inserter)))))
                (terminate
                 inserter
-                (make-instance ',kind :info ',info :next ibs :inputs rv))
+                (make-instance 'cleavir-bir:tprimop
+                  :info ',info :next ibs :inputs rv))
                (copy-list ibs))))
-        (let ((form
-                `(insert inserter
-                         (make-instance ',kind :info ',info :inputs rv))))
-          `(defmethod compile-ast ((ast ,ast) inserter system)
-             (with-compiled-asts (rv ,ca inserter system (,@in))
-               ,(if (eq kind 'cleavir-bir:nvprimop) form `(list ,form))))))))
+        `(defmethod compile-ast ((ast ,ast) inserter system)
+           (with-compiled-asts (rv ,ca inserter system (,@in))
+             (let ((outs (list ,@(loop for o in out
+                                       collect `(make-instance
+                                                    'cleavir-bir:output
+                                                  :rtype ',o)))))
+               (insert inserter
+                       (make-instance 'cleavir-bir:vprimop
+                         :info ',info :inputs rv :outputs outs))
+               (copy-list outs)))))))
 
 (defprimop symbol-value cleavir-ast:symbol-value-ast
   cleavir-ast:symbol-ast)

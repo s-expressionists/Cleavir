@@ -10,7 +10,7 @@
   ;; significance. If the jump is carrying a value via phi that is not
   ;; the value of the local-call, we also quit.
   (let ((successor (cleavir-bir:successor local-call))
-        (linear-datum local-call))
+        (linear-datum (first (cleavir-bir:outputs local-call))))
     (loop (typecase successor
             (cleavir-bir:jump
              ;; Make sure no dynamic environment actions happen.
@@ -26,12 +26,15 @@
                         (if (cleavir-bir:unused-p linear-datum)
                             (return successor) ; value significance
                             (if (eq linear-datum (first inputs))
-                                (setq linear-datum (first (cleavir-bir:outputs successor))) ; can keep looking
+                                ;; can keep looking
+                                (setq linear-datum
+                                      (first (cleavir-bir:outputs successor)))
                                 (return successor) ; value significance
                                 )))
                        (t (return successor)) ; value significance
                        )
-                     (setq successor (cleavir-bir:start (first (cleavir-bir:next successor))))))))
+                     (setq successor (cleavir-bir:start
+                                      (first (cleavir-bir:next successor))))))))
             (cleavir-bir:returni
              ;; Is this a self tail recursive call?
              (let ((callee (cleavir-bir:callee local-call)))
@@ -51,10 +54,11 @@
         common-dynenv
         target-owner)
     (cleavir-set:doset (call calls)
-      (let ((cont (logical-continuation call))
-            (dynenv (cleavir-bir:dynamic-environment call))
-            (use (cleavir-bir:transitive-use call))
-            (owner (cleavir-bir:function call)))
+      (let* ((cont (logical-continuation call))
+             (dynenv (cleavir-bir:dynamic-environment call))
+             (call-out (first (cleavir-bir:outputs call)))
+             (use (cleavir-bir:transitive-use call-out))
+             (owner (cleavir-bir:function call)))
         ;; Check which properties every user shares.
         (cond ((eq return-point :uncalled)
                (unless (eq function cont)
@@ -97,10 +101,10 @@
        (cleavir-bir:end before))
       ;; The stuff in the AFTER block is now unreachable.
       (cleavir-bir:delete-iblock after)
-      ;; Remove the local call.
-      (cleavir-bir:delete-computation call)
       (let ((call-arguments (rest (cleavir-bir:inputs call)))
             (inputs '()))
+        ;; Remove the local call.
+        (cleavir-bir:delete-instruction call)
         (cleavir-bir:map-lambda-list
          (lambda (state item index)
            (declare (ignore index))
@@ -112,19 +116,32 @@
                 (let ((module (cleavir-bir:module (cleavir-bir:function call))))
                   (cond
                     (arg
-                     (let ((suppliedp (cleavir-bir:make-constant-reference
-                                       (cleavir-bir:constant-in-module t module))))
+                     (let* ((const (cleavir-bir:constant-in-module t module))
+                            (suppliedp-out (make-instance 'cleavir-bir:output))
+                            (suppliedp (make-instance
+                                           'cleavir-bir:constant-reference
+                                         :inputs (list const)
+                                         :outputs (list suppliedp-out))))
                        (cleavir-bir:insert-instruction-before suppliedp jump)
                        (push arg inputs)
-                       (push suppliedp inputs)))
+                       (push suppliedp-out inputs)))
                     (t
-                     (let* ((nil-constant (cleavir-bir:constant-in-module nil module))
-                            (value (cleavir-bir:make-constant-reference nil-constant))
-                            (suppliedp (cleavir-bir:make-constant-reference nil-constant)))
+                     (let* ((nil-constant
+                              (cleavir-bir:constant-in-module nil module))
+                            (value-out (make-instance 'cleavir-bir:output))
+                            (value (make-instance
+                                       'cleavir-bir:constant-reference
+                                     :inputs (list nil-constant)
+                                     :outputs (list value-out)))
+                            (suppliedp-out (make-instance 'cleavir-bir:output))
+                            (suppliedp (make-instance
+                                           'cleavir-bir:constant-reference
+                                         :inputs (list nil-constant)
+                                         :outputs (list suppliedp-out))))
                        (cleavir-bir:insert-instruction-before value jump)
                        (cleavir-bir:insert-instruction-before suppliedp jump)
-                       (push value inputs)
-                       (push suppliedp inputs))))))
+                       (push value-out inputs)
+                       (push suppliedp-out inputs))))))
                (&rest
                 ;; The argument is unused, so don't pass anything.
                 (assert (cleavir-bir:unused-p item))))))
@@ -214,12 +231,13 @@
            (if unique-call
                (progn
                  (check-type unique-call cleavir-bir:local-call)
-                 (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call))))
-                   (unless (cleavir-bir:unused-p unique-call)
+                 (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call)))
+                       (ucall-out (first (cleavir-bir:outputs unique-call))))
+                   (unless (cleavir-bir:unused-p ucall-out)
                      (let ((phi (make-instance 'cleavir-bir:phi :iblock dummy-block)))
                        (setf (cleavir-bir:inputs dummy-block) (list phi))
                        ;; Replace the call-as-datum with the return-values.
-                       (cleavir-bir:replace-uses phi unique-call)))
+                       (cleavir-bir:replace-uses phi ucall-out)))
                    dummy-block))
                (if (eq return-point :unknown)
                    :unknown
@@ -249,9 +267,11 @@
         ;; If we have a FTM->MTF sequence, clear it out.
         (when (and common-use
                    (typep common-use 'cleavir-bir:multiple-to-fixed))
-          (let ((definition (first (cleavir-bir:inputs common-use))))
-            (when (typep definition 'cleavir-bir:fixed-to-multiple)
-              (cleavir-bir:delete-ftm-mtf-pair definition common-use)))))
+          (let ((cuinput (first (cleavir-bir:inputs common-use))))
+            (when (typep cuinput 'cleavir-bir:output)
+              (let ((cudef (cleavir-bir:definition cuinput)))
+                (when (typep cudef 'cleavir-bir:fixed-to-multiple)
+                  (cleavir-bir:delete-ftm-mtf-pair cudef common-use)))))))
       ;; We've interpolated and there are potentially useless
       ;; catches in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.

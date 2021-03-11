@@ -102,7 +102,6 @@
 
 ;;; An instruction is something to be done.
 ;;; All instructions have sequences of inputs and outputs.
-;;; Inputs are mutable but outputs may not be (for computations).
 ;;; Every input and output is a LINEAR-DATUM, except that READVAR has a VARIABLE
 ;;; input and WRITEVAR has one as an output.
 (defgeneric inputs (instruction))
@@ -123,7 +122,9 @@
                      #+sbcl (or standard-object null))
    (%inputs :initform nil :initarg :inputs :accessor inputs
             ;; Sequence of DATA.
-            :type sequence)
+            :type sequence);; Sequence of data.
+   (%outputs :initform '() :initarg :outputs :accessor outputs
+             :type sequence)
    ;; The iblock this instruction belongs to.
    (%iblock :initarg :iblock :accessor iblock :type iblock)
    (%policy :initform (current-policy) :initarg :policy :reader policy)
@@ -136,24 +137,14 @@
 (defmethod dynamic-environment ((instruction instruction))
   (dynamic-environment (iblock instruction)))
 
-;;; An instruction that outputs a single datum.
-;;; In this case the instruction is identified with the datum.
-(defclass computation (value transfer instruction) ())
-(defmethod outputs ((instruction computation)) (list instruction))
-
-;;; An instruction that outputs a variable number of outputs
-;;; or a fixed number (that is not one) of them.
-(defclass operation (instruction)
-  (;; Sequence of data.
-   (%outputs :initform '() :initarg :outputs :accessor outputs
-             :type sequence)))
-
-;;; Data output by an OPERATION.
+;;; Data output by an instruction.
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initform nil :initarg :definition
                 :reader definition :accessor %definition)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defmethod definitions ((datum output)) (list (definition datum)))
 
 ;;; some useful mixins
 (defclass no-input (instruction)
@@ -161,8 +152,11 @@
 (defclass one-input (instruction)
   ((%inputs :initform nil
             :type (or null (cons datum null)))))
-(defclass no-output (operation)
+(defclass no-output (instruction)
   ((%outputs :initform '() :type null)))
+(defclass one-output (instruction)
+  ((%outputs :initform nil
+             :type (or null (cons datum null)))))
 
 ;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
@@ -172,7 +166,7 @@
           :type list)))
 
 ;;; A terminator with no next iblocks (abstract)
-(defclass terminator0 (terminator operation)
+(defclass terminator0 (terminator)
   ((%next :initform nil :type null)))
 
 ;;; A terminator with exactly one next iblock (abstract)

@@ -14,14 +14,14 @@
   (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:delete-phi #:output #:name #:ctype #:derived-type
-           #:definitions #:use #:transitive-use #:unused-p)
+           #:definition #:definitions #:use #:transitive-use #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:binder
            #:use-status #:ignore
            #:record-variable-ref #:record-variable-set
            #:immutablep #:closed-over-p)
   (:export #:constant #:load-time-value
            #:constant-value #:form #:read-only-p)
-  (:export #:instruction #:operation #:computation #:inputs #:outputs
+  (:export #:instruction #:inputs #:outputs
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next
            #:origin #:policy)
@@ -50,7 +50,7 @@
            #:do-iblock-instructions)
   (:export #:map-local-instructions
            #:insert-instruction-before #:insert-instruction-after
-           #:replace-computation #:delete-computation #:delete-instruction
+           #:delete-instruction
            #:delete-ftm-mtf-pair #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)

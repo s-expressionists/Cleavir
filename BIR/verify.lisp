@@ -79,13 +79,10 @@
                   (typep (first inputs) 'variable))
              "Accessvar ~a has non-variable input ~a"
              instruction (first inputs)))
-      (local-call
-       (assert (typep (first inputs) 'function))
-       (assert (every (lambda (i)
-                        (eq (use i) instruction))
-                      (rest inputs))))
-      (mv-local-call
-       (assert (typep (first inputs) 'function)))
+      (abstract-local-call
+       (test (typep (first inputs) 'function)
+             "Local call ~a has non-function callee ~a"
+             instruction (first inputs)))
       (constant-reference
        (test (typep (first inputs) 'constant)
              "Constant reference ~a has non-constant input ~a"
@@ -104,7 +101,8 @@
              (first inputs)))
       (t (flet ((validp (v)
                   (etypecase v
-                    (computation (cleavir-set:presentp v *seen-instructions*))
+                    (output (cleavir-set:presentp
+                             (definition v) *seen-instructions*))
                     (argument
                      (member-of-lambda-list-p
                       v
@@ -126,9 +124,7 @@ has use-before-define on inputs ~a"
       (test (not (cleavir-set:presentp inputs *seen-lists*))
             ;; could track the other instruction sharing it
             "Inputs list of instruction ~a is shared" instruction)
-      (cleavir-set:nadjoinf *seen-lists* inputs))))
-
-(defmethod verify progn ((instruction operation))
+      (cleavir-set:nadjoinf *seen-lists* inputs)))
   ;; All outputs are OUTPUTs, unless this is a terminator, in which case
   ;; they're all PHIs, or unless this is a WRITEVAR.
   ;; In either case, we're a definer.
@@ -140,7 +136,8 @@ has use-before-define on inputs ~a"
        (test (cleavir-set:presentp instruction (writers (first outputs)))
              "Writevar ~a is not a definition of its output ~a"
              instruction (first outputs)))
-      (terminator
+      ;; values-save has regular outputs. KLUDGE
+      ((and terminator (not values-save))
        (flet ((phi-p (o) (typep o 'phi)))
          (test (every #'phi-p outputs)
                "Terminator ~a has non-phi outputs ~a"
@@ -152,11 +149,11 @@ has use-before-define on inputs ~a"
       (t
        (flet ((outputp (o) (typep o 'output)))
          (test (every #'outputp outputs)
-               "Operation ~a has outputs ~a of wrong class"
+               "Instruction ~a has outputs ~a of wrong class"
                instruction (remove-if #'outputp outputs)))
        (flet ((definerp (o) (eq instruction (definition o))))
          (test (every #'definerp outputs)
-               "Operation ~a is not the definer of its outputs ~a"
+               "Instruction ~a is not the definer of its outputs ~a"
                instruction (remove-if #'definerp outputs)))))
     ;; Make sure output lists are not shared.
     (unless (null outputs)
@@ -172,7 +169,7 @@ has use-before-define on inputs ~a"
 (defmethod verify progn ((instruction one-input))
   ;; verify type decl
   (test (and (listp (inputs instruction))
-             (= (length (list (inputs instruction))) 1))
+             (= (length (inputs instruction)) 1))
         "One-input instruction ~a does not have exactly one input: ~a"
         instruction (inputs instruction)))
 
@@ -180,6 +177,13 @@ has use-before-define on inputs ~a"
   ;; verify type decl
   (test (null (outputs instruction))
         "No-output instruction ~a has >0 outputs ~a" (outputs instruction)))
+
+(defmethod verify progn ((instruction one-output))
+  ;; verify type decl
+  (test (and (listp (outputs instruction))
+             (= (length (outputs instruction)) 1))
+        "One-output instruction ~a does not have exactly one output: ~a"
+        instruction (outputs instruction)))
 
 (defun match-jump-types (inst inputs outputs)
   ;; Ensure the number and rtypes of the inputs match those of the outputs
@@ -328,8 +332,9 @@ has use-before-define on inputs ~a"
 
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
-  (test (typep (use instruction) '(or null ifi))
-        "conditional test ~a is not used by an ifi instruction" instruction))
+  (test (typep (use (first (outputs instruction))) '(or null ifi))
+        "conditional test ~a is used by ~a, not an ifi instruction"
+        instruction (use (first (outputs instruction)))))
 
 (defmethod verify progn ((mtf multiple-to-fixed))
   (test (rtype= (rtype (first (inputs mtf))) :multiple-values)

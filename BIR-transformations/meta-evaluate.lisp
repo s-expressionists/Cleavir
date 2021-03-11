@@ -141,31 +141,31 @@
     (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:readvar))
-  (when (cleavir-bir:unused-p instruction)
-    (cleavir-bir:delete-computation instruction)))
+  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+    (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction
     ((instruction cleavir-bir:constant-reference))
-  (when (cleavir-bir:unused-p instruction)
-    (cleavir-bir:delete-computation instruction)))
+  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+    (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:enclose))
-  (when (cleavir-bir:unused-p instruction)
-    (cleavir-bir:delete-computation instruction)))
+  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+    (cleavir-bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:conditional-test))
-  (when (cleavir-bir:unused-p instruction)
-    (cleavir-bir:delete-computation instruction)))
+  (when (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
+    (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:abstract-call))
-  (when (and (cleavir-bir:unused-p instruction)
+  (when (and (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction)))
              (cleavir-attributes:has-boolean-attribute-p
               (cleavir-bir:attributes instruction)
               :flushable))
-    (cleavir-bir:delete-computation instruction)))
+    (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:vprimop))
   (let ((name (cleavir-primop-info:name (cleavir-bir:info instruction))))
     (when (and (member name '(fdefinition car cdr symbol-value))
-               (cleavir-bir:unused-p instruction))
-      (cleavir-bir:delete-computation instruction))))
+               (cleavir-bir:unused-p (first (cleavir-bir:outputs instruction))))
+      (cleavir-bir:delete-instruction instruction))))
 
 (defun flush-dead-code (iblock)
   (cleavir-bir:map-iblock-instructions-backwards #'maybe-flush-instruction
@@ -280,13 +280,18 @@
 
 ;; Replace COMPUTATION with a constant reference to value.
 (defun replace-computation-by-constant-value (instruction value)
-  (let ((constant-reference
-          (cleavir-bir:make-constant-reference
+  (let* ((constant 
            (cleavir-bir:constant-in-module
             value
-            (cleavir-bir:module (cleavir-bir:function instruction))))))
+            (cleavir-bir:module (cleavir-bir:function instruction))))
+         (constant-reference
+           (make-instance 'cleavir-bir:constant-reference
+             :inputs (list constant)))
+         (outs (cleavir-bir:outputs instruction)))
+    (setf (cleavir-bir:outputs instruction) nil
+          (cleavir-bir:outputs constant-reference) outs)
     (cleavir-bir:insert-instruction-before constant-reference instruction)
-    (cleavir-bir:replace-computation instruction constant-reference)))
+    (cleavir-bir:delete-instruction instruction)))
 
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
@@ -306,10 +311,12 @@
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:multiple-to-fixed) system)
   (declare (ignore system))
-  (let ((definition (first (cleavir-bir:inputs instruction))))
-    (when (typep definition 'cleavir-bir:fixed-to-multiple)
-      (cleavir-bir:delete-ftm-mtf-pair definition instruction)
-      t)))
+  (let ((input (first (cleavir-bir:inputs instruction))))
+    (when (typep input 'cleavir-bir:output)
+      (let ((definition (cleavir-bir:definition input)))
+        (when (typep definition 'cleavir-bir:fixed-to-multiple)
+          (cleavir-bir:delete-ftm-mtf-pair definition instruction)
+          t)))))
 
 (defmethod derive-types ((instruction cleavir-bir:multiple-to-fixed) system)
   ;; Derive the type of the outputs (fixed values) from the
@@ -338,7 +345,7 @@
 
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
   (derive-type-for-linear-datum
-   instruction
+   (first (cleavir-bir:outputs instruction))
    (cleavir-ctype:values
     (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction))
     nil
@@ -365,7 +372,7 @@
 
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
   (derive-type-for-linear-datum
-   instruction
+   (first (cleavir-bir:outputs instruction))
    (cleavir-ctype:member system (cleavir-bir:constant-value
                                  (first (cleavir-bir:inputs instruction))))
    system))
@@ -376,16 +383,17 @@
   (let ((readers (cleavir-bir:readers variable)))
     (when (and (cleavir-bir:immutablep variable)
                (= (cleavir-set:size readers) 1))
-      (let ((binder (cleavir-bir:binder variable))
-            (reader (cleavir-set:arb readers)))
+      (let* ((binder (cleavir-bir:binder variable))
+             (reader (cleavir-set:arb readers))
+             (reader-out (first (cleavir-bir:outputs reader))))
         (when (eq (cleavir-bir:function binder)
                   (cleavir-bir:function reader))
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let ((input (first (cleavir-bir:inputs binder))))
             (setf (cleavir-bir:inputs binder) nil)
-            (cleavir-bir:replace-uses input reader))
-          (cleavir-bir:delete-computation reader)
+            (cleavir-bir:replace-uses input reader-out))
+          (cleavir-bir:delete-instruction reader)
           t)))))
 
 ;;; Variable bound to constant can get propagated.
@@ -393,20 +401,22 @@
   (when (cleavir-bir:immutablep variable)
     (let* ((writer (cleavir-bir:binder variable))
            (input (first (cleavir-bir:inputs writer))))
-      ;; FIXME: Should really check for a constant type here instead.
-      (typecase input
-        (cleavir-bir:constant-reference
-         (let ((constant (first (cleavir-bir:inputs input))))
-           (cleavir-set:doset (reader (cleavir-bir:readers variable))
-             (change-class reader 'cleavir-bir:constant-reference
-               :inputs (list constant)))
-           #+(or)
-           (format t "~&meta-evaluate: constant propagating ~a"
-                   (cleavir-bir:constant-value constant))
-           (cleavir-bir:delete-instruction writer)
-           (cleavir-bir:delete-instruction input))
-         t)
-        (t nil)))))
+      (when (typep input 'cleavir-bir:output) ; FIXME: should be SSA?
+        (let ((def (cleavir-bir:definition input)))
+          ;; FIXME: Should really check for a constant type here instead.
+          (typecase def
+            (cleavir-bir:constant-reference
+             (let ((constant (first (cleavir-bir:inputs def))))
+               (cleavir-set:doset (reader (cleavir-bir:readers variable))
+                 (change-class reader 'cleavir-bir:constant-reference
+                               :inputs (list constant)))
+               #+(or)
+               (format t "~&meta-evaluate: constant propagating ~a"
+                       (cleavir-bir:constant-value constant))
+               (cleavir-bir:delete-instruction writer)
+               (cleavir-bir:delete-instruction def))
+             t)
+            (t nil)))))))
 
 ;;; For an immutable variable, we prove that the type of its readers
 ;;; is just the type of its definition.
@@ -416,7 +426,8 @@
              (first (cleavir-bir:inputs (cleavir-bir:binder variable))))
            (type (cleavir-bir:ctype definition)))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
-        (derive-type-for-linear-datum reader type system)))))
+        (let ((out (first (cleavir-bir:outputs reader))))
+          (derive-type-for-linear-datum out type system))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (let ((variable (first (cleavir-bir:outputs instruction))))
@@ -435,7 +446,7 @@
           (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
       (derive-type-for-linear-datum
-       local-call
+       (first (cleavir-bir:outputs local-call))
        return-type
        system))))
 
@@ -466,7 +477,7 @@
     ;; inference, and also type conflict when the type is checked
     ;; externally.
     (derive-type-for-linear-datum
-     instruction
+     (first (cleavir-bir:outputs instruction))
      (if (eq type-check-function :external)
          ctype
          (cleavir-ctype:conjoin/2 (cleavir-bir:asserted-type instruction)

@@ -39,7 +39,8 @@
     (cleavir-bir:do-functions (function module)
       (let ((enclose (cleavir-bir:enclose function)))
         (when enclose
-          (let ((use (cleavir-bir:use enclose)))
+          (let* ((eout (first (cleavir-bir:outputs enclose)))
+                 (use (cleavir-bir:use eout)))
             (typecase use
               (cleavir-bir:call
                (when (safe-call use)
@@ -48,7 +49,8 @@
                (let ((variable (first (cleavir-bir:outputs use)))
                      (safe t))
                  (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                   (let ((use (cleavir-bir:use reader)))
+                   (let* ((rout (first (cleavir-bir:outputs reader)))
+                          (use (cleavir-bir:use rout)))
                      (typecase use
                        (null)
                        (cleavir-bir:call

@@ -197,15 +197,11 @@
   (declare (ignore stack))
   (list
    :inputs (mapcar (input-copier map) (cleavir-bir:inputs instruction))
+   :outputs (mapcar (output-copier stack map)
+                    (cleavir-bir:outputs instruction))
    :iblock (copy-of (cleavir-bir:iblock instruction) map)
    :policy (cleavir-bir:policy instruction)
    :origin (cleavir-bir:origin instruction)))
-
-(defmethod clone-initargs append
-    ((instruction cleavir-bir:operation) stack map)
-  (list
-   :outputs (mapcar (output-copier stack map)
-                    (cleavir-bir:outputs instruction))))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:terminator) stack map)

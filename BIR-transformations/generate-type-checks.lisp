@@ -22,20 +22,23 @@
             :origin (cleavir-bir:origin thei)))))
 
 (defun generate-type-check (thei)
-  (let* ((input (first (cleavir-bir:inputs thei)))
-         (type-check-function (cleavir-bir:type-check-function thei)))
+  (let ((input (first (cleavir-bir:inputs thei)))
+        (type-check-function (cleavir-bir:type-check-function thei)))
     (unless (symbolp type-check-function)
-      (let ((rtype (cleavir-bir:rtype thei)))
+      (let ((rtype (cleavir-bir:rtype input)))
         (case rtype
           (:object
-           (change-class thei 'cleavir-bir:local-call
-                         :inputs (list type-check-function input))
-           (let ((mtf (make-instance 'cleavir-bir:multiple-to-fixed
-                                     :outputs (list (make-instance 'cleavir-bir:output
-                                                                   :rtype :object)))))
-             (cleavir-bir:insert-instruction-after mtf thei)
-             (cleavir-bir:replace-uses (first (cleavir-bir:outputs mtf)) thei)
-             (setf (cleavir-bir:inputs mtf) (list thei))
+           (let* ((call-out (make-instance 'cleavir-bir:output
+                              :rtype :multiple-values))
+                  (call (make-instance 'cleavir-bir:local-call
+                          :outputs (list call-out)
+                          :origin (cleavir-bir:origin thei)
+                          :policy (cleavir-bir:policy thei))))
+             (cleavir-bir:insert-instruction-before call thei)
+             (setf (cleavir-bir:inputs thei) nil
+                   (cleavir-bir:inputs call) (list type-check-function input))
+             (change-class thei 'cleavir-bir:multiple-to-fixed
+                           :inputs (list call-out))
              (post-find-local-calls type-check-function)))
           (:multiple-values
            (change-class thei 'cleavir-bir:mv-local-call

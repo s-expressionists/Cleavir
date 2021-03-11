@@ -1,7 +1,7 @@
 (in-package #:cleavir-bir)
 
 ;;; This instruction creates a first-class object from a FUNCTION.
-(defclass enclose (no-input computation)
+(defclass enclose (no-input one-output instruction)
   ((%code :initarg :code :reader code
           :type function)
    ;; Indicates the extent of the closure created by this
@@ -10,60 +10,41 @@
             :initform :indefinite
             :type (member :dynamic :indefinite))
    (%derived-type :initform (current-top-function-ctype))))
-(defmethod rtype ((d enclose)) :object)
 
 (defclass unreachable (no-input no-output terminator0) ())
 
-(defclass nop (no-input no-output operation) ())
+(defclass nop (no-input no-output instruction) ())
 
 ;;; Abstract. An instruction dealing with a variable.
 (defclass accessvar (instruction) ())
 
-(defclass writevar (one-input accessvar operation) ())
+(defclass writevar (one-input one-output accessvar) ())
 
-(defclass readvar (one-input accessvar computation) ())
-
-(defmethod rtype ((rv readvar)) (rtype (first (inputs rv))))
+(defclass readvar (one-input one-output accessvar) ())
 
 ;;; Constants
 
-(defclass constant-reference (one-input computation) ())
+(defclass constant-reference (one-input one-output instruction) ())
 
-(defmethod rtype ((inst constant-reference)) :object)
-
-(defun make-constant-reference (constant)
-  (make-instance 'constant-reference :inputs (list constant)))
-
-(defclass load-time-value-reference (one-input computation) ())
-
-(defmethod rtype ((inst load-time-value-reference)) :object)
-
-(defun make-load-time-value-reference (load-time-value)
-  (make-instance 'load-time-value-reference :inputs (list load-time-value)))
+(defclass load-time-value-reference (one-input one-output instruction) ())
 
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
           :type cleavir-primop-info:info)))
 
-;; primop returning no values
-(defclass nvprimop (primop no-output operation) ())
-
 ;; primop returning values
-(defclass vprimop (primop computation) ())
-(defmethod rtype ((d vprimop))
-  (first (cleavir-primop-info:out-rtypes (info d))))
+(defclass vprimop (primop) ())
 
 ;; primop that tests in a branch
-(defclass tprimop (primop no-output terminator operation) ())
+(defclass tprimop (primop no-output terminator) ())
 
-(defclass abstract-call (computation)
+(defclass abstract-call (one-output instruction)
   ((%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes))
    (%transforms :initarg :transforms :reader transforms
                 :initform nil)))
 (defgeneric callee (instruction))
-(defmethod rtype ((d abstract-call)) :multiple-values)
 
 (defclass call (abstract-call) ())
 (defmethod callee ((i call)) (first (inputs i)))
@@ -94,12 +75,10 @@
 (defclass returni (one-input no-output terminator0) ())
 
 (defclass values-save
-    (dynamic-environment one-input terminator1 computation)
+    (dynamic-environment one-input one-output terminator1)
   ())
-(defmethod rtype ((v values-save)) :multiple-values)
 
-(defclass values-collect (computation) ())
-(defmethod rtype ((v values-collect)) :multiple-values)
+(defclass values-collect (one-output instruction) ())
 
 ;;; Allocate some temporary space for an object of the specified rtype.
 ;;; Within this dynamic environment, readtemp and writetemp can be used.
@@ -119,11 +98,10 @@
    (%alloca :initarg :alloca :reader alloca :type alloca)))
 
 ;;; Read the object stored in the temporary storage in the alloca.
-(defclass readtemp (accesstemp no-input computation) ())
-(defmethod rtype ((d readtemp)) (rtype (alloca d)))
+(defclass readtemp (accesstemp no-input one-output instruction) ())
 
 ;;; Write it
-(defclass writetemp (accesstemp one-input no-output operation) ())
+(defclass writetemp (accesstemp one-input no-output instruction) ())
 
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
@@ -149,7 +127,7 @@
 
 ;;; Unconditional local control transfer. Inputs are passed to the single next
 ;;; block.
-(defclass jump (terminator1 operation) ())
+(defclass jump (terminator1) ())
 
 ;; Is the dynamic environment of the jump's iblock distinct from the
 ;; dynamic environment the jump is transferring control to?
@@ -161,37 +139,36 @@
 ;;; against NIL, and branches to either of its two successors. This is
 ;;; the canonical way to branch in Cleavir, which optimizations know
 ;;; how to deal with.
-(defclass ifi (no-output terminator operation) ())
+(defclass ifi (no-output terminator) ())
 
 ;;; A CONDITIONAL-TEST instruction is a computation whose value is
 ;;; guaranteed to be used by IFI as dispatch. The reason for this
 ;;; constraint is that these can usually be specially treated by a
 ;;; backend.
-(defclass conditional-test (computation) ())
+(defclass conditional-test (one-output instruction) ())
 
 (defclass eq-test (conditional-test) ())
 (defclass typeq-test (conditional-test)
   ((%test-ctype :initarg :test-ctype :reader test-ctype)))
 
-(defclass case (one-input no-output terminator operation)
+(defclass case (one-input no-output terminator)
   ((%comparees :initarg :comparees :reader comparees)))
 
 ;;; Convert an aggregate of :objects into a :multiple-values
-(defclass fixed-to-multiple (computation) ())
-(defmethod rtype ((d fixed-to-multiple)) :multiple-values)
+(defclass fixed-to-multiple (one-output instruction) ())
 
 ;;; Reverse of the above
-(defclass multiple-to-fixed (one-input operation) ())
+(defclass multiple-to-fixed (one-input instruction) ())
 
 ;;; Convert a value from one rtype to another.
 ;;; This may or may not entail an actual operation at runtime.
-(defclass cast (one-input computation)
+(defclass cast (one-input one-output instruction)
   (;; The destination rtype.
    ;; (The source rtype is the rtype of the input.)
    (%rtype :initarg :rtype :reader rtype)))
 
 ;;; Represents a type assertion on the first input.
-(defclass thei (one-input computation)
+(defclass thei (one-input one-output instruction)
   ((%asserted-type :initarg :asserted-type :accessor asserted-type)
    ;; This slot holds either a function which checks the input,
    ;; :TRUSTED if we want to treat this as trusted type assertion with
@@ -200,6 +177,3 @@
    (%type-check-function :initarg :type-check-function
                          :accessor type-check-function
                          :type (or (member :trusted :external) function))))
-
-;;; The RTYPE should just be whatever the input's RTYPE is.
-(defmethod rtype ((datum thei)) (rtype (first (inputs datum))))

@@ -37,19 +37,6 @@
 (defmethod add-use ((datum function) (use abstract-local-call))
   (cleavir-set:nadjoinf (local-calls datum) use))
 
-(defmethod shared-initialize :before
-    ((inst instruction) slot-names &rest initargs &key (inputs nil inputsp))
-  (declare (cl:ignore slot-names initargs))
-  ;; Maintain uses
-  ;; The initform for inputs is nil, so we don't need to do this updating unless
-  ;; an :inputs was provided.
-  (when inputsp
-    (when (slot-boundp inst '%inputs)
-      (dolist (input (inputs inst))
-        (remove-use input inst)))
-    (dolist (input inputs)
-      (add-use input inst))))
-
 (defmethod (setf inputs) :before (new-inputs (inst instruction))
   (dolist (input (inputs inst))
     (remove-use input inst))
@@ -69,22 +56,29 @@
 (defmethod add-definition ((datum variable) (definition instruction))
   (cleavir-set:nadjoinf (writers datum) definition))
 
+(defmethod (setf outputs) :before (new-outputs (inst instruction))
+  (dolist (output (outputs inst))
+    (remove-definition output inst))
+  (dolist (output new-outputs)
+    (add-definition output inst)))
+
 (defmethod shared-initialize :before
-    ((inst operation) slot-names &rest initargs &key outputs)
-  (declare (cl:ignore initargs))
-  ;; Maintain use lists
-  (when (or (eq slot-names 't) (member '%outputs slot-names))
+    ((inst instruction) slot-names &rest initargs
+     &key (inputs nil inputsp) (outputs nil outputsp))
+  (declare (cl:ignore slot-names initargs))
+  ;; Maintain uses
+  (when inputsp
+    (when (slot-boundp inst '%inputs)
+      (dolist (input (inputs inst))
+        (remove-use input inst)))
+    (dolist (input inputs)
+      (add-use input inst)))
+  (when outputsp
     (when (slot-boundp inst '%outputs)
       (dolist (output (outputs inst))
         (remove-definition output inst)))
     (dolist (output outputs)
       (add-definition output inst))))
-
-(defmethod (setf outputs) :before (new-outputs (inst operation))
-  (dolist (output (outputs inst))
-    (remove-definition output inst))
-  (dolist (output new-outputs)
-    (add-definition output inst)))
 
 ;;; Control flow modification
 
@@ -202,7 +196,8 @@
 (defun delete-thei (thei)
   (let ((input (first (inputs thei))))
     (setf (inputs thei) '())
-    (cleavir-bir:replace-computation thei input)))
+    (replace-uses input (first (outputs thei)))
+    (delete-instruction thei)))
 
 (defun delete-phi (phi)
   (let ((iblock (iblock phi)))
@@ -224,10 +219,7 @@
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))
-  (typecase instruction
-    (computation (assert (null (use instruction))))
-    (operation
-     (assert (every #'unused-p (outputs instruction)))))
+  (assert (every #'unused-p (outputs instruction)))
   (clean-up-instruction instruction)
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
@@ -309,37 +301,21 @@
   (when (use old)
     (setf (%use old) nil)))
 
-;;; Delete a computation, replacing its use with the given LINEAR-DATUM.
-(defun replace-computation (computation replacement)
-  (replace-uses replacement computation)
-  (delete-instruction computation)
-  (values))
-
-;;; Delete a computation with unused result.
-(defun delete-computation (computation)
-  (check-type computation computation)
-  (assert (null (use computation)))
-  (delete-instruction computation)
-  (values))
-
 ;;; Delete a pair of fixed-to-multiple and multiple-to-fixed instructions.
 (defun delete-ftm-mtf-pair (ftm mtf)
   (let ((outputs (outputs mtf))
-        (inputs (inputs ftm)))
-    ;; Prevent it from cleaning up its inputs when it's deleted.
-    (setf (slot-value ftm '%inputs) '())
-    ;; Clean up its inputs.
-    ;; (This is a separate loop in case inputs is longer than outputs.)
-    (loop for inp in inputs do (remove-use inp ftm))
+        (inputs (inputs ftm))
+        (nil-const (constant-in-module nil (module (function ftm)))))
+    ;; Prepare for ownership change
+    (setf (inputs ftm) nil (outputs mtf) nil)
     ;; Replace and default values.
     (do ((inputs inputs (rest inputs))
          (outputs outputs (rest outputs)))
         ((null inputs)
          (dolist (output outputs)
-           (let ((nil-ref (make-constant-reference
-                           (constant-in-module nil (module (function ftm))))))
-             (insert-instruction-before nil-ref ftm)
-             (replace-uses nil-ref output))))
+           (let ((nil-ref (make-instance 'constant-reference
+                            :inputs (list nil-const) :outputs (list output))))
+             (insert-instruction-before nil-ref ftm))))
       (when outputs
         (replace-uses (first inputs) (first outputs)))))
   (delete-instruction mtf)

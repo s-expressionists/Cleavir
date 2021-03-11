@@ -358,11 +358,15 @@
                              inserter system)
     (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
                                    inserter system)
-      (insert inserter (make-instance 'cleavir-bir:call
-                         :attributes (cleavir-ast:attributes ast)
-                         :transforms (cleavir-ast:transforms ast)
-                         :inputs (list* (first callee)
-                                        (mapcar #'first args)))))))
+      (let ((call-out (make-instance 'cleavir-bir:output
+                        :rtype :multiple-values)))
+        (insert inserter (make-instance 'cleavir-bir:call
+                           :attributes (cleavir-ast:attributes ast)
+                           :transforms (cleavir-ast:transforms ast)
+                           :inputs (list* (first callee)
+                                          (mapcar #'first args))
+                           :outputs (list call-out)))
+        call-out))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -370,9 +374,12 @@
 
 (defmethod compile-ast ((ast cleavir-ast:function-ast) inserter system)
   (let* ((f (compile-function ast system))
-         (enclose (make-instance 'cleavir-bir:enclose :code f)))
+         (enclose-out (make-instance 'cleavir-bir:output :rtype :object))
+         (enclose (make-instance 'cleavir-bir:enclose
+                    :code f :outputs (list enclose-out))))
     (setf (cleavir-bir:enclose f) enclose)
-    (list (insert inserter enclose))))
+    (insert inserter enclose)
+    (list enclose-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -403,8 +410,10 @@
       (insert inserter
               (make-instance 'cleavir-bir:writevar
                 :inputs rv :outputs (list var)))
-      (list (insert inserter (make-instance 'cleavir-bir:readvar
-                               :inputs (list var)))))))
+      (let ((readvar-out (make-instance 'cleavir-bir:output :rtype :object)))
+        (insert inserter (make-instance 'cleavir-bir:readvar
+                           :inputs (list var) :outputs (list readvar-out)))
+        (list readvar-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -422,10 +431,14 @@
                                      asserted-type
                                      system)
       linear-datum
-      (insert inserter (make-instance 'cleavir-bir:thei
-                         :inputs (list linear-datum)
-                         :asserted-type asserted-type
-                         :type-check-function type-check-function))))
+      (let ((thei-out (make-instance 'cleavir-bir:output
+                        :rtype (cleavir-bir:rtype linear-datum))))
+        (insert inserter (make-instance 'cleavir-bir:thei
+                           :inputs (list linear-datum)
+                           :outputs (list thei-out)
+                           :asserted-type asserted-type
+                           :type-check-function type-check-function))
+        thei-out)))
 
 (defmethod compile-ast ((ast cleavir-ast:the-ast) inserter system)
   (let* ((inner (cleavir-ast:form-ast ast))
@@ -493,12 +506,13 @@
            (eblock (make-iblock inserter
                                 :name (symbolicate
                                        '#:typeq- tspec-str '#:-else)))
+           (tq-out (make-instance 'cleavir-bir:output))
            (tq (make-instance 'cleavir-bir:typeq-test
-                 :inputs obj
+                 :inputs obj :outputs (list tq-out)
                  :test-ctype tspec)))
       (insert inserter tq)
       (terminate inserter (make-instance 'cleavir-bir:ifi
-                            :inputs (list tq)
+                            :inputs (list tq-out)
                             :next (list tblock eblock)))
       (list tblock eblock))))
 
@@ -525,9 +539,10 @@
        (list var))
       (t
        (cleavir-bir:record-variable-ref var)
-       (list (insert inserter
-                     (make-instance 'cleavir-bir:readvar
-                       :inputs (list var))))))))
+       (let ((readvar-out (make-instance 'cleavir-bir:output :rtype :object)))
+         (insert inserter (make-instance 'cleavir-bir:readvar
+                            :inputs (list var) :outputs (list readvar-out)))
+         (list readvar-out))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -539,10 +554,13 @@
                             inserter system (:object :object))
     (let ((tblock (make-iblock inserter :name '#:eq-then))
           (eblock (make-iblock inserter :name '#:eq-else)))
-      (let ((eq-test (make-instance 'cleavir-bir:eq-test :inputs args)))
+      (let* ((eq-out (make-instance 'cleavir-bir:output))
+             (eq-test (make-instance 'cleavir-bir:eq-test
+                        :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)
         (terminate inserter (make-instance 'cleavir-bir:ifi
-                              :inputs (list eq-test) :next (list tblock eblock))))
+                              :inputs (list eq-out)
+                              :next (list tblock eblock))))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -555,7 +573,9 @@
                             inserter system (:object :object))
     (let ((tblock (make-iblock inserter :name '#:neq-then))
           (eblock (make-iblock inserter :name '#:neq-else)))
-      (let ((eq-test (make-instance 'cleavir-bir:eq-test :inputs args)))
+      (let* ((eq-out (make-instance 'cleavir-bir:output))
+             (eq-test (make-instance 'cleavir-bir:eq-test
+                        :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)
         (terminate inserter (make-instance 'cleavir-bir:ifi
                               :inputs (list eq-test) :next (list eblock tblock))))
@@ -581,11 +601,13 @@
 
 (defmethod compile-ast ((ast cleavir-ast:constant-ast) inserter system)
   (declare (ignore system))
-  (list
-   (insert inserter
-           (cleavir-bir:make-constant-reference
-            (cleavir-bir:constant-in-module (cleavir-ast:value ast)
-                                            *current-module*)))))
+  (let ((const (cleavir-bir:constant-in-module (cleavir-ast:value ast)
+                                               *current-module*))
+        (constref-out (make-instance 'cleavir-bir:output :rtype :object)))
+    (insert inserter
+            (make-instance 'cleavir-bir:constant-reference
+              :inputs (list const) :outputs (list constref-out)))
+    (list constref-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -593,9 +615,11 @@
 
 (defmethod compile-ast ((ast cleavir-ast:load-time-value-ast) inserter system)
   (declare (ignore system))
-  (list
+  (let ((ltv (cleavir-bir:load-time-value-in-module
+              (cleavir-ast:form ast) (cleavir-ast:read-only-p ast)
+              *current-module*))
+        (ltv-out (make-instance 'cleavir-bir:output :rtype :object)))
    (insert inserter
-           (cleavir-bir:make-load-time-value-reference
-            (cleavir-bir:load-time-value-in-module
-             (cleavir-ast:form ast) (cleavir-ast:read-only-p ast)
-             *current-module*)))))
+           (make-instance 'cleavir-bir:load-time-value-reference
+             :inputs (list ltv) :outputs (list ltv-out)))
+    (list ltv-out)))
