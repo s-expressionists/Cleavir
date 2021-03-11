@@ -131,11 +131,19 @@
                   (list (cleavir-ast:then-ast ast) (cleavir-ast:else-ast ast))))
 
 (defmethod compile-test-ast (ast inserter system)
-  (with-compiled-asts (test (ast) inserter system (:object))
-    (let ((tblock (make-iblock inserter :name '#:if-then))
-          (eblock (make-iblock inserter :name '#:if-else)))
+  (with-compiled-asts (inp (ast) inserter system (:object))
+    (let* ((tblock (make-iblock inserter :name '#:if-then))
+           (eblock (make-iblock inserter :name '#:if-else))
+           (null-constant (cleavir-bir:constant-in-module nil *current-module*))
+           (null-temp (make-instance 'cleavir-bir:output))
+           (test (make-instance 'cleavir-bir:output)))
+      (insert inserter (make-instance 'cleavir-bir:constant-reference
+                         :inputs (list null-constant)
+                         :outputs (list null-temp)))
+      (insert inserter (make-instance 'cleavir-bir:eq-test
+                         :inputs (list* null-temp inp) :outputs (list test)))
       (terminate inserter (make-instance 'cleavir-bir:ifi
-                            :inputs test :next (list tblock eblock)))
+                            :inputs (list test) :next (list eblock tblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
