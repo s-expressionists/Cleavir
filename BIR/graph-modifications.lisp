@@ -199,6 +199,10 @@
     (replace-uses input (output thei))
     (delete-instruction thei)))
 
+;;; Return a copy of a list containing all but the indexed element.
+(defun list-sans-index (list index)
+  (loop for elem in list for p from 0 unless (= index p) collect elem))
+
 (defun delete-phi (phi)
   (let ((iblock (iblock phi)))
     (setf (cleavir-bir:inputs iblock)
@@ -206,15 +210,9 @@
     (dolist (def (definitions phi))
       (let ((pos (position phi (cleavir-bir:outputs def))))
         (setf (cleavir-bir:outputs def)
-              (loop for output in (cleavir-bir:outputs def)
-                    for index from 0
-                    unless (= index pos)
-                      collect output))
+              (list-sans-index (cleavir-bir:outputs def) pos))
         (setf (cleavir-bir:inputs def)
-              (loop for input in (cleavir-bir:inputs def)
-                    for index from 0
-                    unless (= index pos)
-                      collect input))))))
+              (list-sans-index (cleavir-bir:inputs def) pos))))))
 
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
