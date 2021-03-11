@@ -139,7 +139,7 @@
 ;;; against NIL, and branches to either of its two successors. This is
 ;;; the canonical way to branch in Cleavir, which optimizations know
 ;;; how to deal with.
-(defclass ifi (no-output terminator) ())
+(defclass ifi (one-input no-output terminator) ())
 
 ;;; A CONDITIONAL-TEST instruction is a computation whose value is
 ;;; guaranteed to be used by IFI as dispatch. The reason for this
@@ -148,7 +148,7 @@
 (defclass conditional-test (one-output instruction) ())
 
 (defclass eq-test (conditional-test) ())
-(defclass typeq-test (conditional-test)
+(defclass typeq-test (one-input conditional-test)
   ((%test-ctype :initarg :test-ctype :reader test-ctype)))
 
 (defclass case (one-input no-output terminator)

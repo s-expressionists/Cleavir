@@ -161,6 +161,7 @@
   ((%outputs :initform nil
              :type (or null (cons datum null)))))
 
+(defmethod input ((inst one-input)) (first (inputs inst)))
 (defmethod output ((inst one-output)) (first (outputs inst)))
 
 ;;; An instruction that can end a iblock (abstract)

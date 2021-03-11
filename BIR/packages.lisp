@@ -21,7 +21,7 @@
            #:immutablep #:closed-over-p)
   (:export #:constant #:load-time-value
            #:constant-value #:form #:read-only-p)
-  (:export #:instruction #:inputs #:outputs
+  (:export #:instruction #:inputs #:outputs #:input
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next
            #:origin #:policy)

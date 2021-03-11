@@ -188,14 +188,13 @@
 ;;; Fold the IFI if we can determine whether or not the test will
 ;;; evaluate to NIL.
 (defun fold-ifi (instruction system)
-  (let* ((test (first (cleavir-bir:inputs instruction)))
+  (let* ((test (cleavir-bir:input instruction))
          (next (cleavir-bir:next instruction))
          (then (first next))
          (else (second next)))
     (multiple-value-bind (next dead)
         (cond ((typep test 'cleavir-bir:constant-reference)
-               (if (cleavir-bir:constant-value
-                    (first (cleavir-bir:inputs test)))
+               (if (cleavir-bir:constant-value (cleavir-bir:input test))
                    (values then else)
                    (values else then)))
               ((cleavir-ctype:disjointp (cleavir-bir:ctype test)
@@ -232,7 +231,7 @@
 (defun eliminate-if-if (instruction)
   (let* ((iblock (cleavir-bir:iblock instruction))
          (phis (cleavir-bir:inputs iblock))
-         (test (first (cleavir-bir:inputs instruction))))
+         (test (cleavir-bir:input instruction)))
     ;; An IFI is eligible for this optimization if it starts its block
     ;; (i.e. is the only instruction in the block) and tests the phi
     ;; which is the unique input to its block.
@@ -304,14 +303,14 @@
      (apply folder
             (mapcar (lambda (input)
                       (cleavir-bir:constant-value
-                       (first (cleavir-bir:inputs input))))
+                       (cleavir-bir:input input)))
                     inputs)))
     t))
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:multiple-to-fixed) system)
   (declare (ignore system))
-  (let ((input (first (cleavir-bir:inputs instruction))))
+  (let ((input (cleavir-bir:input instruction)))
     (when (typep input 'cleavir-bir:output)
       (let ((definition (cleavir-bir:definition input)))
         (when (typep definition 'cleavir-bir:fixed-to-multiple)
@@ -321,7 +320,7 @@
 (defmethod derive-types ((instruction cleavir-bir:multiple-to-fixed) system)
   ;; Derive the type of the outputs (fixed values) from the
   ;; definition.
-  (let* ((definition (first (cleavir-bir:inputs instruction)))
+  (let* ((definition (cleavir-bir:input instruction))
          (values-type (cleavir-bir:ctype definition)))
     (unless (cleavir-ctype:top-p values-type system)
       (let ((required-type
@@ -360,7 +359,7 @@
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:typeq-test) system)
-  (let* ((object (first (cleavir-bir:inputs instruction)))
+  (let* ((object (cleavir-bir:input instruction))
          (ctype (cleavir-bir:ctype object))
          (test-ctype (cleavir-bir:test-ctype instruction)))
     (cond ((cleavir-ctype:values-subtypep ctype test-ctype system)
@@ -374,7 +373,7 @@
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
    (cleavir-ctype:member system (cleavir-bir:constant-value
-                                 (first (cleavir-bir:inputs instruction))))
+                                 (cleavir-bir:input instruction)))
    system))
 
 ;;; Local variable with one reader and one writer can be substituted
@@ -390,7 +389,7 @@
                   (cleavir-bir:function reader))
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
-          (let ((input (first (cleavir-bir:inputs binder))))
+          (let ((input (cleavir-bir:input binder)))
             (setf (cleavir-bir:inputs binder) nil)
             (cleavir-bir:replace-uses input reader-out))
           (cleavir-bir:delete-instruction reader)
@@ -400,13 +399,13 @@
 (defun constant-propagate-variable-if-possible (variable)
   (when (cleavir-bir:immutablep variable)
     (let* ((writer (cleavir-bir:binder variable))
-           (input (first (cleavir-bir:inputs writer))))
+           (input (cleavir-bir:input writer)))
       (when (typep input 'cleavir-bir:output) ; FIXME: should be SSA?
         (let ((def (cleavir-bir:definition input)))
           ;; FIXME: Should really check for a constant type here instead.
           (typecase def
             (cleavir-bir:constant-reference
-             (let ((constant (first (cleavir-bir:inputs def))))
+             (let ((constant (cleavir-bir:input def)))
                (cleavir-set:doset (reader (cleavir-bir:readers variable))
                  (change-class reader 'cleavir-bir:constant-reference
                                :inputs (list constant)))
@@ -423,7 +422,7 @@
 (defun derive-type-for-variable (variable system)
   (when (cleavir-bir:immutablep variable)
     (let* ((definition
-             (first (cleavir-bir:inputs (cleavir-bir:binder variable))))
+             (cleavir-bir:input (cleavir-bir:binder variable)))
            (type (cleavir-bir:ctype definition)))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
         (let ((out (cleavir-bir:output reader)))
@@ -443,7 +442,7 @@
   ;; Propagate the return type to local calls and enclose of the function.
   (let ((function (cleavir-bir:function instruction))
         (return-type
-          (cleavir-bir:ctype (first (cleavir-bir:inputs instruction)))))
+          (cleavir-bir:ctype (cleavir-bir:input instruction))))
     (cleavir-set:doset (local-call (cleavir-bir:local-calls function))
       (derive-type-for-linear-datum
        (cleavir-bir:output local-call)
@@ -451,7 +450,7 @@
        system))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
-  (let* ((input (first (cleavir-bir:inputs instruction)))
+  (let* ((input (cleavir-bir:input instruction))
          (ctype (cleavir-bir:ctype input)))
     ;; Remove THEI when its input's type is a subtype of the
     ;; THEI's asserted type.
@@ -463,7 +462,7 @@
 (defmethod derive-types ((instruction cleavir-bir:thei) system)
   (let* ((type-check-function
            (cleavir-bir:type-check-function instruction))
-         (input (first (cleavir-bir:inputs instruction)))
+         (input (cleavir-bir:input instruction))
          (ctype (cleavir-bir:ctype input)))
     ;; Compute the type of the THEI itself.
     ;; For THEI, the type we use to make inferences is the intersection

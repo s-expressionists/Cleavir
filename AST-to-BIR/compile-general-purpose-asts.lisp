@@ -374,7 +374,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:function-ast) inserter system)
   (let* ((f (compile-function ast system))
-         (enclose-out (make-instance 'cleavir-bir:output :rtype :object))
+         (enclose-out (make-instance 'cleavir-bir:output))
          (enclose (make-instance 'cleavir-bir:enclose
                     :code f :outputs (list enclose-out))))
     (setf (cleavir-bir:enclose f) enclose)
@@ -389,7 +389,8 @@
   (let ((rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
     (cond ((eq rv :no-return) rv)
           (t
-           (let* ((var (bind-variable (cleavir-ast:lexical-variable ast) (cleavir-ast:ignore ast)))
+           (let* ((var (bind-variable (cleavir-ast:lexical-variable ast)
+                                      (cleavir-ast:ignore ast)))
                   (leti (make-instance 'cleavir-bir:leti
                           :inputs (adapt inserter rv '(:object))
                           :outputs (list var))))

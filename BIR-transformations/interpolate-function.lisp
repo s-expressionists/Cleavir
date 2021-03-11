@@ -265,7 +265,7 @@
         ;; If we have a FTM->MTF sequence, clear it out.
         (when (and common-use
                    (typep common-use 'cleavir-bir:multiple-to-fixed))
-          (let ((cuinput (first (cleavir-bir:inputs common-use))))
+          (let ((cuinput (cleavir-bir:input common-use)))
             (when (typep cuinput 'cleavir-bir:output)
               (let ((cudef (cleavir-bir:definition cuinput)))
                 (when (typep cudef 'cleavir-bir:fixed-to-multiple)

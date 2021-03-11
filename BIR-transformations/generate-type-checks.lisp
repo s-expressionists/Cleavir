@@ -10,7 +10,7 @@
 
 ;;; Warn about a compile time type conflict.
 (defun maybe-warn-type-conflict (thei)
-  (let ((input (first (cleavir-bir:inputs thei))))
+  (let ((input (cleavir-bir:input thei)))
     (when (cleavir-ctype:disjointp (cleavir-bir:asserted-type thei)
                                    (cleavir-bir:ctype input)
                                    nil)
@@ -22,7 +22,7 @@
             :origin (cleavir-bir:origin thei)))))
 
 (defun generate-type-check (thei)
-  (let ((input (first (cleavir-bir:inputs thei)))
+  (let ((input (cleavir-bir:input thei))
         (type-check-function (cleavir-bir:type-check-function thei)))
     (unless (symbolp type-check-function)
       (let ((rtype (cleavir-bir:rtype input)))
