@@ -86,6 +86,10 @@
    (%readers :initform (cleavir-set:empty-set) :accessor readers)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
 
+(defmethod print-object ((object constant) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (write (constant-value object) :stream stream)))
+
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
@@ -189,7 +193,7 @@
   (or (call-next-method)
       (let ((use (cleavir-bir:use datum)))
         (and (typep use 'cleavir-bir:leti)
-             (unused-p (first (cleavir-bir:outputs use)))))))
+             (unused-p (output use))))))
 
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
