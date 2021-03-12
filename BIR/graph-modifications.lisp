@@ -302,18 +302,20 @@
 ;;; Delete a pair of fixed-to-multiple and multiple-to-fixed instructions.
 (defun delete-ftm-mtf-pair (ftm mtf)
   (let ((outputs (outputs mtf))
-        (inputs (inputs ftm))
-        (nil-const (constant-in-module nil (module (function ftm)))))
+        (inputs (inputs ftm)))
     ;; Prepare for ownership change
     (setf (inputs ftm) nil (outputs mtf) nil)
     ;; Replace and default values.
     (do ((inputs inputs (rest inputs))
          (outputs outputs (rest outputs)))
         ((null inputs)
-         (dolist (output outputs)
-           (let ((nil-ref (make-instance 'constant-reference
-                            :inputs (list nil-const) :outputs (list output))))
-             (insert-instruction-before nil-ref ftm))))
+         (unless (null outputs) ; Don't create the constant unless we have to.
+           (let ((nil-const (constant-in-module nil (module (function ftm)))))
+             (dolist (output outputs)
+               (let ((nil-ref (make-instance 'constant-reference
+                                :inputs (list nil-const)
+                                :outputs (list output))))
+                 (insert-instruction-before nil-ref ftm))))))
       (when outputs
         (replace-uses (first inputs) (first outputs)))))
   (delete-instruction mtf)
