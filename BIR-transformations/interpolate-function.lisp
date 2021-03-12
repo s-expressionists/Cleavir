@@ -141,8 +141,14 @@
                        (push value-out inputs)
                        (push suppliedp-out inputs))))))
                (&rest
-                ;; The argument is unused, so don't pass anything.
-                (assert (cleavir-bir:unused-p item))))))
+                ;; The argument is unused, so we don't need to pass anything.
+                ;; To keep the BIR consistent, we need to outright delete any
+                ;; LETI, because otherwise it would refer to a now-undefined
+                ;; ARGUMENT.
+                (assert (cleavir-bir:unused-p item))
+                (let ((use (cleavir-bir:use item)))
+                  (when (typep use 'cleavir-bir:leti)
+                    (cleavir-bir:delete-instruction use)))))))
          lambda-list)
         (setf (cleavir-bir:inputs jump) (nreverse inputs))))))
 
