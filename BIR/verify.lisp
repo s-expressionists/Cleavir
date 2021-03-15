@@ -522,9 +522,7 @@
             (test (not (cleavir-set:empty-set-p (readers constant)))
                   "Module records a constant with no references ~a." constant)))
       (error (e)
-        (error 'verification-error :module module :original-condition e)
-        (error "BUG: Error while verifying module ~a~%~t(containing functions ~a):~%~t~a~%"
-               module (cleavir-set:mapset 'list #'name (functions module)) e)))
+        (error 'verification-error :module module :original-condition e)))
     ;; Report results.
     (when (or function-problems *problems*)
       (error 'verification-failed :module module
