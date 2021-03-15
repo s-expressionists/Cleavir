@@ -5,6 +5,9 @@
   ;; failures there may cause hard to understand failures more specifically
   (:method-combination progn :most-specific-last))
 
+(defgeneric verify-inputs (instruction))
+(defgeneric verify-outputs (instruction))
+
 (defvar *problems*)
 (defmacro problem (format-control &rest format-arguments)
   `(push (list ,format-control (list ,@format-arguments)) *problems*))
@@ -57,95 +60,115 @@
   (test (eq (iblock instruction) *verifying-iblock*)
         "Instruction ~a's iblock ~a does not match its presence in ~a"
         instruction (iblock instruction) *verifying-iblock*)
-  ;; All inputs are LINEAR-DATUMs, and if they're instructions, they dominate
-  ;; this instruction (but see KLUDGE above).
+  (verify-inputs instruction)
   (let ((inputs (inputs instruction)))
-    (typecase instruction
-      (readvar
-       (test (and (= (length inputs) 1)
-                  (typep (first inputs) 'variable))
-             "Accessvar ~a has non-variable input ~a"
-             instruction (first inputs)))
-      (abstract-local-call
-       (test (typep (first inputs) 'function)
-             "Local call ~a has non-function callee ~a"
-             instruction (first inputs)))
-      (constant-reference
-       (test (typep (first inputs) 'constant)
-             "Constant reference ~a has non-constant input ~a"
-             instruction (first inputs))
-       (test (cleavir-set:presentp (first inputs)
-                                   (constants *verifying-module*))
-             "Referenced constant ~a not in its module."
-             (first inputs)))
-      (load-time-value-reference
-       (test (typep (first inputs) 'load-time-value)
-             "LTV reference ~a has non-LTV input ~a"
-             instruction (first inputs))
-       (test (cleavir-set:presentp (first inputs)
-                                   (load-time-values *verifying-module*))
-             "Referenced LTV ~a is not in its module."
-             (first inputs)))
-      (t (flet ((validp (v)
-                  (etypecase v
-                    (output (cleavir-set:presentp
-                             (definition v) *seen-instructions*))
-                    (argument
-                     (member-of-lambda-list-p
-                      v
-                      (lambda-list (function instruction))))
-                    (linear-datum t))))
-           (test (every #'validp inputs)
-                 "Instruction ~a, with inputs ~a,
-has use-before-define on inputs ~a"
-                 instruction inputs
-                 (remove-if #'validp inputs)))
-       (flet ((used-input-p (input)
-                (eq (use input) instruction)))
-         (test (every #'used-input-p inputs)
-               "Instruction ~a is not the use of its inputs ~a"
-               instruction
-               (remove-if #'used-input-p inputs)))))
-    ;; Make sure input lists are not shared, so we can destroy them
-    (unless (null inputs)
-      (test (not (cleavir-set:presentp inputs *seen-lists*))
-            ;; could track the other instruction sharing it
-            "Inputs list of instruction ~a is shared" instruction)
-      (cleavir-set:nadjoinf *seen-lists* inputs)))
-  ;; All outputs are OUTPUTs, unless this is a terminator, in which case
-  ;; they're all PHIs, or unless this is a WRITEVAR.
-  ;; In either case, we're a definer.
+    (test (or (null inputs) (not (cleavir-set:presentp inputs *seen-lists*)))
+          "Instruction ~ has shared input list ~a" instruction inputs))
+  (verify-outputs instruction)
   (let ((outputs (outputs instruction)))
-    (typecase instruction
-      (writevar
-       (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
-             "Writevar ~a has bad outputs ~a" instruction outputs)
-       (test (cleavir-set:presentp instruction (writers (first outputs)))
-             "Writevar ~a is not a definition of its output ~a"
-             instruction (first outputs)))
-      ;; values-save has regular outputs. KLUDGE
-      ((and terminator (not values-save))
-       (flet ((phi-p (o) (typep o 'phi)))
-         (test (every #'phi-p outputs)
-               "Terminator ~a has non-phi outputs ~a"
-               instruction (remove-if #'phi-p outputs)))
-       (flet ((presentp (o) (cleavir-set:presentp instruction (definitions o))))
-         (test (every #'presentp outputs)
-               "Terminator ~a is not a definition of its outputs ~a"
-               instruction (remove-if #'presentp outputs))))
-      (t
-       (flet ((outputp (o) (typep o 'output)))
-         (test (every #'outputp outputs)
-               "Instruction ~a has outputs ~a of wrong class"
-               instruction (remove-if #'outputp outputs)))
-       (flet ((definerp (o) (eq instruction (definition o))))
-         (test (every #'definerp outputs)
-               "Instruction ~a is not the definer of its outputs ~a"
-               instruction (remove-if #'definerp outputs)))))
-    ;; Make sure output lists are not shared.
-    (unless (null outputs)
-      (test (not (cleavir-set:presentp outputs *seen-lists*))
-            "Instruction ~a has shared output list ~a" instruction outputs))))
+    (test (or (null outputs) (not (cleavir-set:presentp outputs *seen-lists*)))
+          "Instruction ~a has shared output list ~a" instruction outputs)))
+
+(defmethod verify-outputs ((instruction writevar))
+  (let ((outputs (outputs instruction)))
+    (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
+          "Writevar ~a has bad outputs ~a" instruction outputs)
+    (test (cleavir-set:presentp instruction (writers (first outputs)))
+          "Writevar ~a is not a definition of its output ~a"
+          instruction (first outputs))))
+
+(defun verify-phi-outputs (instruction)
+  (let ((outputs (outputs instruction)))
+    (flet ((phi-p (o) (typep o 'phi)))
+      (test (every #'phi-p outputs)
+            "Terminator ~a has non-phi outputs ~a"
+            instruction (remove-if #'phi-p outputs)))
+    (flet ((presentp (o) (cleavir-set:presentp instruction (definitions o))))
+      (test (every #'presentp outputs)
+            "Terminator ~a is not a definition of its outputs ~a"
+            instruction (remove-if #'presentp outputs)))))
+
+(defmethod verify-outputs ((instruction jump)) (verify-phi-outputs instruction))
+(defmethod verify-outputs ((instruction unwind))
+  (verify-phi-outputs instruction))
+
+(defmethod verify-outputs ((instruction instruction))
+  (let ((outputs (outputs instruction)))
+    (flet ((outputp (o) (typep o 'output)))
+      (test (every #'outputp outputs)
+            "Instruction ~a has outputs ~a of wrong class"
+            instruction (remove-if #'outputp outputs)))
+    (flet ((definerp (o) (eq instruction (definition o))))
+      (test (every #'definerp outputs)
+            "Instruction ~a is not the definer of its outputs ~a"
+            instruction (remove-if #'definerp outputs)))))
+
+(defun linear-datum-already-defined-p (instruction datum)
+  ;; All inputs are linear data, and if they are OUTPUTs, their definer
+  ;; dominates this instruction (but see KLUDGE above)
+  (etypecase datum
+    (output (cleavir-set:presentp (definition datum) *seen-instructions*))
+    (argument
+     (member-of-lambda-list-p datum (lambda-list (function instruction))))
+    ;; FIXME: Check PHI dominance too
+    (linear-datum t)))
+
+(defun check-ubd (instruction inputs)
+  (let ((invalid (loop for inp in inputs
+                       unless (linear-datum-already-defined-p instruction inp)
+                         collect inp)))
+    (test (null invalid)
+          "Instruction ~a, with inputs ~a, has use-before-define on inputs ~a"
+          instruction inputs invalid)))
+
+(defun check-usedness (instruction inputs)
+  (let ((invalid (loop for inp in inputs
+                       unless (eq (use inp) instruction) collect inp)))
+    (test (null invalid)
+          "Instruction ~a is not the use of its inputs ~a"
+          instruction invalid)))
+
+(defmethod verify-inputs ((instruction readvar))
+  (let* ((inputs (inputs instruction)) (var (first inputs)))
+    (test (and (= (length inputs) 1) (typep var 'variable))
+          "Accessvar ~a has non-variable input ~a" instruction var)
+    (test (cleavir-set:presentp instruction (readers var))
+          "Readvar ~a is not a reader of its variable ~a" instruction var)))
+
+(defmethod verify-inputs ((instruction abstract-local-call))
+  (let ((inputs (inputs instruction)))
+    (test (typep (first inputs) 'function)
+          "Local call ~a has non-function callee ~a"
+          instruction (first inputs))
+    (check-ubd instruction (rest inputs))
+    (check-usedness instruction (rest inputs))))
+
+(defmethod verify-inputs ((instruction constant-reference))
+  (let* ((inputs (inputs instruction))
+         (constant (first inputs)))
+    (test (typep constant 'constant)
+          "Constant reference ~a has non-constant input ~a"
+          instruction constant)
+    (test (cleavir-set:presentp constant (constants *verifying-module*))
+          "Referenced constant ~a not in its module."
+          constant)
+    (test (cleavir-set:presentp instruction (readers constant))
+          "Constant reference ~a is not a reader of its constant input ~a"
+          instruction constant)))
+
+(defmethod verify-inputs ((instruction load-time-value-reference))
+  (let ((inputs (inputs instruction)))
+    (test (typep (first inputs) 'load-time-value)
+          "LTV reference ~a has non-LTV input ~a"
+          instruction (first inputs))
+    (test (cleavir-set:presentp (first inputs)
+                                (load-time-values *verifying-module*))
+          "Referenced LTV ~a is not in its module."
+          (first inputs))))
+
+(defmethod verify-inputs ((instruction instruction))
+  (check-ubd instruction (inputs instruction))
+  (check-usedness instruction (inputs instruction)))
 
 (defmethod verify progn ((instruction no-input))
   ;; No inputs (verify type decl)
