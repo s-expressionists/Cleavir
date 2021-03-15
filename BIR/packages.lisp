@@ -2,8 +2,7 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:variable #:load-time-value #:case
-           #:disassemble #:ignore)
+  (:shadow #:function #:catch #:variable #:load-time-value #:case #:ignore)
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
@@ -57,5 +56,12 @@
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)
   (:export #:verify)
-  (:export #:disassemble)
   (:export #:unused-variable #:type-conflict))
+
+(defpackage #:cleavir-bir-disassembler
+  (:use #:cl)
+  (:shadow #:disassemble)
+  (:export #:display #:disassemble)
+  (:export #:display-module-disassembly #:display-function-disassembly
+           #:display-iblock-disassembly #:display-instruction-disassembly)
+  (:export #:with-disassembly))

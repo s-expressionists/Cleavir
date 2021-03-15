@@ -1,10 +1,33 @@
 (in-package #:cleavir-bir)
 
+;;;; This file defines a disassembler for displaying BIR in a human-readable
+;;;; format. This is primarily text-based and aims at brevity and simplicity.
+;;;; For a more visual way to understand BIR, try Visualizer/.
+
+;;;; In more detail, there are two stages of disassembly available. The first
+;;;; converts BIR objects into s-expressions.
+;;;; BIR data are represented by symbols, which may be arbitrarily named by the
+;;;; disassembler if they are nameless. Iblocks and functions are also named by
+;;;; symbols. These s-expressions are produced by the function DISASSEMBLE,
+;;;; which accepts modules, functions, iblocks, or individual instructions.
+
+;;;; The s-expressions can then be printed to standard output with
+;;;; DISPLAY-MODULE-DISASSEMBLY, etc. The printed format has the same
+;;;; information as the s-expressions, but formatted for easy readability.
+
+;;;; For convenience, you can use DISPLAY, which performs both steps at once on
+;;;; a module, function, iblock, or instruction.
+
+;;;; More advanced usage: You can use the WITH-DISASSEMBLY macro around multiple
+;;;; disassembly operations. All disassemble operations in the dynamic extent of
+;;;; a WITH-DISASSEMBLY will share names, etc. You can use this to display only
+;;;; particular regions of interest.
+
 (defvar *ids*)
 (defvar *name-ids*)
 
 (defvar *in-disassembly* nil)
-(defmacro with-disassembly ((&key override) &body body)
+(defmacro cleavir-bir-disassembler:with-disassembly ((&key override) &body body)
   (let ((bodyf (gensym "BODY")))
     `(flet ((,bodyf () ,@body))
        (if (or ,override (not *in-disassembly*))
@@ -30,6 +53,8 @@
            (setf (gethash name *name-ids*) 0)
            (make-symbol (write-to-string name :escape nil))))))
 
+(defgeneric cleavir-bir-disassembler:disassemble (bir))
+
 (defgeneric disassemble-datum (datum))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
 (defmethod disassemble-datum ((value datum))
@@ -46,16 +71,26 @@
   (:method-combination append)
   (:method append ((instruction instruction)) ()))
 
-(defun disassemble-instruction (instruction)
-  (let ((dis `(,(label instruction)
-               ,@(mapcar #'disassemble-datum (inputs instruction))
-               ,@(disassemble-instruction-extra instruction))))
-    `(:= (,@(mapcar (lambda (out)
-                      `(,(disassemble-datum out)
-                        ,@(when (typep out 'linear-datum)
-                            `(,(ctype out)))))
-                    (outputs instruction)))
-         ,dis)))
+;;;; Instructions are disassembled as
+;;;; (:= (...outputs...) (class-name ...inputs... ...extra...))
+;;;; where: CLASS-NAME is the name of the instruction's class,
+;;;; INPUTS is a list of data (made into symbols as described),
+;;;; EXTRA is the list returned by DISASSEMBE-INSTRUCTION-EXTRA, a generic
+;;;  function that can be specialized for different instruction-specific info,
+;;;; OUTPUTS is a list of (symbol [ctype]), where SYMBOL is the datum's symbol,
+;;;; and CTYPE is the datum's ctype, if the output is linear.
+
+(defmethod cleavir-bir-disassembler:disassemble ((instruction instruction))
+  (cleavir-bir-disassembler:with-disassembly ()
+    (let ((dis `(,(label instruction)
+                 ,@(mapcar #'disassemble-datum (inputs instruction))
+                 ,@(disassemble-instruction-extra instruction))))
+      `(:= (,@(mapcar (lambda (out)
+                        `(,(disassemble-datum out)
+                          ,@(when (typep out 'linear-datum)
+                              `(,(ctype out)))))
+                      (outputs instruction)))
+           ,dis))))
 
 (defun iblock-id (iblock)
   (or (gethash iblock *ids*)
@@ -90,9 +125,9 @@
 (defmethod disassemble-instruction-extra append ((inst thei))
   (list (asserted-type inst) (type-check-function inst)))
 
-(defun disassemble-iblock (iblock)
+(defmethod cleavir-bir-disassembler:disassemble ((iblock iblock))
   (check-type iblock iblock)
-  (with-disassembly ()
+  (cleavir-bir-disassembler:with-disassembly ()
     (let ((insts nil))
       (do-iblock-instructions (i iblock)
         (push (disassemble-instruction i) insts))
@@ -113,27 +148,44 @@
                              (disassemble-datum (third item))))
                       (t (mapcar #'disassemble-datum item)))))
 
-(defun disassemble-function (function)
+(defmethod cleavir-bir-disassembler:disassemble ((function function))
   (check-type function function)
-  (with-disassembly ()
+  (cleavir-bir-disassembler:with-disassembly ()
     (let ((iblocks nil))
       ;; sort blocks in forward flow order.
       (do-iblocks (iblock function :backward)
-        (push (disassemble-iblock iblock) iblocks))
-    (list* (list (disassemble-datum function) (iblock-id (start function))
-                 (disassemble-lambda-list (lambda-list function))
-                 (cleavir-set:mapset 'list #'disassemble-datum
-                                     (environment function)))
-           iblocks))))
+        (push (cleavir-bir-disassembler:disassemble iblock) iblocks))
+      (list* (list (disassemble-datum function) (iblock-id (start function))
+                   (disassemble-lambda-list (lambda-list function))
+                   (cleavir-set:mapset 'list #'disassemble-datum
+                                       (environment function)))
+             iblocks))))
 
-(defun disassemble (module)
+(defmethod cleavir-bir-disassembler:disassemble ((module module))
   (check-type module module)
-  (with-disassembly ()
+  (cleavir-bir-disassembler:with-disassembly ()
     (cons (constants module)
-          (cleavir-set:mapset 'list #'disassemble-function
+          (cleavir-set:mapset 'list #'cleavir-bir-disassembler:disassemble
                               (functions module)))))
 
-(defun print-iblock-disasm (iblock-disasm &key (show-dynenv t))
+(defun cleavir-bir-disassembler:display-instruction-disassembly (inst-disasm)
+  (destructuring-bind (assign outs . rest) inst-disasm
+    (declare (cl:ignore assign))
+    (format t "~&     ")
+    (format t "~{~(~a~)~}" rest)
+    (when outs
+      (format t " -> "))
+    (format t "~{~a~^, ~}" (mapcar #'first outs))
+    (let* ((type-specs (mapcar #'cdr outs))
+           (types (mapcar #'first type-specs)))
+      (unless (or (every (lambda (ctype) (cleavir-ctype:top-p ctype nil)) types)
+                  (every (lambda (type-spec) (eq type-spec nil)) type-specs))
+        (format t "~45T; ")
+        (format t "~{ctype: ~a~^, ~}" types))))
+  (values))
+
+(defun cleavir-bir-disassembler:display-iblock-disassembly
+    (iblock-disasm &key (show-dynenv t))
   (destructuring-bind ((label . args) dynenv entrances &rest insts)
       iblock-disasm
     (format t "~&  iblock ~a ~:a:" label args)
@@ -141,32 +193,40 @@
       (format t "~&   dynenv = ~a" dynenv))
     (when entrances
       (format t "~&   entrances = ~(~:a~)" entrances))
-    (dolist (inst insts)
-      (destructuring-bind (_ outs . rest) inst
-        (declare (cl:ignore _))
-        (format t "~&     ")
-        (format t "~{~(~a~)~}" rest)
-        (when outs
-          (format t " -> "))
-        (format t "~{~a~^, ~}" (mapcar #'first outs))
-        (let* ((type-specs (mapcar #'cdr outs))
-               (types (mapcar #'first type-specs)))
-          (unless (or (every (lambda (ctype) (cleavir-ctype:top-p ctype nil)) types)
-                      (every (lambda (type-spec) (eq type-spec nil)) type-specs))
-            (format t "~45T; ")
-            (format t "~{ctype: ~a~^, ~}" types)))))))
+    (mapc #'cleavir-bir-disassembler:display-instruction-disassembly insts))
+  (values))
 
-(defun print-function-disasm (function-disasm &key (show-dynenv t))
+(defun cleavir-bir-disassembler:display-function-disassembly
+    (function-disasm &key (show-dynenv t))
   (destructuring-bind ((name start args env) . iblocks)
       function-disasm
-    (format t "~&function ~a ~:a ~&     with environment ~(~a~) ~&     with start iblock ~a"
+    (format t "~&function ~a ~:a ~&     with environment ~(~:a~) ~&     with start iblock ~a"
             name args env start)
     (dolist (iblock iblocks)
-      (print-iblock-disasm iblock :show-dynenv show-dynenv))))
+      (cleavir-bir-disassembler:display-iblock-disassembly
+       iblock :show-dynenv show-dynenv)))
+  (values))
 
-(defun print-disasm (disasm &key (show-dynenv t))
+(defun cleavir-bir-disassembler:display-module-disassembly
+    (disasm &key (show-dynenv t))
   (format t "~&-------module-------")
   (destructuring-bind (constants . funs) disasm
     (format t "~&constants: ~a" constants)
     (dolist (fun funs)
-      (print-function-disasm fun :show-dynenv show-dynenv))))
+      (cleavir-bir-disassembler:display-function-disassembly
+       fun :show-dynenv show-dynenv)))
+  (values))
+
+(defgeneric cleavir-bir-disassembler:display (bir))
+(defmethod cleavir-bir-disassembler:display ((module module))
+  (cleavir-bir-disassembler:display-module-disassembly
+   (cleavir-bir-disassembler:disassemble module)))
+(defmethod cleavir-bir-disassembler:display ((function function))
+  (cleavir-bir-disassembler:display-function-disassembly
+   (cleavir-bir-disassembler:disassemble function)))
+(defmethod cleavir-bir-disassembler:display ((iblock iblock))
+  (cleavir-bir-disassembler:display-iblock-disassembly
+   (cleavir-bir-disassembler:disassemble iblock)))
+(defmethod cleavir-bir-disassembler:display ((instruction instruction))
+  (cleavir-bir-disassembler:display-instruction-disassembly
+   (cleavir-bir-disassembler:disassemble instruction)))
