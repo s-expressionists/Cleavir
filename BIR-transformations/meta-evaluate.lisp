@@ -23,11 +23,6 @@
                                  derived-type
                                  system)))
 
-(defun true-ctype (system) (cleavir-ctype:member system t))
-(defun false-ctype (system) (cleavir-ctype:member system nil))
-(defun boolean-ctype (boolean system)
-  (if boolean (true-ctype system) (false-ctype system)))
-
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
 (defun derive-function-argument-types (function system)
@@ -76,7 +71,9 @@
                       (setq suppliedp
                             (cleavir-ctype:disjoin/2
                              suppliedp
-                             (boolean-ctype arg system)
+                             (if arg
+                                 (cleavir-ctype:member system t)
+                                 (cleavir-ctype:member system nil))
                              system))))
                   (ecase state
                     (:required
@@ -197,13 +194,13 @@
          (else (second next)))
     (multiple-value-bind (next dead)
         (cond ((cleavir-ctype:disjointp (cleavir-bir:ctype in)
-                                        (false-ctype system)
+                                        (cleavir-ctype:member system nil)
                                         system)
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype in))
                (values then else))
               ((cleavir-ctype:values-subtypep (cleavir-bir:ctype in)
-                                              (false-ctype system)
+                                              (cleavir-ctype:member system nil)
                                               system)
                #+(or)
                (print "folding ifi based on type NULL")
@@ -291,31 +288,23 @@
     (cleavir-bir:insert-instruction-before constant-reference instruction)
     (cleavir-bir:delete-instruction instruction)))
 
-;;; Return true iff the input's value is known now (at compile time).
-(defun constant-input-p (input)
-  ;; FIXME: Should really check for a constant type here instead.
-  (when (typep input 'cleavir-bir:output)
-    (let ((def (cleavir-bir:definition input)))
-      (typep def 'cleavir-bir:constant-reference))))
-
-;;; Return the cleavir-bir:constant for an input that previously passed a
-;;; constant-input-p test.
-(defun constant-input-constant (input)
-  (cleavir-bir:input (cleavir-bir:definition input)))
-
 ;; Try to constant fold an instruction on INPUTS by applying FOLDER on its
 ;; inputs.
-;; Unused for now, but it will probably be useful later.
 (defun constant-fold-instruction (instruction inputs folder)
-  (when (every #'constant-input-p inputs)
-    (replace-computation-by-constant-value
-     instruction
-     (apply folder
-            (mapcar (lambda (input)
-                      (cleavir-bir:constant-value
-                       (constant-input-constant input)))
-                    inputs)))
-    t))
+  (let ((definers (loop for inp in inputs
+                        if (typep inp 'cleavir-bir:output)
+                          collect (cleavir-bir:definition inp)
+                        else do (return-from constant-fold-instruction nil))))
+    (when (every (lambda (definer)
+                   (typep definer 'cleavir-bir:constant-reference))
+                 definers)
+      (replace-computation-by-constant-value
+       instruction
+       (apply folder
+              (mapcar (lambda (def)
+                        (cleavir-bir:constant-value (cleavir-bir:input def)))
+                      definers)))
+      t)))
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:multiple-to-fixed) system)
@@ -361,32 +350,21 @@
     system)
    system))
 
-(defmethod derive-types ((instruction cleavir-bir:eq-test) system)
-  (let* ((inputs (cleavir-bir:inputs instruction))
-         (left (first inputs)) (right (second inputs)))
-    (cond ((and (constant-input-p left) (constant-input-p right))
-           (let* ((leftc (constant-input-constant left))
-                  (rightc (constant-input-constant right))
-                  (leftv (cleavir-bir:constant-value leftc))
-                  (rightv (cleavir-bir:constant-value rightc))
-                  (ct (boolean-ctype (eq leftv rightv) system)))
-             (derive-type-for-linear-datum (cleavir-bir:output instruction)
-                                           ct system)))
-          ((cleavir-ctype:disjointp (cleavir-bir:ctype left)
-                                    (cleavir-bir:ctype right)
-                                    system)
-           (derive-type-for-linear-datum (cleavir-bir:output instruction)
-                                         (false-ctype system) system)))))
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test) system)
+  (declare (ignore system))
+  (let ((inputs (cleavir-bir:inputs instruction)))
+    (constant-fold-instruction instruction inputs #'eq)))
 
-(defmethod derive-types ((instruction cleavir-bir:typeq-test) system)
+(defmethod meta-evaluate-instruction
+    ((instruction cleavir-bir:typeq-test) system)
   (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction)))
         (test-ctype (cleavir-bir:test-ctype instruction)))
     (cond ((cleavir-ctype:values-subtypep ctype test-ctype system)
-           (derive-type-for-linear-datum (cleavir-bir:output instruction)
-                                         (true-ctype system) system))
+           (replace-computation-by-constant-value instruction t)
+           t)
           ((cleavir-ctype:disjointp ctype test-ctype system)
-           (derive-type-for-linear-datum (cleavir-bir:output instruction)
-                                         (false-ctype system) system)))))
+           (replace-computation-by-constant-value instruction nil)
+           t))))
 
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
   (derive-type-for-linear-datum

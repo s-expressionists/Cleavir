@@ -330,16 +330,6 @@ has use-before-define on inputs ~a"
       (test (eq de (dynamic-environment (first (next j))))
             "Jump ~a is not marked as an unwind, but does unwind" j))))
 
-(defmethod verify progn ((instruction ifi))
-  ;; Verify that the input is a CONDITIONAL-TEST.
-  (let ((input (input instruction)))
-    (test (typep input 'output)
-          "ifi ~a does not have a simple transfer as input, but ~a"
-          instruction input)
-    (test (typep (definition input) 'conditional-test)
-          "ifi ~a's input is produced by ~a, not a conditional test"
-          instruction (definition input))))
-
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
   (test (typep (use (output instruction)) '(or null ifi))

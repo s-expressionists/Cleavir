@@ -138,7 +138,7 @@
 ;;; IF instruction is a terminator which takes one input, tests it
 ;;; against NIL, and branches to either of its two successors. This is
 ;;; the canonical way to branch in Cleavir, which optimizations know
-;;; how to deal with. Its sole input must be a CONDITIONAL-TEST.
+;;; how to deal with.
 (defclass ifi (one-input no-output terminator) ())
 
 ;;; A CONDITIONAL-TEST instruction is a computation whose value is
