@@ -130,7 +130,7 @@
   (cleavir-bir-disassembler:with-disassembly ()
     (let ((insts nil))
       (do-iblock-instructions (i iblock)
-        (push (disassemble-instruction i) insts))
+        (push (cleavir-bir-disassembler:disassemble i) insts))
       (list* (list* (iblock-id iblock)
                     (mapcar #'disassemble-datum (inputs iblock)))
              (dynamic-environment iblock)

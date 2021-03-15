@@ -11,19 +11,6 @@
 (defmacro test (condition format-control &rest format-arguments)
   `(unless ,condition (problem ,format-control ,@format-arguments)))
 
-(defmacro with-problems ((function) &body body)
-  (let ((gfunction (gensym "FUNCTION")))
-    `(let ((*problems* nil) (,gfunction ,function))
-       (handler-case
-           (progn ,@body)
-         (error (e)
-           (error "BUG: Error while verifying function ~a:~%~t~a~%"
-                  (name ,gfunction) e)))
-       (unless (null *problems*)
-         (error "Problems found in function ~a!~%~:{~&~?~%~}"
-                (name ,gfunction) *problems*))
-       (values))))
-
 ;;; KLUDGE: This is somewhat inexact; for example if two blocks share their
 ;;; only predecessor, one could have a computation in the other as an input,
 ;;; which is invalid, but if we happened to traverse the blocks in the wrong
@@ -430,79 +417,93 @@ has use-before-define on inputs ~a"
       (cleavir-set:nadjoinf *seen-instructions* i))))
 
 (defmethod verify progn ((function function))
-  (with-problems (function)
-    (let ((start (start function))
-          (returni (returni function))
-          (*verifying-function* function))
-      ;; make sure the function is actually in its module.
-      (test (cleavir-set:presentp function (functions (module function)))
-            "Locally referenced or called function ~a not present in its module."
-            function)
-      ;; start is an iblock (verify type decl)
-      (test (typep start 'iblock)
-            "Function start ~a is not an iblock" start)
-      ;; Module is correct
-      (when (boundp '*verifying-module*)
-        (test (eq (module function) *verifying-module*)
-              "Function ~a is in the wrong module" function))
-      ;; Reachability etc
-      (let ((reachable (cleavir-set:empty-set))
-            (iblocks (cleavir-set:empty-set)))
-        (do-iblocks (iblock function)
-          (test (not (cleavir-set:presentp iblock iblocks))
-                "Iblock ~a is present in the iblock flow order of function ~a more than once."
-                iblock function)
-          (cleavir-set:nadjoinf iblocks iblock))
-        (labels ((iblock-verifier (iblock)
-                   (verify iblock)
-                   ;; A function has at most one return instruction
-                   (test (if (typep (end iblock) 'returni)
-                             (eq (end iblock) returni)
-                             t)
-                         "iblock ~a ends in a returni which is not the returni of the function."
-                         iblock)
-                   (cleavir-set:nadjoinf reachable iblock))
-                 (traverse (iblock)
-                   (unless (cleavir-set:presentp iblock reachable)
-                     (cleavir-set:nadjoinf reachable iblock)
-                     (iblock-verifier iblock)
-                     (dolist (successor (successors iblock))
-                       (traverse successor)))))
-          (traverse start)
-          ;; All reachable blocks are in the iblocks set
-          (test (cleavir-set:set<= reachable iblocks)
-                "Some reachable iblocks ~a are not recorded by the function ~a"
-                (cleavir-set:difference 'list reachable iblocks)
+  (let ((start (start function))
+        (returni (returni function))
+        (*verifying-function* function))
+    ;; make sure the function is actually in its module.
+    (test (cleavir-set:presentp function (functions (module function)))
+          "Locally referenced or called function ~a not present in its module."
+          function)
+    ;; start is an iblock (verify type decl)
+    (test (typep start 'iblock)
+          "Function start ~a is not an iblock" start)
+    ;; Module is correct
+    (when (boundp '*verifying-module*)
+      (test (eq (module function) *verifying-module*)
+            "Function ~a is in the wrong module" function))
+    ;; Reachability etc
+    (let ((reachable (cleavir-set:empty-set))
+          (iblocks (cleavir-set:empty-set)))
+      (do-iblocks (iblock function)
+        (test (not (cleavir-set:presentp iblock iblocks))
+              "Iblock ~a is present in the iblock flow order of function ~a more than once."
+              iblock function)
+        (cleavir-set:nadjoinf iblocks iblock))
+      (labels ((iblock-verifier (iblock)
+                 (verify iblock)
+                 ;; A function has at most one return instruction
+                 (test (if (typep (end iblock) 'returni)
+                           (eq (end iblock) returni)
+                           t)
+                       "iblock ~a ends in a returni which is not the returni of the function."
+                       iblock)
+                 (cleavir-set:nadjoinf reachable iblock))
+               (traverse (iblock)
+                 (unless (cleavir-set:presentp iblock reachable)
+                   (cleavir-set:nadjoinf reachable iblock)
+                   (iblock-verifier iblock)
+                   (dolist (successor (successors iblock))
+                     (traverse successor)))))
+        (traverse start)
+        ;; All reachable blocks are in the iblocks set
+        (test (cleavir-set:set<= reachable iblocks)
+              "Some reachable iblocks ~a are not recorded by the function ~a"
+              (cleavir-set:difference 'list reachable iblocks)
+              function)
+        ;; All members of the iblocks set are reachable
+        (test (cleavir-set:set<= iblocks reachable)
+              "Some iblocks recorded by the function ~a are unreachable: ~a"
+              function
+              (cleavir-set:difference 'list iblocks reachable)))
+      ;; Check that the catch instructions of this function were in
+      ;; fact seen.
+      (cleavir-set:doset (catch (catches function))
+                         (test (cleavir-set:presentp catch *seen-instructions*)
+                               "The catch ~a is recorded by the function ~a but not reachable." catch function))
+      ;; The return instruction's iblock, if it exists, is reachable
+      ;; and in the iblocks set.
+      (when returni
+        (let ((end (iblock returni)))
+          (test (cleavir-set:presentp end reachable)
+                "The return iblock of the function ~a is not reachable."
                 function)
-          ;; All members of the iblocks set are reachable
-          (test (cleavir-set:set<= iblocks reachable)
-                "Some iblocks recorded by the function ~a are unreachable: ~a"
-                function
-                (cleavir-set:difference 'list iblocks reachable)))
-        ;; Check that the catch instructions of this function were in
-        ;; fact seen.
-        (cleavir-set:doset (catch (catches function))
-          (test (cleavir-set:presentp catch *seen-instructions*)
-                "The catch ~a is recorded by the function ~a but not reachable." catch function))
-        ;; The return instruction's iblock, if it exists, is reachable
-        ;; and in the iblocks set.
-        (when returni
-          (let ((end (iblock returni)))
-            (test (cleavir-set:presentp end reachable)
-                  "The return iblock of the function ~a is not reachable."
-                  function)
-            (test (cleavir-set:presentp end iblocks)
-                  "The return iblock of function ~a is not recorded."
-                  function)))))))
+          (test (cleavir-set:presentp end iblocks)
+                "The return iblock of function ~a is not recorded."
+                function))))))
 
 (defmethod verify progn ((module module))
-  (let ((*seen-instructions* (cleavir-set:empty-set))
-        (*seen-lists* (cleavir-set:empty-set))
-        (*seen-next* (cleavir-set:empty-set))
-        (*verifying-module* module))
-    (cleavir-set:mapset nil #'verify (functions module))
-    ;; Check for dangling references.
-    (cleavir-set:doset (constant (constants module))
-      (test (not (cleavir-set:empty-set-p (readers constant)))
-            "Module records a constant with no references ~a."
-            constant))))
+  (let ((*problems* nil) (function-problems nil))
+    (handler-case
+        (let ((*seen-instructions* (cleavir-set:empty-set))
+              (*seen-lists* (cleavir-set:empty-set))
+              (*seen-next* (cleavir-set:empty-set))
+              (*verifying-module* module))
+          (do-functions (function module)
+            (let ((*problems* nil))
+              (verify function)
+              (when *problems*
+                (push (list* function *problems*) function-problems))))
+          ;; Now do module-level tests
+          ;; Check for dangling references.
+          (cleavir-set:doset (constant (constants module))
+            (test (not (cleavir-set:empty-set-p (readers constant)))
+                  "Module records a constant with no references ~a." constant)))
+      (error (e)
+        (error 'verification-error :module module :original-condition e)
+        (error "BUG: Error while verifying module ~a~%~t(containing functions ~a):~%~t~a~%"
+               module (cleavir-set:mapset 'list #'name (functions module)) e)))
+    ;; Report results.
+    (when (or function-problems *problems*)
+      (error 'verification-failed :module module
+                                  :function-problems function-problems
+                                  :module-problems *problems*))))
