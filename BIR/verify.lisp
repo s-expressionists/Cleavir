@@ -157,14 +157,17 @@
           instruction constant)))
 
 (defmethod verify-inputs ((instruction load-time-value-reference))
-  (let ((inputs (inputs instruction)))
-    (test (typep (first inputs) 'load-time-value)
+  (let* ((inputs (inputs instruction))
+         (ltv (first inputs)))
+    (test (typep ltv 'load-time-value)
           "LTV reference ~a has non-LTV input ~a"
-          instruction (first inputs))
-    (test (cleavir-set:presentp (first inputs)
-                                (load-time-values *verifying-module*))
+          instruction ltv)
+    (test (cleavir-set:presentp ltv (load-time-values *verifying-module*))
           "Referenced LTV ~a is not in its module."
-          (first inputs))))
+          ltv)
+    (test (cleavir-set:presentp instruction (readers ltv))
+          "Load time value reference ~a is not a reader of its LTV input ~a"
+          instruction ltv)))
 
 (defmethod verify-inputs ((instruction instruction))
   (check-ubd instruction (inputs instruction))
@@ -301,10 +304,12 @@
   (test (cleavir-set:presentp c (catches (function c)))
         "Catch ~a not in its function ~a's catch set." c (function c))
   ;; check that all unwinds are unwinds
-  (test (cleavir-set:every (lambda (u) (typep u 'unwind)) (unwinds c))
-        "Catch ~a has non-unwinds ~a in its unwind set"
-        c (cleavir-set:filter 'list (lambda (u) (not (typep u 'unwind)))
-                              (unwinds c)))
+  (let ((non-unwinds
+          (cleavir-set:filter
+           'list (lambda (u) (not (typep u 'unwind))) (unwinds c))))
+    (test (null non-unwinds)
+          "Catch ~a has non-unwinds ~a in its unwind set"
+          c non-unwinds))
   ;; check that there's at least one next
   (test (> (length (next c)) 0)
         "Catch ~a has no nexts" c)
@@ -520,7 +525,10 @@
           ;; Check for dangling references.
           (cleavir-set:doset (constant (constants module))
             (test (not (cleavir-set:empty-set-p (readers constant)))
-                  "Module records a constant with no references ~a." constant)))
+                  "Module records a constant with no references ~a." constant))
+          (cleavir-set:doset (ltv (load-time-values module))
+            (test (not (cleavir-set:empty-set-p (readers ltv)))
+                  "Module records a constant with no references ~a." ltv)))
       (error (e)
         (error 'verification-error :module module :original-condition e)))
     ;; Report results.
