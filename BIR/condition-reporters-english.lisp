@@ -27,7 +27,7 @@
   ;; explanation. MODULE-PROBLEMS is a list of "problems". FUNCTION-PROBLEMS
   ;; is a list of (function problem*). A "problem" is a list of a format
   ;; control and a list of format arguments, suitable for use with ~?.
-  ;; What ~<~{  ~@;~:@{~?~%~}~:> does is: Pop one format argument and use it as
+  ;; What ~<~{  ~@;~:@{~a~%~}~:> does is: Pop one format argument and use it as
   ;; the list in a pprint logical block with per-line prefix "  ". This
   ;; argument is a list of problems.
   ;; Iterate over each problem passing it to ~?, and then print newline.
@@ -37,8 +37,8 @@
   ;;   g
   (format stream "~&BIR verification failed. The IR is in an inconsistent state.
 This probably indicates a problem in the compiler; please report it.
-~@[~%Problems pertaining to the entire module:~%~<  ~@;~:@{~?~%~}~:>~]
-~:{~&Problems pertaining to function ~a:~%~@<  ~@;~:@{~?~%~}~:>~}"
+~@[~%Problems pertaining to the entire module:~%~<  ~@;~@{~a~%~}~:>~]
+~:{~&Problems pertaining to function ~a:~%~@<  ~@;~@{~a~%~}~:>~}"
           (module-problems condition)
           (function-problems condition)))
 
