@@ -21,11 +21,13 @@
 
 (defgeneric rtype (datum))
 
+(defgeneric origin (bir))
+
 (defclass datum ()
   (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name :type (or symbol
-                                                              (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
-                                                              null))))
+   (%name :initarg :name :initform nil :reader name
+          :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
+                    null))))
 
 ;;; A lexical is a datum that can be bound in an environment.
 (defclass lexical (datum) ())
@@ -153,6 +155,9 @@
 (defmethod definitions ((datum output))
   (cleavir-set:make-set (definition datum)))
 
+(defmethod origin ((datum output))
+  (when (definition datum) (origin (definition datum))))
+
 ;;; some useful mixins
 (defclass no-input (instruction)
   ((%inputs :initform nil :type null)))
@@ -256,6 +261,8 @@
    ;; What kind of ignore declaration is on this variable?
    (%ignore :initarg :ignore :reader ignore)
    (%rtype :initarg :rtype :initform :object :reader rtype)))
+
+(defmethod origin ((datum variable)) (origin (binder datum)))
 
 (defmethod unused-p ((datum variable))
   (cleavir-set:empty-set-p (readers datum)))
