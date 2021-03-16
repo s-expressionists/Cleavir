@@ -35,9 +35,10 @@
 
 (defmethod acclimation:report-condition
     ((condition verification-failed) stream (language acclimation:english))
-  (macrolet ((dis (thing what)
+  (macrolet ((dis (thing what show-ctype)
                `(handler-case (let ((*standard-output* stream))
-                                (cleavir-bir-disassembler:display ,thing))
+                                (cleavir-bir-disassembler:display
+                                 ,thing :show-ctype ,show-ctype))
                   (error (e)
                     (format stream
                             ,(concatenate 'string
@@ -46,7 +47,7 @@
                                           ":~@<  ~@;~a~:>")
                             e)))))
     (cleavir-bir-disassembler:with-disassembly ()
-      (dis (module condition) "module")
+      (dis (module condition) "module" t)
       (format stream "~&BIR verification failed. The IR is in an inconsistent state.
 This probably indicates a problem in the compiler; please report it.
 ~@[~%Problems pertaining to the entire module:~%~<  ~@;~@{~a~%~}~:>~]"
@@ -62,7 +63,7 @@ This probably indicates a problem in the compiler; please report it.
                      (destructuring-bind (subject . problems)
                          (pprint-pop)
                        (if (typep subject 'instruction)
-                           (dis subject "instruction")
+                           (dis subject "instruction" nil)
                            (format stream "~&    ~a" subject))
                        (fresh-line stream)
                        (dolist (problem problems)
