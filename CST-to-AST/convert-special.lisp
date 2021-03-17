@@ -301,42 +301,78 @@
 ;;;
 ;;; The TAGBODY special form always returns NIL.  We generate a PROGN
 ;;; with the TAGBODY-AST and a CONSTANT-AST in it, because the
-;;; TAGBODY-AST (unlike hte TAGBODY special form) does not generate a
+;;; TAGBODY-AST (unlike the TAGBODY special form) does not generate a
 ;;; value.
 
 (defun tagp (item)
-  (let ((raw (cst:raw item)))
-    ;; go tags are symbols or integers, per CLHS glossary.
-    (or (symbolp raw)
-        (integerp raw))))
+  ;; go tags are symbols or integers, per CLHS glossary.
+  (or (symbolp item) (integerp item)))
+
+;;; Returns two values. The first value is a list of CSTs for the tagbody
+;;; prefix, i.e. the forms before any tags. The second value is a list of
+;;; (tag-cst . form-csts) in order.
+(defun parse-tagbody (body-cst)
+  (loop with state = #() ; not a go tag
+        with prefix = nil
+        with tags = nil ; alist of (tag-ast . asts)
+        with current = nil ; list of non-tag asts
+        for rest = body-cst then (cst:rest rest)
+        for item = (if (cst:null rest)
+                       (loop-finish)
+                       (cst:first rest))
+        if (tagp (cst:raw item))
+          do (if (vectorp state)
+                 ;; we just hit the first tag,
+                 ;; so everything prior is the prefix
+                 (setf prefix (nreverse current))
+                 ;; finish the previous tag
+                 (push (cons state (nreverse current)) tags))
+             (setf current nil)
+             (setf state item)
+        else do (push item current)
+        finally (if (vectorp state)
+                    ;; This tagbody had no tags
+                    (setf prefix (nreverse current))
+                    ;; Finish the final tag
+                    (push (cons state (nreverse current)) tags))
+                (return (values prefix (nreverse tags)))))
 
 (defmethod convert-special
     ((symbol (eql 'tagbody)) cst env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (cst:db origin (tagbody-cst . body-cst) cst
     (declare (ignore tagbody-cst))
-    (let ((tag-asts
-            (loop for rest = body-cst then (cst:rest rest)
-                  until (cst:null rest)
-                  when (tagp (cst:first rest))
-                    collect (let ((tag-cst (cst:first rest)))
-                              (cleavir-ast:make-tag-ast
-                               (cst:raw tag-cst)
-                               :origin (cst:source tag-cst)))))
-          (new-env env))
-      (loop for ast in tag-asts
-            do (setf new-env (cleavir-env:add-tag
-                              new-env (cleavir-ast:name ast) ast)))
-      (let ((item-asts (loop for rest = body-cst then (cst:rest rest)
-                             until (cst:null rest)
-                             collect (let ((item-cst (cst:first rest)))
-                                       (if (tagp item-cst)
-                                           (pop tag-asts)
-                                           (convert item-cst new-env system))))))
-        (process-progn
-         (list (cleavir-ast:make-tagbody-ast item-asts :origin origin)
-               (convert-constant (make-atom-cst nil origin) env system))
-         origin)))))
+    (multiple-value-bind (prefix-csts tag-specs)
+        (parse-tagbody body-cst)
+      (let ((tag-asts
+              (loop for (tag-cst) in tag-specs
+                    collect (cleavir-ast:make-tag-ast
+                             (cst:raw tag-cst)
+                             :origin (cst:source tag-cst))))
+            (new-env env))
+        ;; Set up the environment for the inside of the tagbody.
+        (loop for ast in tag-asts
+              do (setf new-env (cleavir-env:add-tag
+                                new-env (cleavir-ast:name ast) ast)))
+        (let ((prefix-ast
+                (process-progn
+                 (loop for prefix-cst in prefix-csts
+                       collect (convert prefix-cst new-env system))
+                 origin)))
+          ;; Now compile the bodies of the tags and insert them into the
+          ;; TAG-ASTs.
+          (loop for tag-ast in tag-asts
+                for (ignore . form-csts) in tag-specs
+                for seq = (loop for form-cst in form-csts
+                                collect (convert form-cst new-env system))
+                for progn = (process-progn seq origin)
+                do (setf (cleavir-ast:body-ast tag-ast) progn))
+          ;; Finally, put together the tagbody, with NIL constant as described.
+          (process-progn
+           (list (cleavir-ast:make-tagbody-ast
+                  prefix-ast tag-asts :origin origin)
+                 (convert-constant (make-atom-cst nil origin) env system))
+           origin))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -47,7 +47,7 @@
    #:return-from-ast #:make-return-from-ast #:form-ast
    #:setq-ast #:make-setq-ast #:value-ast
    #:multiple-value-setq-ast #:make-multiple-value-setq-ast #:lexical-variables
-   #:tagbody-ast #:make-tagbody-ast #:item-asts
+   #:tagbody-ast #:make-tagbody-ast #:prefix-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype

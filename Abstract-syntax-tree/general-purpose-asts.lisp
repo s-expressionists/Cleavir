@@ -688,9 +688,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class TAG-AST.
+;;; The TAG-AST includes the tag itself, and also the code following it
+;;; that is not after another tag.
 
 (defclass tag-ast (ast)
-  ((%name :initarg :name :reader name)))
+  ((%name :initarg :name :reader name)
+   (%body-ast :initarg :body-ast :accessor body-ast)))
 
 (defun make-tag-ast (name &key origin (policy *policy*))
   (make-instance 'tag-ast
@@ -698,26 +701,28 @@
     :name name))
 
 (cleavir-io:define-save-info tag-ast
-  (:name name))
+  (:name name) (:body-ast body-ast))
 
-(define-children tag-ast ())
+(define-children tag-ast (body-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class TAGBODY-AST.
 
 (defclass tagbody-ast (no-value-ast-mixin ast)
-  ((%item-asts :initarg :item-asts :reader item-asts)))
+  ((%prefix-ast :initarg :prefix-ast :reader prefix-ast)
+   ;; A proper list of TAG-ASTs.
+   (%item-asts :initarg :item-asts :reader item-asts)))
 
-(defun make-tagbody-ast (item-asts &key origin (policy *policy*))
+(defun make-tagbody-ast (prefix-ast item-asts &key origin (policy *policy*))
   (make-instance 'tagbody-ast
     :origin origin :policy policy
-    :item-asts item-asts))
+    :prefix-ast prefix-ast :item-asts item-asts))
 
 (cleavir-io:define-save-info tagbody-ast
-  (:item-asts item-asts))
+    (:prefix-ast prefix-ast) (:item-asts item-asts))
 
-(define-children tagbody-ast item-asts)
+(define-children tagbody-ast (prefix-ast . item-asts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

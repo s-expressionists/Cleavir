@@ -247,40 +247,22 @@
 (defun (setf go-info) (new-info tag-ast)
   (setf (gethash tag-ast *go-info*) new-info))
 
-;;; FIXME: We really oughta move this up to CST-to-AST
-(defun parse-tagbody (items)
-  (loop with state = #() ; not a go tag
-        with prefix = nil
-        with tags = nil ; alist of (tag-ast . asts)
-        with current = nil ; list of non-tag asts
-        for item in items
-        if (typep item 'cleavir-ast:tag-ast)
-          do (if (vectorp state)
-                 (setf prefix (nreverse current))
-                 (push (cons state (nreverse current)) tags))
-             (setf current nil)
-             (setf state item)
-        else do (push item current)
-        finally (if (vectorp state)
-                    (setf prefix (nreverse current))
-                    (push (cons state (nreverse current)) tags))
-                (return (values prefix (nreverse tags)))))
-
 (defmethod compile-ast ((ast cleavir-ast:tagbody-ast) inserter system)
-  (multiple-value-bind (prefix tags)
-      (parse-tagbody (cleavir-ast:item-asts ast))
-    ;; Special case: there are no tags.
-    (when (null tags)
+  (let ((prefix-ast (cleavir-ast:prefix-ast ast))
+        (item-asts (cleavir-ast:item-asts ast)))
+    ;; Special case: there are no tags; treat this as a progn except
+    ;; that it does not return values.
+    (when (null item-asts)
       (return-from compile-ast
-        (if (compile-sequence-for-effect prefix inserter system)
-            ()
-            :no-return)))
+        (if (eq (compile-ast prefix-ast inserter system) :no-return)
+            :no-return
+            ())))
     ;; General case
     (let* ((old-dynenv (dynamic-environment inserter))
            (function (function inserter))
            (prefix-iblock (make-iblock inserter :name '#:tagbody))
            (tag-iblocks
-             (loop for (tag-ast) in tags
+             (loop for tag-ast in item-asts
                    ;; name could be an integer, so write it out
                    for tagname = (write-to-string (cleavir-ast:name tag-ast))
                    for bname = (symbolicate '#:tag- tagname)
@@ -291,42 +273,41 @@
       ;; this is used to check whether the catch is actually necessary.
       (setf (go-info catch) nil)
       (setf (cleavir-bir:dynamic-environment prefix-iblock) catch)
-      (loop for (tag-ast) in tags
+      (loop for tag-ast in item-asts
             for tag-iblock in tag-iblocks
             do (setf (cleavir-bir:dynamic-environment tag-iblock) catch
-                     (go-info tag-ast)
-                     (list catch tag-iblock function)))
+                     (go-info tag-ast) (list catch tag-iblock function)))
       (terminate inserter catch)
       (begin inserter prefix-iblock)
-      (when (compile-sequence-for-effect prefix inserter system)
+      (unless (eq (compile-ast prefix-ast inserter system) :no-return)
         (terminate inserter (make-instance 'cleavir-bir:jump
                               :inputs () :outputs ()
                               :next (list (first tag-iblocks)))))
-      (loop for (tag . body) in tags
+      (loop for tag-ast in item-asts
+            for body-ast = (cleavir-ast:body-ast tag-ast)
             for (ib . rest) on tag-iblocks
             do (begin inserter ib)
-            if (compile-sequence-for-effect body inserter system)
-              ;; Code continues onto the next tag, or out of the tagbody.
-              do (let ((next
-                         (if rest
-                             (first rest)
-                             (make-iblock inserter
-                                          :name '#:tagbody-resume
-                                          :dynamic-environment old-dynenv))))
-                   (terminate inserter
-                              (make-instance 'cleavir-bir:jump
-                                :inputs () :outputs ()
-                                :next (list next)))
-                   (unless rest
-                     ;; Start on the block after the tagbody.
-                     (begin inserter next)
-                     ;; We return no values.
-                     (return-from compile-ast ())))
-            else
+            if (eq (compile-ast body-ast inserter system) :no-return)
               ;; Code doesn't return. If this is the last tag, that means the
               ;; tagbody doesn't either.
-              do (unless rest
-                   (return-from compile-ast :no-return))))))
+              do (unless rest (return-from compile-ast :no-return))
+                 ;; Code continues onto the next tag, or out of the tagbody.
+            else do (let ((next
+                            (if rest
+                                (first rest)
+                                (make-iblock inserter
+                                             :name '#:tagbody-resume
+                                             :dynamic-environment
+                                             old-dynenv))))
+                      (terminate inserter
+                                 (make-instance 'cleavir-bir:jump
+                                   :inputs () :outputs ()
+                                   :next (list next)))
+                      (unless rest
+                        ;; Start on the block after the tagbody.
+                        (begin inserter next)
+                        ;; We return no values.
+                        (return-from compile-ast ())))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
