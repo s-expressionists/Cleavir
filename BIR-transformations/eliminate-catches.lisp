@@ -15,12 +15,14 @@
      (make-instance 'cleavir-bir:jump
        :inputs () :outputs () :next (list normal-next))
      catch)
-    ;; Other blocks might be unreachable now
-    (mapc #'cleavir-bir:maybe-delete-iblock other-next)
-    ;; Merge if able
-    (cleavir-bir:merge-successor-if-possible fore)
     ;; Fix reachability
-    (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore))))
+    (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore))
+    ;; Merge if able
+    ;; NOTE: It may be possible to merge blocks within the tagbody as well,
+    ;; but it's slightly complicated to do so correctly while not merging
+    ;; deleted iblocks, and anyway practically speaking meta-evaluate will
+    ;; handle it.
+    (loop while (cleavir-bir:merge-successor-if-possible fore))))
 
 (defun eliminate-catches (function)
   (cleavir-set:doset (catch (cleavir-bir:catches function))
