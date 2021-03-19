@@ -169,9 +169,9 @@
 (defmethod cleavir-bir-disassembler:disassemble ((module module))
   (check-type module module)
   (cleavir-bir-disassembler:with-disassembly ()
-    (cons (constants module)
-          (cleavir-set:mapset 'list #'cleavir-bir-disassembler:disassemble
-                              (functions module)))))
+    (list* (cleavir-set:mapset 'list #'constant-value (constants module))
+           (cleavir-set:mapset 'list #'cleavir-bir-disassembler:disassemble
+                               (functions module)))))
 
 (defun cleavir-bir-disassembler:display-instruction-disassembly
     (inst-disasm &key (show-ctype *show-ctype*))
@@ -220,7 +220,7 @@
             ((:show-ctype *show-ctype*) *show-ctype*))
   (format t "~&-------module-------")
   (destructuring-bind (constants . funs) disasm
-    (format t "~&constants: ~a" constants)
+    (format t "~&constants: ~:s" constants)
     (mapc #'cleavir-bir-disassembler:display-function-disassembly funs))
   (values))
 
