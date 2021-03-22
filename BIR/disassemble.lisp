@@ -130,6 +130,11 @@
 (defmethod disassemble-instruction-extra append ((inst thei))
   (list (asserted-type inst) (type-check-function inst)))
 
+(defun disassemble-dynenv (dynenv)
+  (etypecase dynenv
+    (function `(:function ,(name dynenv)))
+    (instruction `(,(label dynenv) :in ,(name (iblock dynenv))))))
+
 (defmethod cleavir-bir-disassembler:disassemble ((iblock iblock))
   (check-type iblock iblock)
   (cleavir-bir-disassembler:with-disassembly ()
@@ -138,7 +143,7 @@
         (push (cleavir-bir-disassembler:disassemble i) insts))
       (list* (list* (iblock-id iblock)
                     (mapcar #'disassemble-datum (inputs iblock)))
-             (dynamic-environment iblock)
+             (disassemble-dynenv (dynamic-environment iblock))
              (cleavir-set:mapset 'list #'iblock-id (entrances iblock))
              (nreverse insts)))))
 
