@@ -26,7 +26,7 @@
                                (return successor)) ; value significance
                               ((eq linear-datum (first inputs))
                                ;; can keep looking
-                               (setq linar-datum
+                               (setq linear-datum
                                      (first (cleavir-bir:outputs successor))))
                               (t ; value significance
                                (return successor))))
