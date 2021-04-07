@@ -29,8 +29,7 @@
                  :name (cleavir-bir:name variable)
                  :extent (cleavir-bir:extent variable)
                  :use-status (cleavir-bir:use-status variable)
-                 :ignore (cleavir-bir:ignore variable)
-                 :rtype (cleavir-bir:rtype variable))))))
+                 :ignore (cleavir-bir:ignore variable))))))
 
 (defun variable-copier (stack map)
   (lambda (variable) (copy-variable variable stack map)))
@@ -38,8 +37,7 @@
 (defun copy-argument (argument map)
   (setf (copy-of argument map)
         (make-instance 'cleavir-bir:argument
-          :name (cleavir-bir:name argument)
-          :rtype (cleavir-bir:rtype argument))))
+          :name (cleavir-bir:name argument))))
 
 (defun copy-lambda-list (lambda-list map)
   (loop for thing in lambda-list
@@ -89,8 +87,7 @@
       (setf (copy-of datum map)
             (make-instance 'cleavir-bir:phi
               :name (cleavir-bir:name datum)
-              :iblock (copy-of (cleavir-bir:iblock datum) map)
-              :rtype (cleavir-bir:rtype datum)))))
+              :iblock (copy-of (cleavir-bir:iblock datum) map)))))
 
 (defun phi-copier (map) (lambda (datum) (copy-phi datum map)))
 
@@ -134,8 +131,7 @@
   (declare (ignore stack))
   (setf (copy-of datum map)
         (make-instance 'cleavir-bir:output
-          :name (cleavir-bir:name datum)
-          :rtype (cleavir-bir:rtype datum))))
+          :name (cleavir-bir:name datum))))
 (defmethod copy-output ((datum cleavir-bir:phi) stack map)
   (declare (ignore stack))
   (copy-phi datum map))
@@ -154,8 +150,7 @@
   (make-instance 'cleavir-bir:load-time-value
     :name (cleavir-bir:name datum)
     :form (cleavir-bir:form datum)
-    :read-only-p (cleavir-bir:read-only-p datum)
-    :rtype (cleavir-bir:rtype datum)))
+    :read-only-p (cleavir-bir:read-only-p datum)))
 
 (defun input-copier (map)
   (lambda (datum) (copy-input datum map)))

@@ -1,14 +1,5 @@
 (in-package #:cleavir-bir)
 
-;;; An rtype is a "representation type", indicating the "underlying" type of an
-;;; object. This is a static property distinct from its lisp type specifier.
-;;; BIR knows the following rtypes:
-;;; :object, meaning a general lisp object,
-;;; and :multiple-values.
-;;; Clients may define and use additional rtypes.
-(defgeneric rtype= (rt1 rt2)
-  (:method (rt1 rt2) (eql rt1 rt2)))
-
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment ()
   (;; The set of iblocks that have this as their dynamic environment.
@@ -22,8 +13,7 @@
 (defgeneric origin (bir))
 
 (defclass datum ()
-  ((%rtype :initarg :rtype :initform :object :reader rtype)
-   ;; A name, for debugging/display/etc. NIL means no name.
+  (;; A name, for debugging/display/etc. NIL means no name.
    (%name :initarg :name :initform nil :reader name
           :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
                     null))))

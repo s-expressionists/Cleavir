@@ -10,7 +10,6 @@
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
-  (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:delete-phi #:output #:name #:ctype #:derived-type
            #:definition #:definitions #:use #:transitive-use #:unused-p)

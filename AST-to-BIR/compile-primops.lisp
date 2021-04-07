@@ -8,8 +8,7 @@
       (when (integerp out)
         (error "BUG: Test primop in invalid context: ~a" ast))
       (let ((outputs (loop for o in out
-                           collect (make-instance 'cleavir-bir:output
-                                     :rtype o))))
+                           collect (make-instance 'cleavir-bir:output))))
         (insert inserter
                 (make-instance 'cleavir-bir:vprimop
                   :info info :inputs (mapcar #'first args) :outputs outputs))
@@ -48,8 +47,7 @@
            (with-compiled-asts (rv ,ca inserter system (,@in))
              (let ((outs (list ,@(loop for o in out
                                        collect `(make-instance
-                                                    'cleavir-bir:output
-                                                  :rtype ',o)))))
+                                                    'cleavir-bir:output)))))
                (insert inserter
                        (make-instance 'cleavir-bir:vprimop
                          :info ',info :inputs rv :outputs outs))

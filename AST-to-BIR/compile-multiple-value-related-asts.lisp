@@ -8,11 +8,11 @@
   ;; could be rewritten to account for this kind of context.
   (let* ((during (make-iblock inserter :name '#:mv-prog1-body))
          (de (dynamic-environment inserter))
-         (save-out (make-instance 'cleavir-bir:output :rtype :multiple-values))
+         (save-out (make-instance 'cleavir-bir:output))
          (save (make-instance 'cleavir-bir:values-save
                  :inputs (list mv) :outputs (list save-out)
                  :next (list during)))
-         (read-out (make-instance 'cleavir-bir:output :rtype :multiple-values))
+         (read-out (make-instance 'cleavir-bir:output))
          (read (make-instance 'cleavir-bir:values-collect
                  :inputs (list save-out) :outputs (list read-out))))
     (setf (cleavir-bir:dynamic-environment during) save)
@@ -49,16 +49,13 @@
            (compile-m-v-p1-save inserter system
                                 rv (cleavir-ast:form-asts ast))))))
 
-;;; Semantics of mv-call could be rethought. For example if all the argument
-;;; forms produce a fixed number of values we could just make a call?
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast)
                         inserter system)
   (with-compiled-ast (callee (cleavir-ast:function-form-ast ast)
                              inserter system)
     (let ((form-asts (cleavir-ast:form-asts ast)))
       (cond ((null form-asts)
-             (let ((call-out (make-instance 'cleavir-bir:output
-                               :rtype :multiple-values)))
+             (let ((call-out (make-instance 'cleavir-bir:output)))
                (insert inserter (make-instance 'cleavir-bir:call
                                   :inputs (list (first callee))
                                   :outputs (list call-out)))
@@ -66,8 +63,7 @@
             ((null (rest form-asts))
              (with-compiled-arguments (args form-asts inserter system
                                             :multiple-values)
-               (let ((mv-call-out (make-instance 'cleavir-bir:output
-                                    :rtype :multiple-values)))
+               (let ((mv-call-out (make-instance 'cleavir-bir:output)))
                  (insert inserter (make-instance 'cleavir-bir:mv-call
                                     :inputs (list* (first callee)
                                                    (mapcar #'first args))
@@ -81,8 +77,7 @@
                    for mv = (if (eq rv :no-return)
                                 (return-from compile-ast :no-return)
                                 (adapt inserter rv :multiple-values))
-                   for save-out = (make-instance 'cleavir-bir:output
-                                    :rtype :multiple-values)
+                   for save-out = (make-instance 'cleavir-bir:output)
                    for save = (terminate
                                inserter
                                (make-instance 'cleavir-bir:values-save
@@ -96,8 +91,7 @@
                              (when (eq rv :no-return)
                                (return-from compile-ast :no-return))
                              (let* ((mv (adapt inserter rv :multiple-values))
-                                    (cout (make-instance 'cleavir-bir:output
-                                            :rtype :multiple-values))
+                                    (cout (make-instance 'cleavir-bir:output))
                                     (c (make-instance
                                            'cleavir-bir:values-collect
                                          :inputs (nconc save-outs mv)
@@ -106,8 +100,8 @@
                                       (make-iblock inserter
                                                    :dynamic-environment orig-de
                                                    :name '#:mv-call))
-                                    (mvcout (make-instance 'cleavir-bir:output
-                                              :rtype :multiple-values)))
+                                    (mvcout
+                                      (make-instance 'cleavir-bir:output)))
                                (insert inserter c)
                                (terminate inserter
                                           (make-instance 'cleavir-bir:jump

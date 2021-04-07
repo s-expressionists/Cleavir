@@ -20,7 +20,6 @@
            (setf (gethash lexical-variable *variables*)
                  (make-instance 'cleavir-bir:variable
                                 :name (cleavir-ast:name lexical-variable)
-                                :rtype :object
                                 :ignore ignore))))))
 
 (defun find-variable (lexical-variable)
@@ -123,8 +122,7 @@
   (if (eq target :multiple-values)
       (if (listp results)
           ;; a bunch of values were returned, so just ftm
-          (list (let ((ftm-out (make-instance 'cleavir-bir:output
-                                 :rtype :multiple-values)))
+          (list (let ((ftm-out (make-instance 'cleavir-bir:output)))
                   (insert inserter
                           (make-instance 'cleavir-bir:fixed-to-multiple
                             :inputs (copy-list results)
