@@ -80,29 +80,6 @@
 
 (defclass values-collect (one-output instruction) ())
 
-;;; Allocate some temporary space for an object of the specified rtype.
-;;; Within this dynamic environment, readtemp and writetemp can be used.
-;;; It is expected that the memory is freed whenever the dynamic environment
-;;; is exited. This can be used to implement dynamic-extent or
-;;; multiple-value-prog1.
-;;; By "freed", I mean that (tagbody 0 (multiple-value-prog1 (f) (go 0))) and
-;;; the like shouldn't eat the entire stack.
-(defclass alloca (no-input no-output ssa dynamic-environment terminator1)
-  ((%rtype :initarg :rtype :reader rtype)))
-
-;;; Abstract.
-(defclass accesstemp (instruction)
-  (;; The storage this instruction is accessing.
-   ;; Must be the instruction's dynamic environment,
-   ;; or that environment's ancestor.
-   (%alloca :initarg :alloca :reader alloca :type alloca)))
-
-;;; Read the object stored in the temporary storage in the alloca.
-(defclass readtemp (accesstemp no-input one-output instruction) ())
-
-;;; Write it
-(defclass writetemp (accesstemp one-input no-output instruction) ())
-
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (cleavir-set:empty-set)
@@ -159,13 +136,6 @@
 
 ;;; Reverse of the above
 (defclass multiple-to-fixed (one-input instruction) ())
-
-;;; Convert a value from one rtype to another.
-;;; This may or may not entail an actual operation at runtime.
-(defclass cast (one-input one-output instruction)
-  (;; The destination rtype.
-   ;; (The source rtype is the rtype of the input.)
-   (%rtype :initarg :rtype :reader rtype)))
 
 ;;; Represents a type assertion on the first input.
 (defclass thei (one-input one-output instruction)

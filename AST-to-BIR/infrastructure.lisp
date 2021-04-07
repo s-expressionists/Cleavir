@@ -121,16 +121,10 @@
 (defun adapt (inserter results target)
   (assert (not (eq results :no-return)))
   (labels ((maybe-cast (ldatum rtype)
+             (assert (eq rtype :object))
              (let ((ldrt (cleavir-bir:rtype ldatum)))
-               (assert (not (eq ldrt :multiple-values)))
-               (if (eq ldrt rtype)
-                   ldatum
-                   (let ((cast-out (make-instance 'cleavir-bir:output
-                                     :rtype rtype)))
-                     (insert inserter
-                             (make-instance 'cleavir-bir:cast
-                               :inputs (list ldatum) :outputs (list cast-out)))
-                     cast-out))))
+               (assert (eq ldrt :object))
+               ldatum))
            (maybe-cast-to-object (ldatum)
              (maybe-cast ldatum :object)))
     (if (eq target :multiple-values)

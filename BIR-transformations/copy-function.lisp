@@ -228,12 +228,6 @@
    :transforms (cleavir-bir:transforms instruction)))
 
 (defmethod clone-initargs append
-    ((instruction cleavir-bir:alloca) stack map)
-  (declare (ignore stack map))
-  (list
-   :rtype (cleavir-bir:rtype instruction)))
-
-(defmethod clone-initargs append
     ((instruction cleavir-bir:unwind) stack map)
   (let* ((original-dest (cleavir-bir:destination instruction))
          (original-dest-function (cleavir-bir:function original-dest))
@@ -256,8 +250,3 @@
     ((instruction cleavir-bir:case) stack map)
   (declare (ignore stack map))
   (list :comparees (cleavir-bir:comparees instruction)))
-
-(defmethod clone-initargs append
-    ((instruction cleavir-bir:cast) stack map)
-  (declare (ignore stack map))
-  (list :rtype (cleavir-bir:rtype instruction)))

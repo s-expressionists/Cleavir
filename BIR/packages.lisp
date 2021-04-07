@@ -27,7 +27,7 @@
            #:origin #:policy)
   (:export #:*origin* #:*policy* #:*top-ctype* #:*top-function-ctype*)
   (:export #:multiple-to-fixed #:fixed-to-multiple
-           #:accessvar #:writevar #:readvar #:cast
+           #:accessvar #:writevar #:readvar
            #:constant-reference #:make-constant-reference
            #:load-time-value-reference #:make-load-time-value-reference
            #:returni #:unreachable #:jump #:unwindp
@@ -36,7 +36,6 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:values-save #:values-collect
-           #:alloca #:writetemp #:readtemp
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes #:transforms

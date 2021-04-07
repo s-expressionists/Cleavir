@@ -279,20 +279,6 @@
         collect dyn
         until (typep dyn 'function)))
 
-(defmethod verify progn ((at accesstemp))
-  ;; verify type decl
-  (test (typep (alloca at) 'alloca)
-        "has non-alloca ALLOCA slot: ~a" at (alloca at))
-  ;; Check that the alloca is an ancestor of the dynenv
-  (test (loop with alloca = (alloca at)
-              for dyn = (dynamic-environment at)
-                then (parent dyn)
-              when (eq dyn alloca)
-                return t
-              finally (return nil))
-        "has alloca ~a, which is not an ancestor of its dynamic environment: ~a"
-        at (alloca at) (dynenvs (dynamic-environment at))))
-
 (defmethod verify progn ((wv writevar))
   ;; match types
   (test (rtype= (rtype (first (inputs wv)))
