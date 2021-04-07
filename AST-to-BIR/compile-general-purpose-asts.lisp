@@ -436,6 +436,17 @@
                (compile-function type-check-function-ast system))))
     (cond ((or (eq rv :no-return))
            :no-return)
+          ((not (symbolp type-check-function))
+           ;; We do an mv-call here - see generate-type-checks.lisp
+           ;; so we force receiving and outputting multiple values.
+           (let ((out (make-instance 'cleavir-bir:output
+                        :rtype :multiple-values)))
+             (insert inserter (make-instance 'cleavir-bir:thei
+                                :inputs (adapt inserter rv :multiple-values)
+                                :outputs (list out)
+                                :asserted-type ctype
+                                :type-check-function type-check-function))
+             out))
           ((some (lambda (ctype)
                    (cleavir-ctype:bottom-p ctype system))
                  required)
