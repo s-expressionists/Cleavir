@@ -46,7 +46,6 @@
    #:progn-ast #:make-progn-ast #:form-asts
    #:return-from-ast #:make-return-from-ast #:form-ast
    #:setq-ast #:make-setq-ast #:value-ast
-   #:multiple-value-setq-ast #:make-multiple-value-setq-ast #:lexical-variables
    #:tagbody-ast #:make-tagbody-ast #:prefix-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
    #:the-ast #:make-the-ast #:ctype

@@ -1,19 +1,5 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defmethod compile-ast ((ast cleavir-ast:multiple-value-setq-ast)
-                        inserter system)
-  (let ((vars (loop for as in (cleavir-ast:lexical-variables ast)
-                    collect (find-variable as))))
-    (with-compiled-ast (vals (cleavir-ast:form-ast ast) inserter system
-                             (make-list (length vars)
-                                        :initial-element :object))
-      (loop for var in vars
-            for val in vals
-            for wv = (make-instance 'cleavir-bir:writevar
-                       :inputs (list val) :outputs (list var))
-            do (insert inserter wv))
-      ())))
-
 (defun compile-m-v-p1-save (inserter system mv form-asts)
   ;; Note that there are further situations we don't need to save.
   ;; If the user of the m-v-p1 only needs fixed values, those could just be

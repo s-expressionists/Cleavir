@@ -651,42 +651,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class MULTIPLE-VALUE-SETQ-AST.
-;;;
-;;; This AST can be used to represent MULTIPLE-VALUE-BIND.
-;;;
-;;; The LEXICAL-VARIABLES is a list of lexical variables to be assigned to.
-;;; FORM-AST represents a form to be evaluated, and the values of
-;;; which will be assigned to the lexical variables.  If
-;;; the FORM-AST produces fewer values than there are lexical
-;;; variables, then NIL is assigned to the remaining
-;;; lexical variables.  If there are more values there are lexical
-;;; variables, then the additional values are not
-;;; assigned anywhere.
-;;;
-;;; Unlike the special operator, this AST returns all values from
-;;; the form (including unassigned values). This allows it to be
-;;; used in concert with MULTIPLE-VALUE-PROG1 to implement THE
-;;; type checks, and potentially other things.
-
-(defclass multiple-value-setq-ast (ast)
-  ((%lexical-variables :initarg :lexical-variables :reader lexical-variables)
-   (%form-ast :initarg :form-ast :reader form-ast)))
-
-(defun make-multiple-value-setq-ast (lexical-variables form-ast &key origin (policy *policy*))
-  (make-instance 'multiple-value-setq-ast
-    :origin origin :policy policy
-    :lexical-variables lexical-variables
-    :form-ast form-ast))
-
-(cleavir-io:define-save-info multiple-value-setq-ast
-  (:lexical-variables lexical-variables)
-  (:form-ast form-ast))
-
-(define-children multiple-value-setq-ast (form-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class TAG-AST.
 ;;; The TAG-AST includes the tag itself, and also the code following it
 ;;; that is not after another tag.
