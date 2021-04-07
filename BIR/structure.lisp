@@ -19,12 +19,11 @@
       nil
       (dynamic-environment (iblock dynamic-environment))))
 
-(defgeneric rtype (datum))
-
 (defgeneric origin (bir))
 
 (defclass datum ()
-  (;; A name, for debugging/display/etc. NIL means no name.
+  ((%rtype :initarg :rtype :initform :object :reader rtype)
+   ;; A name, for debugging/display/etc. NIL means no name.
    (%name :initarg :name :initform nil :reader name
           :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
                     null))))
@@ -85,8 +84,7 @@
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
 
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -95,8 +93,7 @@
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -149,8 +146,7 @@
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initform nil :initarg :definition
-                :reader definition :accessor %definition)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+                :reader definition :accessor %definition)))
 
 (defmethod definitions ((datum output))
   (cleavir-set:make-set (definition datum)))
@@ -189,8 +185,7 @@
   ((%next :type (cons iblock null))))
 
 ;;; An argument to a function.
-(defclass argument (value transfer)
-  ((%rtype :initarg :rtype :initform :object :reader rtype)))
+(defclass argument (value transfer) ())
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.
@@ -203,8 +198,7 @@
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
-            :type iblock)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+            :type iblock)))
 
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
@@ -259,8 +253,7 @@
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
    ;; What kind of ignore declaration is on this variable?
-   (%ignore :initarg :ignore :reader ignore)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%ignore :initarg :ignore :reader ignore)))
 
 (defmethod origin ((datum variable)) (origin (binder datum)))
 
