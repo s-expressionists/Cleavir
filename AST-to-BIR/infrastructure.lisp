@@ -120,50 +120,44 @@
 ;; Returns a list of data, suitable as instruction inputs.
 (defun adapt (inserter results target)
   (assert (not (eq results :no-return)))
-  (labels ((maybe-cast (ldatum rtype)
-             (assert (eq rtype :object))
-             (let ((ldrt (cleavir-bir:rtype ldatum)))
-               (assert (eq ldrt :object))
-               ldatum))
-           (maybe-cast-to-object (ldatum)
-             (maybe-cast ldatum :object)))
-    (if (eq target :multiple-values)
-        (if (listp results)
-            ;; a bunch of values were returned, so just ftm
-            (list (let ((ftm-out (make-instance 'cleavir-bir:output
-                                   :rtype :multiple-values)))
-                    (insert inserter
-                            (make-instance 'cleavir-bir:fixed-to-multiple
-                              :inputs (mapcar #'maybe-cast-to-object results)
-                              :outputs (list ftm-out)))
-                    ftm-out))
-            ;; multiple values were returned
-            (list results))
-        (if (listp results)
-            ;; our target is a bunch of values, and we have a bunch of values
-            ;; either nil fill or take what we need
-            (let ((nresults (length results)) (ntarget (length target))
-                  (shared (mapcar #'maybe-cast results target)))
-              (if (>= nresults ntarget)
-                  shared
-                  (append shared
-                          (loop repeat (- ntarget nresults)
-                                for out = (make-instance 'cleavir-bir:output)
-                                for const = (cleavir-bir:constant-in-module
-                                             'nil *current-module*)
-                                for inst = (make-instance 'cleavir-bir:constant-reference
-                                             :inputs (list const)
-                                             :outputs (list out))
-                                do (insert inserter inst)
-                                collect out))))
-            ;; target is a bunch of values and result is multiple-values,
-            ;; so mtf.
-            (let ((outputs (loop repeat (length target)
-                                 collect (make-instance 'cleavir-bir:output))))
-              (insert inserter (make-instance 'cleavir-bir:multiple-to-fixed
-                                 :inputs (list results)
-                                 :outputs outputs))
-              (mapcar #'maybe-cast outputs target))))))
+  (if (eq target :multiple-values)
+      (if (listp results)
+          ;; a bunch of values were returned, so just ftm
+          (list (let ((ftm-out (make-instance 'cleavir-bir:output
+                                 :rtype :multiple-values)))
+                  (insert inserter
+                          (make-instance 'cleavir-bir:fixed-to-multiple
+                            :inputs (copy-list results)
+                            :outputs (list ftm-out)))
+                  ftm-out))
+          ;; multiple values were returned
+          (list results))
+      (if (listp results)
+          ;; our target is a bunch of values, and we have a bunch of values
+          ;; either nil fill or take what we need
+          (let ((nresults (length results)) (ntarget (length target))
+                (shared (copy-list results)))
+            (if (>= nresults ntarget)
+                shared
+                (append shared
+                        (loop repeat (- ntarget nresults)
+                              for out = (make-instance 'cleavir-bir:output)
+                              for const = (cleavir-bir:constant-in-module
+                                           'nil *current-module*)
+                              for inst = (make-instance 'cleavir-bir:constant-reference
+                                           :inputs (list const)
+                                           :outputs (list out))
+                              do (insert inserter inst)
+                              collect out))))
+          ;; target is a bunch of values and result is multiple-values,
+          ;; so mtf.
+          (let ((outputs (loop repeat (length target)
+                               collect (make-instance 'cleavir-bir:output))))
+            (insert inserter (make-instance 'cleavir-bir:multiple-to-fixed
+                               :inputs (list results)
+                               :outputs outputs))
+            ;; not sure if copy is required
+            (copy-list outputs)))))
 
 (defgeneric compile-function (ast system))
 
