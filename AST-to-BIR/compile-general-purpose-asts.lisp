@@ -86,39 +86,18 @@
            rv))
         (t ; multiple blocks, so we have to merge their results
          (let ((mergeb (make-iblock inserter :name '#:merge)))
-           (if (let ((first-rv (third (first map))))
-                 (and (listp first-rv)
-                      (loop with len = (length first-rv)
-                            for (_0 _1 rv) in (rest map)
-                            always (and (listp rv) (= (length rv) len)))))
-               ;; All the same number of values, so we can phi them.
-               (let* ((nrtypes (length (third (first map))))
-                      (rtypes (make-list nrtypes :initial-element :object))
-                      (phis (loop repeat nrtypes
-                                  collect (make-instance 'cleavir-bir:phi
-                                            :iblock mergeb))))
-                 (loop for (ins ib rv) in map
-                       do (terminate
-                           ins
-                           (make-instance 'cleavir-bir:jump
-                             :inputs (adapt ins rv rtypes)
-                             :outputs (copy-list phis)
-                             :next (list mergeb))))
-                 (setf (cleavir-bir:inputs mergeb) phis)
-                 (begin inserter mergeb)
-                 phis)
-               ;; Dump everything into multiple-values.
-               (let ((phi (make-instance 'cleavir-bir:phi :iblock mergeb)))
-                 (loop for (ins ib rv) in map
-                       do (terminate
-                           ins
-                           (make-instance 'cleavir-bir:jump
-                             :inputs (adapt ins rv :multiple-values)
-                             :outputs (list phi)
-                             :next (list mergeb))))
-                 (setf (cleavir-bir:inputs mergeb) (list phi))
-                 (begin inserter mergeb)
-                 phi))))))))
+           ;; Dump everything into multiple-values.
+           (let ((phi (make-instance 'cleavir-bir:phi :iblock mergeb)))
+             (loop for (ins ib rv) in map
+                   do (terminate
+                       ins
+                       (make-instance 'cleavir-bir:jump
+                         :inputs (adapt ins rv :multiple-values)
+                         :outputs (list phi)
+                         :next (list mergeb))))
+             (setf (cleavir-bir:inputs mergeb) (list phi))
+             (begin inserter mergeb)
+             phi)))))))
 
 (defmethod compile-ast ((ast cleavir-ast:if-ast) inserter system)
   (compile-branch inserter system (cleavir-ast:test-ast ast)
