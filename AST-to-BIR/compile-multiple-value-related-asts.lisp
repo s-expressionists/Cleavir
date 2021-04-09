@@ -1,53 +1,44 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defun compile-m-v-p1-save (inserter system mv form-asts)
-  ;; Note that there are further situations we don't need to save.
-  ;; If the user of the m-v-p1 only needs fixed values, those could just be
-  ;; extracted early and no saving done. We don't have that information at this
-  ;; moment, so an optimization pass could rewrite it. Alternately AST-to-BIR
-  ;; could be rewritten to account for this kind of context.
-  (let* ((during (make-iblock inserter :name '#:mv-prog1-body))
-         (de (dynamic-environment inserter))
-         (save-out (make-instance 'cleavir-bir:output))
-         (save (make-instance 'cleavir-bir:values-save
-                 :inputs (list mv) :outputs (list save-out)
-                 :next (list during)))
-         (read-out (make-instance 'cleavir-bir:output))
-         (read (make-instance 'cleavir-bir:values-collect
-                 :inputs (list save-out) :outputs (list read-out))))
-    (setf (cleavir-bir:dynamic-environment during) save)
-    (terminate inserter save)
-    (begin inserter during)
-    (cond ((compile-sequence-for-effect form-asts inserter system)
-           (insert inserter read)
-           (let ((after (make-iblock inserter
-                                     :name '#:mv-prog1-after
-                                     :dynamic-environment de)))
-             (terminate inserter (make-instance 'cleavir-bir:jump
-                                   :inputs () :outputs ()
-                                   :next (list after)))
-             (begin inserter after))
-           read-out)
-          (t
-           ;; the forms did not return.
-           ;; This makes our saving pointless, so hypothetically we could go back
-           ;; and change that stuff.
-           :no-return))))
+(defun compile-m-v-p1-save (inserter system mv form-asts))
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-prog1-ast)
                         inserter system)
-  (let ((rv (compile-ast (cleavir-ast:first-form-ast ast) inserter system)))
-    (cond ((eq rv :no-return) rv)
-          ((listp rv)
-           ;; A bunch of values are returned, so we don't need to save.
-           (if (compile-sequence-for-effect (cleavir-ast:form-asts ast)
-                                            inserter system)
-               rv
-               :no-return))
-          (t
-           ;; Multiple values were returned. Save.
-           (compile-m-v-p1-save inserter system
-                                rv (cleavir-ast:form-asts ast))))))
+  (with-compiled-ast (rv (cleavir-ast:first-form-ast ast) inserter system
+                         :multiple-values)
+    ;; Note that there are further situations we don't need to save.
+    ;; If the user of the m-v-p1 only needs fixed values, those could just be
+    ;; extracted early and no saving done. We don't have that information at this
+    ;; moment, so an optimization pass could rewrite it. Alternately AST-to-BIR
+    ;; could be rewritten to account for this kind of context.
+    (let* ((during (make-iblock inserter :name '#:mv-prog1-body))
+           (de (dynamic-environment inserter))
+           (save-out (make-instance 'cleavir-bir:output))
+           (save (make-instance 'cleavir-bir:values-save
+                   :inputs rv
+                   :outputs (list save-out) :next (list during)))
+           (read-out (make-instance 'cleavir-bir:output))
+           (read (make-instance 'cleavir-bir:values-collect
+                   :inputs (list save-out) :outputs (list read-out))))
+      (setf (cleavir-bir:dynamic-environment during) save)
+      (terminate inserter save)
+      (begin inserter during)
+      (cond ((compile-sequence-for-effect (cleavir-ast:form-asts ast)
+                                          inserter system)
+             (insert inserter read)
+             (let ((after (make-iblock inserter
+                                       :name '#:mv-prog1-after
+                                       :dynamic-environment de)))
+               (terminate inserter (make-instance 'cleavir-bir:jump
+                                     :inputs () :outputs ()
+                                     :next (list after)))
+               (begin inserter after))
+             read-out)
+            (t
+             ;; the forms did not return.
+             ;; This makes our saving pointless, so hypothetically we could go back
+             ;; and change that stuff.
+             :no-return)))))
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-call-ast)
                         inserter system)
