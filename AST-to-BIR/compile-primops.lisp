@@ -30,11 +30,12 @@
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-primop-info:info primop))
          (out (cleavir-primop-info:out-rtypes info))
-         (in (cleavir-primop-info:in-rtypes info))
+         (targets (make-list (cleavir-primop-info:ninputs info)
+                             :initial-element :object))
          (ca `(,@(loop for reader in readers collect `(,reader ast)))))
     (if (integerp out)
-        `(defmethod compile-test-ast ((ast ,ast) inserter system)
-           (with-compiled-asts (rv ,ca inserter system (,@in))
+        `(defmethod compile-test-asts ((ast ,ast) inserter system)
+           (with-compiled-asts (rv ,ca inserter system ,targets)
              (let ((ibs
                      (list ,@(loop repeat out
                                    collect `(make-iblock inserter)))))
@@ -44,7 +45,7 @@
                   :info ',info :next ibs :inputs rv))
                (copy-list ibs))))
         `(defmethod compile-ast ((ast ,ast) inserter system)
-           (with-compiled-asts (rv ,ca inserter system (,@in))
+           (with-compiled-asts (rv ,ca inserter system ,targets)
              (let ((outs (list ,@(loop for o in out
                                        collect `(make-instance
                                                     'cleavir-bir:output)))))

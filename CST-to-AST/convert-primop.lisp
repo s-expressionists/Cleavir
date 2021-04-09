@@ -6,8 +6,8 @@
 
 (defun convert-primop (symbol cst env system)
   (let* ((info (cleavir-primop-info:info symbol))
-         (in (cleavir-primop-info:in-rtypes info)))
-    (check-simple-primop-syntax cst (length in))
+         (ninputs (cleavir-primop-info:ninputs info)))
+    (check-simple-primop-syntax cst ninputs)
     (cst:db origin (op-cst . args-cst) cst
       (declare (ignore op-cst))
       (make-instance 'cleavir-ast:primop-ast

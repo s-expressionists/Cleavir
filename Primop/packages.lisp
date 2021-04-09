@@ -47,4 +47,4 @@
 (defpackage #:cleavir-primop-info
   (:use #:cl)
   (:export #:info #:defprimop
-           #:name #:in-rtypes #:out-rtypes #:attributes))
+           #:name #:ninputs #:out-rtypes #:attributes))

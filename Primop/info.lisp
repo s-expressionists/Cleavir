@@ -16,8 +16,8 @@
    ;; If the latter, indicates that this is a test with that many branches.
    (%out-rtypes :initarg :out-rtypes :reader out-rtypes
                 :type (or list (integer 2)))
-   ;; List of rtypes of the inputs
-   (%in-rtypes :initarg :in-rtypes :reader in-rtypes :type list)
+   ;; Number of inputs accepted
+   (%ninputs :initarg :ninputs :reader ninputs :type (integer 0))
    ;; Miscellaneous attributes
    (%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes))))
@@ -31,9 +31,9 @@
   (or (gethash name *primops*)
       (error "BUG: No primop: ~a" name)))
 
-(defmacro defprimop (name (&rest in) out)
+(defmacro defprimop (name ninputs out)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (gethash ',name *primops*)
            (make-instance 'info
              :name ',name
-             :out-rtypes ',out :in-rtypes ',in))))
+             :out-rtypes ',out :ninputs ',ninputs))))
