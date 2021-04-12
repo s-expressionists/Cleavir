@@ -12,7 +12,7 @@
                        ((:effect) nil))))
         (insert inserter
                 (make-instance 'cleavir-bir:vprimop
-                  :info info :inputs (mapcar #'first args) :outputs outputs))
+                  :info info :inputs args :outputs outputs))
         (copy-list outputs)))))
 
 (defmethod compile-test-ast ((ast cleavir-ast:primop-ast) inserter system)

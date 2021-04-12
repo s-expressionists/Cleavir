@@ -52,12 +52,11 @@
                                   :outputs (list call-out)))
                call-out))
             ((null (rest form-asts))
-             (with-compiled-arguments (args form-asts inserter system
-                                            :multiple-values)
+             (with-compiled-ast (mvarg (first form-asts) inserter system
+                                       :multiple-values)
                (let ((mv-call-out (make-instance 'cleavir-bir:output)))
                  (insert inserter (make-instance 'cleavir-bir:mv-call
-                                    :inputs (list* (first callee)
-                                                   (mapcar #'first args))
+                                    :inputs (list* (first callee) mvarg)
                                     :outputs (list mv-call-out)))
                  mv-call-out)))
             (t
@@ -106,8 +105,4 @@
                                (return mvcout)))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
-  (let ((a
-          (compile-arguments (cleavir-ast:argument-asts ast) inserter system)))
-    (if (eq a :no-return)
-        a
-        (mapcar #'first a))))
+  (compile-arguments (cleavir-ast:argument-asts ast) inserter system))

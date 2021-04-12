@@ -218,22 +218,19 @@
                                                  '(,target)))))))))
            ,@body)))))
 
-(defun compile-arguments (arg-asts inserter system
-                          &optional (target '(:object)))
+(defun compile-arguments (arg-asts inserter system)
   (loop for arg-ast in arg-asts
         for rv = (compile-ast arg-ast inserter system)
         if (eq rv :no-return)
           return rv
-        else collect (adapt inserter rv target)))
+        else collect (first (adapt inserter rv '(:object)))))
 
-(defmacro with-compiled-arguments ((name asts inserter system
-                                    &optional (target ''(:object)))
+(defmacro with-compiled-arguments ((name asts inserter system)
                                    &body body)
   (let ((gasts (gensym "ASTS")) (ginserter (gensym "INSERTER"))
         (gsystem (gensym "SYSTEM")) (gtarget (gensym "TARGET")))
-    `(let ((,gasts ,asts) (,ginserter ,inserter)
-           (,gsystem ,system) (,gtarget ,target))
-       (let ((,name (compile-arguments ,gasts ,ginserter ,gsystem ,gtarget)))
+    `(let ((,gasts ,asts) (,ginserter ,inserter) (,gsystem ,system))
+       (let ((,name (compile-arguments ,gasts ,ginserter ,gsystem)))
          (if (eq ,name :no-return)
              ,name
              (progn ,@body))))))

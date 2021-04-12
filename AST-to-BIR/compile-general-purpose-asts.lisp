@@ -312,8 +312,7 @@
         (insert inserter (make-instance 'cleavir-bir:call
                            :attributes (cleavir-ast:attributes ast)
                            :transforms (cleavir-ast:transforms ast)
-                           :inputs (list* (first callee)
-                                          (mapcar #'first args))
+                           :inputs (list* (first callee) args)
                            :outputs (list call-out)))
         call-out))))
 
