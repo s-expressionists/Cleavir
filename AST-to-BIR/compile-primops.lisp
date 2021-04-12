@@ -4,11 +4,12 @@
   (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
                                  inserter system)
     (let* ((info (cleavir-ast:info ast))
-           (out (cleavir-primop-info:out-rtypes info)))
+           (out (cleavir-primop-info:out-kind info)))
       (when (integerp out)
         (error "BUG: Test primop in invalid context: ~a" ast))
-      (let ((outputs (loop for o in out
-                           collect (make-instance 'cleavir-bir:output))))
+      (let ((outputs (ecase out
+                       ((:value) (list (make-instance 'cleavir-bir:output)))
+                       ((:effect) nil))))
         (insert inserter
                 (make-instance 'cleavir-bir:vprimop
                   :info info :inputs (mapcar #'first args) :outputs outputs))
@@ -18,7 +19,7 @@
   (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
                                  inserter system)
     (let* ((info (cleavir-ast:info ast))
-           (out (cleavir-primop-info:out-rtypes info)))
+           (out (cleavir-primop-info:out-kind info)))
       (check-type out (integer 0))
       (let ((ibs (loop repeat out collect (make-iblock inserter))))
         (terminate
@@ -29,7 +30,7 @@
 
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-primop-info:info primop))
-         (out (cleavir-primop-info:out-rtypes info))
+         (out (cleavir-primop-info:out-kind info))
          (targets (make-list (cleavir-primop-info:ninputs info)
                              :initial-element :object))
          (ca `(,@(loop for reader in readers collect `(,reader ast)))))
@@ -46,9 +47,10 @@
                (copy-list ibs))))
         `(defmethod compile-ast ((ast ,ast) inserter system)
            (with-compiled-asts (rv ,ca inserter system ,targets)
-             (let ((outs (list ,@(loop for o in out
-                                       collect `(make-instance
-                                                    'cleavir-bir:output)))))
+             (let ((outs ,(ecase out
+                            ((:value)
+                             '(list (make-instance 'cleavir-bir:output)))
+                            ((:effect) nil))))
                (insert inserter
                        (make-instance 'cleavir-bir:vprimop
                          :info ',info :inputs rv :outputs outs))

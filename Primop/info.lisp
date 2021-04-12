@@ -12,10 +12,10 @@
 ;;; structure describing a primop
 (defclass info ()
   ((%name :initarg :name :reader name)
-   ;; List of rtypes of the outputs, or an integer.
-   ;; If the latter, indicates that this is a test with that many branches.
-   (%out-rtypes :initarg :out-rtypes :reader out-rtypes
-                :type (or list (integer 2)))
+   ;; :value means it returns a value. :effect means it doesn't.
+   ;; An integer means it's a conditional with that many branches.
+   (%out-kind :initarg :out-kind :reader out-kind
+              :type (or (member :value :effect) (integer 2)))
    ;; Number of inputs accepted
    (%ninputs :initarg :ninputs :reader ninputs :type (integer 0))
    ;; Miscellaneous attributes
@@ -36,4 +36,4 @@
      (setf (gethash ',name *primops*)
            (make-instance 'info
              :name ',name
-             :out-rtypes ',out :ninputs ',ninputs))))
+             :out-kind ',out :ninputs ',ninputs))))
