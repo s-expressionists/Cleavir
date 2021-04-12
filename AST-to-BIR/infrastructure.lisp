@@ -196,8 +196,7 @@
              (let ((,name (adapt ,ginserter ,name ,gtarget)))
                ,@body))))))
 
-(defmacro with-compiled-asts ((name (&rest asts) inserter system
-                               (&rest targets))
+(defmacro with-compiled-asts ((name (&rest asts) inserter system)
                               &body body)
   (let ((gasts (loop repeat (length asts) collect (gensym "AST")))
         (bname (gensym "WITH-COMPILED-ASTS"))
@@ -208,14 +207,13 @@
          (let ((,name
                  (list
                   ,@(loop for gast in gasts
-                          for target in targets
                           for c = `(compile-ast ,gast ,ginserter ,gsystem)
                           collect `(let ((temp ,c))
                                      (if (eq temp :no-return)
                                          (return-from ,bname temp)
                                          (first
                                           (adapt ,ginserter temp
-                                                 '(,target)))))))))
+                                                 '(:object)))))))))
            ,@body)))))
 
 (defun compile-arguments (arg-asts inserter system)

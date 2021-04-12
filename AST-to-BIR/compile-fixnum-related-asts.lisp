@@ -11,7 +11,7 @@
                              inserter system)
   (with-compiled-asts (rv ((cleavir-ast:arg1-ast ast)
                            (cleavir-ast:arg2-ast ast))
-                          inserter system (:object :object))
+                          inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop
                             :inputs (mapcar #'first rv)
@@ -24,7 +24,7 @@
                              inserter system)
   (with-compiled-asts (rv ((cleavir-ast:arg1-ast ast)
                            (cleavir-ast:arg2-ast ast))
-                          inserter system (:object :object))
+                          inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop
                             :inputs (mapcar #'first rv)
