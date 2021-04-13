@@ -53,7 +53,7 @@
          (setf (cleavir-bir:returni function) nil))
         (t
          (let ((returni (make-instance 'cleavir-bir:returni
-                          :inputs (adapt inserter rv :multiple-values))))
+                          :inputs rv)))
            (setf (cleavir-bir:returni function) returni)
            (terminate inserter returni)))))
     (cleavir-bir:compute-iblock-flow-order function)
@@ -92,12 +92,11 @@
                    do (terminate
                        ins
                        (make-instance 'cleavir-bir:jump
-                         :inputs (adapt ins rv :multiple-values)
-                         :outputs (list phi)
+                         :inputs rv :outputs (list phi)
                          :next (list mergeb))))
              (setf (cleavir-bir:inputs mergeb) (list phi))
              (begin inserter mergeb)
-             phi)))))))
+             (list phi))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:if-ast) inserter system)
   (compile-branch inserter system (cleavir-ast:test-ast ast)
@@ -177,11 +176,11 @@
       (unless (eq normal-rv :no-return)
         (terminate inserter
                    (make-instance 'cleavir-bir:jump
-                     :inputs (adapt inserter normal-rv :multiple-values)
+                     :inputs normal-rv
                      :outputs (copy-list (cleavir-bir:inputs mergeb))
                      :next (list mergeb)))))
     (begin inserter mergeb)
-    phi))
+    (list phi)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -197,12 +196,11 @@
             (terminate
              inserter
              (make-instance 'cleavir-bir:jump
-               :inputs (adapt inserter rv :multiple-values)
+               :inputs rv
                :outputs (copy-list (cleavir-bir:inputs mergeb))
                :next (list mergeb)))
             ;; nonlocal
-            (insert-unwind inserter catch mergeb
-                           (adapt inserter rv :multiple-values)
+            (insert-unwind inserter catch mergeb rv
                            (copy-list (cleavir-bir:inputs mergeb)))))))
   :no-return)
 
@@ -276,7 +274,7 @@
                         ;; Start on the block after the tagbody.
                         (begin inserter next)
                         ;; We return no values.
-                        (return-from compile-ast ())))))))
+                        (return-from compile-ast :no-value)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -314,7 +312,7 @@
                            :transforms (cleavir-ast:transforms ast)
                            :inputs (list* (first callee) args)
                            :outputs (list call-out)))
-        call-out))))
+        (list call-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -334,19 +332,16 @@
 ;;; LEXICAL-BIND-AST
 
 (defmethod compile-ast ((ast cleavir-ast:lexical-bind-ast) inserter system)
-  (let ((rv (compile-ast (cleavir-ast:value-ast ast) inserter system)))
-    (cond ((eq rv :no-return) rv)
-          (t
-           (let* ((var (bind-variable (cleavir-ast:lexical-variable ast)
-                                      (cleavir-ast:ignore ast)))
-                  (leti (make-instance 'cleavir-bir:leti
-                          :inputs (adapt inserter rv '(:object))
-                          :outputs (list var))))
-             (adjoin-variable inserter var)
-             (insert inserter leti)
-             (setf (cleavir-bir:binder var) leti))
-           ;; return no values
-           ()))))
+  (with-compiled-ast (rv (cleavir-ast:value-ast ast) inserter system)
+    (let* ((var (bind-variable (cleavir-ast:lexical-variable ast)
+                               (cleavir-ast:ignore ast)))
+           (leti (make-instance 'cleavir-bir:leti
+                   :inputs rv :outputs (list var))))
+      (adjoin-variable inserter var)
+      (insert inserter leti)
+      (setf (cleavir-bir:binder var) leti))
+    ;; return no values
+    :no-value))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -407,33 +402,18 @@
            ;; so we force receiving and outputting multiple values.
            (let ((out (make-instance 'cleavir-bir:output)))
              (insert inserter (make-instance 'cleavir-bir:thei
-                                :inputs (adapt inserter rv :multiple-values)
-                                :outputs (list out)
+                                :inputs rv :outputs (list out)
                                 :asserted-type ctype
                                 :type-check-function type-check-function))
-             out))
+             (list out)))
           ((some (lambda (ctype)
                    (cleavir-ctype:bottom-p ctype system))
                  required)
            (terminate inserter (make-instance 'cleavir-bir:unreachable))
            :no-return)
-          ((listp rv) ; several single values
-           (if (null (rest rv)) ; single value
-               (list (wrap-thei inserter
-                                (first rv)
-                                (if (null required)
-                                    (if (null optional)
-                                        rest
-                                        (first optional))
-                                    (first required))
-                                type-check-function
-                                system))
-               ;; FIXME: this is not as good as splitting this up into individual THEIs,
-               ;; but we don't have a good way to split up type-check-function.
-               (wrap-thei inserter (first (adapt inserter rv :multiple-values))
-                          ctype type-check-function system)))
           (t ; arbitrary values
-           (wrap-thei inserter rv ctype type-check-function system)))))
+           (list (wrap-thei inserter (first rv)
+                            ctype type-check-function system))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -493,8 +473,7 @@
     ;; FIXME: We probably want to make a new AST class to distinguish between
     ;; these two cases more cleanly.
     (typecase var
-      (cleavir-bir:argument
-       (list var))
+      (cleavir-bir:argument (list var))
       (t
        (cleavir-bir:record-variable-ref var)
        (let ((readvar-out (make-instance 'cleavir-bir:output)))

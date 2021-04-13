@@ -241,6 +241,12 @@
       (let ((next (cleavir-bir:next instruction))
             (origin (cleavir-bir:origin instruction))
             (predecessors (cleavir-bir:predecessors iblock)))
+        ;; If one of the predecessors is an unwind, don't replace it
+        (cleavir-set:doset (predecessor predecessors)
+          (let ((end (cleavir-bir:end predecessor)))
+            (when (cleavir-bir:unwindp end)
+              (return-from eliminate-if-if nil))))
+        ;; Actual work
         (cleavir-set:doset (predecessor predecessors)
           (let* ((end (cleavir-bir:end predecessor))
                  (input (first (cleavir-bir:inputs end))))

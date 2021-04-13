@@ -4,8 +4,7 @@
 
 (defmethod compile-ast ((ast cleavir-ast:multiple-value-prog1-ast)
                         inserter system)
-  (with-compiled-ast (rv (cleavir-ast:first-form-ast ast) inserter system
-                         :multiple-values)
+  (with-compiled-ast (rv (cleavir-ast:first-form-ast ast) inserter system)
     ;; Note that there are further situations we don't need to save.
     ;; If the user of the m-v-p1 only needs fixed values, those could just be
     ;; extracted early and no saving done. We don't have that information at this
@@ -33,7 +32,7 @@
                                      :inputs () :outputs ()
                                      :next (list after)))
                (begin inserter after))
-             read-out)
+             (list read-out))
             (t
              ;; the forms did not return.
              ;; This makes our saving pointless, so hypothetically we could go back
@@ -48,17 +47,16 @@
       (cond ((null form-asts)
              (let ((call-out (make-instance 'cleavir-bir:output)))
                (insert inserter (make-instance 'cleavir-bir:call
-                                  :inputs (list (first callee))
+                                  :inputs callee
                                   :outputs (list call-out)))
-               call-out))
+               (list call-out)))
             ((null (rest form-asts))
-             (with-compiled-ast (mvarg (first form-asts) inserter system
-                                       :multiple-values)
+             (with-compiled-ast (mvarg (first form-asts) inserter system)
                (let ((mv-call-out (make-instance 'cleavir-bir:output)))
                  (insert inserter (make-instance 'cleavir-bir:mv-call
                                     :inputs (list* (first callee) mvarg)
                                     :outputs (list mv-call-out)))
-                 mv-call-out)))
+                 (list mv-call-out))))
             (t
              (loop with orig-de = (dynamic-environment inserter)
                    for form-ast in (butlast form-asts)
@@ -66,7 +64,7 @@
                    for rv = (compile-ast form-ast inserter system)
                    for mv = (if (eq rv :no-return)
                                 (return-from compile-ast :no-return)
-                                (adapt inserter rv :multiple-values))
+                                rv)
                    for save-out = (make-instance 'cleavir-bir:output)
                    for save = (terminate
                                inserter
@@ -80,7 +78,7 @@
                                   (rv (compile-ast last-ast inserter system)))
                              (when (eq rv :no-return)
                                (return-from compile-ast :no-return))
-                             (let* ((mv (adapt inserter rv :multiple-values))
+                             (let* ((mv rv)
                                     (cout (make-instance 'cleavir-bir:output))
                                     (c (make-instance
                                            'cleavir-bir:values-collect
@@ -102,7 +100,13 @@
                                        (make-instance 'cleavir-bir:mv-call
                                          :inputs (list (first callee) cout)
                                          :outputs (list mvcout)))
-                               (return mvcout)))))))))
+                               (return (list mvcout))))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
-  (compile-arguments (cleavir-ast:argument-asts ast) inserter system))
+  (let ((out (make-instance 'cleavir-bir:output)))
+    (insert inserter
+            (make-instance 'cleavir-bir:fixed-to-multiple
+              :inputs (compile-arguments (cleavir-ast:argument-asts ast)
+                                         inserter system)
+              :outputs (list out)))
+    (list out)))

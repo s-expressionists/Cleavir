@@ -113,50 +113,6 @@
                         variable)
   (values))
 
-;; Insert code or whatever else to adapt the results (from compile-ast) to match
-;; the target. TARGET may be :multiple-values or a list of rvalues.
-;; RESULTS must not be :no-return. Gotta handle that yourself.
-;; Returns a list of data, suitable as instruction inputs.
-(defun adapt (inserter results target)
-  (assert (not (eq results :no-return)))
-  (if (eq target :multiple-values)
-      (if (listp results)
-          ;; a bunch of values were returned, so just ftm
-          (list (let ((ftm-out (make-instance 'cleavir-bir:output)))
-                  (insert inserter
-                          (make-instance 'cleavir-bir:fixed-to-multiple
-                            :inputs (copy-list results)
-                            :outputs (list ftm-out)))
-                  ftm-out))
-          ;; multiple values were returned
-          (list results))
-      (if (listp results)
-          ;; our target is a bunch of values, and we have a bunch of values
-          ;; either nil fill or take what we need
-          (let ((nresults (length results)) (ntarget (length target))
-                (shared (copy-list results)))
-            (if (>= nresults ntarget)
-                shared
-                (append shared
-                        (loop repeat (- ntarget nresults)
-                              for out = (make-instance 'cleavir-bir:output)
-                              for const = (cleavir-bir:constant-in-module
-                                           'nil *current-module*)
-                              for inst = (make-instance 'cleavir-bir:constant-reference
-                                           :inputs (list const)
-                                           :outputs (list out))
-                              do (insert inserter inst)
-                              collect out))))
-          ;; target is a bunch of values and result is multiple-values,
-          ;; so mtf.
-          (let ((outputs (loop repeat (length target)
-                               collect (make-instance 'cleavir-bir:output))))
-            (insert inserter (make-instance 'cleavir-bir:multiple-to-fixed
-                               :inputs (list results)
-                               :outputs outputs))
-            ;; not sure if copy is required
-            (copy-list outputs)))))
-
 (defgeneric compile-function (ast system))
 
 (defun compile-toplevel (ast system)
@@ -173,8 +129,10 @@
   (:method :around ((ast cleavir-ast:ast) inserter system)
     (declare (ignore inserter system))
     (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
-          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
-      (call-next-method))))
+          (cleavir-bir:*policy* (cleavir-ast:policy ast))
+          (result (call-next-method)))
+      (assert (or (listp result) (eq result :no-value) (eq result :no-return)))
+      result)))
 
 (defgeneric compile-test-ast (ast inserter system)
   (:method :around ((ast cleavir-ast:ast) inserter system)
@@ -183,18 +141,14 @@
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))
 
-(defmacro with-compiled-ast ((name ast inserter system
-                              &optional (target ''(:object)))
-                             &body body)
-  (let ((gast (gensym "AST")) (gtarget (gensym "TARGET"))
+(defmacro with-compiled-ast ((name ast inserter system) &body body)
+  (let ((gast (gensym "AST"))
         (ginserter (gensym "INSERTER")) (gsystem (gensym "SYSTEM")))
-    `(let ((,gast ,ast) (,ginserter ,inserter) (,gsystem ,system)
-           (,gtarget ,target))
+    `(let ((,gast ,ast) (,ginserter ,inserter) (,gsystem ,system))
        (let ((,name (compile-ast ,gast ,ginserter ,gsystem)))
          (if (eq ,name :no-return)
              ,name
-             (let ((,name (adapt ,ginserter ,name ,gtarget)))
-               ,@body))))))
+             (progn ,@body))))))
 
 (defmacro with-compiled-asts ((name (&rest asts) inserter system)
                               &body body)
@@ -211,9 +165,7 @@
                           collect `(let ((temp ,c))
                                      (if (eq temp :no-return)
                                          (return-from ,bname temp)
-                                         (first
-                                          (adapt ,ginserter temp
-                                                 '(:object)))))))))
+                                         (first temp)))))))
            ,@body)))))
 
 (defun compile-arguments (arg-asts inserter system)
@@ -221,12 +173,12 @@
         for rv = (compile-ast arg-ast inserter system)
         if (eq rv :no-return)
           return rv
-        else collect (first (adapt inserter rv '(:object)))))
+        else collect (first rv)))
 
 (defmacro with-compiled-arguments ((name asts inserter system)
                                    &body body)
   (let ((gasts (gensym "ASTS")) (ginserter (gensym "INSERTER"))
-        (gsystem (gensym "SYSTEM")) (gtarget (gensym "TARGET")))
+        (gsystem (gensym "SYSTEM")))
     `(let ((,gasts ,asts) (,ginserter ,inserter) (,gsystem ,system))
        (let ((,name (compile-arguments ,gasts ,ginserter ,gsystem)))
          (if (eq ,name :no-return)

@@ -14,7 +14,7 @@
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop
-                            :inputs (mapcar #'first rv)
+                            :inputs rv
                             :info '#.(cleavir-primop-info:info
                                       'cleavir-primop:fixnum-less)
                             :next (reverse ibs)))
@@ -27,7 +27,7 @@
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
       (terminate inserter (make-instance 'cleavir-bir:tprimop
-                            :inputs (mapcar #'first rv)
+                            :inputs rv
                             :info '#.(cleavir-primop-info:info
                                       'cleavir-primop:fixnum-not-greater)
                             :next (reverse ibs)))
