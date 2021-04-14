@@ -11,7 +11,7 @@
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
   (dotimes (repeat 3)
-    (declare (ignore repeat))
+    (declare (ignorable repeat))
     (cleavir-bir:do-functions (function module)
       (meta-evaluate-function function system)
       (cleavir-bir:compute-iblock-flow-order function))))

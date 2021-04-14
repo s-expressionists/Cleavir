@@ -130,6 +130,7 @@
 
 (defmethod parse-expanded-type-specifier
     ((type-specifier (eql 'cl:function)) environment system)
+  (declare (cl:ignore environment))
   (cleavir-ctype:function-top system))
 
 (defmethod parse-expanded-type-specifier
