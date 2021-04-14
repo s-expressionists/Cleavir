@@ -194,7 +194,6 @@
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:instruction) stack map)
-  (declare (ignore stack))
   (list
    :inputs (mapcar (input-copier map) (cleavir-bir:inputs instruction))
    :outputs (mapcar (output-copier stack map)
