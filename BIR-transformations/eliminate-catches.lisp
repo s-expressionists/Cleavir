@@ -8,6 +8,7 @@
         (fore (cleavir-bir:iblock catch))
         (normal-next (first (cleavir-bir:next catch)))
         (other-next (rest (cleavir-bir:next catch))))
+    (declare (ignore other-next))
     (cleavir-set:doset (s (cleavir-bir:scope catch))
       (setf (cleavir-bir:dynamic-environment s) nde))
     ;; Replace the instruction

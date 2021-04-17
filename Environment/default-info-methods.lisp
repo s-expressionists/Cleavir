@@ -658,7 +658,7 @@
 ;;; This method is called when the environment is the global
 ;;; environment.
 (defmethod function-inline-expansion (environment defining-info)
-  (declare (cl:ignore environment))
+  (declare (cl:ignore environment defining-info))
   nil)
 
 ;;; This method is called when the entry is not related to the

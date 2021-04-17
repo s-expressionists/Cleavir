@@ -426,6 +426,7 @@
           (derive-type-for-linear-datum out type system))))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
+  (declare (ignore system))
   (let ((variable (cleavir-bir:output instruction)))
     (when variable
       (or (substitute-single-read-variable-if-possible variable)
