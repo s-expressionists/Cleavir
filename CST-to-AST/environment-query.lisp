@@ -87,3 +87,6 @@
                  (setq info (trucler:describe-block
                              system environment new-block-name)))))
     info))
+
+(defun declarations (system environment)
+  (trucler:declarations (trucler:describe-declarations system environment)))

@@ -252,7 +252,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations env) declaration-csts))
+                system (declarations system env) declaration-csts))
              (defs (convert-local-functions definitions-cst symbol env system))
              (new-env (augment-environment-from-fdefs
                        system env definitions-cst))
@@ -279,7 +279,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations env) declaration-csts))
+                system (declarations system env) declaration-csts))
              (new-env (augment-environment-from-fdefs
                        system env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
@@ -405,8 +405,7 @@
         (error 'read-only-p-must-be-boolean
                :cst (cst:first remaining-cst)))
       ;; FIXME: We probably want to create and use
-      ;; cleavir-env:constantp in case the environments don't match
-      ;; up.
+      ;; a cleavir constantp in case the environments don't match up.
       (if (and (eq *compiler* 'cl:compile-file)
                (not (constantp form env)))
           (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
@@ -665,7 +664,7 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations environment) declaration-csts))
+                system (declarations system environment) declaration-csts))
              (new-env (augment-environment-with-declarations
                        environment system canonical-declaration-specifiers)))
         (with-preserved-toplevel-ness

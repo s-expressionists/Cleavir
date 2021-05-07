@@ -6,10 +6,10 @@
                :cleavir-ast
 	       :cleavir-ast-transformations
 	       :cleavir-primop
-	       :cleavir-environment
 	       :cleavir-compilation-policy
                :cleavir-ctype
                :cleavir-conditions
+               :trucler
                :acclimation)
   :serial t
   :components

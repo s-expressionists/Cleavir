@@ -486,8 +486,7 @@
                      append (cdr (cst:listify declaration-cst))))
              (canonicalized-dspecs
                (cst:canonicalize-declaration-specifiers
-                system
-                (cleavir-env:declarations env)
+                system (declarations system env)
                 declaration-specifiers))
              (itemized-lambda-list
                (itemize-lambda-list parsed-lambda-list)))
