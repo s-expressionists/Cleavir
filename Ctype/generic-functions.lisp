@@ -218,6 +218,9 @@
 (defgeneric values-optional (ctype system))
 (defgeneric values-rest (ctype system))
 
+(defgeneric nth-value (n ctype system)
+  (:argument-precedence-order ctype system n))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions FUNCTION-REQUIRED, FUNCTION-OPTIONAL, FUNCTION-REST, FUNCTION-KEYSP, FUNCTION-KEYS, FUNCTION-ALLOW-OTHER-KEYS-P,

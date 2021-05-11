@@ -38,12 +38,12 @@
             item
             (let ((top-ctype (cleavir-ctype:top system)))
               ;; LIST is of course (or null cons)
-              (cleavir-ctype:values
-               (list (cleavir-ctype:disjoin/2
-                      (cleavir-ctype:member system nil)
-                      (cleavir-ctype:cons top-ctype top-ctype system)
-                      system))
-               nil (cleavir-ctype:bottom system) system))
+              (cleavir-ctype:single-value
+               (cleavir-ctype:disjoin/2
+                (cleavir-ctype:member system nil)
+                (cleavir-ctype:cons top-ctype top-ctype system)
+                system)
+               system))
             system)))
        (cleavir-bir:lambda-list function))
       ;; If there are no local calls either, don't bother doing
@@ -67,7 +67,8 @@
                             (cleavir-ctype:disjoin/2
                              type
                              (if arg
-                                 (cleavir-bir:ctype arg)
+                                 (cleavir-ctype:primary
+                                  (cleavir-bir:ctype arg) system)
                                  (cleavir-ctype:member system nil))
                              system))
                       (setq suppliedp
@@ -79,11 +80,13 @@
                              system))))
                   (ecase state
                     (:required
-                     (setf (cleavir-bir:derived-type item) type))
+                     (setf (cleavir-bir:derived-type item)
+                           (cleavir-ctype:single-value type system)))
                     (&optional
-                     (setf (cleavir-bir:derived-type (first item)) type)
+                     (setf (cleavir-bir:derived-type (first item))
+                           (cleavir-ctype:single-value type system))
                      (setf (cleavir-bir:derived-type (second item))
-                           suppliedp)))))
+                           (cleavir-ctype:single-value suppliedp system))))))
                (&key
                 ;; too hairy for me to handle
                 )))
@@ -195,19 +198,20 @@
 ;;; evaluate to NIL.
 (defun fold-ifi (instruction system)
   (let* ((in (cleavir-bir:input instruction))
+         (inct (cleavir-ctype:primary (cleavir-bir:ctype in) system))
          (next (cleavir-bir:next instruction))
          (then (first next))
          (else (second next)))
     (multiple-value-bind (next dead)
-        (cond ((cleavir-ctype:disjointp (cleavir-bir:ctype in)
+        (cond ((cleavir-ctype:disjointp inct
                                         (cleavir-ctype:member system nil)
                                         system)
                #+(or)
                (format t "folding ifi based on type ~a" (cleavir-bir:ctype in))
                (values then else))
-              ((cleavir-ctype:values-subtypep (cleavir-bir:ctype in)
-                                              (cleavir-ctype:member system nil)
-                                              system)
+              ((cleavir-ctype:subtypep inct
+                                       (cleavir-ctype:member system nil)
+                                       system)
                #+(or)
                (print "folding ifi based on type NULL")
                (values else then)))
@@ -335,9 +339,10 @@
 
 (defmethod meta-evaluate-instruction
     ((instruction cleavir-bir:typeq-test) system)
-  (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction)))
+  (let ((ctype (cleavir-ctype:primary
+                (cleavir-bir:ctype (cleavir-bir:input instruction)) system))
         (test-ctype (cleavir-bir:test-ctype instruction)))
-    (cond ((cleavir-ctype:values-subtypep ctype test-ctype system)
+    (cond ((cleavir-ctype:subtypep ctype test-ctype system)
            (replace-computation-by-constant-value instruction t)
            t)
           ((cleavir-ctype:disjointp ctype test-ctype system)
@@ -347,10 +352,10 @@
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
-   (cleavir-ctype:values
-    (list (cleavir-ctype:member system (cleavir-bir:constant-value
-                                        (cleavir-bir:input instruction))))
-    nil (cleavir-ctype:bottom system) system)
+   (cleavir-ctype:single-value
+    (cleavir-ctype:member system (cleavir-bir:constant-value
+                                  (cleavir-bir:input instruction)))
+    system)
    system))
 
 ;;; Local variable with one reader and one writer can be substituted

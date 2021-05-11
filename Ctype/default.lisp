@@ -345,6 +345,17 @@
   (declare (ignore system))
   (ll-rest (cl:rest ctype)))
 
+(defmethod nth-value (n ctype system)
+  (let* ((req (ll-required (cl:rest ctype)))
+         (nreq (length req)))
+    (if (< n nreq)
+        (nth n req)
+        (let* ((opt (ll-optional (cl:rest ctype)))
+               (nopt (length opt)))
+          (if (< n (+ nreq nopt))
+              (nth (- n nreq) opt)
+              (ll-rest (cl:rest ctype)))))))
+
 (defmethod function-required (ctype system)
   (declare (ignore system))
   (ll-required (second ctype)))

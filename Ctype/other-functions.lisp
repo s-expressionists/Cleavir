@@ -20,3 +20,8 @@
 (defun function-top (system)
   (function nil nil (top system) nil nil nil (values nil nil (top system) system) system))
 
+(defun primary (values-ctype system)
+  (nth-value 0 values-ctype system))
+
+(defun single-value (non-values-ctype system)
+  (values (list non-values-ctype) nil (bottom system) system))
