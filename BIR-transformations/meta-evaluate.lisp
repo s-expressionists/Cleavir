@@ -19,9 +19,8 @@
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
   (setf (cleavir-bir:derived-type linear-datum)
-        (cleavir-ctype:conjoin/2 (cleavir-bir:ctype linear-datum)
-                                 derived-type
-                                 system)))
+        (cleavir-ctype:values-conjoin (cleavir-bir:ctype linear-datum)
+                                      derived-type system)))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
@@ -123,7 +122,7 @@
                  nil nil (cleavir-ctype:bottom system) system)))
       (cleavir-set:doset (definition (cleavir-bir:definitions phi))
         (setq type
-              (cleavir-ctype:disjoin/2
+              (cleavir-ctype:values-disjoin
                type
                (cleavir-bir:ctype
                 (nth (position phi (cleavir-bir:outputs definition))
@@ -326,7 +325,8 @@
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
    (cleavir-ctype:values
-    (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction))
+    (loop for inp in (cleavir-bir:inputs instruction)
+          collect (cleavir-ctype:primary (cleavir-bir:ctype inp) system))
     nil
     (cleavir-ctype:bottom system)
     system)
@@ -460,9 +460,8 @@
      (cleavir-bir:output instruction)
      (if (eq type-check-function :external)
          ctype
-         (cleavir-ctype:conjoin/2 (cleavir-bir:asserted-type instruction)
-                                  ctype
-                                  system))
+         (cleavir-ctype:values-conjoin
+          (cleavir-bir:asserted-type instruction) ctype system))
      system)
     ;; Propagate the type of the input into function.
     ;; FIXME: Extend this to values types.

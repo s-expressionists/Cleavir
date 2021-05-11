@@ -11,9 +11,9 @@
 ;;; Warn about a compile time type conflict.
 (defun maybe-warn-type-conflict (thei)
   (let ((input (cleavir-bir:input thei)))
-    (when (cleavir-ctype:disjointp (cleavir-bir:asserted-type thei)
-                                   (cleavir-bir:ctype input)
-                                   nil)
+    (when (cleavir-ctype:values-disjointp (cleavir-bir:asserted-type thei)
+                                          (cleavir-bir:ctype input)
+                                          nil)
       (warn 'cleavir-bir:type-conflict
             :datum input
             :asserted-type (cleavir-bir:asserted-type thei)

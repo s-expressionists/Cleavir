@@ -12,6 +12,7 @@
   (:export #:conjoin/2 #:disjoin/2 #:negate #:subtract
            #:top #:bottom #:top-p #:bottom-p
            #:conjoin #:disjoin #:disjointp)
+  (:export #:values-conjoin #:values-disjoin #:values-disjointp)
   (:export #:cons #:array #:complex #:range
            #:member #:satisfies #:function #:values
            #:coerce-to-values)

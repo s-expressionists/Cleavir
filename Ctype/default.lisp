@@ -103,6 +103,7 @@
 (defun function-return (ctype) (third ctype))
 
 (defun values-conjoin (vct1 vct2 sys)
+  (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
         with rest1 = (values-rest vct1 sys)
@@ -153,12 +154,8 @@
 
 (defmethod conjoin/2 (ct1 ct2 sys)
   (cond
-    ((and (values-ctype-p ct1) (values-ctype-p ct2))
-     (values-conjoin ct1 ct2 sys))
-    ((values-ctype-p ct1)
-     (values-conjoin ct1 (coerce-to-values ct2 sys) sys))
-    ((values-ctype-p ct2)
-     (values-conjoin (coerce-to-values ct1 sys) ct2 sys))
+    ((or (values-ctype-p ct1) (values-ctype-p ct2))
+     (error "Values ctypes ~a ~a input to conjoin/2" ct1 ct2))
     ;; Pick off some very basic cases.
     ((or (bottom-p ct1 sys) (bottom-p ct2 sys)) 'nil)
     ((top-p ct1 sys) ct2)
@@ -174,6 +171,7 @@
              ty)))))
 
 (defun values-disjoin (vct1 vct2 sys)
+  (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
         with rest1 = (values-rest vct1 sys)
@@ -222,12 +220,8 @@
 
 (defmethod disjoin/2 (ct1 ct2 sys)
   (cond
-    ((and (values-ctype-p ct1) (values-ctype-p ct2))
-     (values-disjoin ct1 ct2 sys))
-    ((values-ctype-p ct1)
-     (values-disjoin ct1 (coerce-to-values ct2 sys) sys))
-    ((values-ctype-p ct2)
-     (values-disjoin (coerce-to-values ct1 sys) ct2 sys))
+    ((or (values-ctype-p ct1) (values-ctype-p ct2))
+     (error "values ctypes ~a ~a input to disjoin" ct1 ct2))
     ((or (top-p ct1 sys) (top-p ct2 sys)) 't)
     ((bottom-p ct1 sys) ct2)
     ((bottom-p ct2 sys) ct1)
@@ -305,6 +299,9 @@
 
 (defmethod values (req opt rest sys)
   (declare (ignore sys))
+  (when (or (some #'values-ctype-p req) (some #'values-ctype-p opt)
+            (values-ctype-p rest))
+    (error "Nested values ctype on ~a ~a ~a" req opt rest))
   `(cl:values ,@req &optional ,@opt &rest ,rest))
 
 ;;; These readers work on the premise that these type specifiers
