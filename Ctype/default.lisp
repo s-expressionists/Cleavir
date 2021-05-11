@@ -148,7 +148,7 @@
                          required)))
         when donep
         return (if (some (lambda (req) (bottom-p req sys)) required)
-                   nil
+                   (values nil nil nil sys)
                    (values (nreverse required) (nreverse optional) rest sys))))
 
 (defmethod conjoin/2 (ct1 ct2 sys)

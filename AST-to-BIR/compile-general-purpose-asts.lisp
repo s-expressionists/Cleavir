@@ -388,8 +388,6 @@
          (ctype (cleavir-ast:ctype ast))
          (type-check-function-ast (cleavir-ast:type-check-function-ast ast))
          (required (cleavir-ctype:values-required ctype system))
-         (optional (cleavir-ctype:values-optional ctype system))
-         (rest (cleavir-ctype:values-rest ctype system))
          (rv (compile-ast inner inserter system))
          (type-check-function
            (if (symbolp type-check-function-ast)

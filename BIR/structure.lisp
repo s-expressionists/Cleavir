@@ -44,12 +44,12 @@
 (defun current-top-ctype ()
   (if (boundp '*top-ctype*)
       *top-ctype*
-      (cleavir-ctype:top nil)))
+      (cleavir-ctype:values nil nil (cleavir-ctype:top nil) nil)))
 (defvar *top-function-ctype*)
 (defun current-top-function-ctype ()
   (if (boundp '*top-function-ctype*)
       *top-function-ctype*
-      (cleavir-ctype:function-top nil)))
+      (cleavir-ctype:values nil nil (cleavir-ctype:function-top nil) nil)))
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)

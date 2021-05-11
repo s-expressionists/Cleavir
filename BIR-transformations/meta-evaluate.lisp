@@ -38,10 +38,12 @@
             item
             (let ((top-ctype (cleavir-ctype:top system)))
               ;; LIST is of course (or null cons)
-              (cleavir-ctype:disjoin/2
-               (cleavir-ctype:member system nil)
-               (cleavir-ctype:cons top-ctype top-ctype system)
-               system))
+              (cleavir-ctype:values
+               (list (cleavir-ctype:disjoin/2
+                      (cleavir-ctype:member system nil)
+                      (cleavir-ctype:cons top-ctype top-ctype system)
+                      system))
+               nil (cleavir-ctype:bottom system) system))
             system)))
        (cleavir-bir:lambda-list function))
       ;; If there are no local calls either, don't bother doing
@@ -114,7 +116,8 @@
 ;;; definitions, instead of narrowing the types conservatively.
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (cleavir-bir:inputs iblock))
-    (let ((type (cleavir-ctype:bottom system)))
+    (let ((type (cleavir-ctype:values
+                 nil nil (cleavir-ctype:bottom system) system)))
       (cleavir-set:doset (definition (cleavir-bir:definitions phi))
         (setq type
               (cleavir-ctype:disjoin/2
@@ -134,11 +137,6 @@
 (defgeneric maybe-flush-instruction (instruction))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:instruction)))
-
-(defmethod maybe-flush-instruction
-    ((instruction cleavir-bir:multiple-to-fixed))
-  (when (every #'cleavir-bir:unused-p (cleavir-bir:outputs instruction))
-    (cleavir-bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:readvar))
   (when (cleavir-bir:unused-p (cleavir-bir:output instruction))
@@ -181,6 +179,14 @@
 (defmethod meta-evaluate-instruction (instruction system)
   ;; Without particular knowledge, we have nothing to do.
   (declare (ignore instruction system)))
+
+(defmethod derive-types :after (instruction system)
+  (declare (ignore system))
+  (loop for outp in (cleavir-bir:outputs instruction)
+        unless (or (not (typep outp 'cleavir-bir:linear-datum))
+                   (cleavir-ctype::values-ctype-p (cleavir-bir:ctype outp)))
+          do (warn "Bad ctype ~a in output of ~a"
+                   (cleavir-bir:ctype outp) instruction)))
 
 (defmethod derive-types (instruction system)
   (declare (ignore instruction system)))
@@ -312,40 +318,6 @@
                       definers)))
       t)))
 
-(defmethod meta-evaluate-instruction
-    ((instruction cleavir-bir:multiple-to-fixed) system)
-  (declare (ignore system))
-  (let ((input (cleavir-bir:input instruction)))
-    (when (typep input 'cleavir-bir:output)
-      (let ((definition (cleavir-bir:definition input)))
-        (when (typep definition 'cleavir-bir:fixed-to-multiple)
-          (cleavir-bir:delete-ftm-mtf-pair definition instruction)
-          t)))))
-
-(defmethod derive-types ((instruction cleavir-bir:multiple-to-fixed) system)
-  ;; Derive the type of the outputs (fixed values) from the
-  ;; definition.
-  (let ((values-type (cleavir-bir:ctype (cleavir-bir:input instruction))))
-    (unless (cleavir-ctype:top-p values-type system)
-      (let ((required-type
-              (cleavir-ctype:values-required values-type system))
-            (optional-type
-              (cleavir-ctype:values-optional values-type system))
-            (rest-type (cleavir-ctype:disjoin/2
-                        (cleavir-ctype:values-rest values-type system)
-                        (cleavir-ctype:member system nil)
-                        system)))
-        (dolist (output (cleavir-bir:outputs instruction))
-          (derive-type-for-linear-datum
-           output
-           (cond (required-type (pop required-type))
-                 (optional-type (cleavir-ctype:disjoin/2
-                                 (pop optional-type)
-                                 (cleavir-ctype:member system nil)
-                                 system))
-                 (t rest-type))
-           system))))))
-
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
@@ -375,8 +347,10 @@
 (defmethod derive-types ((instruction cleavir-bir:constant-reference) system)
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
-   (cleavir-ctype:member system (cleavir-bir:constant-value
-                                 (cleavir-bir:input instruction)))
+   (cleavir-ctype:values
+    (list (cleavir-ctype:member system (cleavir-bir:constant-value
+                                        (cleavir-bir:input instruction))))
+    nil (cleavir-ctype:bottom system) system)
    system))
 
 ;;; Local variable with one reader and one writer can be substituted

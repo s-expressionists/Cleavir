@@ -120,8 +120,11 @@
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
         (*current-module* (make-module))
-        (cleavir-bir:*top-ctype* (cleavir-ctype:top system))
-        (cleavir-bir:*top-function-ctype* (cleavir-ctype:function-top system)))
+        (cleavir-bir:*top-ctype* (cleavir-ctype:coerce-to-values
+                                  (cleavir-ctype:top system) system))
+        (cleavir-bir:*top-function-ctype*
+          (cleavir-ctype:coerce-to-values
+           (cleavir-ctype:function-top system) system)))
     (compile-function ast system)))
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
