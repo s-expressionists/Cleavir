@@ -371,9 +371,14 @@
                   (cleavir-bir:function reader))
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
-          (let ((input (cleavir-bir:input binder)))
+          (let* ((input (cleavir-bir:input binder))
+                 (fout (make-instance 'cleavir-bir:output))
+                 (ftm (make-instance 'cleavir-bir:fixed-to-multiple
+                        :outputs (list fout))))
             (setf (cleavir-bir:inputs binder) nil)
-            (cleavir-bir:replace-uses input reader-out))
+            (cleavir-bir:insert-instruction-before ftm reader)
+            (cleavir-bir:replace-uses fout reader-out)
+            (setf (cleavir-bir:inputs ftm) (list input)))
           (cleavir-bir:delete-instruction reader)
           t)))))
 
