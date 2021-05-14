@@ -347,11 +347,14 @@
          (nreq (length req)))
     (if (< n nreq)
         (nth n req)
-        (let* ((opt (ll-optional (cl:rest ctype)))
-               (nopt (length opt)))
-          (if (< n (+ nreq nopt))
-              (nth (- n nreq) opt)
-              (ll-rest (cl:rest ctype)))))))
+        (disjoin
+         system
+         (member system nil)
+         (let* ((opt (ll-optional (cl:rest ctype)))
+                (nopt (length opt)))
+           (if (< n (+ nreq nopt))
+               (nth (- n nreq) opt)
+               (ll-rest (cl:rest ctype))))))))
 
 (defmethod function-required (ctype system)
   (declare (ignore system))
