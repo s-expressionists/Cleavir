@@ -134,9 +134,6 @@
 ;;; Convert an aggregate of :objects into a :multiple-values
 (defclass fixed-to-multiple (one-output instruction) ())
 
-;;; Reverse of the above
-(defclass multiple-to-fixed (one-input instruction) ())
-
 ;;; Represents a type assertion on the first input.
 (defclass thei (one-input one-output instruction)
   ((%asserted-type :initarg :asserted-type :accessor asserted-type)

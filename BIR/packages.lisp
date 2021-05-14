@@ -25,7 +25,7 @@
            #:successor #:predecessor #:next
            #:origin #:policy)
   (:export #:*origin* #:*policy* #:*top-ctype* #:*top-function-ctype*)
-  (:export #:multiple-to-fixed #:fixed-to-multiple
+  (:export #:fixed-to-multiple
            #:accessvar #:writevar #:readvar
            #:constant-reference #:make-constant-reference
            #:load-time-value-reference #:make-load-time-value-reference
@@ -49,7 +49,7 @@
   (:export #:map-local-instructions
            #:insert-instruction-before #:insert-instruction-after
            #:delete-instruction
-           #:delete-ftm-mtf-pair #:replace-uses #:replace-terminator
+           #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)

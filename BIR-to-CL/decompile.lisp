@@ -82,11 +82,6 @@
   (list `(setq ,(decompile-datum inst)
                (list ,@(mapcar #'decompile-datum (cleavir-bir:inputs inst))))))
 
-(defmethod decompile-instruction ((inst cleavir-bir:multiple-to-fixed))
-  (list `(multiple-value-setq
-             (,@(mapcar #'decompile-datum (cleavir-bir:outputs inst)))
-           (values-list ,(decompile-datum (first (cleavir-bir:inputs inst)))))))
-
 (defun decompile-iblock (iblock)
   (loop for instruction = (cleavir-bir:start iblock)
           then (cleavir-bir:successor instruction)

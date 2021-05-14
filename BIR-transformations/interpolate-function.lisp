@@ -265,17 +265,7 @@
       (when returni
         (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni)))
       (when unique-call
-        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
-        ;; TODO: can generalize this to the case of more than
-        ;; one outside call.
-        ;; If we have a FTM->MTF sequence, clear it out.
-        (when (and common-use
-                   (typep common-use 'cleavir-bir:multiple-to-fixed))
-          (let ((cuinput (cleavir-bir:input common-use)))
-            (when (typep cuinput 'cleavir-bir:output)
-              (let ((cudef (cleavir-bir:definition cuinput)))
-                (when (typep cudef 'cleavir-bir:fixed-to-multiple)
-                  (cleavir-bir:delete-ftm-mtf-pair cudef common-use)))))))
+        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call)))
       ;; We've interpolated and there are potentially useless
       ;; catches in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.
