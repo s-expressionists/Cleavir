@@ -52,52 +52,51 @@
 (defun find-function-local-calls (function)
   (let ((enclose (cleavir-bir:enclose function)))
     (when enclose
-      (let* ((eout (cleavir-bir:output enclose))
-             (use (cleavir-bir:use eout)))
-        (typecase use
-          (cleavir-bir:call
-           (when (and (eq eout (cleavir-bir:callee use))
-                      (check-argument-list-compatible
-                       (rest (cleavir-bir:inputs use))
-                       function))
-             (change-class use 'cleavir-bir:local-call)
-             (cleavir-bir:replace-uses function eout)
-             (cleavir-bir:delete-instruction enclose)))
-          (cleavir-bir:mv-call
-           (when (eq eout (cleavir-bir:callee use))
-             (change-class use 'cleavir-bir:mv-local-call)
-             (cleavir-bir:replace-uses function eout)
-             (cleavir-bir:delete-instruction enclose)))
-          (cleavir-bir:leti
-           (let ((variable (cleavir-bir:output use)))
-             ;; Variable needs to be immutable since we want to make
-             ;; sure this definition reaches the readers.
-             (when (cleavir-bir:immutablep variable)
-               (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                 (let* ((rout (cleavir-bir:output reader))
-                        (use (cleavir-bir:use rout)))
-                   (typecase use
-                     (cleavir-bir:call
-                      (when (and (eq rout (cleavir-bir:callee use))
-                                 (check-argument-list-compatible
-                                  (rest (cleavir-bir:inputs use))
-                                  function))
-                        (change-class use 'cleavir-bir:local-call)
-                        (cleavir-bir:replace-uses function rout)
-                        (cleavir-bir:delete-instruction reader)))
-                     (cleavir-bir:mv-call
-                      (when (eq rout (cleavir-bir:callee use))
-                        (change-class use 'cleavir-bir:mv-local-call)
-                        (cleavir-bir:replace-uses function rout)
-                        (cleavir-bir:delete-instruction reader)))))))
-             ;; No more references to the variable means we can clean
-             ;; up the enclose. The LETI might've already been
-             ;; cleaned up by any readvar deletion triggers.
-             (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
-               (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
-                 (cleavir-bir:delete-instruction use))
-               (cleavir-bir:delete-instruction enclose))))))))
+      (fflc-use function (cleavir-bir:output enclose))))
   (post-find-local-calls function))
+
+;;; Find local calls for a given use of a function enclosure.
+;;; Because the closure may be stored in a variable or etc, it is convenient
+;;; for this function to be recursive.
+(defun fflc-use (function datum)
+  (let ((use (cleavir-bir:use datum)) (def (cleavir-bir:definition datum)))
+    (typecase use
+      (cleavir-bir:call
+       (when (and (eq datum (cleavir-bir:callee use))
+                  (check-argument-list-compatible
+                   (rest (cleavir-bir:inputs use))
+                   function))
+         (change-class use 'cleavir-bir:local-call)
+         (cleavir-bir:replace-uses function datum)
+         (cleavir-bir:delete-instruction def)))
+      (cleavir-bir:mv-call
+       (when (eq datum (cleavir-bir:callee use))
+         (change-class use 'cleavir-bir:mv-local-call)
+         (cleavir-bir:replace-uses function datum)
+         (cleavir-bir:delete-instruction def)))
+      (cleavir-bir:fixed-to-multiple
+       ;; This case is here to catch code like (funcall (values x) ...)
+       ;; which can be produced by macros.
+       (when (eq datum (first (cleavir-bir:inputs use)))
+         (let ((out (cleavir-bir:output use)))
+           (fflc-use function out)
+           (when (null (cleavir-bir:use out)) ; use was deleted
+             (cleavir-bir:delete-instruction def)))))
+      (cleavir-bir:leti
+       (let ((variable (cleavir-bir:output use)))
+         ;; Variable needs to be immutable since we want to make
+         ;; sure this definition reaches the readers.
+         (when (cleavir-bir:immutablep variable)
+           (cleavir-set:doset (reader (cleavir-bir:readers variable))
+             (fflc-use function (cleavir-bir:output reader)))
+           ;; No more references to the variable means we can clean
+           ;; up the enclose.
+           (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+             ;; The LETI might've already been
+             ;; cleaned up by any readvar deletion triggers.
+             (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
+               (cleavir-bir:delete-instruction use))
+             (cleavir-bir:delete-instruction def))))))))
 
 (defun find-module-local-calls (module)
   (cleavir-bir:map-functions #'find-function-local-calls module)
