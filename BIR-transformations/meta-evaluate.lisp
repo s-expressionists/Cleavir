@@ -468,6 +468,51 @@
     (derive-type-for-linear-datum (cleavir-bir:output instruction)
                                   ftype system)))
 
+(defmethod derive-types ((instruction cleavir-bir:values-save) system)
+  (derive-type-for-linear-datum (cleavir-bir:output instruction)
+                                (cleavir-bir:ctype
+                                 (cleavir-bir:input instruction))
+                                system))
+
+(defun values-ctype-appender (system)
+  (lambda (ct1 ct2)
+    ;; This function computes the type you get from appending two sets of
+    ;; values together; in lisp terms, the type of
+    ;; (multiple-value-call #'values a b) given the types of A and B.
+    ;; This is considerably complicated by nontrivial &optional and &rest.
+    ;; For a start (to be improved? FIXME) we take the required values of the
+    ;; first form, and record the minimum number of required values, which is
+    ;; just the sum of those of the values types.
+    ;; Also, if the number of values of the first type is fixed (no &optional
+    ;; and the &rest is bottom) we give the simple exact result.
+    (let ((req1 (cleavir-ctype:values-required ct1 system))
+          (opt1 (cleavir-ctype:values-optional ct1 system))
+          (rest1 (cleavir-ctype:values-rest ct1 system))
+          (req2 (cleavir-ctype:values-required ct2 system))
+          (opt2 (cleavir-ctype:values-optional ct2 system))
+          (rest2 (cleavir-ctype:values-rest ct2 system)))
+      (if (and (null opt1) (cleavir-ctype:bottom-p rest1 system))
+          ;; simple case
+          (cleavir-ctype:values (append req1 req2) opt2 rest2 system)
+          ;; Approximate as described
+          (cleavir-ctype:values
+           (append req1 (make-list (length req2)
+                                   :initial-element (cleavir-ctype:top system)))
+           nil
+           (cleavir-ctype:top system)
+           system)))))
+
+(defmethod derive-types ((instruction cleavir-bir:values-collect) system)
+  (let* ((ins (mapcar #'cleavir-bir:ctype (cleavir-bir:inputs instruction)))
+         (out (cleavir-bir:output instruction))
+         (ct
+           (cond ((zerop (length ins)) ; degenerate cases
+                  (cleavir-ctype:values
+                   nil nil (cleavir-ctype:bottom system) system))
+                 ((= (length ins) 1) (first ins))
+                 (t (reduce (values-ctype-appender system) ins)))))
+    (derive-type-for-linear-datum out ct system)))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
   (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction))))
     ;; Remove THEI when its input's type is a subtype of the
