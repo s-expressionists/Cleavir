@@ -103,10 +103,10 @@
                                (return (list mvcout))))))))))
 
 (defmethod compile-ast ((ast cleavir-ast:values-ast) inserter system)
-  (let ((out (make-instance 'cleavir-bir:output)))
-    (insert inserter
-            (make-instance 'cleavir-bir:fixed-to-multiple
-              :inputs (compile-arguments (cleavir-ast:argument-asts ast)
-                                         inserter system)
-              :outputs (list out)))
-    (list out)))
+  (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
+                                 inserter system)
+    (let ((out (make-instance 'cleavir-bir:output)))
+      (insert inserter
+              (make-instance 'cleavir-bir:fixed-to-multiple
+                :inputs args :outputs (list out)))
+      (list out))))
