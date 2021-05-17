@@ -214,14 +214,10 @@
         instruction (outputs instruction)))
 
 (defun match-jump-types (inst inputs outputs)
-  ;; Ensure the number and rtypes of the inputs match those of the outputs
+  ;; Ensure the number of inputs match that of the outputs
   (test (= (length inputs) (length outputs))
         "has mismatch between inputs ~a and outputs ~a"
-        inst inputs outputs)
-  (flet ((rt= (x y) (rtype= (rtype x) (rtype y))))
-    (test (every #'rt= inputs outputs)
-          "has mismatched rtypes between inputs and outputs"
-          inst)))
+        inst inputs outputs))
 
 (defmethod verify progn ((instruction terminator))
   ;; No successor (verify type decl)
@@ -278,27 +274,6 @@
   (loop for dyn = d then (parent dyn)
         collect dyn
         until (typep dyn 'function)))
-
-(defmethod verify progn ((at accesstemp))
-  ;; verify type decl
-  (test (typep (alloca at) 'alloca)
-        "has non-alloca ALLOCA slot: ~a" at (alloca at))
-  ;; Check that the alloca is an ancestor of the dynenv
-  (test (loop with alloca = (alloca at)
-              for dyn = (dynamic-environment at)
-                then (parent dyn)
-              when (eq dyn alloca)
-                return t
-              finally (return nil))
-        "has alloca ~a, which is not an ancestor of its dynamic environment: ~a"
-        at (alloca at) (dynenvs (dynamic-environment at))))
-
-(defmethod verify progn ((wv writevar))
-  ;; match types
-  (test (rtype= (rtype (first (inputs wv)))
-                (rtype (output wv)))
-        "has input rtype ~a but output rtype ~a"
-        wv (rtype (first (inputs wv))) (rtype (output wv))))
 
 (defmethod verify progn ((rv readvar))
   (let ((var (first (inputs rv))))
@@ -364,11 +339,6 @@
   (test (typep (use (output instruction)) '(or null ifi))
         "is used by ~a, not an ifi instruction"
         instruction (use (output instruction))))
-
-(defmethod verify progn ((mtf multiple-to-fixed))
-  (test (rtype= (rtype (first (inputs mtf))) :multiple-values)
-        "has first input rtype ~a, not ~a"
-        mtf (rtype (first (inputs mtf))) :multiple-values))
 
 (defmethod verify progn ((iblock iblock))
   ;; All predecessors truly have this as a successor

@@ -6,8 +6,8 @@
 
 (defun convert-primop (symbol cst env system)
   (let* ((info (cleavir-primop-info:info symbol))
-         (in (cleavir-primop-info:in-rtypes info)))
-    (check-simple-primop-syntax cst (length in))
+         (ninputs (cleavir-primop-info:ninputs info)))
+    (check-simple-primop-syntax cst ninputs)
     (cst:db origin (op-cst . args-cst) cst
       (declare (ignore op-cst))
       (make-instance 'cleavir-ast:primop-ast
@@ -172,21 +172,6 @@
   (let ((info (cleavir-env:variable-info env var)))
     (assert (typep info 'cleavir-env:lexical-variable-info))
     (cleavir-env:identity info)))
-
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:multiple-value-setq)) cst env system)
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 2 2)
-  (cst:db origin (mvs-cst variables-cst form-cst) cst
-    (declare (ignore mvs-cst))
-    (assert (cst:proper-list-p variables-cst))
-    (let ((lexes
-            (loop for var in (cst:raw variables-cst)
-                  collect (find-lexical-variable var env))))
-      (cleavir-ast:make-multiple-value-setq-ast
-       lexes
-       (convert form-cst env system)
-       :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

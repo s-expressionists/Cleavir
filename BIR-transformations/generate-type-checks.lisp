@@ -11,9 +11,9 @@
 ;;; Warn about a compile time type conflict.
 (defun maybe-warn-type-conflict (thei)
   (let ((input (cleavir-bir:input thei)))
-    (when (cleavir-ctype:disjointp (cleavir-bir:asserted-type thei)
-                                   (cleavir-bir:ctype input)
-                                   nil)
+    (when (cleavir-ctype:values-disjointp (cleavir-bir:asserted-type thei)
+                                          (cleavir-bir:ctype input)
+                                          nil)
       (warn 'cleavir-bir:type-conflict
             :datum input
             :asserted-type (cleavir-bir:asserted-type thei)
@@ -25,24 +25,8 @@
   (let ((input (cleavir-bir:input thei))
         (type-check-function (cleavir-bir:type-check-function thei)))
     (unless (symbolp type-check-function)
-      (let ((rtype (cleavir-bir:rtype input)))
-        (case rtype
-          (:object
-           (let* ((call-out (make-instance 'cleavir-bir:output
-                              :rtype :multiple-values))
-                  (call (make-instance 'cleavir-bir:local-call
-                          :outputs (list call-out)
-                          :origin (cleavir-bir:origin thei)
-                          :policy (cleavir-bir:policy thei))))
-             (cleavir-bir:insert-instruction-before call thei)
-             (setf (cleavir-bir:inputs thei) nil
-                   (cleavir-bir:inputs call) (list type-check-function input))
-             (change-class thei 'cleavir-bir:multiple-to-fixed
-                           :inputs (list call-out))
-             (post-find-local-calls type-check-function)))
-          (:multiple-values
-           (change-class thei 'cleavir-bir:mv-local-call
-                         :inputs (list type-check-function input))))))))
+      (change-class thei 'cleavir-bir:mv-local-call
+                    :inputs (list type-check-function input)))))
 
 (defun generate-type-checks (function)
   (let ((theis '()))

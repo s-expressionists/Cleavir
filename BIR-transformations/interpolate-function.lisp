@@ -100,13 +100,25 @@
       ;; The stuff in the AFTER block is now unreachable.
       (cleavir-bir:delete-iblock after)
       (let ((call-arguments (rest (cleavir-bir:inputs call)))
+            (ftmd-arguments
+              (loop for datum in (rest (cleavir-bir:inputs call))
+                    collect (make-instance 'cleavir-bir:output
+                              :name (cleavir-bir:name datum)
+                              :derived-type (cleavir-bir:ctype datum))))
             (inputs '()))
         ;; Remove the local call.
         (cleavir-bir:delete-instruction call)
+        ;; Insert fixed-to-multiple instructions to ensure only primary values
+        ;; of the call arguments are used.
+        (loop for arg in call-arguments for ftm-out in ftmd-arguments
+              for ftm = (make-instance 'cleavir-bir:fixed-to-multiple
+                          :inputs (list arg) :outputs (list ftm-out))
+              do (cleavir-bir:insert-instruction-before ftm jump))
+        ;; Compute inputs to the jump.
         (cleavir-bir:map-lambda-list
          (lambda (state item index)
            (declare (ignore index))
-           (let ((arg (pop call-arguments)))
+           (let ((arg (pop ftmd-arguments)))
              (ecase state
                (:required
                 (push arg inputs))
@@ -265,17 +277,7 @@
       (when returni
         (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock returni)))
       (when unique-call
-        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call))
-        ;; TODO: can generalize this to the case of more than
-        ;; one outside call.
-        ;; If we have a FTM->MTF sequence, clear it out.
-        (when (and common-use
-                   (typep common-use 'cleavir-bir:multiple-to-fixed))
-          (let ((cuinput (cleavir-bir:input common-use)))
-            (when (typep cuinput 'cleavir-bir:output)
-              (let ((cudef (cleavir-bir:definition cuinput)))
-                (when (typep cudef 'cleavir-bir:fixed-to-multiple)
-                  (cleavir-bir:delete-ftm-mtf-pair cudef common-use)))))))
+        (cleavir-bir:merge-successor-if-possible (cleavir-bir:iblock unique-call)))
       ;; We've interpolated and there are potentially useless
       ;; catches in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.

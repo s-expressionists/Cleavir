@@ -1,14 +1,5 @@
 (in-package #:cleavir-bir)
 
-;;; An rtype is a "representation type", indicating the "underlying" type of an
-;;; object. This is a static property distinct from its lisp type specifier.
-;;; BIR knows the following rtypes:
-;;; :object, meaning a general lisp object,
-;;; and :multiple-values.
-;;; Clients may define and use additional rtypes.
-(defgeneric rtype= (rt1 rt2)
-  (:method (rt1 rt2) (eql rt1 rt2)))
-
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment ()
   (;; The set of iblocks that have this as their dynamic environment.
@@ -18,8 +9,6 @@
   (if (typep dynamic-environment 'function)
       nil
       (dynamic-environment (iblock dynamic-environment))))
-
-(defgeneric rtype (datum))
 
 (defgeneric origin (bir))
 
@@ -55,12 +44,12 @@
 (defun current-top-ctype ()
   (if (boundp '*top-ctype*)
       *top-ctype*
-      (cleavir-ctype:top nil)))
+      (cleavir-ctype:values nil nil (cleavir-ctype:top nil) nil)))
 (defvar *top-function-ctype*)
 (defun current-top-function-ctype ()
   (if (boundp '*top-function-ctype*)
       *top-function-ctype*
-      (cleavir-ctype:function-top nil)))
+      (cleavir-ctype:values nil nil (cleavir-ctype:function-top nil) nil)))
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
@@ -85,8 +74,7 @@
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
 
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -95,8 +83,7 @@
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -149,8 +136,7 @@
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initform nil :initarg :definition
-                :reader definition :accessor %definition)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+                :reader definition :accessor %definition)))
 
 (defmethod definitions ((datum output))
   (cleavir-set:make-set (definition datum)))
@@ -189,8 +175,7 @@
   ((%next :type (cons iblock null))))
 
 ;;; An argument to a function.
-(defclass argument (value transfer)
-  ((%rtype :initarg :rtype :initform :object :reader rtype)))
+(defclass argument (value transfer) ())
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.
@@ -203,8 +188,7 @@
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
-            :type iblock)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+            :type iblock)))
 
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
@@ -259,8 +243,7 @@
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
    ;; What kind of ignore declaration is on this variable?
-   (%ignore :initarg :ignore :reader ignore)
-   (%rtype :initarg :rtype :initform :object :reader rtype)))
+   (%ignore :initarg :ignore :reader ignore)))
 
 (defmethod origin ((datum variable)) (origin (binder datum)))
 

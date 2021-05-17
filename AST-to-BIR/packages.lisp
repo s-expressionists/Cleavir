@@ -9,4 +9,4 @@
   (:export #:with-compiled-ast #:with-compiled-asts #:with-compiled-arguments)
   (:export #:defprimop)
   (:export #:inserter #:make-iblock #:begin #:proceed #:insert #:terminate
-           #:adapt #:function #:dynamic-environment))
+           #:function #:dynamic-environment))

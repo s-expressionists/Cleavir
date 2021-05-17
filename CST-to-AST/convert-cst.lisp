@@ -217,7 +217,9 @@
   (let ((origin (cst:source cst)))
     (type-wrap (cleavir-ast:make-lexical-ast (cleavir-env:identity info)
                  :origin origin)
-               (cleavir-ctype:coerce-to-values (cleavir-env:type info) system)
+               (cleavir-ctype:values (list (cleavir-env:type info))
+                                     nil (cleavir-ctype:bottom system)
+                                     system)
                origin
                env
                system)))

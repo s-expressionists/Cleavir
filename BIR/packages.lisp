@@ -10,7 +10,6 @@
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
-  (:export #:rtype #:rtype=)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:delete-phi #:output #:name #:ctype #:derived-type
            #:definition #:definitions #:use #:transitive-use #:unused-p)
@@ -26,8 +25,8 @@
            #:successor #:predecessor #:next
            #:origin #:policy)
   (:export #:*origin* #:*policy* #:*top-ctype* #:*top-function-ctype*)
-  (:export #:multiple-to-fixed #:fixed-to-multiple
-           #:accessvar #:writevar #:readvar #:cast
+  (:export #:fixed-to-multiple
+           #:accessvar #:writevar #:readvar
            #:constant-reference #:make-constant-reference
            #:load-time-value-reference #:make-load-time-value-reference
            #:returni #:unreachable #:jump #:unwindp
@@ -36,7 +35,6 @@
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
            #:values-save #:values-collect
-           #:alloca #:writetemp #:readtemp
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes #:transforms
@@ -51,7 +49,7 @@
   (:export #:map-local-instructions
            #:insert-instruction-before #:insert-instruction-after
            #:delete-instruction
-           #:delete-ftm-mtf-pair #:replace-uses #:replace-terminator
+           #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)
