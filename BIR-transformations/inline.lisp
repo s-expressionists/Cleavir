@@ -96,7 +96,9 @@
              ;; cleaned up by any readvar deletion triggers.
              (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
                (cleavir-bir:delete-instruction use))
-             (cleavir-bir:delete-instruction def))))))))
+             (cleavir-bir:delete-instruction def)))))
+      (null ; unused
+       (cleavir-bir:delete-instruction def)))))
 
 (defun find-module-local-calls (module)
   (cleavir-bir:map-functions #'find-function-local-calls module)
