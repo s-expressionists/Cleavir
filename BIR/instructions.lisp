@@ -8,8 +8,7 @@
    ;; instruction.
    (%extent :initarg :extent :accessor extent
             :initform :indefinite
-            :type (member :dynamic :indefinite))
-   (%derived-type :initform (current-top-function-ctype))))
+            :type (member :dynamic :indefinite))))
 
 (defclass unreachable (no-input no-output terminator0) ())
 

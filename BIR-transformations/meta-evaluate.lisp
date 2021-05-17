@@ -426,13 +426,19 @@
 ;;; For an immutable variable, we prove that the type of its readers
 ;;; is just the type of its definition.
 (defun derive-type-for-variable (variable system)
-  (when (cleavir-bir:immutablep variable)
-    (let* ((definition
-             (cleavir-bir:input (cleavir-bir:binder variable)))
-           (type (cleavir-bir:ctype definition)))
+  (let* ((dtype (if (cleavir-bir:immutablep variable)
+                    ;; We can get the type from the definition.
+                    (cleavir-ctype:primary
+                     (cleavir-bir:ctype
+                      (cleavir-bir:input (cleavir-bir:binder variable)))
+                     system)
+                    ;; Can't use the definition's type, but we can still
+                    ;; derive that it's exactly one value.
+                    (cleavir-ctype:top system)))
+         (type (cleavir-ctype:single-value dtype system)))
       (cleavir-set:doset (reader (cleavir-bir:readers variable))
         (let ((out (cleavir-bir:output reader)))
-          (derive-type-for-linear-datum out type system))))))
+          (derive-type-for-linear-datum out type system)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (declare (ignore system))
@@ -455,6 +461,12 @@
        (cleavir-bir:output local-call)
        return-type
        system))))
+
+(defmethod derive-types ((instruction cleavir-bir:enclose) system)
+  (let ((ftype (cleavir-ctype:single-value
+                (cleavir-ctype:function-top system) system)))
+    (derive-type-for-linear-datum (cleavir-bir:output instruction)
+                                  ftype system)))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:thei) system)
   (let ((ctype (cleavir-bir:ctype (cleavir-bir:input instruction))))

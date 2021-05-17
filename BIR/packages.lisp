@@ -24,7 +24,7 @@
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next
            #:origin #:policy)
-  (:export #:*origin* #:*policy* #:*top-ctype* #:*top-function-ctype*)
+  (:export #:*origin* #:*policy* #:*top-ctype*)
   (:export #:fixed-to-multiple
            #:accessvar #:writevar #:readvar
            #:constant-reference #:make-constant-reference
