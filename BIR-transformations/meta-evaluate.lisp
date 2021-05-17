@@ -321,6 +321,25 @@
                       definers)))
       t)))
 
+;;; If there is only one input and it has type (values something &rest nil),
+;;; there is no need for this instruction.
+(defmethod meta-evaluate-instruction ((inst cleavir-bir:fixed-to-multiple)
+                                      system)
+  (let ((inputs (cleavir-bir:inputs inst)))
+    (when (= (length inputs) 1)
+      (let* ((input (first inputs))
+             (inty (cleavir-bir:ctype input)))
+        (when (and (cleavir-ctype:bottom-p
+                    (cleavir-ctype:values-rest inty system)
+                    system)
+                   (null (cleavir-ctype:values-optional inty system))
+                   (= (length (cleavir-ctype:values-required inty system)) 1))
+          (setf (cleavir-bir:inputs inst) nil)
+          (let ((out (cleavir-bir:output inst)))
+            (cleavir-bir:replace-uses input out)
+            (cleavir-bir:delete-instruction inst)
+            t))))))
+
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
   (derive-type-for-linear-datum
    (cleavir-bir:output instruction)
