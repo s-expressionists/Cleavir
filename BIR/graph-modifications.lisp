@@ -272,10 +272,10 @@
   (clean-up-iblock iblock)
   (when (slot-boundp iblock '%end)
     (let ((successors (successors iblock)))
+      (setf (next (end iblock)) nil) ; prevent looping
       (dolist (s successors)
         (cleavir-set:nremovef (predecessors s) iblock)
-        (when (orphan-iblock-p s)
-          (delete-iblock s)))))
+        (maybe-delete-iblock s))))
   (remove-iblock-from-flow-order iblock))
 
 (defun maybe-delete-iblock (iblock)
