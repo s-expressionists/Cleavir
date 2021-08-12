@@ -45,7 +45,8 @@
       (convert (cst:cst-from-expression
                 `(error 'run-time-program-error
                         :expr ',(cst:raw cst)
-                        :origin ',(cst:source cst)))
+                        :origin ',(cst:source cst))
+                :source (cst:source cst))
                environment system))
     (substitute-cst (cst)
       :report "Compile the given CST in place of the problematic one."

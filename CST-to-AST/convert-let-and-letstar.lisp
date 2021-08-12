@@ -156,30 +156,21 @@
         (multiple-value-bind (item-specific-dspecs remaining-dspecs)
             (itemize-declaration-specifiers (mapcar #'list variable-csts)
                                             canonical-declaration-specifiers)
-          (loop with remaining-dspecs-cst = (cst:cstify remaining-dspecs)
-                with result = (cst:cons (make-atom-cst 'locally origin)
-                                        (if (null remaining-dspecs)
-                                            forms-cst
-                                            (cst:cons
-                                             (cst:cons (make-atom-cst 'declare origin)
-                                                       remaining-dspecs-cst
-                                                       :source (cst:source remaining-dspecs-cst))
-                                             forms-cst
-                                             :source origin))
-                                        :source origin)
+          (loop with result = (cst:quasiquote
+                               origin
+                               (locally
+                                   (declare (cst:unquote-splicing
+                                             remaining-dspecs))
+                                 (cst:unquote-splicing forms-cst)))
                 for binding-cst in (reverse binding-csts)
                 for declaration-cst-groups in (reverse item-specific-dspecs)
                 for declaration-csts = (first declaration-cst-groups)
-                do (setf result
-                         (cst:cons
-                          (make-atom-cst 'let origin)
-                          (cst:cons (cst:list binding-cst)
-                                    (if (null declaration-csts)
-                                        (cst:list result)
-                                        (cst:list
-                                         (cst:cons (make-atom-cst 'declare)
-                                                   (cst:cstify declaration-csts))
-                                         result))
-                                    :source origin)
-                          :source origin))
+                for declarations-cst
+                  = (cst:cstify declaration-csts :source origin)
+                do (setf result (cst:quasiquote
+                                 origin
+                                 (let ((cst:unquote binding-cst))
+                                   (declare
+                                    (cst:unquote-splicing declarations-cst))
+                                   (cst:unquote result))))
                 finally (return (convert result environment system))))))))

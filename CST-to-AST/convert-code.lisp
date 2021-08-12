@@ -449,11 +449,9 @@
 
 (defun cst-for-body (forms-cst block-name-cst &optional origin)
   (if block-name-cst
-      (cst:cons (make-atom-cst 'block origin)
-                (cst:cons block-name-cst forms-cst)
-                :source origin)
-      (cst:cons (make-atom-cst 'progn origin) forms-cst
-                :source origin)))
+      (cst:quasiquote origin (block (cst:unquote block-name-cst)
+                               (cst:unquote-splicing forms-cst)))
+      (cst:quasiquote origin (progn (cst:unquote-splicing forms-cst)))))
 
 ;;; Given the entries and idspecs, compute and return an alist from LEXICAL-VARIABLEs
 ;;; to lists of declaration specifier CSTs for that lexical variable.

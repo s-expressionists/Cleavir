@@ -137,8 +137,7 @@
                     (and ct (not lt))
                     (and (not ct) (not lt) e *compile-time-too*))
                    (cst-eval-for-effect
-                    (cst:cons (make-atom-cst 'progn s) body-cst
-                              :source s)
+                    (cst:quasiquote s (progn (cst:unquote-splicing body-cst)))
                     environment system)
                    (convert (make-atom-cst nil s) environment system))
                   (;; Discard
@@ -229,6 +228,7 @@
         collect (cleavir-ast:make-lexical-bind-ast
                  (function-lexical env name)
                  fun-ast
+                 :origin (cleavir-ast:origin fun-ast)
                  ;; TODO: propagate ignore declaration
                  )))
 
@@ -505,8 +505,8 @@
                  (setf new-env
                        (cleavir-env:add-local-macro new-env name expander))))
       (with-preserved-toplevel-ness
-        (convert (cst:cons (make-atom-cst 'locally origin) body-cst
-                           :source origin)
+        (convert (cst:quasiquote origin
+                                 (locally (cst:unquote-splicing body-cst)))
                  new-env
                  system)))))
 
@@ -548,9 +548,8 @@
                          (cleavir-env:add-local-symbol-macro
                           new-env name expansion)))))
       (with-preserved-toplevel-ness
-        (convert (cst:cons (make-atom-cst 'locally origin)
-                           body-cst
-                           :source origin)
+        (convert (cst:quasiquote origin
+                                 (locally (cst:unquote-splicing body-cst)))
                  new-env system)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

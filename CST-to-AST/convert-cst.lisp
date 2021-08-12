@@ -19,8 +19,8 @@
 
 (defmethod convert-cst
     (cst (info cleavir-env:constant-variable-info) env system)
-  (declare (ignore cst))
-  (let ((cst (cst:cst-from-expression (cleavir-env:value info))))
+  (let ((cst (cst:cst-from-expression (cleavir-env:value info)
+                                      :source (cst:source cst))))
     (convert-constant cst env system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
