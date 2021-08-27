@@ -293,7 +293,7 @@
 (defmethod function (req opt rest keyp keys aokp returns sys)
   (declare (ignore sys))
   `(cl:function (,@req &optional ,@opt &rest ,rest
-                       ,@(when keyp `(&key ,keys))
+                       ,@(when keyp `(&key ,@keys))
                        ,@(when aokp '(&allow-other-keys)))
                 ,returns))
 
