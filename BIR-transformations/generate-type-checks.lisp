@@ -9,11 +9,11 @@
 ;;;; since it may inline functions.
 
 ;;; Warn about a compile time type conflict.
-(defun maybe-warn-type-conflict (thei)
+(defun maybe-warn-type-conflict (thei system)
   (let ((input (cleavir-bir:input thei)))
     (when (cleavir-ctype:values-disjointp (cleavir-bir:asserted-type thei)
                                           (cleavir-bir:ctype input)
-                                          nil)
+                                          system)
       (warn 'cleavir-bir:type-conflict
             :datum input
             :asserted-type (cleavir-bir:asserted-type thei)
@@ -28,7 +28,7 @@
       (change-class thei 'cleavir-bir:mv-local-call
                     :inputs (list type-check-function input)))))
 
-(defun generate-type-checks (function)
+(defun generate-type-checks (function system)
   (let ((theis '()))
     (cleavir-bir:do-iblocks (iblock function)
       (cleavir-bir:do-iblock-instructions (instruction iblock)
@@ -36,8 +36,10 @@
           (push instruction theis))))
     ;; We first warn about type conflicts in case we lose derived
     ;; types when generating type checks.
-    (mapc #'maybe-warn-type-conflict theis)
+    (dolist (thei theis)
+      (maybe-warn-type-conflict thei system))
     (mapc #'generate-type-check theis)))
 
-(defun module-generate-type-checks (module)
-  (cleavir-bir:map-functions #'generate-type-checks module))
+(defun module-generate-type-checks (module system)
+  (cleavir-bir:do-functions (function module)
+    (generate-type-checks function system)))
