@@ -39,7 +39,7 @@
 ;;; the traversal stops when we reach the place where the variable was
 ;;; defined.
 
-(defgeneric defining-variable-info (environment symbol))
+(defgeneric defining-variable-info (system environment symbol))
 
 ;;; For entries with the right type to introduce a variable, we check
 ;;; whether the name in the entry is EQ to the symbol that we are
@@ -53,41 +53,43 @@
 ;;; SPECIAL-VARIABLE, and SYMBOL-MACRO.  Since constant variables can
 ;;; only be global, there is no entry type for constant variables.
 
-(defmethod defining-variable-info ((environment lexical-variable) symbol)
+(defmethod defining-variable-info (system (environment lexical-variable)
+                                   symbol)
   (if (eq symbol (name environment))
       (make-instance 'lexical-variable-info
 	:name symbol
 	:identity (identity environment))
-      (defining-variable-info (next environment) symbol)))
+      (defining-variable-info system (next environment) symbol)))
 
-(defmethod defining-variable-info ((environment special-variable) symbol)
+(defmethod defining-variable-info (system (environment special-variable)
+                                   symbol)
   (if (eq symbol (name environment))
       (make-instance 'special-variable-info
 	:name symbol
 	:global-p nil)
-      (defining-variable-info (next environment) symbol)))
+      (defining-variable-info system (next environment) symbol)))
 
-(defmethod defining-variable-info ((environment symbol-macro) symbol)
+(defmethod defining-variable-info (system (environment symbol-macro) symbol)
   (if (eq symbol (name environment))
       (make-instance 'symbol-macro-info
 	:name symbol
 	:expansion (expansion environment))
-      (defining-variable-info (next environment) symbol)))
+      (defining-variable-info system (next environment) symbol)))
 
 ;;; This method implements the action to take when the argument is an
 ;;; ENTRY, but it is not an entry defining a variable.  We handle this
 ;;; situation by just making a recursive call, passing the next entry
 ;;; in the environment.
-(defmethod defining-variable-info ((environment entry) symbol)
-  (defining-variable-info (next environment) symbol))
+(defmethod defining-variable-info (system (environment entry) symbol)
+  (defining-variable-info system (next environment) symbol))
 
 ;;; This method implements the action to take when the argument is the
 ;;; global environment.  We detect this situation by the fact that the
 ;;; argument is not an ENTRY.  Since we have run out of local
 ;;; environment entries, we must now consult the implementation by
 ;;; calling VARIABLE-INFO on the global environment.
-(defmethod defining-variable-info (environment symbol)
-  (variable-info environment symbol))
+(defmethod defining-variable-info (system environment symbol)
+  (variable-info system environment symbol))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -325,8 +327,8 @@
 ;;;
 ;;; The main method on VARIABLE-INFO specialized to ENTRY. 
 
-(defmethod variable-info ((environment entry) symbol)
-  (let ((defining-info (defining-variable-info environment symbol)))
+(defmethod variable-info (system (environment entry) symbol)
+  (let ((defining-info (defining-variable-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that VARIABLE-INFO
 	;; returned NIL when called with the global environment, which
@@ -355,7 +357,7 @@
 ;;; reach the place where the function was defined, in which case no
 ;;; relevant modifying entry was found.
 
-(defgeneric defining-function-info (environment symbol))
+(defgeneric defining-function-info (system environment symbol))
 
 ;;; For entries with the right type to introduce a function, we check
 ;;; whether the name in the entry is EQUAL to the function-name (or EQ
@@ -369,34 +371,34 @@
 ;;; The relevant entries for function info are FUNCTION, and
 ;;; MACRO.
 
-(defmethod defining-function-info ((environment function) function-name)
+(defmethod defining-function-info (system (environment function) function-name)
   (if (equal function-name (name environment))
       (make-instance 'local-function-info
 	:name function-name
 	:identity (identity environment))
-      (defining-function-info (next environment) function-name)))
+      (defining-function-info system (next environment) function-name)))
 
-(defmethod defining-function-info ((environment macro) symbol)
+(defmethod defining-function-info (system (environment macro) symbol)
   (if (eq symbol (name environment))
       (make-instance 'local-macro-info
 	:name symbol
 	:expander (expander environment))
-      (defining-function-info (next environment) symbol)))
+      (defining-function-info system (next environment) symbol)))
 
 ;;; This method implements the action to take when the argument is an
 ;;; ENTRY, but it is not an entry defining a function.  We handle this
 ;;; situation by just making a recursive call, passing the next entry
 ;;; in the environment.
-(defmethod defining-function-info ((environment entry) function-name)
-  (defining-function-info (next environment) function-name))
+(defmethod defining-function-info (system (environment entry) function-name)
+  (defining-function-info system (next environment) function-name))
 
 ;;; This method implements the action to take when the argument is the
 ;;; global environment.  We detect this situation by the fact that the
 ;;; argument is not an ENTRY.  Since we have run out of local
 ;;; environment entries, we must now consult the implementation by
 ;;; calling FUNCTION-INFO on the global environment.
-(defmethod defining-function-info (environment function-name)
-  (function-info environment function-name))
+(defmethod defining-function-info (system environment function-name)
+  (function-info system environment function-name))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -773,8 +775,9 @@
 ;;;
 ;;; The main method on FUNCTION-INFO specialized to ENTRY. 
 
-(defmethod function-info ((environment entry) symbol)
-  (let ((defining-info (defining-function-info environment symbol)))
+(defmethod function-info (system (environment entry) symbol)
+  (declare (ignore system))
+  (let ((defining-info (defining-function-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that FUNCTION-INFO
 	;; returned NIL when called with the global environment, which

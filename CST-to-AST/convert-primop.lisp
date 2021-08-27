@@ -167,9 +167,9 @@
 ;;; the variables to be lexical.
 
 ;;; Internal helper
-(defun find-lexical-variable (var env)
+(defun find-lexical-variable (var env sys)
   (assert (symbolp var))
-  (let ((info (cleavir-env:variable-info env var)))
+  (let ((info (cleavir-env:variable-info sys env var)))
     (assert (typep info 'cleavir-env:lexical-variable-info))
     (cleavir-env:identity info)))
 
@@ -194,7 +194,7 @@
     (cleavir-ast:make-fixnum-add-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
-                                      (cst:raw variable-cst) env)
+                                      (cst:raw variable-cst) env system)
                                      :origin origin)))
 
 
@@ -210,7 +210,7 @@
     (cleavir-ast:make-fixnum-sub-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
-                                      (cst:raw variable-cst) env)
+                                      (cst:raw variable-cst) env system)
                                      :origin origin)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,8 +1,8 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defun variable-info (environment var-name-cst)
+(defun variable-info (system environment var-name-cst)
   (let* ((symbol (cst:raw var-name-cst))
-         (info (cleavir-env:variable-info environment symbol)))
+         (info (cleavir-env:variable-info system environment symbol)))
     (loop while (null info)
 	  do (restart-case (error 'no-variable-info
 				  :name symbol
@@ -23,12 +23,13 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq info (cleavir-env:variable-info environment new-symbol)))))
+		 (setq info (cleavir-env:variable-info
+                             system environment new-symbol)))))
     info))
 
-(defun function-info (environment function-name-cst)
+(defun function-info (system environment function-name-cst)
   (let* ((function-name (cst:raw function-name-cst))
-         (result (cleavir-env:function-info environment function-name)))
+         (result (cleavir-env:function-info system environment function-name)))
     (loop while (null result)
 	  do (restart-case (error 'no-function-info
 				  :name function-name
@@ -43,7 +44,8 @@
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq result (cleavir-env:function-info environment new-function-name)))))
+		 (setq result (cleavir-env:function-info
+                               system environment new-function-name)))))
     result))
 
 (defun tag-info (environment tag-name-cst)

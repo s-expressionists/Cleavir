@@ -11,7 +11,7 @@
 ;;; LEXICAL-BIND-AST that assigns the value to the variable, and the second
 ;;; one is the NEXT-AST.
 (defun set-or-bind-variable (variable-cst value-ast next-ast env system)
-  (let ((info (cleavir-env:variable-info env (cst:raw variable-cst))))
+  (let ((info (cleavir-env:variable-info system env (cst:raw variable-cst))))
     (assert (not (null info)))
     (if (typep info 'cleavir-env:special-variable-info)
         (convert-special-binding

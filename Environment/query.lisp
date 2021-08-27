@@ -27,7 +27,7 @@
 
 ;;; Cleavir tools call this function in order to obtain information
 ;;; about a symbol in a variable position.
-(defgeneric variable-info (environment symbol))
+(defgeneric variable-info (system environment symbol))
 
 ;;; As a response to a query about a symbol in a variable position, an
 ;;; instance of this class must be returned if the symbol stands for a
@@ -105,7 +105,7 @@
 ;;; Cleavir tools call this function in order to obtain information
 ;;; about a symbol in a function position.  It could also be used to
 ;;; obtain information about a function name that is not a symbol.
-(defgeneric function-info (environment function-name))
+(defgeneric function-info (system environment function-name))
 
 (defclass local-function-info ()
   (;; The name of the local function.  It can be different from the

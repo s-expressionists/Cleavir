@@ -185,8 +185,8 @@
 ;;; LEXICAL-VARIABLE that will have the function with that name as a
 ;;; value.  It is known that the environment contains an entry
 ;;; corresponding to the name given as an argument.
-(defun function-lexical (environment name)
-  (cleavir-env:identity (cleavir-env:function-info environment name)))
+(defun function-lexical (system environment name)
+  (cleavir-env:identity (cleavir-env:function-info system environment name)))
 
 ;;; Convert a local function definition.
 (defun convert-local-function (definition-cst operator environment system)
@@ -223,10 +223,10 @@
 ;;; AST of each function in a list of function ASTs to its associated
 ;;; LEXICAL-VARIABLE.  FUNCTIONS is a list of CONS cells.  Each CONS
 ;;; cell has a function name in its CAR and an AST in its CDR.
-(defun compute-function-init-asts (functions env)
+(defun compute-function-init-asts (functions env system)
   (loop for (name . fun-ast) in functions
         collect (cleavir-ast:make-lexical-bind-ast
-                 (function-lexical env name)
+                 (function-lexical system env name)
                  fun-ast
                  :origin (cleavir-ast:origin fun-ast)
                  ;; TODO: propagate ignore declaration
@@ -256,7 +256,7 @@
              (defs (convert-local-functions definitions-cst symbol env system))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (init-asts
-               (compute-function-init-asts defs new-env))
+               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
                          new-env system canonical-declaration-specifiers)))
         (process-progn
@@ -284,7 +284,7 @@
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
              (init-asts
-               (compute-function-init-asts defs new-env))
+               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
                          new-env system canonical-declaration-specifiers)))
         (process-progn
@@ -528,7 +528,7 @@
                  (let* ((name (cst:raw name-cst))
                         ;; We use cleavir-env directly, because it's
                         ;; okay if the variable is unbound.
-                        (info (cleavir-env:variable-info env name))
+                        (info (cleavir-env:variable-info system env name))
                         (expansion (cst:raw expansion-cst)))
                    (typecase info
                      (cleavir-env:constant-variable-info
@@ -558,7 +558,7 @@
 ;;;
 
 (defun convert-named-function (name-cst environment system)
-  (let ((info (function-info environment name-cst)))
+  (let ((info (function-info system environment name-cst)))
     (convert-function-reference name-cst info environment system)))
 
 (defun convert-lambda-function (lambda-form-cst env system)
