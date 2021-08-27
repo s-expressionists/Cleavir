@@ -16,7 +16,7 @@
 ;;;; where the default action is to make a recursive call, passing the
 ;;;; next instance in the chain.
 
-(defgeneric make-info (environment defining-info))
+(defgeneric make-info (system environment defining-info))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -283,12 +283,12 @@
 ;;; VARIABLE-INFO.
 
 (defmethod make-info
-    (environment (defining-info lexical-variable-info))
+    (system environment (defining-info lexical-variable-info))
   (make-instance 'lexical-variable-info
     :name (name defining-info)
     :identity (identity defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil ; FIXME
+                 system
                  (variable-type environment defining-info))
     :ignore
     (let ((entry (variable-ignore environment defining-info)))
@@ -298,11 +298,11 @@
       (if (null entry) (dynamic-extent defining-info) t))))
 
 (defmethod make-info
-    (environment (defining-info special-variable-info))
+    (system environment (defining-info special-variable-info))
   (make-instance 'special-variable-info
     :name (name defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (variable-type environment defining-info))
     :global-p (global-p defining-info)
     :ignore
@@ -310,17 +310,17 @@
       (if (null entry) nil (ignore entry)))))
 
 (defmethod make-info
-    (environment (defining-info constant-variable-info))
-  (declare (cl:ignorable environment))
+    (system environment (defining-info constant-variable-info))
+  (declare (cl:ignorable system environment))
   defining-info)
 
 (defmethod make-info
-    (environment (defining-info symbol-macro-info))
+    (system environment (defining-info symbol-macro-info))
   (make-instance 'symbol-macro-info
     :name (name defining-info)
     :expansion (expansion defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (variable-type environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -336,7 +336,7 @@
 	;; must then also respect the protocol and return nil to our
 	;; caller.
 	nil
-	(make-info environment defining-info))))
+	(make-info system environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -705,12 +705,12 @@
 ;;; FUNCTION-INFO.
 
 (defmethod make-info
-    (environment (defining-info local-function-info))
+    (system environment (defining-info local-function-info))
   (make-instance 'local-function-info
     :name (name defining-info)
     :identity (identity defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (function-type environment defining-info))
     :ignore
     (let ((entry (function-ignore environment defining-info)))
@@ -729,11 +729,11 @@
     :attributes (attributes defining-info)))
 
 (defmethod make-info
-    (environment (defining-info global-function-info))
+    (system environment (defining-info global-function-info))
   (make-instance 'global-function-info
     :name (name defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (function-type environment defining-info))
     :ignore
     (let ((entry (function-ignore environment defining-info)))
@@ -752,12 +752,13 @@
       (if (null entry) (dynamic-extent defining-info) t))))
 
 (defmethod make-info
-    (environment (defining-info local-macro-info))
-  (declare (cl:ignore environment))
+    (system environment (defining-info local-macro-info))
+  (declare (cl:ignore system environment))
   defining-info)
 
 (defmethod make-info
-    (environment (defining-info global-macro-info))
+    (system environment (defining-info global-macro-info))
+  (declare (cl:ignore system))
   (make-instance 'global-macro-info
     :name (name defining-info)
     :compiler-macro (compiler-macro defining-info)
@@ -767,8 +768,8 @@
     :expander (expander defining-info)))
 
 (defmethod make-info
-    (environment (defining-info special-operator-info))
-  (declare (cl:ignore environment))
+    (system environment (defining-info special-operator-info))
+  (declare (cl:ignore system environment))
   defining-info)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -785,7 +786,7 @@
 	;; must then also respect the protocol and return nil to our
 	;; caller.
 	nil
-	(make-info environment defining-info))))
+	(make-info system environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
