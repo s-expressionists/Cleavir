@@ -58,7 +58,8 @@
   (if (eq symbol (name environment))
       (make-instance 'lexical-variable-info
 	:name symbol
-	:identity (identity environment))
+	:identity (identity environment)
+        :type (cleavir-ctype:top system))
       (defining-variable-info system (next environment) symbol)))
 
 (defmethod defining-variable-info (system (environment special-variable)
@@ -66,14 +67,16 @@
   (if (eq symbol (name environment))
       (make-instance 'special-variable-info
 	:name symbol
-	:global-p nil)
+	:global-p nil
+        :type (cleavir-ctype:top system))
       (defining-variable-info system (next environment) symbol)))
 
 (defmethod defining-variable-info (system (environment symbol-macro) symbol)
   (if (eq symbol (name environment))
       (make-instance 'symbol-macro-info
 	:name symbol
-	:expansion (expansion environment))
+	:expansion (expansion environment)
+        :type (cleavir-ctype:top system))
       (defining-variable-info system (next environment) symbol)))
 
 ;;; This method implements the action to take when the argument is an
@@ -375,7 +378,8 @@
   (if (equal function-name (name environment))
       (make-instance 'local-function-info
 	:name function-name
-	:identity (identity environment))
+	:identity (identity environment)
+        :type (cleavir-ctype:function-top system))
       (defining-function-info system (next environment) function-name)))
 
 (defmethod defining-function-info (system (environment macro) symbol)
@@ -415,6 +419,8 @@
 ;;; environment.
 (defmethod function-type (environment defining-info)
   (declare (cl:ignorable environment))
+  (unless (slot-boundp defining-info '%type)
+    (error "unbound function type in ~a" defining-info))
   (list (type defining-info)))
 
 ;;; This method is called when the entry is not related to the

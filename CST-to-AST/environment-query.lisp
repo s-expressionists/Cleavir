@@ -11,13 +11,15 @@
 		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
-                         :name symbol)))
+                         :name symbol
+                         :type (cleavir-ctype:top system))))
                ;; This is identical to CONTINUE, but more specifically named.
 	       (consider-special ()
 		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
-                         :name symbol)))
+                         :name symbol
+                         :type (cleavir-ctype:top system))))
 	       (substitute (new-symbol)
 		 :report "Substitute a different name."
 		 :interactive (lambda ()
@@ -38,7 +40,8 @@
 		 :report "Treat it as the name of a global function."
 		 (return-from function-info
 		   (make-instance 'cleavir-env:global-function-info
-		     :name function-name)))
+		     :name function-name
+                     :type (cleavir-ctype:function-top system))))
 	       (substitute (new-function-name)
 		 :report "Substitute a different name."
 		 :interactive (lambda ()
