@@ -262,7 +262,7 @@
     (let* ((type (declared-type declarations))
            ;; FIXME system arguments
            (ptype (cleavir-env:parse-type-specifier type env system)))
-      (unless (cleavir-ctype:top-p ptype nil)
+      (unless (cleavir-ctype:top-p ptype system)
         (setf new-env
               (cleavir-env:add-variable-type new-env raw-variable ptype))))
     (when (member 'ignore raw-declarations :test #'eq :key #'car)
