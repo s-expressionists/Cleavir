@@ -182,14 +182,6 @@
   ;; Without particular knowledge, we have nothing to do.
   (declare (ignore instruction system)))
 
-(defmethod derive-types :after (instruction system)
-  (declare (ignore system))
-  (loop for outp in (cleavir-bir:outputs instruction)
-        unless (or (not (typep outp 'cleavir-bir:linear-datum))
-                   (cleavir-ctype::values-ctype-p (cleavir-bir:ctype outp)))
-          do (warn "Bad ctype ~a in output of ~a"
-                   (cleavir-bir:ctype outp) instruction)))
-
 (defmethod derive-types (instruction system)
   (declare (ignore instruction system)))
 
