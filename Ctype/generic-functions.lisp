@@ -102,6 +102,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic function CLASS.
+;;;
+;;; Given a class, return the ctype for that class.
+
+(defgeneric class (class system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function CONS.
 ;;;
 ;;; Given two non-values ctypes, return the ctype of a cons type using them.
@@ -120,6 +128,41 @@
 ;;; The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY.
 
 (defgeneric array (element dimensions simplicity system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function STRING.
+;;;
+;;; Given a dimension specifier, and simplicity mark, return a ctype
+;;; representing the string type.
+;;; The dimension specifier is either a nonnegative integer or the symbol *.
+;;; The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY.
+
+(defgeneric string (dimension simplicity system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function CHARACTER.
+;;;
+;;; Return the ctype representing CL:CHARACTER.
+
+(defgeneric character (system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function BASE-CHAR.
+;;;
+;;; Return the ctype representing CL:BASE-CHAR.
+
+(defgeneric base-char (system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function STANDARD-CHAR.
+;;;
+;;; Return the ctype representing CL:STANDARD-CHAR.
+
+(defgeneric standard-char (system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -142,6 +185,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic function FIXNUM.
+;;;
+;;; Return the ctype for CL:FIXNUM.
+
+(defgeneric fixnum (system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function MEMBER.
 
 (defgeneric member (system &rest elements))
@@ -151,6 +202,17 @@
 ;;; Generic function SATISFIES.
 
 (defgeneric satisfies (fname system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function KEYWORD.
+;;;
+;;; Returns the ctype representing CL:KEYWORD.
+;;; While KEYWORD = (SATISFIES KEYWORD), this function exists in case a client
+;;; has a more specialized representation, for example to make clear that it is
+;;; a subtype of SYMBOL.
+
+(defgeneric keyword (system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -171,6 +233,17 @@
 
 (defgeneric function
     (required optional rest keyp keys allow-other-keys-p returns system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function COMPILED-FUNCTION.
+;;;
+;;; Returns the ctype for CL:COMPILED-FUNCTION.
+;;; While COMPILED-FUNCTION = (SATISFIES COMPILED-FUNCTION-P), this function
+;;; exists in case a client has a more specialized representation, for example
+;;; to make clear that it is a subtype of FUNCTION.
+
+(defgeneric compiled-function (system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

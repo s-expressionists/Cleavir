@@ -80,15 +80,10 @@
 
 (defmethod top-p (ctype sys)
   (declare (ignore sys))
-  (or (eql ctype 't)
-      ;; Kinda KLUDGEy way to avoid (find-class 't),
-      ;; which needs an environment.
-      (and (cl:typep ctype 'class)
-           (eql (class-name ctype) 't))))
+  (eql ctype 't))
 
 (defmethod bottom-p (ctype sys)
   (declare (ignore sys))
-  ;; We assume that NIL is not a class.
   (eql ctype 'nil))
 
 ;;; Internal
@@ -264,6 +259,8 @@
   (declare (ignore atypes))
   (general-function-returns fctype system))
 
+(defmethod class (class sys) (declare (ignore sys)) class)
+
 (defmethod cons (car cdr sys)
   (declare (ignore sys))
   (cond ((eql car 'nil) 'nil)
@@ -274,6 +271,17 @@
   (declare (ignore sys))
   `(,simplicity ,element ,dimensions))
 
+(defmethod string (dimension simplicity sys)
+  (declare (ignore sys))
+  `(,(ecase simplicity
+       ((cl:array) 'cl:string)
+       ((cl:simple-array) 'cl:simple-string))
+    ,dimension))
+
+(defmethod character (sys) (declare (ignore sys)) 'cl:character)
+(defmethod base-char (sys) (declare (ignore sys)) 'cl:base-char)
+(defmethod standard-char (sys) (declare (ignore sys)) 'cl:standard-char)
+
 (defmethod complex (part sys)
   (declare (ignore sys))
   `(cl:complex ,part))
@@ -281,6 +289,8 @@
 (defmethod range (type low high sys)
   (declare (ignore sys))
   `(,type ,low ,high))
+
+(defmethod fixnum (sys) (declare (ignore sys)) 'cl:fixnum)
 
 (defmethod member (sys &rest elems)
   (declare (ignore sys))
@@ -290,12 +300,16 @@
   (declare (ignore sys))
   `(cl:satisfies ,fname))
 
+(defmethod keyword (sys) (declare (ignore sys)) 'cl:keyword)
+
 (defmethod function (req opt rest keyp keys aokp returns sys)
   (declare (ignore sys))
   `(cl:function (,@req &optional ,@opt &rest ,rest
                        ,@(when keyp `(&key ,@keys))
                        ,@(when aokp '(&allow-other-keys)))
                 ,returns))
+
+(defmethod compiled-function (sys) (declare (ignore sys)) 'compiled-function)
 
 (defmethod values (req opt rest sys)
   (declare (ignore sys))
