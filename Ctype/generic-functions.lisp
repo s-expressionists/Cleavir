@@ -51,15 +51,22 @@
 ;;;
 ;;; Generic functions CONJOIN/2, DISJOIN/2.
 ;;;
-;;; Given two ctypes, compute their conjunction or disjunction, as for the AND
-;;; and OR type specifiers respectively. The arguments may either both be values
-;;; ctypes or both non-values ctypes, i.e. they are never called with a values
-;;; and non-values ctype.
+;;; Given two non-values ctypes, compute their conjunction or disjunction, as
+;;; for the AND and OR type specifiers respectively.
 ;;;
 ;;; Called by the n-ary CONJOIN and DISJOIN.
 
 (defgeneric conjoin/2 (ctype1 ctype2 system))
 (defgeneric disjoin/2 (ctype1 ctype2 system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions VALUES-CONJOIN, VALUES-DISJOIN.
+;;;
+;;; Given two values ctypes, compute their conjunction or disjunction.
+
+(defgeneric values-conjoin (ctype1 ctype2 system))
+(defgeneric values-disjoin (ctype1 ctype2 system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -97,8 +97,10 @@
   (and (consp ctype) (eq (car ctype) 'cl:function)))
 (defun function-return (ctype) (third ctype))
 
-(defun values-conjoin (vct1 vct2 sys)
-  (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
+(defmethod values-conjoin (vct1 vct2 sys)
+  (assert (and (values-ctype-p vct1) (values-ctype-p vct2))
+          () "An argument to ~s is not a values ctype: args are ~s ~s"
+          'values-conjoin vct1 vct2)
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
         with rest1 = (values-rest vct1 sys)
@@ -165,7 +167,7 @@
              nil
              ty)))))
 
-(defun values-disjoin (vct1 vct2 sys)
+(defmethod values-disjoin (vct1 vct2 sys)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
