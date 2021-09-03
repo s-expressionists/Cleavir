@@ -383,7 +383,8 @@
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let* ((input (cleavir-bir:input binder))
-                 (fout (make-instance 'cleavir-bir:output))
+                 (fout (make-instance 'cleavir-bir:output
+                         :derived-type (cleavir-bir:ctype input)))
                  (ftm (make-instance 'cleavir-bir:fixed-to-multiple
                         :outputs (list fout))))
             (setf (cleavir-bir:inputs binder) nil)
