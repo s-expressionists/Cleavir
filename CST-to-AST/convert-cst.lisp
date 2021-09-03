@@ -97,12 +97,7 @@
          (function-ast (convert-called-function-reference name-cst info env system))
          (argument-asts (convert-sequence arguments-cst env system))
          (origin (cst:source cst))
-         ;; FIXME: This should be the intersection of all function
-         ;; type entries in the environment.
-         (ftype (let ((type (first (cleavir-env:function-type env info))))
-                  (if (eq (second type) '*)
-                      `(function (&rest t) ,(third type))
-                      type))))
+         (ftype (cleavir-env:type info)))
     (let ((required (cleavir-ctype:function-required ftype system))
           (optional (cleavir-ctype:function-optional ftype system))
           (rest (cleavir-ctype:function-rest ftype system))
