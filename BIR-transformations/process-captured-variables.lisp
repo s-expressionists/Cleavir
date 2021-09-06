@@ -27,37 +27,45 @@
 
 ;;; Determine the extent of closures. We mark closures created by
 ;;; ENCLOSE instructions as dynamic extent if all of its uses are
-;;; calls with the DX-call attribute. Make sure we only mark closures
-;;; as dynamic extent and do not try to mark a function as indefinite
-;;; extent, since there may be an explicit dynamic extent declaration
-;;; on the function which we should preserve.
+;;; calls with the DX-call attribute in the enclosing function.
+;;; We only mark closures as dynamic extent and do not try to mark a
+;;; function as indefinite extent, since there may be an explicit
+;;; dynamic extent declaration on the function which we should preserve.
+
+;;; This analysis is conservative and could be improved (FIXME).
+;;; Functions that are closed over are never marked dynamic-extent, even
+;;; in cases in which they could be, e.g. if they are only recursive.
+(defun safe-call-p (call)
+  (cleavir-attributes:has-boolean-attribute-p
+   (cleavir-bir:attributes call)
+   :dx-call))
+
+(defun determine-closure-extent (function)
+  (let ((enclose (cleavir-bir:enclose function)))
+    (when enclose
+      (let* ((eout (cleavir-bir:output enclose))
+             (use (cleavir-bir:use eout)))
+        (typecase use
+          (cleavir-bir:call
+           (when (safe-call-p use)
+             (setf (cleavir-bir:extent enclose) :dynamic)))
+          (cleavir-bir:writevar
+           (let ((variable (cleavir-bir:output use))
+                 (efunc (cleavir-bir:function enclose)))
+             (cleavir-set:doset (reader (cleavir-bir:readers variable))
+               (let* ((rout (cleavir-bir:output reader))
+                      (use (cleavir-bir:use rout)))
+                 (typecase use
+                   (null)
+                   (cleavir-bir:call
+                    (unless (and (eq (cleavir-bir:function use) efunc)
+                                 (safe-call-p use))
+                      (return-from determine-closure-extent)))
+                   (t (return-from determine-closure-extent)))
+                 (setf (cleavir-bir:extent enclose) :dynamic))))))))))
+
 (defun determine-closure-extents (module)
-  (flet ((safe-call (call)
-           (cleavir-attributes:has-boolean-attribute-p
-            (cleavir-bir:attributes call)
-            :dx-call)))
-    (cleavir-bir:do-functions (function module)
-      (let ((enclose (cleavir-bir:enclose function)))
-        (when enclose
-          (let* ((eout (cleavir-bir:output enclose))
-                 (use (cleavir-bir:use eout)))
-            (typecase use
-              (cleavir-bir:call
-               (when (safe-call use)
-                 (setf (cleavir-bir:extent enclose) :dynamic)))
-              (cleavir-bir:writevar
-               (let ((variable (cleavir-bir:output use))
-                     (safe t))
-                 (cleavir-set:doset (reader (cleavir-bir:readers variable))
-                   (let* ((rout (cleavir-bir:output reader))
-                          (use (cleavir-bir:use rout)))
-                     (typecase use
-                       (null)
-                       (cleavir-bir:call
-                        (setq safe (safe-call use)))
-                       (t (setq safe nil)))))
-                 (when safe
-                   (setf (cleavir-bir:extent enclose) :dynamic)))))))))))
+  (cleavir-bir:map-functions #'determine-closure-extent module))
 
 (defun function-extent (function)
   (let ((enclose (cleavir-bir:enclose function)))
