@@ -227,6 +227,18 @@
   ;; don't accidentally clean them up.
   (setf (cleavir-bir:start function) nil))
 
+;;; This is essentially a filter, but since we only care about the single
+;;; outside call case, we do it like this to avoid consing.
+(defun unique-outside-call (function local-calls)
+  (let ((result nil))
+    (cleavir-set:doset (call local-calls result)
+      (unless (eq (cleavir-bir:function call) function)
+        (if result
+            ;; This is the second outside call we've seen: fail
+            (return nil)
+            ;; This is the first outside call we've seen: record
+            (setf result call))))))
+
 ;;; If there is a common return point, integrate FUNCTION into the
 ;;; graph of TARGET-OWNER and rewire the calls into the body of the
 ;;; FUNCTION.
@@ -236,28 +248,31 @@
 ;;; the function into the common ``transitive'' use of the local calls.
 (defun contify (function local-calls return-point common-use common-dynenv target-owner)
   (let* ((returni (cleavir-bir:returni function))
-         ;; If the return-point has a predecessor, it does not start a
-         ;; block and will be the unique outside call to this
-         ;; function, which means we should normalize the return point
-         ;; to be a dummy block.
+         ;; If there is exactly one outside call to the function, it may be in
+         ;; the middle of a block, and have its output used somewhere other
+         ;; than a phi. In this situation we need to normalize the IR so that
+         ;; the call is at the end of a block and passes to a phi.
          (unique-call
            (and (not (eq return-point :unknown))
-                (cleavir-bir:predecessor return-point)))
+                (unique-outside-call function local-calls)))
          (return-point
-           (if unique-call
-               (progn
-                 (check-type unique-call cleavir-bir:local-call)
-                 (let ((dummy-block (nth-value 1 (cleavir-bir:split-block-after unique-call)))
-                       (ucall-out (cleavir-bir:output unique-call)))
-                   (unless (cleavir-bir:unused-p ucall-out)
-                     (let ((phi (make-instance 'cleavir-bir:phi :iblock dummy-block)))
-                       (setf (cleavir-bir:inputs dummy-block) (list phi))
-                       ;; Replace the call-as-datum with the return-values.
-                       (cleavir-bir:replace-uses phi ucall-out)))
-                   dummy-block))
-               (if (eq return-point :unknown)
-                   :unknown
-                   (cleavir-bir:iblock return-point))))
+           (cond
+             (unique-call
+              (check-type unique-call cleavir-bir:local-call)
+              (let ((dummy-block
+                      (nth-value 1 (cleavir-bir:split-block-after unique-call)))
+                    (ucall-out (cleavir-bir:output unique-call)))
+                (unless (cleavir-bir:unused-p ucall-out)
+                  (let ((phi (make-instance 'cleavir-bir:phi
+                               :iblock dummy-block)))
+                    (setf (cleavir-bir:inputs dummy-block) (list phi))
+                    ;; Replace the call-as-datum with the return-values.
+                    (cleavir-bir:replace-uses phi ucall-out)))
+                dummy-block))
+             ((eq return-point :unknown) :unknown)
+             ;; If there is more than one call, to share a continuation they
+             ;; must all output to the same phi, so we don't need to normalize.
+             (t (cleavir-bir:iblock return-point))))
          (start (cleavir-bir:start function)))
     (unless (and returni (eq return-point :unknown))
       (move-function-arguments-to-iblock function)
