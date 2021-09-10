@@ -35,6 +35,7 @@
 ;;; which is invalid, but if we happened to traverse the blocks in the wrong
 ;;; order we wouldn't catch it.
 (defvar *seen-instructions*)
+(defvar *seen-iblocks*)
 
 (defvar *seen-lists*)
 (defvar *seen-next*)
@@ -125,7 +126,7 @@
     (output (cleavir-set:presentp (definition datum) *seen-instructions*))
     (argument
      (member-of-lambda-list-p datum (lambda-list (function instruction))))
-    ;; FIXME: Check PHI dominance too
+    (phi (cleavir-set:presentp (iblock datum) *seen-iblocks*))
     (linear-datum t)))
 
 (defun check-ubd (instruction inputs)
@@ -341,6 +342,8 @@
         instruction (use (output instruction))))
 
 (defmethod verify progn ((iblock iblock))
+  ;; Iblocks can input to themselves through PHIs, so make it seen immediately
+  (cleavir-set:nadjoinf *seen-iblocks* iblock)
   ;; All predecessors truly have this as a successor
   (let ((non-successor-predecessors
           (cleavir-set:filter 'list
@@ -494,6 +497,7 @@
   (let ((*problems* nil) (function-problems nil))
     (handler-case
         (let ((*seen-instructions* (cleavir-set:empty-set))
+              (*seen-iblocks* (cleavir-set:empty-set))
               (*seen-lists* (cleavir-set:empty-set))
               (*seen-next* (cleavir-set:empty-set))
               (*verifying-module* module))
