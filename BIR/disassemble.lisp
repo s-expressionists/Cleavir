@@ -132,7 +132,7 @@
 
 (defun disassemble-dynenv (dynenv)
   (etypecase dynenv
-    (function `(:function ,(name dynenv)))
+    (function `(:function ,(disassemble-datum dynenv)))
     (instruction `(,(label dynenv) :in ,(name (iblock dynenv))))))
 
 (defmethod cleavir-bir-disassembler:disassemble ((iblock iblock))
