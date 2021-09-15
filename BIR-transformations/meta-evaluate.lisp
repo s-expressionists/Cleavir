@@ -371,7 +371,7 @@
 
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
-(defun substitute-single-read-variable-if-possible (variable)
+(defun substitute-single-read-variable-if-possible (variable system)
   (let ((readers (cleavir-bir:readers variable)))
     (when (and (cleavir-bir:immutablep variable)
                (= (cleavir-set:size readers) 1))
@@ -383,8 +383,13 @@
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let* ((input (cleavir-bir:input binder))
+                 (type (cleavir-ctype:coerce-to-values
+                        (cleavir-ctype:primary
+                         (cleavir-bir:ctype input)
+                         system)
+                        system))
                  (fout (make-instance 'cleavir-bir:output
-                         :derived-type (cleavir-bir:ctype input)))
+                         :derived-type type))
                  (ftm (make-instance 'cleavir-bir:fixed-to-multiple
                         :outputs (list fout))))
             (setf (cleavir-bir:inputs binder) nil)
@@ -434,10 +439,9 @@
           (derive-type-for-linear-datum out type system)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
-  (declare (ignore system))
   (let ((variable (cleavir-bir:output instruction)))
     (when variable
-      (or (substitute-single-read-variable-if-possible variable)
+      (or (substitute-single-read-variable-if-possible variable system)
           (constant-propagate-variable-if-possible variable)))))
 
 (defmethod derive-types ((instruction cleavir-bir:leti) system)
