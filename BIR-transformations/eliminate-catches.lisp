@@ -12,7 +12,8 @@
     ;; Replace the instruction
     (cleavir-bir:replace-terminator
      (make-instance 'cleavir-bir:jump
-       :inputs () :outputs () :next (list normal-next))
+       :inputs () :outputs () :next (list normal-next)
+       :origin (cleavir-bir:origin catch) :policy (cleavir-bir:policy catch))
      catch)
     ;; Fix reachability
     (cleavir-bir:compute-iblock-flow-order (cleavir-bir:function fore))

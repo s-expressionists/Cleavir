@@ -219,8 +219,10 @@
         (print "folding ifi instruction")
         (cleavir-bir:replace-terminator
          (make-instance 'cleavir-bir:jump
-                        :next (list next)
-                        :inputs '() :outputs '())
+           :next (list next)
+           :inputs '() :outputs '()
+           :origin (cleavir-bir:origin instruction)
+           :policy (cleavir-bir:policy instruction))
          instruction)
         ;; Try to delete the block if possible, so we can maybe
         ;; optimize more in this pass. Ultimately, the flow order will
@@ -249,6 +251,7 @@
       ;; predecessor.
       (let ((next (cleavir-bir:next instruction))
             (origin (cleavir-bir:origin instruction))
+            (policy (cleavir-bir:policy instruction))
             (predecessors (cleavir-bir:predecessors iblock)))
         ;; If one of the predecessors is an unwind, don't replace it
         (cleavir-set:doset (predecessor predecessors)
@@ -268,7 +271,7 @@
                     "Jump/phi pair inconsistent.")
             (let ((ifi (make-instance 'cleavir-bir:ifi
                          :next (copy-list next)
-                         :origin origin)))
+                         :origin origin :policy policy)))
               (cleavir-bir:replace-terminator ifi end)
               (setf (cleavir-bir:inputs ifi) (list input))))))
       ;; Now we clean up the original IFI block.
@@ -296,7 +299,9 @@
             (cleavir-bir:module (cleavir-bir:function instruction))))
          (constant-reference
            (make-instance 'cleavir-bir:constant-reference
-             :inputs (list constant)))
+             :inputs (list constant)
+             :origin (cleavir-bir:origin instruction)
+             :policy (cleavir-bir:policy instruction)))
          (outs (cleavir-bir:outputs instruction)))
     (setf (cleavir-bir:outputs instruction) nil
           (cleavir-bir:outputs constant-reference) outs)
@@ -393,7 +398,9 @@
           (let* ((input (cleavir-bir:input binder))
                  (fout (make-instance 'cleavir-bir:output))
                  (ftm (make-instance 'cleavir-bir:fixed-to-multiple
-                        :outputs (list fout))))
+                        :outputs (list fout)
+                        :origin (cleavir-bir:origin reader)
+                        :policy (cleavir-bir:policy reader))))
             (setf (cleavir-bir:inputs binder) nil)
             (cleavir-bir:insert-instruction-before ftm reader)
             (cleavir-bir:replace-uses fout reader-out)

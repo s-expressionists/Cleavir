@@ -80,7 +80,9 @@
   (let ((unwind-inputs (cleavir-bir:inputs u))
         (unwind-outputs (cleavir-bir:outputs u))
         (new (make-instance 'cleavir-bir:jump
-               :next (list (cleavir-bir:destination u)))))
+               :next (list (cleavir-bir:destination u))
+               :origin (cleavir-bir:origin u)
+               :policy (cleavir-bir:policy u))))
     (cleavir-bir:replace-terminator new u)
     (setf (cleavir-bir:inputs new) unwind-inputs
           (cleavir-bir:outputs new) unwind-outputs)))
@@ -90,10 +92,13 @@
   ;; Now jump with arguments into START.
   (multiple-value-bind (before after)
       (cleavir-bir:split-block-after call)
-    (let ((jump (make-instance 'cleavir-bir:jump
-                               :next (list start)
-                               :outputs (copy-list (cleavir-bir:inputs start))))
-          (lambda-list (cleavir-bir:lambda-list (cleavir-bir:callee call))))
+    (let* ((origin (cleavir-bir:origin call))
+           (policy (cleavir-bir:policy call))
+           (jump (make-instance 'cleavir-bir:jump
+                   :next (list start)
+                   :outputs (copy-list (cleavir-bir:inputs start))
+                   :origin origin :policy policy))
+           (lambda-list (cleavir-bir:lambda-list (cleavir-bir:callee call))))
       (cleavir-bir:replace-terminator
        jump
        (cleavir-bir:end before))
@@ -112,7 +117,8 @@
         ;; of the call arguments are used.
         (loop for arg in call-arguments for ftm-out in ftmd-arguments
               for ftm = (make-instance 'cleavir-bir:fixed-to-multiple
-                          :inputs (list arg) :outputs (list ftm-out))
+                          :inputs (list arg) :outputs (list ftm-out)
+                          :origin origin :policy policy)
               do (cleavir-bir:insert-instruction-before ftm jump))
         ;; Compute inputs to the jump.
         (cleavir-bir:map-lambda-list
@@ -131,7 +137,8 @@
                             (suppliedp (make-instance
                                            'cleavir-bir:constant-reference
                                          :inputs (list const)
-                                         :outputs (list suppliedp-out))))
+                                         :outputs (list suppliedp-out)
+                                         :origin origin :policy policy)))
                        (cleavir-bir:insert-instruction-before suppliedp jump)
                        (push arg inputs)
                        (push suppliedp-out inputs)))
@@ -142,12 +149,14 @@
                             (value (make-instance
                                        'cleavir-bir:constant-reference
                                      :inputs (list nil-constant)
-                                     :outputs (list value-out)))
+                                     :outputs (list value-out)
+                                     :origin origin :policy policy))
                             (suppliedp-out (make-instance 'cleavir-bir:output))
                             (suppliedp (make-instance
                                            'cleavir-bir:constant-reference
                                          :inputs (list nil-constant)
-                                         :outputs (list suppliedp-out))))
+                                         :outputs (list suppliedp-out)
+                                         :origin origin :policy policy)))
                        (cleavir-bir:insert-instruction-before value jump)
                        (cleavir-bir:insert-instruction-before suppliedp jump)
                        (push value-out inputs)
@@ -168,8 +177,10 @@
   (let* ((returni (cleavir-bir:returni function))
          (outputs (cleavir-bir:inputs return-point-block))
          (jump (make-instance 'cleavir-bir:jump
-                              :outputs (copy-list outputs)
-                              :next (list return-point-block))))
+                 :outputs (copy-list outputs)
+                 :next (list return-point-block)
+                 :origin (cleavir-bir:origin returni)
+                 :policy (cleavir-bir:policy returni))))
     ;; THis assertion is sort of guaranteed by LOGICAL-CONTINUATION.
     (assert (<= (length (cleavir-bir:inputs return-point-block))
                 (length (cleavir-bir:inputs returni))))
