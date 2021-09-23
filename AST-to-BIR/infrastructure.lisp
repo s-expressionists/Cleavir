@@ -113,7 +113,12 @@
                         variable)
   (values))
 
-(defgeneric compile-function (ast system))
+(defgeneric compile-function (ast system)
+  (:method :around ((ast cleavir-ast:function-ast) system)
+    (declare (ignore system))
+    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
+          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
+      (call-next-method))))
 
 (defun compile-toplevel (ast system)
   (let ((*variables* (make-hash-table :test #'eq))
