@@ -311,7 +311,8 @@
                        ,@(when aokp '(&allow-other-keys)))
                 ,returns))
 
-(defmethod compiled-function (sys) (declare (ignore sys)) 'compiled-function)
+(defmethod compiled-function (sys) (declare (ignore sys))
+  'cl:compiled-function)
 
 (defmethod values (req opt rest sys)
   (declare (ignore sys))
