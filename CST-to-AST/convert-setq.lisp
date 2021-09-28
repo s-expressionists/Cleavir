@@ -53,4 +53,4 @@
 				   system)))
 
 (defun convert-elementary-setq (var-cst form-cst env system)
-  (convert-setq var-cst form-cst (variable-info env var-cst) env system))
+  (convert-setq var-cst form-cst (variable-info system env var-cst) env system))

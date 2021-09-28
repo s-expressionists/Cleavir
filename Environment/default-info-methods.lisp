@@ -16,7 +16,7 @@
 ;;;; where the default action is to make a recursive call, passing the
 ;;;; next instance in the chain.
 
-(defgeneric make-info (environment defining-info))
+(defgeneric make-info (system environment defining-info))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -39,7 +39,7 @@
 ;;; the traversal stops when we reach the place where the variable was
 ;;; defined.
 
-(defgeneric defining-variable-info (environment symbol))
+(defgeneric defining-variable-info (system environment symbol))
 
 ;;; For entries with the right type to introduce a variable, we check
 ;;; whether the name in the entry is EQ to the symbol that we are
@@ -53,41 +53,46 @@
 ;;; SPECIAL-VARIABLE, and SYMBOL-MACRO.  Since constant variables can
 ;;; only be global, there is no entry type for constant variables.
 
-(defmethod defining-variable-info ((environment lexical-variable) symbol)
+(defmethod defining-variable-info (system (environment lexical-variable)
+                                   symbol)
   (if (eq symbol (name environment))
       (make-instance 'lexical-variable-info
 	:name symbol
-	:identity (identity environment))
-      (defining-variable-info (next environment) symbol)))
+	:identity (identity environment)
+        :type (cleavir-ctype:top system))
+      (defining-variable-info system (next environment) symbol)))
 
-(defmethod defining-variable-info ((environment special-variable) symbol)
+(defmethod defining-variable-info (system (environment special-variable)
+                                   symbol)
   (if (eq symbol (name environment))
       (make-instance 'special-variable-info
 	:name symbol
-	:global-p nil)
-      (defining-variable-info (next environment) symbol)))
+	:global-p nil
+        :type (cleavir-ctype:top system))
+      (defining-variable-info system (next environment) symbol)))
 
-(defmethod defining-variable-info ((environment symbol-macro) symbol)
+(defmethod defining-variable-info (system (environment symbol-macro) symbol)
   (if (eq symbol (name environment))
       (make-instance 'symbol-macro-info
 	:name symbol
-	:expansion (expansion environment))
-      (defining-variable-info (next environment) symbol)))
+	:expansion (expansion environment)
+        :type (cleavir-ctype:top system))
+      (defining-variable-info system (next environment) symbol)))
 
 ;;; This method implements the action to take when the argument is an
 ;;; ENTRY, but it is not an entry defining a variable.  We handle this
 ;;; situation by just making a recursive call, passing the next entry
 ;;; in the environment.
-(defmethod defining-variable-info ((environment entry) symbol)
-  (defining-variable-info (next environment) symbol))
+(defmethod defining-variable-info (system (environment entry) symbol)
+  (defining-variable-info system (next environment) symbol))
 
 ;;; This method implements the action to take when the argument is the
 ;;; global environment.  We detect this situation by the fact that the
 ;;; argument is not an ENTRY.  Since we have run out of local
 ;;; environment entries, we must now consult the implementation by
 ;;; calling VARIABLE-INFO on the global environment.
-(defmethod defining-variable-info (environment symbol)
-  (variable-info environment symbol))
+(defmethod defining-variable-info (system environment symbol)
+  (variable-info system environment symbol))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -281,12 +286,12 @@
 ;;; VARIABLE-INFO.
 
 (defmethod make-info
-    (environment (defining-info lexical-variable-info))
+    (system environment (defining-info lexical-variable-info))
   (make-instance 'lexical-variable-info
     :name (name defining-info)
     :identity (identity defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil ; FIXME
+                 system
                  (variable-type environment defining-info))
     :ignore
     (let ((entry (variable-ignore environment defining-info)))
@@ -296,11 +301,11 @@
       (if (null entry) (dynamic-extent defining-info) t))))
 
 (defmethod make-info
-    (environment (defining-info special-variable-info))
+    (system environment (defining-info special-variable-info))
   (make-instance 'special-variable-info
     :name (name defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (variable-type environment defining-info))
     :global-p (global-p defining-info)
     :ignore
@@ -308,25 +313,25 @@
       (if (null entry) nil (ignore entry)))))
 
 (defmethod make-info
-    (environment (defining-info constant-variable-info))
-  (declare (cl:ignorable environment))
+    (system environment (defining-info constant-variable-info))
+  (declare (cl:ignorable system environment))
   defining-info)
 
 (defmethod make-info
-    (environment (defining-info symbol-macro-info))
+    (system environment (defining-info symbol-macro-info))
   (make-instance 'symbol-macro-info
     :name (name defining-info)
     :expansion (expansion defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (variable-type environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; The main method on VARIABLE-INFO specialized to ENTRY. 
 
-(defmethod variable-info ((environment entry) symbol)
-  (let ((defining-info (defining-variable-info environment symbol)))
+(defmethod variable-info (system (environment entry) symbol)
+  (let ((defining-info (defining-variable-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that VARIABLE-INFO
 	;; returned NIL when called with the global environment, which
@@ -334,7 +339,7 @@
 	;; must then also respect the protocol and return nil to our
 	;; caller.
 	nil
-	(make-info environment defining-info))))
+	(make-info system environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -355,7 +360,7 @@
 ;;; reach the place where the function was defined, in which case no
 ;;; relevant modifying entry was found.
 
-(defgeneric defining-function-info (environment symbol))
+(defgeneric defining-function-info (system environment symbol))
 
 ;;; For entries with the right type to introduce a function, we check
 ;;; whether the name in the entry is EQUAL to the function-name (or EQ
@@ -369,34 +374,35 @@
 ;;; The relevant entries for function info are FUNCTION, and
 ;;; MACRO.
 
-(defmethod defining-function-info ((environment function) function-name)
+(defmethod defining-function-info (system (environment function) function-name)
   (if (equal function-name (name environment))
       (make-instance 'local-function-info
 	:name function-name
-	:identity (identity environment))
-      (defining-function-info (next environment) function-name)))
+	:identity (identity environment)
+        :type (cleavir-ctype:function-top system))
+      (defining-function-info system (next environment) function-name)))
 
-(defmethod defining-function-info ((environment macro) symbol)
+(defmethod defining-function-info (system (environment macro) symbol)
   (if (eq symbol (name environment))
       (make-instance 'local-macro-info
 	:name symbol
 	:expander (expander environment))
-      (defining-function-info (next environment) symbol)))
+      (defining-function-info system (next environment) symbol)))
 
 ;;; This method implements the action to take when the argument is an
 ;;; ENTRY, but it is not an entry defining a function.  We handle this
 ;;; situation by just making a recursive call, passing the next entry
 ;;; in the environment.
-(defmethod defining-function-info ((environment entry) function-name)
-  (defining-function-info (next environment) function-name))
+(defmethod defining-function-info (system (environment entry) function-name)
+  (defining-function-info system (next environment) function-name))
 
 ;;; This method implements the action to take when the argument is the
 ;;; global environment.  We detect this situation by the fact that the
 ;;; argument is not an ENTRY.  Since we have run out of local
 ;;; environment entries, we must now consult the implementation by
 ;;; calling FUNCTION-INFO on the global environment.
-(defmethod defining-function-info (environment function-name)
-  (function-info environment function-name))
+(defmethod defining-function-info (system environment function-name)
+  (function-info system environment function-name))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -413,6 +419,8 @@
 ;;; environment.
 (defmethod function-type (environment defining-info)
   (declare (cl:ignorable environment))
+  (unless (slot-boundp defining-info '%type)
+    (error "unbound function type in ~a" defining-info))
   (list (type defining-info)))
 
 ;;; This method is called when the entry is not related to the
@@ -703,12 +711,12 @@
 ;;; FUNCTION-INFO.
 
 (defmethod make-info
-    (environment (defining-info local-function-info))
+    (system environment (defining-info local-function-info))
   (make-instance 'local-function-info
     :name (name defining-info)
     :identity (identity defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (function-type environment defining-info))
     :ignore
     (let ((entry (function-ignore environment defining-info)))
@@ -727,11 +735,11 @@
     :attributes (attributes defining-info)))
 
 (defmethod make-info
-    (environment (defining-info global-function-info))
+    (system environment (defining-info global-function-info))
   (make-instance 'global-function-info
     :name (name defining-info)
     :type (apply #'cleavir-ctype:conjoin
-                 nil
+                 system
 		 (function-type environment defining-info))
     :ignore
     (let ((entry (function-ignore environment defining-info)))
@@ -750,12 +758,13 @@
       (if (null entry) (dynamic-extent defining-info) t))))
 
 (defmethod make-info
-    (environment (defining-info local-macro-info))
-  (declare (cl:ignore environment))
+    (system environment (defining-info local-macro-info))
+  (declare (cl:ignore system environment))
   defining-info)
 
 (defmethod make-info
-    (environment (defining-info global-macro-info))
+    (system environment (defining-info global-macro-info))
+  (declare (cl:ignore system))
   (make-instance 'global-macro-info
     :name (name defining-info)
     :compiler-macro (compiler-macro defining-info)
@@ -765,16 +774,17 @@
     :expander (expander defining-info)))
 
 (defmethod make-info
-    (environment (defining-info special-operator-info))
-  (declare (cl:ignore environment))
+    (system environment (defining-info special-operator-info))
+  (declare (cl:ignore system environment))
   defining-info)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; The main method on FUNCTION-INFO specialized to ENTRY. 
 
-(defmethod function-info ((environment entry) symbol)
-  (let ((defining-info (defining-function-info environment symbol)))
+(defmethod function-info (system (environment entry) symbol)
+  (declare (ignore system))
+  (let ((defining-info (defining-function-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that FUNCTION-INFO
 	;; returned NIL when called with the global environment, which
@@ -782,7 +792,7 @@
 	;; must then also respect the protocol and return nil to our
 	;; caller.
 	nil
-	(make-info environment defining-info))))
+	(make-info system environment defining-info))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

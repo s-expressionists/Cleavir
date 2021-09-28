@@ -27,7 +27,7 @@
 
 ;;; Cleavir tools call this function in order to obtain information
 ;;; about a symbol in a variable position.
-(defgeneric variable-info (environment symbol))
+(defgeneric variable-info (system environment symbol))
 
 ;;; As a response to a query about a symbol in a variable position, an
 ;;; instance of this class must be returned if the symbol stands for a
@@ -46,7 +46,7 @@
    ;; the same object as was supplied for that particular variable. 
    (%identity :initarg :identity :reader identity)
    ;; The type of the variable.
-   (%type :initform t :initarg :type :reader type)
+   (%type :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, IGNORE, and
    ;; IGNORABLE.  NIL means that no IGNORE information has been
    ;; supplied.  IGNORE means and IGNORE declaration is in scope, and
@@ -64,7 +64,7 @@
    ;; reader for further processing.
    (%name :initarg :name :reader name)
    ;; The type of the variable.
-   (%type :initform t :initarg :type :reader type)
+   (%type :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, IGNORE, and
    ;; IGNORABLE.  NIL means that no IGNORE information has been
    ;; supplied.  IGNORE means and IGNORE declaration is in scope, and
@@ -93,7 +93,7 @@
    ;; reader for further processing.
    (%name :initarg :name :reader name)  
    ;; The type of the symbol macro.  
-   (%type :initform t :initarg :type :reader type)
+   (%type :initarg :type :reader type)
    ;; The expansion of the symbol macro as a form rather than as an
    ;; expander function.
    (%expansion :initarg :expansion :reader expansion)))
@@ -105,7 +105,7 @@
 ;;; Cleavir tools call this function in order to obtain information
 ;;; about a symbol in a function position.  It could also be used to
 ;;; obtain information about a function name that is not a symbol.
-(defgeneric function-info (environment function-name))
+(defgeneric function-info (system environment function-name))
 
 (defclass local-function-info ()
   (;; The name of the local function.  It can be different from the
@@ -121,8 +121,7 @@
    ;; the same object as was supplied for that particular function.
    (%identity :initarg :identity :reader identity)
    ;; The type of the local function. 
-   (%type :initform (cleavir-ctype:function-top nil)
-          :initarg :type :reader type)
+   (%type :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, INLINE and
    ;; NOTINLINE.  NIL means that there is neither an INLINE nor a
    ;; NOTINLINE declaration in scope.  INLINE means that there is an
@@ -162,8 +161,7 @@
    ;; the NAME reader for further processing.
    (%name :initarg :name :reader name)
    ;; The type of the global function. 
-   (%type :initform (cleavir-ctype:function-top nil)
-          :initarg :type :reader type)
+   (%type :initarg :type :reader type)
    ;; There are three possible values here, namely NIL, INLINE and
    ;; NOTINLINE.  NIL means that there is neither an INLINE nor a
    ;; NOTINLINE declaration in scope.  INLINE means that there is an

@@ -1,8 +1,8 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defun variable-info (environment var-name-cst)
+(defun variable-info (system environment var-name-cst)
   (let* ((symbol (cst:raw var-name-cst))
-         (info (cleavir-env:variable-info environment symbol)))
+         (info (cleavir-env:variable-info system environment symbol)))
     (loop while (null info)
 	  do (restart-case (error 'no-variable-info
 				  :name symbol
@@ -11,24 +11,27 @@
 		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
-                         :name symbol)))
+                         :name symbol
+                         :type (cleavir-ctype:top system))))
                ;; This is identical to CONTINUE, but more specifically named.
 	       (consider-special ()
 		 :report "Consider the variable as special."
                  (setf info
                        (make-instance 'cleavir-env:special-variable-info
-                         :name symbol)))
+                         :name symbol
+                         :type (cleavir-ctype:top system))))
 	       (substitute (new-symbol)
 		 :report "Substitute a different name."
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq info (cleavir-env:variable-info environment new-symbol)))))
+		 (setq info (cleavir-env:variable-info
+                             system environment new-symbol)))))
     info))
 
-(defun function-info (environment function-name-cst)
+(defun function-info (system environment function-name-cst)
   (let* ((function-name (cst:raw function-name-cst))
-         (result (cleavir-env:function-info environment function-name)))
+         (result (cleavir-env:function-info system environment function-name)))
     (loop while (null result)
 	  do (restart-case (error 'no-function-info
 				  :name function-name
@@ -37,13 +40,15 @@
 		 :report "Treat it as the name of a global function."
 		 (return-from function-info
 		   (make-instance 'cleavir-env:global-function-info
-		     :name function-name)))
+		     :name function-name
+                     :type (cleavir-ctype:function-top system))))
 	       (substitute (new-function-name)
 		 :report "Substitute a different name."
 		 :interactive (lambda ()
 				(format *query-io* "Enter new name: ")
 				(list (read *query-io*)))
-		 (setq result (cleavir-env:function-info environment new-function-name)))))
+		 (setq result (cleavir-env:function-info
+                               system environment new-function-name)))))
     result))
 
 (defun tag-info (environment tag-name-cst)

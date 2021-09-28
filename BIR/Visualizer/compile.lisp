@@ -9,11 +9,11 @@
                  :reader   optimize*)))
 
 (defmethod cleavir-env:variable-info
-    ((env visualizer-environment) symbol)
-  (cleavir-env:variable-info (environment env) symbol))
+    (sys (env visualizer-environment) symbol)
+  (cleavir-env:variable-info sys (environment env) symbol))
 
-(defmethod cleavir-env:function-info ((env visualizer-environment) (sym t))
-  (cleavir-env:function-info (environment env) sym))
+(defmethod cleavir-env:function-info (sys (env visualizer-environment) (sym t))
+  (cleavir-env:function-info sys (environment env) sym))
 
 (defmethod cleavir-env:declarations ((env visualizer-environment))
   (cleavir-env:declarations (environment env)))

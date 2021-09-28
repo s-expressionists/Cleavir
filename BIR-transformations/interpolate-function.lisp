@@ -133,7 +133,9 @@
                   (cond
                     (arg
                      (let* ((const (cleavir-bir:constant-in-module t module))
-                            (suppliedp-out (make-instance 'cleavir-bir:output))
+                            (suppliedp-out (make-instance 'cleavir-bir:output
+                                             :derived-type (cleavir-bir:ctype
+                                                            (second item))))
                             (suppliedp (make-instance
                                            'cleavir-bir:constant-reference
                                          :inputs (list const)
@@ -145,13 +147,17 @@
                     (t
                      (let* ((nil-constant
                               (cleavir-bir:constant-in-module nil module))
-                            (value-out (make-instance 'cleavir-bir:output))
+                            (value-out (make-instance 'cleavir-bir:output
+                                         :derived-type (cleavir-bir:ctype
+                                                        (first item))))
                             (value (make-instance
                                        'cleavir-bir:constant-reference
                                      :inputs (list nil-constant)
                                      :outputs (list value-out)
                                      :origin origin :policy policy))
-                            (suppliedp-out (make-instance 'cleavir-bir:output))
+                            (suppliedp-out (make-instance 'cleavir-bir:output
+                                             :derived-type (cleavir-bir:ctype
+                                                            (second item))))
                             (suppliedp (make-instance
                                            'cleavir-bir:constant-reference
                                          :inputs (list nil-constant)
@@ -198,12 +204,19 @@
        (declare (ignore index))
        (ecase state
          (:required
-          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start)))
+          (let ((supplied (make-instance 'cleavir-bir:phi
+                            :iblock start
+                            :derived-type (cleavir-bir:ctype item))))
             (push supplied phis)
             (cleavir-bir:replace-uses supplied item)))
          (&optional
-          (let ((supplied (make-instance 'cleavir-bir:phi :iblock start))
-                (supplied-p (make-instance 'cleavir-bir:phi :iblock start)))
+          (let ((supplied (make-instance 'cleavir-bir:phi
+                            :iblock start
+                            :derived-type (cleavir-bir:ctype (first item))))
+                (supplied-p (make-instance 'cleavir-bir:phi
+                              :iblock start
+                              :derived-type (cleavir-bir:ctype
+                                             (second item)))))
             (push supplied phis)
             (push supplied-p phis)
             (cleavir-bir:replace-uses supplied (first item))
@@ -275,7 +288,8 @@
                     (ucall-out (cleavir-bir:output unique-call)))
                 (unless (cleavir-bir:unused-p ucall-out)
                   (let ((phi (make-instance 'cleavir-bir:phi
-                               :iblock dummy-block)))
+                               :iblock dummy-block
+                               :derived-type (cleavir-bir:ctype ucall-out))))
                     (setf (cleavir-bir:inputs dummy-block) (list phi))
                     ;; Replace the call-as-datum with the return-values.
                     (cleavir-bir:replace-uses phi ucall-out)))
@@ -294,7 +308,7 @@
                             target-owner
                             common-dynenv)
       (cleavir-set:doset (call local-calls)
-        (rewire-call-into-body call start))
+                         (rewire-call-into-body call start))
       ;; Recompute the flow order, as now the iblocks of the function
       ;; have been integrated into that of TARGET-OWNER.
       (cleavir-bir:compute-iblock-flow-order target-owner)

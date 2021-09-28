@@ -109,12 +109,12 @@
      declaration-data-cst
      environment
      system)
-  (declare (ignore declaration-identifier-cst system))
+  (declare (ignore declaration-identifier-cst))
   ;; This case is a bit tricky, because if the
   ;; variable is globally special, nothing should
   ;; be added to the environment.
   (let ((info (cleavir-env:variable-info
-               environment (cst:raw (cst:first declaration-data-cst)))))
+               system environment (cst:raw (cst:first declaration-data-cst)))))
     (cond ((typep info 'cleavir-env:symbol-macro-info)
            (error 'special-symbol-macro
                   :cst (cst:first declaration-data-cst)))
@@ -202,8 +202,8 @@
 ;;; the binding form is compiled, return true if and only if the
 ;;; variable to be bound is special.  Return a second value indicating
 ;;; whether the variable is globally special.
-(defun variable-is-special-p (variable declarations env)
-  (let* ((existing-var-info (cleavir-env:variable-info env variable))
+(defun variable-is-special-p (variable declarations env system)
+  (let* ((existing-var-info (cleavir-env:variable-info system env variable))
          (special-var-p
            (typep existing-var-info 'cleavir-env:special-variable-info)))
     (cond ((loop for declaration in declarations
@@ -250,7 +250,7 @@
         (origin (cst:source variable-cst))
         (raw-declarations (mapcar #'cst:raw declarations)))
     (multiple-value-bind (special-p globally-p)
-        (variable-is-special-p raw-variable declarations orig-env)
+        (variable-is-special-p raw-variable declarations orig-env system)
       (if special-p
           (unless globally-p
             (setf new-env
@@ -262,7 +262,7 @@
     (let* ((type (declared-type declarations))
            ;; FIXME system arguments
            (ptype (cleavir-env:parse-type-specifier type env system)))
-      (unless (cleavir-ctype:top-p ptype nil)
+      (unless (cleavir-ctype:top-p ptype system)
         (setf new-env
               (cleavir-env:add-variable-type new-env raw-variable ptype))))
     (when (member 'ignore raw-declarations :test #'eq :key #'car)

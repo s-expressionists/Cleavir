@@ -182,14 +182,6 @@
   ;; Without particular knowledge, we have nothing to do.
   (declare (ignore instruction system)))
 
-(defmethod derive-types :after (instruction system)
-  (declare (ignore system))
-  (loop for outp in (cleavir-bir:outputs instruction)
-        unless (or (not (typep outp 'cleavir-bir:linear-datum))
-                   (cleavir-ctype::values-ctype-p (cleavir-bir:ctype outp)))
-          do (warn "Bad ctype ~a in output of ~a"
-                   (cleavir-bir:ctype outp) instruction)))
-
 (defmethod derive-types (instruction system)
   (declare (ignore instruction system)))
 
@@ -384,7 +376,7 @@
 
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
-(defun substitute-single-read-variable-if-possible (variable)
+(defun substitute-single-read-variable-if-possible (variable system)
   (let ((readers (cleavir-bir:readers variable)))
     (when (and (cleavir-bir:immutablep variable)
                (= (cleavir-set:size readers) 1))
@@ -396,7 +388,13 @@
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let* ((input (cleavir-bir:input binder))
-                 (fout (make-instance 'cleavir-bir:output))
+                 (type (cleavir-ctype:coerce-to-values
+                        (cleavir-ctype:primary
+                         (cleavir-bir:ctype input)
+                         system)
+                        system))
+                 (fout (make-instance 'cleavir-bir:output
+                         :derived-type type))
                  (ftm (make-instance 'cleavir-bir:fixed-to-multiple
                         :outputs (list fout)
                         :origin (cleavir-bir:origin reader)
@@ -448,10 +446,9 @@
           (derive-type-for-linear-datum out type system)))))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
-  (declare (ignore system))
   (let ((variable (cleavir-bir:output instruction)))
     (when variable
-      (or (substitute-single-read-variable-if-possible variable)
+      (or (substitute-single-read-variable-if-possible variable system)
           (constant-propagate-variable-if-possible variable)))))
 
 (defmethod derive-types ((instruction cleavir-bir:leti) system)
