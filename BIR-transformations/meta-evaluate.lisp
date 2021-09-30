@@ -245,10 +245,12 @@
             (origin (cleavir-bir:origin instruction))
             (policy (cleavir-bir:policy instruction))
             (predecessors (cleavir-bir:predecessors iblock)))
-        ;; If one of the predecessors is an unwind, don't replace it
+        ;; If one of the predecessors is an unwind or not a jump,
+        ;; don't replace it
         (cleavir-set:doset (predecessor predecessors)
           (let ((end (cleavir-bir:end predecessor)))
-            (when (cleavir-bir:unwindp end)
+            (when (or (not (typep end 'cleavir-bir:jump))
+                      (cleavir-bir:unwindp end))
               (return-from eliminate-if-if nil))))
         ;; Actual work
         (cleavir-set:doset (predecessor predecessors)
