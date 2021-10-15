@@ -557,3 +557,10 @@
       (derive-type-for-linear-datum
        (first (cleavir-bir:lambda-list type-check-function))
        ctype system))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:call) system)
+  (declare (ignore system))
+  ;; Try all client transforms in order.
+  ;; If any return true, a change has been made.
+  (some (lambda (transform) (funcall transform instruction))
+        (cleavir-bir:transforms instruction)))
