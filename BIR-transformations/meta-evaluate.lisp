@@ -13,8 +13,11 @@
   (dotimes (repeat 3)
     (declare (ignorable repeat))
     (cleavir-bir:do-functions (function module)
-      (meta-evaluate-function function system)
-      (cleavir-bir:compute-iblock-flow-order function))))
+      ;; This check is necessary because meta-evaluation might have deleted
+      ;; the function during our iteration. KLUDGE?
+      (when (cleavir-set:presentp function (cleavir-bir:functions module))
+        (meta-evaluate-function function system)
+        (cleavir-bir:compute-iblock-flow-order function)))))
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
