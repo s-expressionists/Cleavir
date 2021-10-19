@@ -36,7 +36,7 @@
 ;;; Functions that are closed over are never marked dynamic-extent, even
 ;;; in cases in which they could be, e.g. if they are only recursive.
 (defun safe-call-p (call)
-  (cleavir-attributes:has-boolean-attribute-p
+  (cleavir-attributes:has-flag-p
    (cleavir-bir:attributes call)
    :dx-call))
 

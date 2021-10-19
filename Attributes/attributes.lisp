@@ -1,64 +1,74 @@
 (in-package #:cleavir-attributes)
 
-;;;; Attributes are generally organized so that their lack is the
-;;;; general case, i.e. if an attribute is "positive" in that it
-;;;; enables transformations, it must be explicitly asserted.
-;;;; Another way of putting this is that a completely unknown
-;;;; function essentially has no attributes.
+(defclass attributes ()
+  (;; Boolean flags; see flags.lisp
+   (%flags :initarg :flags :initform 0 :reader flags :type (integer 0))
+   ;; A sequence of functions called to transform call instructions.
+   (%transforms :initarg :transforms :initform nil
+                :reader transforms :type list)))
 
-;;;; Current attributes:
+(defmethod make-load-form ((object attributes) &optional env)
+  ;; FIXME: We don't save transforms, since they're functions. That may
+  ;; have negative consequences for inline ASTs.
+  ;; This also means we have to initialize to NIL ourselves.
+  (multiple-value-bind (create init)
+      (make-load-form-saving-slots object
+                                   :slot-names '(%flags) :environment env)
+    (values create
+            `(progn ,init (setf (slot-value ,object '%transforms) nil)))))
 
-;;; :NO-CALL means that the function does not increase the number of
-;;; ways its arguments can be called. That is, it does not call
-;;; them itself, and does not enable calls to occur in new ways
-;;; (e.g. by storing an argument in a global variable, where anybody
-;;;  could call it later). This weird phrasing is because function
-;;; arguments could do these things themselves
-;;; (e.g. (labels ((foo (x) (push (cons #'foo x) *calls*))) ...))
-;;; and this does not implicate the NO-CALL-ness of any function
-;;; that is passed them as an argument.
-;;; Implies DYN-CALL.
+(cleavir-io:define-save-info attributes
+    (:flags (flags attributes)))
 
-;;; :DYN-CALL means that the function can only increase the number
-;;; of ways its arguments can be called with ways that call the
-;;; argument in a dynamic environment substantially identical to
-;;; that of the DYN-CALL function.
-;;; For example, (lambda (f) (funcall f)) could be DYN-CALL,
-;;; but (lambda (f x) (let ((*x* x)) (funcall f))) could not, as
-;;; it calls its argument f in a different dynamic environment.
-;;; This implies that arguments are dx-safe (TODO: attribute for
-;;; that) because if f was e.g. stored in a global it could later
-;;; be called in arbitrary dynamic environments.
+;;; NIL means no special attributes.
+(deftype attributes-designator () '(or attributes null))
 
-;;; :DX-CALL implies that the function's callable arguments do not
-;;; escape. For example, the function (lambda (f) (funcall f)) is
-;;; DX-CALL, while (lambda (f) f) is not. FIXME: This is probably
-;;; better expressed as a dynamic extent attribute on individual
-;;; arguments.
+(defmethod flags ((attr null)) 0)
+(defmethod transforms ((attr null)) nil)
 
-;;; :FLUSHABLE means the function does not side-effect and calls to it
-;;; can be deleted if the value of the call is not used.
+(defun default-attributes () nil)
 
-;;; We represent boolean attributes as an integer bitfield.
+(defgeneric has-flag-p (attributes flag-name))
 
-(defun make-attributes (&rest attributes)
-  (let ((result 0))
-    (dolist (attr attributes)
-      (let ((bits (ecase attr
-                    ((:no-call) #b11)
-                    ((:dyn-call) #b10)
-                    ((:dx-call) #b100)
-                    ((:flushable) #b1000))))
-        (setf result (logior result bits))))
-    result))
+(defmethod has-flag-p ((attributes null) flag-name)
+  (declare (ignore has-flag-p))
+  nil)
+(defmethod has-flag-p ((attributes attributes) flag-name)
+  (%has-flag-p (flags attributes) flag-name))
 
-(defun default-attributes () 0)
+;;; Is attributes-1 less specific than attributes-2?
+(defgeneric sub-attributes-p (attributes-1 attributes-2))
 
-(defun has-boolean-attribute-p (attributes attribute-name)
-  (logbitp
-   (ecase attribute-name
-     ((:no-call) 0)
-     ((:dyn-call) 1)
-     ((:dx-call) 2)
-     ((:flushable) 3))
-   attributes))
+(defmethod sub-attributes-p ((attr1 null) (attr2 attributes)) t)
+(defmethod sub-attributes-p ((attr1 attributes) (attr2 null)) nil)
+(defmethod sub-attributes-p ((attr1 attributes) (attr2 attributes))
+  (and (sub-flags-p (flags attr1) (flags attr2))
+       (subsetp (transforms attr1) (transforms attr2))))
+
+;;; Return attributes combining both inputs; the returned attributes
+;;; only have a given quality if both of the inputs do. Because attributes
+;;; are of function parameters, they are contravariant, and so this can be
+;;; used like CL:OR types.
+(defgeneric meet-attributes (attributes-1 attributes-2))
+;;; Dual of the above.
+(defgeneric join-attributes (attributes-1 attributes-2))
+
+(defmethod meet-attributes ((attr1 null) (attr2 attributes)) attr1)
+(defmethod meet-attributes ((attr1 attributes) (attr2 null)) attr2)
+(defmethod meet-attributes ((attr1 attributes) (attr2 attributes))
+  ;; Try to avoid consing.
+  (cond ((sub-attributes-p attr1 attr2) attr1)
+        ((sub-attributes-p attr2 attr1) attr2)
+        (t (make-instance 'attributes
+             :flags (meet-flags (flags attr1) (flags attr2))
+             :transforms (intersection (transforms attr1)
+                                       (transforms attr2))))))
+
+(defmethod join-attributes ((attr1 null) (attr2 attributes)) attr2)
+(defmethod join-attributes ((attr1 attributes) (attr2 null)) attr1)
+(defmethod join-attributes ((attr1 attributes) (attr2 attributes))
+  (cond ((sub-attributes-p attr1 attr2) attr2)
+        ((sub-attributes-p attr2 attr1) attr1)
+        (t (make-instance 'attributes
+             :flags (join-flags (flags attr1) (flags attr2))
+             :transforms (union (transforms attr1) (transforms attr2))))))

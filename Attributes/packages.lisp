@@ -2,5 +2,7 @@
 
 (defpackage #:cleavir-attributes
   (:use #:common-lisp)
-  (:export #:make-attributes #:default-attributes
-           #:has-boolean-attribute-p))
+  (:export #:attributes #:attributes-designator #:default-attributes
+           #:transforms
+           #:meet-attributes #:join-attributes)
+  (:export #:make-flags #:has-flag-p))

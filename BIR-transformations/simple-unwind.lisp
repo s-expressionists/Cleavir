@@ -58,7 +58,7 @@
 (defun simplifiable-user-p (user fn)
   (typecase user
     (cleavir-bir:abstract-call
-     (or (cleavir-attributes:has-boolean-attribute-p
+     (or (cleavir-attributes:has-flag-p
           (cleavir-bir:attributes user)
           :dyn-call)
          (eq (cleavir-bir:callee user) fn)))

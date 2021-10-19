@@ -37,7 +37,7 @@
            #:values-save #:values-collect
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
-           #:attributes #:transforms
+           #:attributes
            #:leti #:dynamic-leti #:enclose #:code
            #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:vprimop #:nvprimop #:tprimop #:info)

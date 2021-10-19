@@ -218,8 +218,7 @@
     ((instruction cleavir-bir:abstract-call) stack map)
   (declare (ignore stack map))
   (list
-   :attributes (cleavir-bir:attributes instruction)
-   :transforms (cleavir-bir:transforms instruction)))
+   :attributes (cleavir-bir:attributes instruction)))
 
 (defmethod clone-initargs append
     ((instruction cleavir-bir:unwind) stack map)

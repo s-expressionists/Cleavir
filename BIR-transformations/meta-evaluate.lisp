@@ -159,7 +159,7 @@
 
 (defmethod maybe-flush-instruction ((instruction cleavir-bir:abstract-call))
   (when (and (cleavir-bir:unused-p (cleavir-bir:output instruction))
-             (cleavir-attributes:has-boolean-attribute-p
+             (cleavir-attributes:has-flag-p
               (cleavir-bir:attributes instruction)
               :flushable))
     (cleavir-bir:delete-instruction instruction)))
@@ -566,4 +566,4 @@
   ;; Try all client transforms in order.
   ;; If any return true, a change has been made.
   (some (lambda (transform) (funcall transform instruction))
-        (cleavir-bir:transforms instruction)))
+        (cleavir-attributes:transforms (cleavir-bir:attributes instruction))))

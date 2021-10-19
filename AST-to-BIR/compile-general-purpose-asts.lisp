@@ -309,7 +309,6 @@
       (let ((call-out (make-instance 'cleavir-bir:output)))
         (insert inserter (make-instance 'cleavir-bir:call
                            :attributes (cleavir-ast:attributes ast)
-                           :transforms (cleavir-ast:transforms ast)
                            :inputs (list* (first callee) args)
                            :outputs (list call-out)))
         (list call-out)))))

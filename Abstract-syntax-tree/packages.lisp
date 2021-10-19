@@ -26,7 +26,7 @@
    #:constant-fdefinition-ast #:make-constant-fdefinition-ast #:info
    #:constant-symbol-value-ast #:make-constant-symbol-value-ast #:info
    #:call-ast #:make-call-ast #:callee-ast #:argument-asts
-   #:inline-declaration #:attributes #:transforms
+   #:inline-declaration #:attributes
    #:primop-ast
    #:block-ast #:make-block-ast #:body
    #:function-ast #:make-function-ast #:lambda-list

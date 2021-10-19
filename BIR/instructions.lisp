@@ -40,9 +40,7 @@
 
 (defclass abstract-call (one-output instruction)
   ((%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))
-   (%transforms :initarg :transforms :reader transforms
-                :initform nil)))
+                :initform (cleavir-attributes:default-attributes))))
 (defgeneric callee (instruction))
 
 (defclass call (abstract-call) ())
