@@ -582,9 +582,18 @@
        (first (cleavir-bir:lambda-list type-check-function))
        ctype system))))
 
+;; Clients can specialize this to perform specific transformations on
+;; the IR for a call.
+;; The "transform" object is some thing stored in a function's attributes,
+;; and so is client-defined. The cleavir-attributes system has more info.
+;; Methods should return true if a transformation took place, and otherwise
+;; return false.
+(defgeneric transform-call (system transform call)
+  (:method (system transform (call cleavir-bir:abstract-call))
+    nil))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:call) system)
-  (declare (ignore system))
   ;; Try all client transforms in order.
   ;; If any return true, a change has been made.
-  (some (lambda (transform) (funcall transform instruction))
+  (some (lambda (transform) (transform-call system transform instruction))
         (cleavir-attributes:transforms (cleavir-bir:attributes instruction))))

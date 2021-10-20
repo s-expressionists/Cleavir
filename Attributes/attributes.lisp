@@ -3,22 +3,23 @@
 (defclass attributes ()
   (;; Boolean flags; see flags.lisp
    (%flags :initarg :flags :initform 0 :reader flags :type (integer 0))
-   ;; A sequence of functions called to transform call instructions.
-   (%transforms :initarg :transforms :initform nil
-                :reader transforms :type list)))
+   ;; A list of objects that BIR-TRANSFORMATIONS uses to invoke
+   ;; client-defined, function-specific transformations.
+   ;; Theirnature is not defined by Cleavir, except that they can be
+   ;; compared with EQUAL, and that they should be externalizable if ASTs
+   ;; are to be externalized.
+   ;; See BIR-TRANSFORMATIONS:TRANSFORM-CALL.
+   ;; FIXME: Might need some more thought on this.
+   (%transforms :initarg :transforms :initform nil :reader transforms)))
 
+;;; We need to be able to externalize attributes for clients that externalize
+;;; them as part of inline definition ASTs.
 (defmethod make-load-form ((object attributes) &optional env)
-  ;; FIXME: We don't save transforms, since they're functions. That may
-  ;; have negative consequences for inline ASTs.
-  ;; This also means we have to initialize to NIL ourselves.
-  (multiple-value-bind (create init)
-      (make-load-form-saving-slots object
-                                   :slot-names '(%flags) :environment env)
-    (values create
-            `(progn ,init (setf (slot-value ,object '%transforms) nil)))))
+  (make-load-form-saving-slots object :environment env))
 
 (cleavir-io:define-save-info attributes
-    (:flags (flags attributes)))
+    (:flags (flags attributes))
+  (:transforms (transforms attributes)))
 
 ;;; NIL means no special attributes.
 (deftype attributes-designator () '(or attributes null))
@@ -44,7 +45,7 @@
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 null)) nil)
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 attributes))
   (and (sub-flags-p (flags attr1) (flags attr2))
-       (subsetp (transforms attr1) (transforms attr2))))
+       (subsetp (transforms attr1) (transforms attr2) :test #'equal)))
 
 ;;; Return attributes combining both inputs; the returned attributes
 ;;; only have a given quality if both of the inputs do. Because attributes
@@ -64,7 +65,7 @@
         (t (make-instance 'attributes
              :flags (meet-flags (flags attr1) (flags attr2))
              :transforms (intersection (transforms attr1)
-                                       (transforms attr2))))))
+                                       (transforms attr2) :test #'equal)))))
 
 (defmethod join-attributes ((attr1 null) (attr2 null)) attr1)
 (defmethod join-attributes ((attr1 null) (attr2 attributes)) attr2)
@@ -74,4 +75,5 @@
         ((sub-attributes-p attr2 attr1) attr1)
         (t (make-instance 'attributes
              :flags (join-flags (flags attr1) (flags attr2))
-             :transforms (union (transforms attr1) (transforms attr2))))))
+             :transforms (union (transforms attr1) (transforms attr2)
+                                :test #'equal)))))
