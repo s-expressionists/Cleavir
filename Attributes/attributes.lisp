@@ -39,6 +39,7 @@
 ;;; Is attributes-1 less specific than attributes-2?
 (defgeneric sub-attributes-p (attributes-1 attributes-2))
 
+(defmethod sub-attributes-p ((attr1 null) (attr2 null)) t)
 (defmethod sub-attributes-p ((attr1 null) (attr2 attributes)) t)
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 null)) nil)
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 attributes))
@@ -53,6 +54,7 @@
 ;;; Dual of the above.
 (defgeneric join-attributes (attributes-1 attributes-2))
 
+(defmethod meet-attributes ((attr1 null) (attr2 null)) attr1)
 (defmethod meet-attributes ((attr1 null) (attr2 attributes)) attr1)
 (defmethod meet-attributes ((attr1 attributes) (attr2 null)) attr2)
 (defmethod meet-attributes ((attr1 attributes) (attr2 attributes))
@@ -64,6 +66,7 @@
              :transforms (intersection (transforms attr1)
                                        (transforms attr2))))))
 
+(defmethod join-attributes ((attr1 null) (attr2 null)) attr1)
 (defmethod join-attributes ((attr1 null) (attr2 attributes)) attr2)
 (defmethod join-attributes ((attr1 attributes) (attr2 null)) attr1)
 (defmethod join-attributes ((attr1 attributes) (attr2 attributes))

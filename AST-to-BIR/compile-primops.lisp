@@ -58,5 +58,14 @@
   cleavir-ast:symbol-ast)
 (defprimop (setf symbol-value) cleavir-ast:set-symbol-value-ast
   cleavir-ast:symbol-ast cleavir-ast:value-ast)
-(defprimop fdefinition cleavir-ast:fdefinition-ast
-  cleavir-ast:name-ast)
+
+;;; Make sure the output of an fdefinition gets the attributes.
+(defmethod compile-ast ((ast cleavir-ast:fdefinition-ast) inserter system)
+  (with-compiled-asts (rv ((cleavir-ast:name-ast ast)) inserter system)
+    (let ((out (make-instance 'cleavir-bir:output
+                 :attributes (cleavir-ast:attributes ast))))
+      (insert inserter
+              (make-instance 'cleavir-bir:vprimop
+                :info (cleavir-primop-info:info 'fdefinition)
+                :inputs rv :outputs (list out)))
+      (list out))))

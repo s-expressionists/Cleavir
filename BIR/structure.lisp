@@ -57,7 +57,10 @@
                   ;; For a generic linear datum, the type we use to
                   ;; make inferences is just the type the compiler has
                   ;; proven about this datum.
-                  :reader ctype)))
+                  :reader ctype)
+   ;; Additional flow attributes
+   (%attributes :initarg :attributes :accessor attributes
+                :initform (cleavir-attributes:default-attributes))))
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
@@ -349,6 +352,8 @@
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil
                           :reader original-lambda-list)
+   (%attributes :initarg :attributes :accessor attributes
+                :initform (cleavir-attributes:default-attributes))
    ;; The module containing this function.
    (%module :initarg :module :reader module :type module)))
 

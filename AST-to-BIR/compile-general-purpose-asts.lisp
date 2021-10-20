@@ -34,6 +34,7 @@
                      :original-lambda-list (cleavir-ast:original-lambda-list ast)
                      :origin (cleavir-ast:origin ast)
                      :policy (cleavir-ast:policy ast)
+                     :attributes (cleavir-ast:attributes ast)
                      :module module))
          (inserter (make-instance 'inserter))
          (start (make-iblock inserter
@@ -308,7 +309,6 @@
                                    inserter system)
       (let ((call-out (make-instance 'cleavir-bir:output)))
         (insert inserter (make-instance 'cleavir-bir:call
-                           :attributes (cleavir-ast:attributes ast)
                            :inputs (list* (first callee) args)
                            :outputs (list call-out)))
         (list call-out)))))

@@ -39,8 +39,8 @@
 (defclass tprimop (primop no-output terminator) ())
 
 (defclass abstract-call (one-output instruction)
-  ((%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
+  ())
+
 (defgeneric callee (instruction))
 
 (defclass call (abstract-call) ())
@@ -48,6 +48,10 @@
 
 (defclass mv-call (abstract-call) ())
 (defmethod callee ((i mv-call)) (first (inputs i)))
+
+;;; convenience method
+(defmethod attributes ((instruction abstract-call))
+  (attributes (callee instruction)))
 
 ;;; A local call is a legal call to a function within the same
 ;;; module. Therefore, the first input is actually a

@@ -25,6 +25,12 @@
         (cleavir-ctype:values-conjoin (cleavir-bir:ctype linear-datum)
                                       derived-type system)))
 
+(defun derive-attributes (linear-datum new-attributes)
+  (setf (cleavir-bir:attributes linear-datum)
+        ;; join due to contravariance
+        (cleavir-attributes:join-attributes
+         (cleavir-bir:attributes linear-datum) new-attributes)))
+
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
 (defun derive-function-argument-types (function system)
@@ -121,16 +127,15 @@
 ;;; definitions, instead of narrowing the types conservatively.
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (cleavir-bir:inputs iblock))
-    (let ((type (cleavir-ctype:values
+    (let ((definitions (cleavir-bir:definitions phi))
+          (type (cleavir-ctype:values
                  nil nil (cleavir-ctype:bottom system) system)))
-      (cleavir-set:doset (definition (cleavir-bir:definitions phi))
-        (setq type
-              (cleavir-ctype:values-disjoin
-               type
-               (cleavir-bir:ctype
-                (nth (position phi (cleavir-bir:outputs definition))
-                     (cleavir-bir:inputs definition)))
-               system)))
+      (cleavir-set:doset (definition definitions)
+        (let ((input (nth (position phi (cleavir-bir:outputs definition))
+                          (cleavir-bir:inputs definition))))
+          (setq type
+                (cleavir-ctype:values-disjoin type (cleavir-bir:ctype input)
+                                              system))))
       (setf (cleavir-bir:derived-type phi) type))))
 
 (defun meta-evaluate-iblock (iblock system)
@@ -343,15 +348,20 @@
             t))))))
 
 (defmethod derive-types ((instruction cleavir-bir:fixed-to-multiple) system)
-  (derive-type-for-linear-datum
-   (cleavir-bir:output instruction)
-   (cleavir-ctype:values
-    (loop for inp in (cleavir-bir:inputs instruction)
-          collect (cleavir-ctype:primary (cleavir-bir:ctype inp) system))
-    nil
-    (cleavir-ctype:bottom system)
-    system)
-   system))
+  (let ((inputs (cleavir-bir:inputs instruction)))
+    ;; FIXME/KLUDGE: For now we only pass attributes for the primary value.
+    (when (= (length inputs) 1)
+      (derive-attributes (cleavir-bir:output instruction)
+                         (cleavir-bir:attributes (first inputs))))
+    (derive-type-for-linear-datum
+     (cleavir-bir:output instruction)
+     (cleavir-ctype:values
+      (loop for inp in inputs
+            collect (cleavir-ctype:primary (cleavir-bir:ctype inp) system))
+      nil
+      (cleavir-ctype:bottom system)
+      system)
+     system)))
 
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:eq-test) system)
   (declare (ignore system))
@@ -450,6 +460,13 @@
         (let ((out (cleavir-bir:output reader)))
           (derive-type-for-linear-datum out type system)))))
 
+(defun derive-attributes-for-variable (variable)
+  (when (cleavir-bir:immutablep variable)
+    (let ((attr (cleavir-bir:attributes
+                 (cleavir-bir:input (cleavir-bir:binder variable)))))
+      (cleavir-set:doset (reader (cleavir-bir:readers variable))
+        (derive-attributes (cleavir-bir:output reader) attr)))))
+
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:leti) system)
   (let ((variable (cleavir-bir:output instruction)))
     (when variable
@@ -458,7 +475,9 @@
 
 (defmethod derive-types ((instruction cleavir-bir:leti) system)
   (let ((variable (cleavir-bir:output instruction)))
-    (when variable (derive-type-for-variable variable system))))
+    (when variable
+      (derive-attributes-for-variable variable)
+      (derive-type-for-variable variable system))))
 
 (defmethod derive-types ((instruction cleavir-bir:returni) system)
   ;; Propagate the return type to local calls and enclose of the function.
@@ -532,6 +551,8 @@
       t)))
 
 (defmethod derive-types ((instruction cleavir-bir:thei) system)
+  (derive-attributes (cleavir-bir:output instruction)
+                     (cleavir-bir:attributes (cleavir-bir:input instruction)))
   (let* ((type-check-function
            (cleavir-bir:type-check-function instruction))
          (input (cleavir-bir:input instruction))

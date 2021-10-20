@@ -370,26 +370,20 @@
 (defclass call-ast (ast)
   ((%callee-ast :initarg :callee-ast :reader callee-ast)
    (%argument-asts :initarg :argument-asts :reader argument-asts)
-   (%inline :initarg :inline :initform nil :reader inline-declaration)
-   (%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
+   (%inline :initarg :inline :initform nil :reader inline-declaration)))
 
 (defun make-call-ast (callee-ast argument-asts
-                      &key origin inline (policy *policy*)
-                        (attributes
-                         (cleavir-attributes:default-attributes)))
+                      &key origin inline (policy *policy*))
   (make-instance 'call-ast
     :origin origin :policy policy
     :callee-ast callee-ast
     :inline inline
-    :argument-asts argument-asts
-    :attributes attributes))
+    :argument-asts argument-asts))
 
 (cleavir-io:define-save-info call-ast
   (:callee-ast callee-ast)
   (:argument-asts argument-asts)
-  (:inline inline-declaration)
-  (:attributes attributes))
+  (:inline inline-declaration))
 
 (define-children call-ast (callee-ast . argument-asts))
 
@@ -867,9 +861,7 @@
 
 (defclass multiple-value-call-ast (ast)
   ((%function-form-ast :initarg :function-form-ast :reader function-form-ast)
-   (%form-asts :initarg :form-asts :reader form-asts)
-   (%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
+   (%form-asts :initarg :form-asts :reader form-asts)))
 
 (defun make-multiple-value-call-ast
     (function-form-ast form-asts
@@ -877,13 +869,11 @@
        (attributes (cleavir-attributes:default-attributes)))
   (make-instance 'multiple-value-call-ast
     :origin origin :policy policy
-    :function-form-ast function-form-ast
-    :form-asts form-asts :attributes attributes))
+    :function-form-ast function-form-ast :form-asts form-asts))
 
 (cleavir-io:define-save-info multiple-value-call-ast
   (:function-form-ast function-form-ast)
-  (:form-asts form-asts)
-  (:attributes attributes))
+  (:form-asts form-asts))
 
 (define-children multiple-value-call-ast (function-form-ast . form-asts))
 

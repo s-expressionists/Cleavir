@@ -134,7 +134,6 @@
                                       origin env system))
                                    argument-asts)
                                   :origin origin
-                                  :attributes (cleavir-env:attributes info)
                                   :inline (cleavir-env:inline info))
        values
        origin
