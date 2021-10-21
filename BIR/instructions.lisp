@@ -32,6 +32,9 @@
   ((%info :initarg :info :reader info
           :type cleavir-primop-info:info)))
 
+(defmethod attributes ((instruction primop))
+  (cleavir-primop-info:attributes (info instruction)))
+
 ;; primop returning values
 (defclass vprimop (primop) ())
 

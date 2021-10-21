@@ -597,3 +597,7 @@
   ;; If any return true, a change has been made.
   (some (lambda (transform) (transform-call system transform instruction))
         (cleavir-attributes:transforms (cleavir-bir:attributes instruction))))
+
+(defmethod meta-evaluate-instruction ((instruction cleavir-bir:primop) system)
+  (some (lambda (transform) (transform-call system transform instruction))
+        (cleavir-attributes:transforms (cleavir-bir:attributes instruction))))
