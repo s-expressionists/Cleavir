@@ -3,7 +3,7 @@
 (defpackage #:cleavir-ast-to-bir
   (:use #:cl)
   (:shadow #:function)
-  (:export #:compile-toplevel #:compile-function
+  (:export #:compile-toplevel #:compile-into-module #:compile-function
            #:compile-ast #:compile-test-ast #:compile-arguments
            #:compile-sequence-for-effect)
   (:export #:with-compiled-ast #:with-compiled-asts #:with-compiled-arguments)

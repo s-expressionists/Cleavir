@@ -120,14 +120,17 @@
           (cleavir-bir:*policy* (cleavir-ast:policy ast)))
       (call-next-method))))
 
-(defun compile-toplevel (ast system)
+(defun compile-into-module (ast module system)
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*current-module* (make-module))
+        (*current-module* module)
         (cleavir-bir:*top-ctype* (cleavir-ctype:coerce-to-values
                                   (cleavir-ctype:top system) system)))
     (compile-function ast system)))
+
+(defun compile-toplevel (ast system)
+  (compile-into-module ast (make-module) system))
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
 (defgeneric compile-ast (ast inserter system)
