@@ -9,7 +9,9 @@
       (cleavir-set:doset (writer writers)
         (cleavir-bir:delete-instruction writer)))))
 
+(defun function-optimize-variables (function)
+  (cleavir-set:doset (variable (cleavir-bir:variables function))
+    (optimize-variable variable)))
+
 (defun module-optimize-variables (module)
-  (cleavir-bir:do-functions (function module)
-    (cleavir-set:doset (variable (cleavir-bir:variables function))
-      (optimize-variable variable))))
+  (cleavir-bir:map-functions #'function-optimize-variables module))
