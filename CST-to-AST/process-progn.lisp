@@ -7,9 +7,6 @@
 ;;; case the list of ASTs is NIL.
 
 (defun process-progn (asts &optional origin)
-  (cond ((null asts)
-         (cleavir-ast:make-constant-ast nil :origin origin))
-        ((null (rest asts))
-         (first asts))
-        (t
-         (cleavir-ast:make-progn-ast asts :origin origin))))
+  (cond ((null asts) (ast:make-constant-ast nil :origin origin))
+        ((null (rest asts)) (first asts))
+        (t (ast:make-progn-ast asts :origin origin))))

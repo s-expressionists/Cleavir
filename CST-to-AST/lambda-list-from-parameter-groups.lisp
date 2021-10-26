@@ -4,12 +4,12 @@
   (let* ((raw (cst:raw var-cst))
          (origin (cst:source var-cst))
          (name (make-symbol (string-downcase raw))))
-    (cleavir-ast:make-lexical-variable name :origin origin)))
+    (ast:make-lexical-variable name :origin origin)))
 
 (defun init-var-to-lexicals (var-cst supplied-p-cst)
   (list (var-to-lexical var-cst)
         (if (null supplied-p-cst)
-            (cleavir-ast:make-lexical-variable (gensym) :origin (cst:source var-cst))
+            (ast:make-lexical-variable (gensym) :origin (cst:source var-cst))
             (var-to-lexical supplied-p-cst))))
 
 (defgeneric entries-from-parameter-group (parameter-group))

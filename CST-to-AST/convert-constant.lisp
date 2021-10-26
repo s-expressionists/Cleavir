@@ -7,5 +7,5 @@
 
 (defun convert-constant (constant-cst env system)
   (declare (ignore env system))
-  (cleavir-ast:make-constant-ast (cst:raw constant-cst)
+  (ast:make-constant-ast (cst:raw constant-cst)
     :origin (cst:source constant-cst)))

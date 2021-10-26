@@ -32,10 +32,9 @@
     (let ((name (cst:raw name-cst)))
       (unless (symbolp name)
         (error 'block-name-must-be-a-symbol :cst name-cst))
-      (let* ((ast (cleavir-ast:make-block-ast
-                   nil :name name :origin origin))
-             (new-env (cleavir-env:add-block env name ast)))
-        (setf (cleavir-ast:body-ast ast)
+      (let* ((ast (ast:make-block-ast nil :name name :origin origin))
+             (new-env (env:add-block env name ast)))
+        (setf (ast:body-ast ast)
               (process-progn (convert-sequence body-cst new-env system)
                              origin))
         ast))))
@@ -56,8 +55,8 @@
           (value-cst (if (cst:null rest-csts)
                          (make-atom-cst nil origin)
                          (cst:first rest-csts))))
-      (cleavir-ast:make-return-from-ast
-       (cleavir-env:identity info)
+      (ast:make-return-from-ast
+       (env:identity info)
        (convert value-cst env system)
        :origin origin))))
 
@@ -186,7 +185,7 @@
 ;;; value.  It is known that the environment contains an entry
 ;;; corresponding to the name given as an argument.
 (defun function-lexical (system environment name)
-  (cleavir-env:identity (cleavir-env:function-info system environment name)))
+  (env:identity (env:function-info system environment name)))
 
 ;;; Convert a local function definition.
 (defun convert-local-function (definition-cst operator environment system)
@@ -225,10 +224,10 @@
 ;;; cell has a function name in its CAR and an AST in its CDR.
 (defun compute-function-init-asts (functions env system)
   (loop for (name . fun-ast) in functions
-        collect (cleavir-ast:make-lexical-bind-ast
+        collect (ast:make-lexical-bind-ast
                  (function-lexical system env name)
                  fun-ast
-                 :origin (cleavir-ast:origin fun-ast)
+                 :origin (ast:origin fun-ast)
                  ;; TODO: propagate ignore declaration
                  )))
 
@@ -252,7 +251,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations env) declaration-csts))
+                system (env:declarations env) declaration-csts))
              (defs (convert-local-functions definitions-cst symbol env system))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (init-asts
@@ -280,7 +279,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations env) declaration-csts))
+                system (env:declarations env) declaration-csts))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
              (init-asts
@@ -346,14 +345,13 @@
         (parse-tagbody body-cst)
       (let ((tag-asts
               (loop for (tag-cst) in tag-specs
-                    collect (cleavir-ast:make-tag-ast
+                    collect (ast:make-tag-ast
                              (cst:raw tag-cst)
                              :origin (cst:source tag-cst))))
             (new-env env))
         ;; Set up the environment for the inside of the tagbody.
         (loop for ast in tag-asts
-              do (setf new-env (cleavir-env:add-tag
-                                new-env (cleavir-ast:name ast) ast)))
+              do (setf new-env (env:add-tag new-env (ast:name ast) ast)))
         (let ((prefix-ast
                 (process-progn
                  (loop for prefix-cst in prefix-csts
@@ -366,10 +364,10 @@
                 for seq = (loop for form-cst in form-csts
                                 collect (convert form-cst new-env system))
                 for progn = (process-progn seq origin)
-                do (setf (cleavir-ast:body-ast tag-ast) progn))
+                do (setf (ast:body-ast tag-ast) progn))
           ;; Finally, put together the tagbody, with NIL constant as described.
           (process-progn
-           (list (cleavir-ast:make-tagbody-ast
+           (list (ast:make-tagbody-ast
                   prefix-ast tag-asts :origin origin)
                  (convert-constant (make-atom-cst nil origin) env system))
            origin))))))
@@ -386,8 +384,8 @@
   (cst:db origin (go-cst tag-cst) cst
     (declare (ignore go-cst))
     (let ((info (tag-info env tag-cst)))
-      (cleavir-ast:make-go-ast
-       (cleavir-env:identity info)
+      (ast:make-go-ast
+       (env:identity info)
        :origin origin))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -395,9 +393,9 @@
 ;;; Converting IF.
 
 (defun boolify (test-ast origin env system)
-  (if (typep test-ast 'cleavir-ast:boolean-ast-mixin)
+  (if (typep test-ast 'ast:boolean-ast-mixin)
       test-ast
-      (cleavir-ast:make-neq-ast
+      (ast:make-neq-ast
        test-ast
        (convert-constant (make-atom-cst nil origin)
                          env system)
@@ -415,7 +413,7 @@
                                            env system)
                          (cst:db s (else-cst) tail-cst
                            (convert else-cst env system)))))
-      (cleavir-ast:make-if-ast
+      (ast:make-if-ast
        test-ast
        true-ast false-ast :origin origin))))
 
@@ -444,13 +442,13 @@
         (error 'read-only-p-must-be-boolean
                :cst (cst:first remaining-cst)))
       ;; FIXME: We probably want to create and use
-      ;; cleavir-env:constantp in case the environments don't match
+      ;; env:constantp in case the environments don't match
       ;; up.
       (if (and (eq *compiler* 'cl:compile-file)
                (not (constantp form env)))
-          (cleavir-ast:make-load-time-value-ast form read-only-p :origin origin)
-          (cleavir-ast:make-constant-ast
-           (cst-eval form-cst (cleavir-env:compile-time env) system)
+          (ast:make-load-time-value-ast form read-only-p :origin origin)
+          (ast:make-constant-ast
+           (cst-eval form-cst (env:compile-time env) system)
            :origin origin)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -484,9 +482,9 @@
                                               lambda-list-cst
                                               (cst:raw body-cst)
                                               environment)))
-      (cleavir-env:eval lambda-expression
-                        (cleavir-env:compile-time environment)
-                        environment))))
+      (env:eval lambda-expression
+                (env:compile-time environment)
+                environment))))
 
 (defmethod convert-special
     ((symbol (eql 'macrolet)) cst env system)
@@ -503,7 +501,7 @@
                       (name (cst:raw name-cst))
                       (expander (expander definition-cst env system)))
                  (setf new-env
-                       (cleavir-env:add-local-macro new-env name expander))))
+                       (env:add-local-macro new-env name expander))))
       (with-preserved-toplevel-ness
         (convert (cst:quasiquote origin
                                  (locally (cst:unquote-splicing body-cst)))
@@ -528,24 +526,24 @@
                  (let* ((name (cst:raw name-cst))
                         ;; We use cleavir-env directly, because it's
                         ;; okay if the variable is unbound.
-                        (info (cleavir-env:variable-info system env name))
+                        (info (env:variable-info system env name))
                         (expansion (cst:raw expansion-cst)))
                    (typecase info
-                     (cleavir-env:constant-variable-info
+                     (env:constant-variable-info
                       (cerror "Bind it anyway."
                               'symbol-macro-names-constant :cst name-cst))
-                     (cleavir-env:special-variable-info
+                     (env:special-variable-info
                       ;; Rebinding a local special is okay.
                       ;; Maybe? CLHS is a little ambiguous here - it
                       ;; says "global variable"s can't be rebound, but
                       ;; defines "global variable" to include all specials,
                       ;; possibly including local specials.
-                      (when (cleavir-env:global-p info)
+                      (when (env:global-p info)
                         (cerror "Bind it anyway."
                                 'symbol-macro-names-global-special
                                 :cst name-cst))))
                    (setf new-env
-                         (cleavir-env:add-local-symbol-macro
+                         (env:add-local-symbol-macro
                           new-env name expansion)))))
       (with-preserved-toplevel-ness
         (convert (cst:quasiquote origin
@@ -603,7 +601,7 @@
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
     (type-wrap (convert form-cst environment system)
-               (cleavir-env:parse-values-type-specifier
+               (env:parse-values-type-specifier
                 (cst:raw value-type-cst)
                 environment system)
                origin environment system)))
@@ -618,7 +616,7 @@
   (check-argument-count cst 1 nil)
   (cst:db origin (multiple-value-prog1-cst first-cst . rest-cst) cst
     (declare (ignore multiple-value-prog1-cst))
-    (cleavir-ast:make-multiple-value-prog1-ast
+    (ast:make-multiple-value-prog1-ast
      (convert first-cst environment system)
      (convert-sequence rest-cst environment system)
      :origin origin)))
@@ -717,7 +715,7 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations environment) declaration-csts))
+                system (env:declarations environment) declaration-csts))
              (new-env (augment-environment-with-declarations
                        environment system canonical-declaration-specifiers)))
         (with-preserved-toplevel-ness

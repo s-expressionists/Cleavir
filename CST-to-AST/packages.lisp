@@ -2,6 +2,9 @@
 
 (defpackage #:cleavir-cst-to-ast
   (:use #:common-lisp)
+  (:local-nicknames (#:env #:cleavir-env)
+                    (#:ast #:cleavir-ast)
+                    (#:ctype #:cleavir-ctype))
   (:export #:cst-to-ast
            #:*compiler*
            #:convert

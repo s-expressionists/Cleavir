@@ -37,8 +37,7 @@
       (let ((*current-form-is-top-level-p* *subforms-are-top-level-p*)
             (*subforms-are-top-level-p* nil)
             ;; gives all generated ASTs the appropriate policy.
-            (cleavir-ast:*policy*
-              (cleavir-env:environment-policy environment)))
+            (ast:*policy* (env:environment-policy environment)))
         (call-next-method))
     (continue ()
       :report "Replace with call to ERROR."

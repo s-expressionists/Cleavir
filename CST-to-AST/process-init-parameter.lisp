@@ -17,26 +17,26 @@
          (next-ast
            (set-or-bind-variable
             var-cst
-            (cleavir-ast:make-if-ast
-             (cleavir-ast:make-eq-ast
+            (ast:make-if-ast
+             (ast:make-eq-ast
               ;; The reason we switch to the bound supplied variable
               ;; is so that we can keep the use of the argument
               ;; supplied-p linear for the sake of making the BIR much
               ;; simpler, as arguments in BIR are linear data.
               (if supplied-p-cst
                   (convert-variable supplied-p-cst env system)
-                  (cleavir-ast:make-lexical-ast supplied-p :origin origin))
+                  (ast:make-lexical-ast supplied-p :origin origin))
               (convert-constant (make-atom-cst nil origin) env system)
               :origin origin)
              init-ast
-             (cleavir-ast:make-lexical-ast var :origin origin)
+             (ast:make-lexical-ast var :origin origin)
              :origin origin)
             next-ast
             env system)))
     (if (null supplied-p-cst)
         next-ast
         (set-or-bind-variable supplied-p-cst
-                              (cleavir-ast:make-lexical-ast supplied-p :origin origin)
+                              (ast:make-lexical-ast supplied-p :origin origin)
                               next-ast
                               env
                               system))))

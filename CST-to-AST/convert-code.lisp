@@ -310,7 +310,7 @@
         (var-cst (cst:name parameter)))
     (set-or-bind-variable
      var-cst
-     (cleavir-ast:make-lexical-ast lexical-variable
+     (ast:make-lexical-ast lexical-variable
        :origin (cst:source var-cst))
      (process-parameters-in-group remaining-parameters-in-group
                                   remaining-parameter-groups
@@ -484,9 +484,7 @@
                      append (cdr (cst:listify declaration-cst))))
              (canonicalized-dspecs
                (cst:canonicalize-declaration-specifiers
-                system
-                (cleavir-env:declarations env)
-                declaration-specifiers))
+                system (env:declarations env) declaration-specifiers))
              (itemized-lambda-list
                (itemize-lambda-list parsed-lambda-list)))
         (multiple-value-bind (idspecs rdspecs)
@@ -504,7 +502,7 @@
                      system))
                   (bound-declarations
                     (compute-bound-declarations entries idspecs)))
-              (cleavir-ast:make-function-ast ast lexical-lambda-list
+              (ast:make-function-ast ast lexical-lambda-list
                 :name name
                 :original-lambda-list (cst:raw lambda-list-cst)
                 :docstring (when documentation (cst:raw documentation))

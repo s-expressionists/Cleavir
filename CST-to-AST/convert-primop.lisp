@@ -10,7 +10,7 @@
     (check-simple-primop-syntax cst ninputs)
     (cst:db origin (op-cst . args-cst) cst
       (declare (ignore op-cst))
-      (make-instance 'cleavir-ast:primop-ast
+      (make-instance 'ast:primop-ast
         :info info
         :argument-asts (convert-sequence args-cst env system)
         :attributes (cleavir-primop-info:attributes info)
@@ -45,7 +45,7 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (eq-cst arg1-cst arg2-cst) cst
     (declare (ignore eq-cst))
-    (cleavir-ast:make-eq-ast
+    (ast:make-eq-ast
      (convert arg1-cst env system)
      (convert arg2-cst env system)
      :origin origin)))
@@ -67,10 +67,10 @@
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (cleavir-env:parse-values-type-specifier
+    (let ((vctype (env:parse-values-type-specifier
                    (cst:raw value-type-cst)
                    env system)))
-      (cleavir-ast:make-the-ast
+      (ast:make-the-ast
        (convert form-cst env system)
        vctype
        nil
@@ -85,9 +85,9 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (typeq-cst arg1-cst arg2-cst) cst
     (declare (ignore typeq-cst))
-    (cleavir-ast:make-typeq-ast
+    (ast:make-typeq-ast
      (convert arg1-cst env system)
-     (cleavir-env:parse-type-specifier (cst:raw arg2-cst) env system)
+     (env:parse-type-specifier (cst:raw arg2-cst) env system)
      :origin origin)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -123,8 +123,8 @@
             collect (cst:raw (cst:first case)) into comparees
             collect (cst:rest case) into dests
             finally (return
-                      (cleavir-ast:make-branch-ast
-                       (cleavir-ast:make-case-ast
+                      (ast:make-branch-ast
+                       (ast:make-case-ast
                         (convert keyform-cst env system)
                         comparees
                         :origin origin)
@@ -152,7 +152,7 @@
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (cst:db origin (values-cst . arguments-cst) cst
     (declare (ignore values-cst))
-    (make-instance 'cleavir-ast:values-ast
+    (make-instance 'ast:values-ast
      :argument-asts (mapcar
 		     (lambda (cst) (convert cst env system))
 		     (cst:listify arguments-cst))
@@ -169,9 +169,9 @@
 ;;; Internal helper
 (defun find-lexical-variable (var env sys)
   (assert (symbolp var))
-  (let ((info (cleavir-env:variable-info sys env var)))
-    (assert (typep info 'cleavir-env:lexical-variable-info))
-    (cleavir-env:identity info)))
+  (let ((info (env:variable-info sys env var)))
+    (assert (typep info 'env:lexical-variable-info))
+    (env:identity info)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -191,7 +191,7 @@
   (check-simple-primop-syntax cst 3)
   (cst:db origin (add-cst arg1-cst arg2-cst variable-cst) cst
     (declare (ignore add-cst))
-    (cleavir-ast:make-fixnum-add-ast (convert arg1-cst env system)
+    (ast:make-fixnum-add-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
                                       (cst:raw variable-cst) env system)
@@ -207,7 +207,7 @@
   (check-simple-primop-syntax cst 3)
   (cst:db origin (sub-cst arg1-cst arg2-cst variable-cst) cst
     (declare (ignore sub-cst))
-    (cleavir-ast:make-fixnum-sub-ast (convert arg1-cst env system)
+    (ast:make-fixnum-sub-ast (convert arg1-cst env system)
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
                                       (cst:raw variable-cst) env system)
@@ -228,7 +228,7 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (not-greater-cst arg1-cst arg2-cst) cst
     (declare (ignore not-greater-cst))
-    (make-instance 'cleavir-ast:fixnum-not-greater-ast
+    (make-instance 'ast:fixnum-not-greater-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
       :origin origin)))
@@ -242,7 +242,7 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (greater-cst arg1-cst arg2-cst) cst
     (declare (ignore greater-cst))
-    (make-instance 'cleavir-ast:fixnum-greater-ast
+    (make-instance 'ast:fixnum-greater-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
       :origin origin)))
@@ -256,7 +256,7 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (not-less-cst arg1-cst arg2-cst) cst
     (declare (ignore not-less-cst))
-    (make-instance 'cleavir-ast:fixnum-not-less-ast
+    (make-instance 'ast:fixnum-not-less-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
       :origin origin)))
@@ -270,7 +270,7 @@
   (check-simple-primop-syntax cst 2)
   (cst:db origin (equal-cst arg1-cst arg2-cst) cst
     (declare (ignore equal-cst))
-    (make-instance 'cleavir-ast:fixnum-equal-ast
+    (make-instance 'ast:fixnum-equal-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
       :origin origin)))
@@ -302,11 +302,11 @@
             until (cst:null rest-cst)
             do (let* ((variable-cst (cst:first rest-cst))
                       (variable (cst:raw variable-cst))
-                      (variable-ast (cleavir-ast:make-lexical-ast
+                      (variable-ast (ast:make-lexical-ast
                                      variable
                                      :origin (cst:source variable-cst))))
                  (setf new-env
-                       (cleavir-env:add-lexical-variable
+                       (env:add-lexical-variable
                         new-env variable variable-ast))))
       (process-progn (convert-sequence body-cst new-env system)))))
 
@@ -329,7 +329,7 @@
   (check-argument-count cst 1 nil)
   (cst:db origin (funcall-cst function-cst . arguments-cst) cst
     (declare (ignore funcall-cst))
-    (cleavir-ast:make-call-ast
+    (ast:make-call-ast
      (convert function-cst env system)
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
@@ -357,7 +357,7 @@
   (check-argument-count cst 1 nil)
   (cst:db origin (multiple-value-call-cst function-cst . arguments-cst) cst
     (declare (ignore multiple-value-call-cst))
-    (cleavir-ast:make-multiple-value-call-ast
+    (ast:make-multiple-value-call-ast
      (convert function-cst env system)
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
@@ -390,7 +390,7 @@
   (check-simple-primop-syntax cst 5)
   (cst:db origin (aref-cst array-cst index-cst type-cst simple-p-cst boxed-p-cst) cst
     (declare (ignore aref-cst))
-    (make-instance 'cleavir-ast:aref-ast
+    (make-instance 'ast:aref-ast
       :array-ast (convert array-cst env system)
       :index-ast (convert index-cst env system)
       :element-type (cst:raw type-cst)
@@ -417,7 +417,7 @@
   (cst:db origin (aset-cst array-cst index-cst object-cst type-cst simple-p-cst boxed-p-cst)
       cst
     (declare (ignore aset-cst))
-    (make-instance 'cleavir-ast:aset-ast
+    (make-instance 'ast:aset-ast
       :array-ast (convert array-cst env system)
       :index-ast (convert index-cst env system)
       :element-ast (convert object-cst env system)
@@ -441,23 +441,23 @@
          :origin origin))))
 
 (define-float-binop cleavir-primop:float-add
-  cleavir-ast:float-add-ast)
+  ast:float-add-ast)
 (define-float-binop cleavir-primop:float-sub
-  cleavir-ast:float-sub-ast)
+  ast:float-sub-ast)
 (define-float-binop cleavir-primop:float-mul
-  cleavir-ast:float-mul-ast)
+  ast:float-mul-ast)
 (define-float-binop cleavir-primop:float-div
-  cleavir-ast:float-div-ast)
+  ast:float-div-ast)
 (define-float-binop cleavir-primop:float-less
-  cleavir-ast:float-less-ast)
+  ast:float-less-ast)
 (define-float-binop cleavir-primop:float-not-greater
-  cleavir-ast:float-not-greater-ast)
+  ast:float-not-greater-ast)
 (define-float-binop cleavir-primop:float-equal
-  cleavir-ast:float-equal-ast)
+  ast:float-equal-ast)
 (define-float-binop cleavir-primop:float-not-less
-  cleavir-ast:float-not-less-ast)
+  ast:float-not-less-ast)
 (define-float-binop cleavir-primop:float-greater
-  cleavir-ast:float-greater-ast)
+  ast:float-greater-ast)
 
 ;;; The following macro is used to generate a method on
 ;;; CONVERT-SPECIAL for unatry floating-point primops.
@@ -473,13 +473,13 @@
          :origin origin))))
 
 (define-float-unop cleavir-primop:float-sin
-  cleavir-ast:float-sin-ast)
+  ast:float-sin-ast)
 
 (define-float-unop cleavir-primop:float-cos
-  cleavir-ast:float-cos-ast)
+  ast:float-cos-ast)
 
 (define-float-unop cleavir-primop:float-sqrt
-  cleavir-ast:float-sqrt-ast)
+  ast:float-sqrt-ast)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -500,7 +500,7 @@
   (check-simple-primop-syntax cst 3)
   (cst:db origin (op-cst type1-cst type2-cst form-cst) cst
     (declare (ignore op-cst))
-    (make-instance 'cleavir-ast:coerce-ast
+    (make-instance 'ast:coerce-ast
      :from (cst:raw type1-cst) :to (cst:raw type2-cst)
      :arg-ast (convert form-cst env system)
      :origin origin)))
@@ -516,7 +516,7 @@
     ((symbol (eql 'cleavir-primop:unreachable)) cst env system)
   (declare (ignore env system))
   (check-simple-primop-syntax cst 0)
-  (make-instance 'cleavir-ast:unreachable-ast :origin (cst:source cst)))
+  (make-instance 'ast:unreachable-ast :origin (cst:source cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -538,6 +538,6 @@
     (let ((*compiler* (if (cst:raw use-file-compilation-semantics-p)
                           'cl:compile-file
                           'cl:compile)))
-      (cleavir-ast:make-constant-ast
-       (convert form-cst (cleavir-env:compile-time env) system)
+      (ast:make-constant-ast
+       (convert form-cst (env:compile-time env) system)
        :origin (cst:source form-cst)))))

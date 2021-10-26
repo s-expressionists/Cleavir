@@ -70,7 +70,7 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations environment) declaration-csts))
+                system (env:declarations environment) declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts (loop for binding-cst in binding-csts
                                   collect (if (cst:atom binding-cst)
@@ -146,7 +146,7 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (cleavir-env:declarations environment) declaration-csts))
+                system (env:declarations environment) declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts
                (loop for binding-cst in binding-csts

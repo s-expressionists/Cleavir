@@ -32,10 +32,10 @@
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst))))
     (if (consp var-or-function)
         ;; (dynamic-extent (function foo))
-        (cleavir-env:add-function-dynamic-extent
+        (env:add-function-dynamic-extent
          environment (second var-or-function))
         ;; (dynamic-extent foo)
-        (cleavir-env:add-variable-dynamic-extent
+        (env:add-variable-dynamic-extent
          environment var-or-function))))
 
 (defmethod augment-environment-with-declaration
@@ -45,9 +45,9 @@
      environment
      system)
   (declare (ignore declaration-identifier-cst))
-  (cleavir-env:add-function-type
+  (env:add-function-type
    environment (cst:raw (cst:second declaration-data-cst))
-   (cleavir-env:parse-type-specifier
+   (env:parse-type-specifier
     (cst:raw (cst:first declaration-data-cst))
     environment system)))
 
@@ -61,9 +61,9 @@
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
-        (cleavir-env:add-function-ignore
+        (env:add-function-ignore
          environment (second var-or-function) ignore)
-        (cleavir-env:add-variable-ignore
+        (env:add-variable-ignore
          environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
@@ -76,9 +76,9 @@
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
-        (cleavir-env:add-function-ignore
+        (env:add-function-ignore
          environment (second var-or-function) ignore)
-        (cleavir-env:add-variable-ignore
+        (env:add-variable-ignore
          environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
@@ -88,7 +88,7 @@
      environment
      system)
   (declare (ignore system))
-  (cleavir-env:add-inline
+  (env:add-inline
    environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
@@ -99,7 +99,7 @@
      environment
      system)
   (declare (ignore system))
-  (cleavir-env:add-inline
+  (env:add-inline
    environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
@@ -113,15 +113,15 @@
   ;; This case is a bit tricky, because if the
   ;; variable is globally special, nothing should
   ;; be added to the environment.
-  (let ((info (cleavir-env:variable-info
+  (let ((info (env:variable-info
                system environment (cst:raw (cst:first declaration-data-cst)))))
-    (cond ((typep info 'cleavir-env:symbol-macro-info)
+    (cond ((typep info 'env:symbol-macro-info)
            (error 'special-symbol-macro
                   :cst (cst:first declaration-data-cst)))
-          ((and (typep info 'cleavir-env:special-variable-info)
-                (cleavir-env:global-p info))
+          ((and (typep info 'env:special-variable-info)
+                (env:global-p info))
            environment)
-          (t (cleavir-env:add-special-variable
+          (t (env:add-special-variable
               environment (cst:raw (cst:first declaration-data-cst)))))))
 
 (defmethod augment-environment-with-declaration
@@ -132,9 +132,9 @@
      system)
   (declare (ignore declaration-identifier-cst))
   (cst:db source (type-cst variable-cst) declaration-data-cst
-    (cleavir-env:add-variable-type
+    (env:add-variable-type
      environment (cst:raw variable-cst)
-     (cleavir-env:parse-type-specifier (cst:raw type-cst)
+     (env:parse-type-specifier (cst:raw type-cst)
                                        environment system))))
 
 (defmethod augment-environment-with-declaration
@@ -153,16 +153,15 @@
 ;;; Augment the environment with an OPTIMIZE specifier.
 (defun augment-environment-with-optimize (optimize environment)
   ;; Make sure every environment has a complete optimize & policy.
-  (let* ((previous (cleavir-env:optimize
-                    (cleavir-env:optimize-info environment)))
+  (let* ((previous (env:optimize (env:optimize-info environment)))
          (total (cleavir-policy:normalize-optimize
                  (append optimize previous)
                  environment))
          ;; Compute also normalizes, so this is slightly wasteful.
          (policy (cleavir-policy:compute-policy
                   total
-                  (cleavir-env:global-environment environment))))
-    (cleavir-env:add-optimize environment total policy)))
+                  (env:global-environment environment))))
+    (env:add-optimize environment total policy)))
 
 ;;; Extract any OPTIMIZE information from a set of canonicalized
 ;;; declaration specifiers.
@@ -203,18 +202,18 @@
 ;;; variable to be bound is special.  Return a second value indicating
 ;;; whether the variable is globally special.
 (defun variable-is-special-p (variable declarations env system)
-  (let* ((existing-var-info (cleavir-env:variable-info system env variable))
+  (let* ((existing-var-info (env:variable-info system env variable))
          (special-var-p
-           (typep existing-var-info 'cleavir-env:special-variable-info)))
+           (typep existing-var-info 'env:special-variable-info)))
     (cond ((loop for declaration in declarations
                  thereis (and (eq (cst:raw (cst:first declaration)) 'special)
                               (eq (cst:raw (cst:second declaration)) variable)))
            ;; If it is declared special it is.
            (values t
                    (and special-var-p
-                        (cleavir-env:global-p existing-var-info))))
+                        (env:global-p existing-var-info))))
           ((and special-var-p
-            (cleavir-env:global-p existing-var-info))
+            (env:global-p existing-var-info))
            ;; It is mentioned in the environment as globally special.
            ;; if it's only special because of a local declaration,
            ;; this binding is not special.
@@ -254,26 +253,26 @@
       (if special-p
           (unless globally-p
             (setf new-env
-                  (cleavir-env:add-special-variable new-env raw-variable)))
-          (let ((lexical-variable (cleavir-ast:make-lexical-variable raw-variable :origin origin)))
+                  (env:add-special-variable new-env raw-variable)))
+          (let ((lexical-variable (ast:make-lexical-variable raw-variable :origin origin)))
             (setf new-env
-                  (cleavir-env:add-lexical-variable
+                  (env:add-lexical-variable
                    new-env raw-variable lexical-variable)))))
     (let* ((type (declared-type declarations))
            ;; FIXME system arguments
-           (ptype (cleavir-env:parse-type-specifier type env system)))
-      (unless (cleavir-ctype:top-p ptype system)
+           (ptype (env:parse-type-specifier type env system)))
+      (unless (ctype:top-p ptype system)
         (setf new-env
-              (cleavir-env:add-variable-type new-env raw-variable ptype))))
+              (env:add-variable-type new-env raw-variable ptype))))
     (when (member 'ignore raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (cleavir-env:add-variable-ignore new-env raw-variable 'ignore)))
+            (env:add-variable-ignore new-env raw-variable 'ignore)))
     (when (member 'ignorable raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (cleavir-env:add-variable-ignore new-env raw-variable 'ignorable)))
+            (env:add-variable-ignore new-env raw-variable 'ignorable)))
     (when (member 'dynamic-extent raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (cleavir-env:add-variable-dynamic-extent new-env raw-variable)))
+            (env:add-variable-dynamic-extent new-env raw-variable)))
     new-env))
 
 ;;; The only purpose of this function is to call the function
@@ -295,5 +294,5 @@
 (defun augment-environment-with-local-function-name (name-cst environment)
   (let* ((name (cst:raw name-cst))
          (origin (cst:source name-cst))
-         (lexical-variable (cleavir-ast:make-lexical-variable name :origin origin)))
-    (cleavir-env:add-local-function environment name lexical-variable)))
+         (lexical-variable (ast:make-lexical-variable name :origin origin)))
+    (env:add-local-function environment name lexical-variable)))
