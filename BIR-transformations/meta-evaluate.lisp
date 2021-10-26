@@ -601,3 +601,25 @@
 (defmethod meta-evaluate-instruction ((instruction cleavir-bir:primop) system)
   (some (lambda (transform) (transform-call system transform instruction))
         (cleavir-attributes:transforms (cleavir-bir:attributes instruction))))
+
+(defgeneric derive-return-type (instruction deriver system))
+(defmethod derive-return-type ((inst cleavir-bir:abstract-call) deriver system)
+  (declare (ignore deriver))
+  (cleavir-ctype:coerce-to-values (cleavir-ctype:top system) system))
+
+(defmethod derive-types ((inst cleavir-bir:abstract-call) system)
+  (let ((derivers (cleavir-attributes:derivers (cleavir-bir:attributes inst))))
+    (cond ((null derivers))
+          ((= (length derivers) 1)
+           (derive-type-for-linear-datum (cleavir-bir:output inst)
+                                         (derive-return-type inst
+                                                             (first derivers)
+                                                             system)
+                                         system))
+          (t
+           (let ((types (loop for deriver in derivers
+                              collect (derive-return-type inst deriver system))))
+             (derive-type-for-linear-datum (cleavir-bir:output inst)
+                                           (apply #'cleavir-ctype:values-conjoin
+                                                  types)
+                                           system))))))

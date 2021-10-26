@@ -9,5 +9,5 @@
   (:export #:determine-function-environments)
   (:export #:determine-closure-extents)
   (:export #:determine-variable-extents)
-  (:export #:meta-evaluate-module #:transform-call)
+  (:export #:meta-evaluate-module #:transform-call #:derive-return-type)
   (:export #:module-generate-type-checks))
