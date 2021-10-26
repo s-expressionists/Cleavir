@@ -78,18 +78,18 @@
         instruction (iblock instruction) *verifying-iblock*)
   (verify-inputs instruction)
   (let ((inputs (inputs instruction)))
-    (test (or (null inputs) (not (cleavir-set:presentp inputs *seen-lists*)))
+    (test (or (null inputs) (not (set:presentp inputs *seen-lists*)))
           "has shared input list ~a" instruction inputs))
   (verify-outputs instruction)
   (let ((outputs (outputs instruction)))
-    (test (or (null outputs) (not (cleavir-set:presentp outputs *seen-lists*)))
+    (test (or (null outputs) (not (set:presentp outputs *seen-lists*)))
           "has shared output list ~a" instruction outputs)))
 
 (defmethod verify-outputs ((instruction writevar))
   (let ((outputs (outputs instruction)))
     (test (and (= (length outputs) 1) (typep (first outputs) 'variable))
           "has bad outputs ~a" instruction outputs)
-    (test (cleavir-set:presentp instruction (writers (first outputs)))
+    (test (set:presentp instruction (writers (first outputs)))
           "is not a definition of its output ~a"
           instruction (first outputs))))
 
@@ -99,7 +99,7 @@
       (test (every #'phi-p outputs)
             "has non-phi outputs ~a"
             instruction (remove-if #'phi-p outputs)))
-    (flet ((presentp (o) (cleavir-set:presentp instruction (definitions o))))
+    (flet ((presentp (o) (set:presentp instruction (definitions o))))
       (test (every #'presentp outputs)
             "is not a definition of its outputs ~a"
             instruction (remove-if #'presentp outputs)))))
@@ -123,10 +123,10 @@
   ;; All inputs are linear data, and if they are OUTPUTs, their definer
   ;; dominates this instruction (but see KLUDGE above)
   (etypecase datum
-    (output (cleavir-set:presentp (definition datum) *seen-instructions*))
+    (output (set:presentp (definition datum) *seen-instructions*))
     (argument
      (member-of-lambda-list-p datum (lambda-list (function instruction))))
-    (phi (cleavir-set:presentp (iblock datum) *seen-iblocks*))
+    (phi (set:presentp (iblock datum) *seen-iblocks*))
     (linear-datum t)))
 
 (defun check-ubd (instruction inputs)
@@ -148,7 +148,7 @@
   (let* ((inputs (inputs instruction)) (var (first inputs)))
     (test (and (= (length inputs) 1) (typep var 'variable))
           "has non-variable input ~a" instruction var)
-    (test (cleavir-set:presentp instruction (readers var))
+    (test (set:presentp instruction (readers var))
           "is not a reader of its variable ~a" instruction var)))
 
 (defmethod verify-inputs ((instruction abstract-local-call))
@@ -165,10 +165,10 @@
     (test (typep constant 'constant)
           "has non-constant input ~a"
           instruction constant)
-    (test (cleavir-set:presentp constant (constants *verifying-module*))
+    (test (set:presentp constant (constants *verifying-module*))
           "references constant ~a which does not belong to its module"
           instruction constant)
-    (test (cleavir-set:presentp instruction (readers constant))
+    (test (set:presentp instruction (readers constant))
           "is not a reader of its constant input ~a"
           instruction constant)))
 
@@ -178,10 +178,10 @@
     (test (typep ltv 'load-time-value)
           "has non-LTV input ~a"
           instruction ltv)
-    (test (cleavir-set:presentp ltv (load-time-values *verifying-module*))
+    (test (set:presentp ltv (load-time-values *verifying-module*))
           "references load-time-value ~a which does not belong to its module."
           instruction ltv)
-    (test (cleavir-set:presentp instruction (readers ltv))
+    (test (set:presentp instruction (readers ltv))
           "is not a reader of its LTV input ~a"
           instruction ltv)))
 
@@ -232,10 +232,10 @@
           instruction (remove-if #'iblockp (next instruction))))
   ;; NEXT list is not shared and therefore destructible
   (unless (null (next instruction))
-    (test (not (cleavir-set:presentp (next instruction) *seen-next*))
+    (test (not (set:presentp (next instruction) *seen-next*))
           "shares its next-list ~a"
           instruction (next instruction))
-    (cleavir-set:nadjoinf *seen-next* (next instruction))))
+    (set:nadjoinf *seen-next* (next instruction))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -259,7 +259,7 @@
         inst (code inst) (enclose (code inst)))
   ;; Make sure the function we are enclosing is in the module.
   (when (boundp '*verifying-module*)
-    (test (cleavir-set:presentp (code inst) (functions *verifying-module*))
+    (test (set:presentp (code inst) (functions *verifying-module*))
           "encloses ~a, which is not present in the module ~a"
           inst (code inst) *verifying-module*)))
 
@@ -267,7 +267,7 @@
   ;; Make sure the function we are calling is in the module.
   (when (boundp '*verifying-module*)
     (let ((function (first (inputs inst))))
-      (test (cleavir-set:presentp function (functions *verifying-module*))
+      (test (set:presentp function (functions *verifying-module*))
             "calls ~a, which is not present in the module ~a"
             inst function *verifying-module*))))
 
@@ -279,7 +279,7 @@
 (defmethod verify progn ((rv readvar))
   (let ((var (first (inputs rv))))
     ;; make sure something writes the variable
-    (test (plusp (cleavir-set:size (writers var)))
+    (test (plusp (set:size (writers var)))
           "reads variable ~a with no writers" rv var)))
 
 (defmethod verify progn ((call call))
@@ -288,14 +288,14 @@
 
 (defmethod verify progn ((c catch))
   ;; verify type decls
-  (test (typep (unwinds c) 'cleavir-set:set)
+  (test (typep (unwinds c) 'set:set)
         "has non-set for unwinds: ~a" c (unwinds c))
   ;; check that it is recorded by its function
-  (test (cleavir-set:presentp c (catches (function c)))
+  (test (set:presentp c (catches (function c)))
         "not in its function ~a's catch set." c (function c))
   ;; check that all unwinds are unwinds
   (let ((non-unwinds
-          (cleavir-set:filter
+          (set:filter
            'list (lambda (u) (not (typep u 'unwind))) (unwinds c))))
     (test (null non-unwinds)
           "has non-unwinds ~a in its unwind set"
@@ -316,11 +316,11 @@
         "has destination ~a, which is not an iblock" u (destination u))
   ;; Make sure the catch knows about us
   ;; (since if we're being verified, we must be reachable and live)
-  (test (cleavir-set:presentp u (unwinds (catch u)))
+  (test (set:presentp u (unwinds (catch u)))
         "is not present in its catch's ~a unwinds ~a"
         u (catch u) (unwinds (catch u)))
   ;; Make sure this unwind's block is an entrance of the destination block.
-  (test (cleavir-set:presentp (iblock u) (entrances (destination u)))
+  (test (set:presentp (iblock u) (entrances (destination u)))
         "has iblock ~a, which is not in the entrances set of the destination ~a"
         u (iblock u) (destination u))
   ;; ensure inputs match destination
@@ -343,10 +343,10 @@
 
 (defmethod verify progn ((iblock iblock))
   ;; Iblocks can input to themselves through PHIs, so make it seen immediately
-  (cleavir-set:nadjoinf *seen-iblocks* iblock)
+  (set:nadjoinf *seen-iblocks* iblock)
   ;; All predecessors truly have this as a successor
   (let ((non-successor-predecessors
-          (cleavir-set:filter 'list
+          (set:filter 'list
                               (lambda (p) (not (member iblock (next (end p))
                                                        :test #'eq)))
                               (predecessors iblock))))
@@ -355,7 +355,7 @@
           iblock non-successor-predecessors))
   ;; All successors have this as a predecessor
   (flet ((has-predecessor-p (next)
-           (cleavir-set:presentp iblock (predecessors next))))
+           (set:presentp iblock (predecessors next))))
     (test (every #'has-predecessor-p (next (end iblock)))
           "has successors which do not list it as a predecessor:~%~a"
           iblock
@@ -376,13 +376,13 @@
         "has dynamic environment ~a, which is not a dynamic-environment"
         iblock (dynamic-environment iblock))
   ;; iblock is in its dynenv's scope set
-  (test (cleavir-set:presentp iblock (scope (dynamic-environment iblock)))
+  (test (set:presentp iblock (scope (dynamic-environment iblock)))
         "is not in its dynamic environment ~a's scope"
         iblock (dynamic-environment iblock))
   ;; dynenv is either the function itself or an instruction that
   ;; dominates this block (but see KLUDGE above)
   (test (or (eq (dynamic-environment iblock) *verifying-function*)
-            (cleavir-set:presentp
+            (set:presentp
              (dynamic-environment iblock) *seen-instructions*))
         "has invalid dynamic environment ~a"
         iblock (dynamic-environment iblock))
@@ -392,7 +392,7 @@
   (test (eq (function iblock) *verifying-function*)
         "is in the wrong function." iblock)
   ;; Check entrances actually end in unwind.
-  (cleavir-set:doset (entrance (entrances iblock))
+  (set:doset (entrance (entrances iblock))
     (test (typep (end entrance) 'unwind)
           "has entrance ~a, which does not end in an unwind" iblock entrance))
   ;; inputs are all phis, and all phis have only terminators as definitions
@@ -401,7 +401,7 @@
       (test (every #'phip inputs)
             "has non-phi inputs ~a" iblock (remove-if #'phip inputs)))
     (flet ((terminatord (p)
-             (cleavir-set:every (lambda (inst)
+             (set:every (lambda (inst)
                                   (and (typep inst 'terminator)
                                        (member p (outputs inst))))
                                 (definitions p))))
@@ -410,9 +410,9 @@
             iblock (remove-if #'terminatord inputs)))
     ;; Inputs lists are not shared, so we can destroy them
     (unless (null inputs)
-      (test (not (cleavir-set:presentp inputs *seen-lists*))
+      (test (not (set:presentp inputs *seen-lists*))
             "has shared inputs list" iblock)
-      (cleavir-set:nadjoinf *seen-lists* inputs)))
+      (set:nadjoinf *seen-lists* inputs)))
   ;; Verify each instruction
   (let ((*verifying-iblock* iblock))
     (do-iblock-instructions (i iblock)
@@ -420,21 +420,21 @@
       (test (typep i 'instruction)
             "is in an iblock despite not being an instruction" i)
       ;; Ensure each instruction is only in the graph once
-      (test (not (cleavir-set:presentp i *seen-instructions*))
+      (test (not (set:presentp i *seen-instructions*))
             "is in the graph multiple times" i)
       ;; Ensure non-end instructions are non-terminator instructions
       (unless (eq i (end iblock))
         (test (not (typep i 'terminator))
               "does not terminate its iblock" i))
       (verify i)
-      (cleavir-set:nadjoinf *seen-instructions* i))))
+      (set:nadjoinf *seen-instructions* i))))
 
 (defmethod verify progn ((function function))
   (let ((start (start function))
         (returni (returni function))
         (*verifying-function* function))
     ;; make sure the function is actually in its module.
-    (test (cleavir-set:presentp function (functions (module function)))
+    (test (set:presentp function (functions (module function)))
           "is not present in its module"
           function)
     ;; start is an iblock (verify type decl)
@@ -445,13 +445,13 @@
       (test (eq (module function) *verifying-module*)
             "in the wrong module" function))
     ;; Reachability etc
-    (let ((reachable (cleavir-set:empty-set))
-          (iblocks (cleavir-set:empty-set)))
+    (let ((reachable (set:empty-set))
+          (iblocks (set:empty-set)))
       (do-iblocks (iblock function)
-        (test (not (cleavir-set:presentp iblock iblocks))
+        (test (not (set:presentp iblock iblocks))
               "is present in the iblock flow order of function ~a more than once."
               iblock function)
-        (cleavir-set:nadjoinf iblocks iblock))
+        (set:nadjoinf iblocks iblock))
       (labels ((iblock-verifier (iblock)
                  (verify iblock)
                  ;; A function has at most one return instruction
@@ -460,46 +460,46 @@
                            t)
                        "ends in a returni which is not the returni of its function."
                        iblock)
-                 (cleavir-set:nadjoinf reachable iblock))
+                 (set:nadjoinf reachable iblock))
                (traverse (iblock)
-                 (unless (cleavir-set:presentp iblock reachable)
-                   (cleavir-set:nadjoinf reachable iblock)
+                 (unless (set:presentp iblock reachable)
+                   (set:nadjoinf reachable iblock)
                    (iblock-verifier iblock)
                    (dolist (successor (successors iblock))
                      (traverse successor)))))
         (traverse start)
         ;; All reachable blocks are in the iblocks set
-        (test (cleavir-set:set<= reachable iblocks)
+        (test (set:set<= reachable iblocks)
               "does not record reachable iblocks ~a"
-              function (cleavir-set:difference 'list reachable iblocks))
+              function (set:difference 'list reachable iblocks))
         ;; All members of the iblocks set are reachable
-        (test (cleavir-set:set<= iblocks reachable)
+        (test (set:set<= iblocks reachable)
               "records unreachable iblocks ~a"
-              function (cleavir-set:difference 'list iblocks reachable)))
+              function (set:difference 'list iblocks reachable)))
       ;; Check that the catch instructions of this function were in
       ;; fact seen.
-      (cleavir-set:doset (catch (catches function))
-        (test (cleavir-set:presentp catch *seen-instructions*)
+      (set:doset (catch (catches function))
+        (test (set:presentp catch *seen-instructions*)
               "is recorded by the function ~a but is not reachable."
               catch function))
       ;; The return instruction's iblock, if it exists, is reachable
       ;; and in the iblocks set.
       (when returni
         (let ((end (iblock returni)))
-          (test (cleavir-set:presentp end reachable)
+          (test (set:presentp end reachable)
                 "has unreachable return iblock"
                 function)
-          (test (cleavir-set:presentp end iblocks)
+          (test (set:presentp end iblocks)
                 "has unrecorded return iblock"
                 function))))))
 
 (defmethod verify progn ((module module))
   (let ((*problems* nil) (function-problems nil))
     (handler-case
-        (let ((*seen-instructions* (cleavir-set:empty-set))
-              (*seen-iblocks* (cleavir-set:empty-set))
-              (*seen-lists* (cleavir-set:empty-set))
-              (*seen-next* (cleavir-set:empty-set))
+        (let ((*seen-instructions* (set:empty-set))
+              (*seen-iblocks* (set:empty-set))
+              (*seen-lists* (set:empty-set))
+              (*seen-next* (set:empty-set))
               (*verifying-module* module))
           (do-functions (function module)
             (let ((*problems* nil))
@@ -508,11 +508,11 @@
                 (push (list* function *problems*) function-problems))))
           ;; Now do module-level tests
           ;; Check for dangling references.
-          (cleavir-set:doset (constant (constants module))
-            (test (not (cleavir-set:empty-set-p (readers constant)))
+          (set:doset (constant (constants module))
+            (test (not (set:empty-set-p (readers constant)))
                   "records a constant with no references ~a." module constant))
-          (cleavir-set:doset (ltv (load-time-values module))
-            (test (not (cleavir-set:empty-set-p (readers ltv)))
+          (set:doset (ltv (load-time-values module))
+            (test (not (set:empty-set-p (readers ltv)))
                   "records an LTV with no references ~a." module ltv)))
       (error (e)
         (error 'verification-error :module module :original-condition e)))

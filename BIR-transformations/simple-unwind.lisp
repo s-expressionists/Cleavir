@@ -57,32 +57,30 @@
 ;;; b) it's a call to the function
 (defun simplifiable-user-p (user fn)
   (typecase user
-    (cleavir-bir:abstract-call
-     (or (cleavir-attributes:has-flag-p
-          (cleavir-bir:attributes user)
-          :dyn-call)
-         (eq (cleavir-bir:callee user) fn)))
+    (bir:abstract-call
+     (or (attributes:has-flag-p (bir:attributes user) :dyn-call)
+         (eq (bir:callee user) fn)))
     (t nil)))
 
 ;;; Detect whether a function is ever called or closed over in an
 ;;; intermediate dynamic environment. If the function escapes, check
 ;;; if it is passed into a "good" call.
 (defun find-intermediate-dynenv (catch function seen)
-  (when (cleavir-set:presentp function seen)
+  (when (set:presentp function seen)
     (return-from find-intermediate-dynenv nil))
-  (cleavir-set:nadjoinf seen function)
-  (let ((enclose (cleavir-bir:enclose function)))
+  (set:nadjoinf seen function)
+  (let ((enclose (bir:enclose function)))
     (when enclose
-      (let* ((eout (cleavir-bir:output enclose))
-             (user (cleavir-bir:use eout)))
+      (let* ((eout (bir:output enclose))
+             (user (bir:use eout)))
         (when (and user
-                   (not (and (eq (cleavir-bir:dynamic-environment user)
+                   (not (and (eq (bir:dynamic-environment user)
                                  catch)
                              (simplifiable-user-p user enclose))))
           (return-from find-intermediate-dynenv t)))))
-  (cleavir-set:doset (call (cleavir-bir:local-calls function))
-    (let ((dynamic-environment (cleavir-bir:dynamic-environment call))
-          (function (cleavir-bir:function call)))
+  (set:doset (call (bir:local-calls function))
+    (let ((dynamic-environment (bir:dynamic-environment call))
+          (function (bir:function call)))
       (cond ((eq catch dynamic-environment))
             ((eq function dynamic-environment)
              (find-intermediate-dynenv catch function seen))
@@ -90,14 +88,14 @@
              (return-from find-intermediate-dynenv t))))))
 
 (defgeneric simple-unwinding-p (instruction))
-(defmethod simple-unwinding-p ((unwind cleavir-bir:unwind))
-  (let ((function (cleavir-bir:function unwind))
-        (catch (cleavir-bir:catch unwind)))
-    (and (eq (cleavir-bir:dynamic-environment unwind) function)
+(defmethod simple-unwinding-p ((unwind bir:unwind))
+  (let ((function (bir:function unwind))
+        (catch (bir:catch unwind)))
+    (and (eq (bir:dynamic-environment unwind) function)
          (not (find-intermediate-dynenv
                catch
                function
-               (cleavir-set:empty-set))))))
+               (set:empty-set))))))
 
-(defmethod simple-unwinding-p ((inst cleavir-bir:catch))
-  (cleavir-set:every #'simple-unwinding-p (cleavir-bir:unwinds inst)))
+(defmethod simple-unwinding-p ((inst bir:catch))
+  (set:every #'simple-unwinding-p (bir:unwinds inst)))

@@ -2,6 +2,10 @@
 
 (defpackage #:cleavir-bir-transformations
   (:use #:cl)
+  (:local-nicknames (#:bir #:cleavir-bir)
+                    (#:set #:cleavir-set)
+                    (#:ctype #:cleavir-ctype)
+                    (#:attributes #:cleavir-attributes))
   (:export #:module-eliminate-catches #:eliminate-catches)
   (:export #:module-optimize-variables #:function-optimize-variables)
   (:export #:simple-unwinding-p)

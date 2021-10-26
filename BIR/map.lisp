@@ -1,8 +1,7 @@
 (in-package #:cleavir-bir)
 
 (defmacro do-functions ((function module) &body body)
-  `(cleavir-set:doset (,function (functions ,module))
-     ,@body))
+  `(set:doset (,function (functions ,module)) ,@body))
 
 (defun map-functions (f module)
   (do-functions (function module)

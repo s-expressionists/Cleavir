@@ -30,10 +30,10 @@
 ;;; Abstract. Like a call, but the compiler is expected to deal with it.
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
-          :type cleavir-primop-info:info)))
+          :type primop-info:info)))
 
 (defmethod attributes ((instruction primop))
-  (cleavir-primop-info:attributes (info instruction)))
+  (primop-info:attributes (info instruction)))
 
 ;; primop returning values
 (defclass vprimop (primop) ())
@@ -86,9 +86,9 @@
 
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
-             :initform (cleavir-set:empty-set)
+             :initform (set:empty-set)
              ;; A set of corresponding UNWINDs
-             :type cleavir-set:set)))
+             :type set:set)))
 
 ;;; Mark a lexical binding.
 (defclass leti (writevar) ())

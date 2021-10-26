@@ -3,8 +3,8 @@
 ;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment ()
   (;; The set of iblocks that have this as their dynamic environment.
-   (%scope :initarg :scope :accessor scope :initform (cleavir-set:empty-set)
-           :type cleavir-set:set)))
+   (%scope :initarg :scope :accessor scope :initform (set:empty-set)
+           :type set:set)))
 (defun parent (dynamic-environment)
   (if (typep dynamic-environment 'function)
       nil
@@ -44,7 +44,7 @@
 (defun current-top-ctype ()
   (if (boundp '*top-ctype*)
       *top-ctype*
-      (cleavir-ctype:values nil nil (cleavir-ctype:top nil) nil)))
+      (ctype:values nil nil (ctype:top nil) nil)))
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
@@ -60,7 +60,7 @@
                   :reader ctype)
    ;; Additional flow attributes
    (%attributes :initarg :attributes :accessor attributes
-                :initform (cleavir-attributes:default-attributes))))
+                :initform (attributes:default-attributes))))
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
@@ -72,7 +72,7 @@
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers)))
 
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -81,7 +81,7 @@
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (cleavir-set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers)))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -137,7 +137,7 @@
                 :reader definition :accessor %definition)))
 
 (defmethod definitions ((datum output))
-  (cleavir-set:make-set (definition datum)))
+  (set:make-set (definition datum)))
 
 (defmethod origin ((datum output))
   (when (definition datum) (origin (definition datum))))
@@ -179,9 +179,8 @@
 ;;; is a LETI with no readers.
 (defmethod unused-p ((datum argument))
   (or (call-next-method)
-      (let ((use (cleavir-bir:use datum)))
-        (and (typep use 'cleavir-bir:leti)
-             (unused-p (output use))))))
+      (let ((use (use datum)))
+        (and (typep use 'leti) (unused-p (output use))))))
 
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
@@ -190,13 +189,13 @@
 
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
-        (definitions (cleavir-set:empty-set)))
-    (cleavir-set:doset (predecessor (predecessors ib))
+        (definitions (set:empty-set)))
+    (set:doset (predecessor (predecessors ib))
       (let ((end (end predecessor)))
         (unless (typep end 'catch)
-          (cleavir-set:nadjoinf definitions end))))
-    (cleavir-set:doset (entrance (entrances ib))
-      (cleavir-set:nadjoinf definitions (end entrance)))
+          (set:nadjoinf definitions end))))
+    (set:doset (entrance (entrances ib))
+      (set:nadjoinf definitions (end entrance)))
     definitions))
 
 ;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
@@ -230,13 +229,13 @@
    ;; The LETI that binds this variable.
    (%binder :initarg :binder :accessor binder :type leti)
    (%writers :accessor writers
-             :initform (cleavir-set:empty-set)
+             :initform (set:empty-set)
              ;; All WRITEVAR instructions.
-             :type cleavir-set:set)
+             :type set:set)
    (%readers :accessor readers
-             :initform (cleavir-set:empty-set)
+             :initform (set:empty-set)
              ;; All READVAR instructions.
-             :type cleavir-set:set)
+             :type set:set)
    ;; Has this variable ever been used?
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
@@ -246,7 +245,7 @@
 (defmethod origin ((datum variable)) (origin (binder datum)))
 
 (defmethod unused-p ((datum variable))
-  (cleavir-set:empty-set-p (readers datum)))
+  (set:empty-set-p (readers datum)))
 
 (defun record-variable-set (variable)
   (with-slots (%use-status) variable
@@ -260,14 +259,14 @@
   (function (binder v)))
 
 (defun immutablep (variable)
-  (= (cleavir-set:size (writers variable)) 1))
+  (= (set:size (writers variable)) 1))
 
 (defun closed-over-p (variable)
   (let ((owner (function variable)))
-    (cleavir-set:doset (reader (readers variable))
+    (set:doset (reader (readers variable))
       (unless (eq owner (function reader))
         (return-from closed-over-p t)))
-    (cleavir-set:doset (writer (writers variable))
+    (set:doset (writer (writers variable))
       (unless (eq owner (function writer))
         (return-from closed-over-p t)))))
 
@@ -278,9 +277,9 @@
    (%end :initarg :end :accessor end
          :type terminator)
    (%predecessors :initarg :predecessors :accessor predecessors
-                  :initform (cleavir-set:empty-set)
+                  :initform (set:empty-set)
                   ;; A set of blocks.
-                  :type cleavir-set:set)
+                  :type set:set)
    (%inputs :initarg :inputs :accessor inputs
             :initform nil
             ;; A sequence of PHIs
@@ -288,8 +287,8 @@
    ;; A set of IBLOCKs that enter this function nonlocally
    ;; (i.e. with an UNWIND operation).
    (%entrances :initarg :entrances :accessor entrances
-               :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)
+               :initform (set:empty-set)
+               :type set:set)
    ;; The links for the doubly linked list of iblocks maintained in
    ;; forward flow order.
    (%next :initform nil :accessor %next :type (or null iblock))
@@ -329,23 +328,23 @@
    ;; The set of variables bound by this function, i.e. the union of
    ;; the variables bound by all LETI instructions in it.
    (%variables :initarg :variables :accessor variables
-               :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)
+               :initform (set:empty-set)
+               :type set:set)
    ;; The set of catches in this function.
    (%catches :initarg :catches :accessor catches
-             :initform (cleavir-set:empty-set)
-             :type cleavir-set:set)
+             :initform (set:empty-set)
+             :type set:set)
    ;; The set of lexicals closed over by this function. Currently
    ;; filled in by process-captured-variables.
-   (%environment :initform (cleavir-set:empty-set) :accessor environment
-                 :type cleavir-set:set)
+   (%environment :initform (set:empty-set) :accessor environment
+                 :type set:set)
    ;; The ENCLOSE instruction which creates this function as a
    ;; first-class value, or NIL if the function does not need to be
    ;; treated as first-class.
    (%enclose :initform nil :accessor enclose :type (or null enclose))
    ;; The set of local calls of this function.
-   (%local-calls :initform (cleavir-set:empty-set) :accessor local-calls
-                 :type cleavir-set:set)
+   (%local-calls :initform (set:empty-set) :accessor local-calls
+                 :type set:set)
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%policy :initarg :policy :initform nil :reader policy)
@@ -353,7 +352,7 @@
    (%original-lambda-list :initarg :original-lambda-list :initform nil
                           :reader original-lambda-list)
    (%attributes :initarg :attributes :accessor attributes
-                :initform (cleavir-attributes:default-attributes))
+                :initform (attributes:default-attributes))
    ;; The module containing this function.
    (%module :initarg :module :reader module :type module)))
 
@@ -367,15 +366,15 @@
 ;;; functions are always compiled together.
 (defclass module ()
   ((%functions :initarg :functions :accessor functions
-               :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)
+               :initform (set:empty-set)
+               :type set:set)
    (%constants :accessor constants
-               :initform (cleavir-set:empty-set)
-               :type cleavir-set:set)
+               :initform (set:empty-set)
+               :type set:set)
    ;; FIXME: move load time value handling more to client
    (%load-time-values :accessor load-time-values
-                      :initform (cleavir-set:empty-set)
-                      :type cleavir-set:set)
+                      :initform (set:empty-set)
+                      :type set:set)
    ;; This table ensures that only one constant object per similar
    ;; object is created.
    (%constant-table :accessor constant-table)))
@@ -392,7 +391,7 @@
   (let ((constant-table (constant-table module)))
     (or (gethash constant-value constant-table)
         (let ((constant (make-instance 'constant :value constant-value)))
-          (cleavir-set:nadjoinf (constants module) constant)
+          (set:nadjoinf (constants module) constant)
           (setf (gethash constant-value constant-table) constant)
           constant))))
 
@@ -404,13 +403,13 @@
   ;; We can look into it later if we need to.
   (let ((ltv (make-instance 'load-time-value
                :form form :read-only-p read-only-p)))
-    (cleavir-set:nadjoinf (load-time-values module) ltv)
+    (set:nadjoinf (load-time-values module) ltv)
     ltv))
 
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
-  (let ((entrances (cleavir-set:empty-set)))
-    (cleavir-set:doset (catch (catches function))
-      (cleavir-set:doset (unwind (unwinds catch))
-        (cleavir-set:nadjoinf entrances (destination unwind))))
+  (let ((entrances (set:empty-set)))
+    (set:doset (catch (catches function))
+      (set:doset (unwind (unwinds catch))
+        (set:nadjoinf entrances (destination unwind))))
     entrances))

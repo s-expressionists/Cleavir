@@ -1,30 +1,28 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defmethod compile-ast ((ast cleavir-ast:primop-ast) inserter system)
-  (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
-                                 inserter system)
-    (let* ((info (cleavir-ast:info ast))
+(defmethod compile-ast ((ast ast:primop-ast) inserter system)
+  (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
+    (let* ((info (ast:info ast))
            (out (cleavir-primop-info:out-kind info)))
       (when (integerp out)
         (error "BUG: Test primop in invalid context: ~a" ast))
       (let ((outputs (ecase out
-                       ((:value) (list (make-instance 'cleavir-bir:output)))
+                       ((:value) (list (make-instance 'bir:output)))
                        ((:effect) nil))))
         (insert inserter
-                (make-instance 'cleavir-bir:vprimop
+                (make-instance 'bir:vprimop
                   :info info :inputs args :outputs outputs))
         (copy-list outputs)))))
 
-(defmethod compile-test-ast ((ast cleavir-ast:primop-ast) inserter system)
-  (with-compiled-arguments (args (cleavir-ast:argument-asts ast)
-                                 inserter system)
-    (let* ((info (cleavir-ast:info ast))
+(defmethod compile-test-ast ((ast ast:primop-ast) inserter system)
+  (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
+    (let* ((info (ast:info ast))
            (out (cleavir-primop-info:out-kind info)))
       (check-type out (integer 0))
       (let ((ibs (loop repeat out collect (make-iblock inserter))))
         (terminate
          inserter
-         (make-instance 'cleavir-bir:tprimop
+         (make-instance 'bir:tprimop
            :info info :next ibs :inputs args))
         (copy-list ibs)))))
 
@@ -40,32 +38,32 @@
                                    collect `(make-iblock inserter)))))
                (terminate
                 inserter
-                (make-instance 'cleavir-bir:tprimop
+                (make-instance 'bir:tprimop
                   :info ',info :next ibs :inputs rv))
                (copy-list ibs))))
         `(defmethod compile-ast ((ast ,ast) inserter system)
            (with-compiled-asts (rv ,ca inserter system)
              (let ((outs ,(ecase out
                             ((:value)
-                             '(list (make-instance 'cleavir-bir:output)))
+                             '(list (make-instance 'bir:output)))
                             ((:effect) nil))))
                (insert inserter
-                       (make-instance 'cleavir-bir:vprimop
+                       (make-instance 'bir:vprimop
                          :info ',info :inputs rv :outputs outs))
                (copy-list outs)))))))
 
-(defprimop symbol-value cleavir-ast:symbol-value-ast
-  cleavir-ast:symbol-ast)
-(defprimop (setf symbol-value) cleavir-ast:set-symbol-value-ast
-  cleavir-ast:symbol-ast cleavir-ast:value-ast)
+(defprimop symbol-value ast:symbol-value-ast
+  ast:symbol-ast)
+(defprimop (setf symbol-value) ast:set-symbol-value-ast
+  ast:symbol-ast ast:value-ast)
 
 ;;; Make sure the output of an fdefinition gets the attributes.
-(defmethod compile-ast ((ast cleavir-ast:fdefinition-ast) inserter system)
-  (with-compiled-asts (rv ((cleavir-ast:name-ast ast)) inserter system)
-    (let ((out (make-instance 'cleavir-bir:output
-                 :attributes (cleavir-ast:attributes ast))))
+(defmethod compile-ast ((ast ast:fdefinition-ast) inserter system)
+  (with-compiled-asts (rv ((ast:name-ast ast)) inserter system)
+    (let ((out (make-instance 'bir:output
+                 :attributes (ast:attributes ast))))
       (insert inserter
-              (make-instance 'cleavir-bir:vprimop
+              (make-instance 'bir:vprimop
                 :info (cleavir-primop-info:info 'fdefinition)
                 :inputs rv :outputs (list out)))
       (list out))))

@@ -3,6 +3,11 @@
 (defpackage #:cleavir-bir
   (:use #:cl)
   (:shadow #:function #:catch #:variable #:load-time-value #:case #:ignore)
+  (:local-nicknames (#:primop-info #:cleavir-primop-info)
+                    (#:set #:cleavir-set)
+                    (#:attributes #:cleavir-attributes)
+                    (#:conditions #:cleavir-conditions)
+                    (#:ctype #:cleavir-ctype))
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches

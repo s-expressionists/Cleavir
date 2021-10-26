@@ -12,18 +12,18 @@
   (let ((variable (gethash lexical-variable *variables*)))
     (cond (variable
            ;; Tie the knot for mutually referential functions.
-           (assert (not (slot-boundp variable 'cleavir-bir::%binder))
+           (assert (not (slot-boundp variable 'bir::%binder))
                    ()
                    "Cannot bind variable more than once.")
            variable)
           (t
            (setf (gethash lexical-variable *variables*)
-                 (make-instance 'cleavir-bir:variable
-                                :name (cleavir-ast:name lexical-variable)
+                 (make-instance 'bir:variable
+                                :name (ast:name lexical-variable)
                                 :ignore ignore))))))
 
 (defun find-variable (lexical-variable)
-  (check-type lexical-variable cleavir-ast:lexical-variable)
+  (check-type lexical-variable ast:lexical-variable)
   (or (gethash lexical-variable *variables*)
       ;; Normally this should never happen but mutually referential
       ;; functions create a circularity we must tie.
@@ -33,21 +33,21 @@
   ((%iblock :initarg :iblock :accessor iblock)
    (%insert-point :initarg :insert-point :accessor insert-point
                   ;; null means no instructions have been added yet.
-                  :type (or null cleavir-bir:instruction))))
+                  :type (or null bir:instruction))))
 
-(defun function (inserter) (cleavir-bir:function (iblock inserter)))
+(defun function (inserter) (bir:function (iblock inserter)))
 (defun dynamic-environment (inserter)
-  (cleavir-bir:dynamic-environment (iblock inserter)))
+  (bir:dynamic-environment (iblock inserter)))
 
 ;; Put the insert point at the last instruction in the block.
 ;; (The terminator shouldn't be set yet.)
 (defun proceed (inserter iblock)
   (setf (iblock inserter) iblock
         (insert-point inserter)
-        (if (cleavir-bir:iblock-started-p iblock)
-            (loop for inst = (cleavir-bir:start iblock) then succ
-                  for succ = (cleavir-bir:successor inst)
-                  when (typep inst 'cleavir-bir:terminator)
+        (if (bir:iblock-started-p iblock)
+            (loop for inst = (bir:start iblock) then succ
+                  for succ = (bir:successor inst)
+                  when (typep inst 'bir:terminator)
                     do (error "BUG: Tried to PROCEED a terminated block")
                   when (null succ)
                     return inst)
@@ -61,25 +61,25 @@
   (let ((ip (insert-point inserter))
         (ib (iblock inserter)))
     (if (null ip)
-        (setf (cleavir-bir:start ib) instruction)
-        (setf (cleavir-bir:predecessor instruction) ip
-              (cleavir-bir:successor ip) instruction))
-    (setf (cleavir-bir:iblock instruction) ib
-          (cleavir-bir:successor instruction) nil
+        (setf (bir:start ib) instruction)
+        (setf (bir:predecessor instruction) ip
+              (bir:successor ip) instruction))
+    (setf (bir:iblock instruction) ib
+          (bir:successor instruction) nil
           (insert-point inserter) instruction))
   instruction)
 
 (defun terminate (inserter terminator)
   (let ((ib (iblock inserter)))
-    (loop for next in (cleavir-bir:next terminator)
-          do (cleavir-set:nadjoinf (cleavir-bir:predecessors next) ib))
+    (loop for next in (bir:next terminator)
+          do (set:nadjoinf (bir:predecessors next) ib))
     (let ((ip (insert-point inserter)))
       (if (null ip)
-          (setf (cleavir-bir:start ib) terminator)
-          (setf (cleavir-bir:successor ip) terminator))
-      (setf (cleavir-bir:predecessor terminator) ip))
-    (setf (cleavir-bir:end ib) terminator
-          (cleavir-bir:iblock terminator) ib))
+          (setf (bir:start ib) terminator)
+          (setf (bir:successor ip) terminator))
+      (setf (bir:predecessor terminator) ip))
+    (setf (bir:end ib) terminator
+          (bir:iblock terminator) ib))
   terminator)
 
 ;;; internal helper
@@ -95,29 +95,28 @@
 (defun make-iblock (inserter
                     &key (function (function inserter))
                       (dynamic-environment
-                       (cleavir-bir:dynamic-environment (iblock inserter)))
+                       (bir:dynamic-environment (iblock inserter)))
                       name)
-  (let ((ib (make-instance 'cleavir-bir:iblock
+  (let ((ib (make-instance 'bir:iblock
               :name name
               :function function :dynamic-environment dynamic-environment)))
-    (cleavir-set:nadjoinf (cleavir-bir:scope dynamic-environment) ib)
+    (set:nadjoinf (bir:scope dynamic-environment) ib)
     ib))
 
 (defun make-module ()
-  (make-instance 'cleavir-bir:module))
+  (make-instance 'bir:module))
 
 (defun adjoin-variable (inserter variable)
   (check-type inserter inserter)
-  (check-type variable cleavir-bir:variable)
-  (cleavir-set:nadjoinf (cleavir-bir:variables (function inserter))
-                        variable)
+  (check-type variable bir:variable)
+  (set:nadjoinf (bir:variables (function inserter)) variable)
   (values))
 
 (defgeneric compile-function (ast system)
-  (:method :around ((ast cleavir-ast:function-ast) system)
+  (:method :around ((ast ast:function-ast) system)
     (declare (ignore system))
-    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
-          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
+    (let ((bir:*origin* (ast:origin ast))
+          (bir:*policy* (ast:policy ast)))
       (call-next-method))))
 
 (defun compile-into-module (ast module system)
@@ -125,8 +124,7 @@
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
         (*current-module* module)
-        (cleavir-bir:*top-ctype* (cleavir-ctype:coerce-to-values
-                                  (cleavir-ctype:top system) system)))
+        (bir:*top-ctype* (ctype:coerce-to-values (ctype:top system) system)))
     (compile-function ast system)))
 
 (defun compile-toplevel (ast system)
@@ -134,19 +132,19 @@
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
 (defgeneric compile-ast (ast inserter system)
-  (:method :around ((ast cleavir-ast:ast) inserter system)
+  (:method :around ((ast ast:ast) inserter system)
     (declare (ignore inserter system))
-    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
-          (cleavir-bir:*policy* (cleavir-ast:policy ast))
+    (let ((bir:*origin* (ast:origin ast))
+          (bir:*policy* (ast:policy ast))
           (result (call-next-method)))
       (assert (or (listp result) (eq result :no-value) (eq result :no-return)))
       result)))
 
 (defgeneric compile-test-ast (ast inserter system)
-  (:method :around ((ast cleavir-ast:ast) inserter system)
+  (:method :around ((ast ast:ast) inserter system)
     (declare (ignore inserter system))
-    (let ((cleavir-bir:*origin* (cleavir-ast:origin ast))
-          (cleavir-bir:*policy* (cleavir-ast:policy ast)))
+    (let ((bir:*origin* (ast:origin ast))
+          (bir:*policy* (ast:policy ast)))
       (call-next-method))))
 
 (defmacro with-compiled-ast ((name ast inserter system) &body body)

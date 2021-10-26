@@ -11,12 +11,12 @@
 ;;; This checks argument counts but does NOT check &key argument validity,
 ;;; which for non-constant keywords can involve complex analysis.
 (defun check-argument-list-compatible (arguments function)
-  (let ((lambda-list (cleavir-bir:lambda-list function))
+  (let ((lambda-list (bir:lambda-list function))
         (nsupplied (length arguments))
         (nrequired 0)
         (noptional 0)
         (restp nil))
-    (cleavir-bir:map-lambda-list
+    (bir:map-lambda-list
      (lambda (state item index)
        (declare (ignore item index))
        (case state
@@ -33,7 +33,7 @@
       (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
           t
           (warn "~a is passed ~d arguments, but expects ~@?"
-                (cleavir-bir:name function) nsupplied
+                (bir:name function) nsupplied
                 (cond (restp "at least ~d")
                       ((zerop noptional) "exactly ~d")
                       ((zerop nrequired) "at most ~*~d")
@@ -50,58 +50,58 @@
 ;;; analysis" for functions, recording the result of the analysis
 ;;; directly into the IR.
 (defun find-function-local-calls (function)
-  (let ((enclose (cleavir-bir:enclose function)))
+  (let ((enclose (bir:enclose function)))
     (when enclose
-      (fflc-use function (cleavir-bir:output enclose))))
+      (fflc-use function (bir:output enclose))))
   (post-find-local-calls function))
 
 ;;; Find local calls for a given use of a function enclosure.
 ;;; Because the closure may be stored in a variable or etc, it is convenient
 ;;; for this function to be recursive.
 (defun fflc-use (function datum)
-  (let ((use (cleavir-bir:use datum)) (def (cleavir-bir:definition datum)))
+  (let ((use (bir:use datum)) (def (bir:definition datum)))
     (typecase use
-      (cleavir-bir:call
-       (when (and (eq datum (cleavir-bir:callee use))
+      (bir:call
+       (when (and (eq datum (bir:callee use))
                   (check-argument-list-compatible
-                   (rest (cleavir-bir:inputs use))
+                   (rest (bir:inputs use))
                    function))
-         (change-class use 'cleavir-bir:local-call)
-         (cleavir-bir:replace-uses function datum)
-         (cleavir-bir:delete-instruction def)))
-      (cleavir-bir:mv-call
-       (when (eq datum (cleavir-bir:callee use))
-         (change-class use 'cleavir-bir:mv-local-call)
-         (cleavir-bir:replace-uses function datum)
-         (cleavir-bir:delete-instruction def)))
-      (cleavir-bir:fixed-to-multiple
+         (change-class use 'bir:local-call)
+         (bir:replace-uses function datum)
+         (bir:delete-instruction def)))
+      (bir:mv-call
+       (when (eq datum (bir:callee use))
+         (change-class use 'bir:mv-local-call)
+         (bir:replace-uses function datum)
+         (bir:delete-instruction def)))
+      (bir:fixed-to-multiple
        ;; This case is here to catch code like (funcall (values x) ...)
        ;; which can be produced by macros.
-       (when (eq datum (first (cleavir-bir:inputs use)))
-         (let ((out (cleavir-bir:output use)))
+       (when (eq datum (first (bir:inputs use)))
+         (let ((out (bir:output use)))
            (fflc-use function out)
-           (when (null (cleavir-bir:use out)) ; use was deleted
-             (cleavir-bir:delete-instruction def)))))
-      (cleavir-bir:leti
-       (let ((variable (cleavir-bir:output use)))
+           (when (null (bir:use out)) ; use was deleted
+             (bir:delete-instruction def)))))
+      (bir:leti
+       (let ((variable (bir:output use)))
          ;; Variable needs to be immutable since we want to make
          ;; sure this definition reaches the readers.
-         (when (cleavir-bir:immutablep variable)
-           (cleavir-set:doset (reader (cleavir-bir:readers variable))
-             (fflc-use function (cleavir-bir:output reader)))
+         (when (bir:immutablep variable)
+           (set:doset (reader (bir:readers variable))
+             (fflc-use function (bir:output reader)))
            ;; No more references to the variable means we can clean
            ;; up the enclose.
-           (when (cleavir-set:empty-set-p (cleavir-bir:readers variable))
+           (when (set:empty-set-p (bir:readers variable))
              ;; The LETI might've already been
              ;; cleaned up by any readvar deletion triggers.
-             (unless (cleavir-set:empty-set-p (cleavir-bir:writers variable))
-               (cleavir-bir:delete-instruction use))
-             (cleavir-bir:delete-instruction def)))))
+             (unless (set:empty-set-p (bir:writers variable))
+               (bir:delete-instruction use))
+             (bir:delete-instruction def)))))
       (null ; unused
-       (cleavir-bir:delete-instruction def)))))
+       (bir:delete-instruction def)))))
 
 (defun find-module-local-calls (module)
-  (cleavir-bir:map-functions #'find-function-local-calls module)
+  (bir:map-functions #'find-function-local-calls module)
   ;; Since contification depends on all non-tail local calls being in
   ;; the same function, it may be the case that contifying triggers
   ;; more contification. Therefore, we do a second pass/fixpoint loop
@@ -111,7 +111,7 @@
   ;; the module.
   (let ((did-something nil))
     (loop do (let ((changed nil))
-               (cleavir-bir:do-functions (function module)
+               (bir:do-functions (function module)
                  (when (maybe-interpolate function)
                    (setq changed t)))
                (setq did-something changed))

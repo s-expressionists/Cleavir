@@ -103,7 +103,7 @@
             (name-id (name iblock)))))
 
 (defmethod disassemble-instruction-extra append ((inst primop))
-  (list (cleavir-primop-info:name (info inst))))
+  (list (primop-info:name (info inst))))
 
 (defmethod disassemble-instruction-extra append ((inst terminator))
   (let ((n (mapcar #'iblock-id (next inst))))
@@ -144,7 +144,7 @@
       (list* (list* (iblock-id iblock)
                     (mapcar #'disassemble-datum (inputs iblock)))
              (disassemble-dynenv (dynamic-environment iblock))
-             (cleavir-set:mapset 'list #'iblock-id (entrances iblock))
+             (set:mapset 'list #'iblock-id (entrances iblock))
              (nreverse insts)))))
 
 (defun disassemble-lambda-list (ll)
@@ -167,16 +167,16 @@
         (push (cleavir-bir-disassembler:disassemble iblock) iblocks))
       (list* (list (disassemble-datum function) (iblock-id (start function))
                    (disassemble-lambda-list (lambda-list function))
-                   (cleavir-set:mapset 'list #'disassemble-datum
+                   (set:mapset 'list #'disassemble-datum
                                        (environment function)))
              iblocks))))
 
 (defmethod cleavir-bir-disassembler:disassemble ((module module))
   (check-type module module)
   (cleavir-bir-disassembler:with-disassembly ()
-    (list* (cleavir-set:mapset 'list #'constant-value (constants module))
-           (cleavir-set:mapset 'list #'cleavir-bir-disassembler:disassemble
-                               (functions module)))))
+    (list* (set:mapset 'list #'constant-value (constants module))
+           (set:mapset 'list #'cleavir-bir-disassembler:disassemble
+                       (functions module)))))
 
 (defun cleavir-bir-disassembler:display-instruction-disassembly
     (inst-disasm &key (show-ctype *show-ctype*))
