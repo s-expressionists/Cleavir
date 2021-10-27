@@ -11,7 +11,7 @@
   (with-compiled-asts (rv ((ast:arg1-ast ast) (ast:arg2-ast ast))
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
-      (terminate inserter (make-instance 'bir:tprimop
+      (terminate inserter (make-instance 'bir:primop
                             :inputs rv
                             :info '#.(cleavir-primop-info:info
                                       'cleavir-primop:fixnum-less)
@@ -22,7 +22,7 @@
   (with-compiled-asts (rv ((ast:arg1-ast ast) (ast:arg2-ast ast))
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
-      (terminate inserter (make-instance 'bir:tprimop
+      (terminate inserter (make-instance 'bir:primop
                             :inputs rv
                             :info '#.(cleavir-primop-info:info
                                       'cleavir-primop:fixnum-not-greater)

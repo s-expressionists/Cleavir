@@ -159,7 +159,7 @@
              (attributes:has-flag-p (bir:attributes instruction) :flushable))
     (bir:delete-instruction instruction)))
 
-(defmethod maybe-flush-instruction ((instruction bir:vprimop))
+(defmethod maybe-flush-instruction ((instruction bir:primop))
   (let ((name (cleavir-primop-info:name (bir:info instruction))))
     (when (and (member name '(fdefinition car cdr symbol-value))
                (bir:unused-p (first (bir:outputs instruction))))

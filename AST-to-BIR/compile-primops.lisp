@@ -10,7 +10,7 @@
                        ((:value) (list (make-instance 'bir:output)))
                        ((:effect) nil))))
         (insert inserter
-                (make-instance 'bir:vprimop
+                (make-instance 'bir:primop
                   :info info :inputs args :outputs outputs))
         (copy-list outputs)))))
 
@@ -21,7 +21,7 @@
       (check-type out (eql 2))
       (let* ((ibs (loop repeat out collect (make-iblock inserter)))
              (p-out (make-instance 'bir:output))
-             (p (make-instance 'bir:vprimop
+             (p (make-instance 'bir:primop
                   :info info :inputs args :outputs (list p-out))))
         (insert inserter p)
         (terminate inserter (make-instance 'bir:ifi
@@ -41,7 +41,7 @@
                      (list ,@(loop repeat out
                                    collect `(make-iblock inserter))))
                    (p-out (make-instance 'bir:output))
-                   (p (make-instance 'bir:vprimop
+                   (p (make-instance 'bir:primop
                         :info ',info :inputs args :outputs (list p-out))))
               (insert inserter p)
               (terminate inserter (make-instance 'bir:ifi
@@ -56,7 +56,7 @@
                             '(list (make-instance 'bir:output)))
                            ((:effect) nil))))
               (insert inserter
-                      (make-instance 'bir:vprimop
+                      (make-instance 'bir:primop
                         :info ',info :inputs rv :outputs outs))
               (copy-list outs))))))))
 
@@ -71,7 +71,7 @@
     (let ((out (make-instance 'bir:output
                  :attributes (ast:attributes ast))))
       (insert inserter
-              (make-instance 'bir:vprimop
+              (make-instance 'bir:primop
                 :info (cleavir-primop-info:info 'fdefinition)
                 :inputs rv :outputs (list out)))
       (list out))))

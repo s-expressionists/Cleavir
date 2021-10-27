@@ -27,19 +27,14 @@
 
 (defclass load-time-value-reference (one-input one-output instruction) ())
 
-;;; Abstract. Like a call, but the compiler is expected to deal with it.
+;;; Like a call, but the compiler is expected to deal with it.
+;;; May or may not have outputs
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
           :type primop-info:info)))
 
 (defmethod attributes ((instruction primop))
   (primop-info:attributes (info instruction)))
-
-;; primop returning values
-(defclass vprimop (primop) ())
-
-;; primop that tests in a branch
-(defclass tprimop (primop no-output terminator) ())
 
 (defclass abstract-call (one-output instruction)
   ())
