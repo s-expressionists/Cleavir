@@ -18,39 +18,47 @@
   (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
     (let* ((info (ast:info ast))
            (out (cleavir-primop-info:out-kind info)))
-      (check-type out (integer 0))
-      (let ((ibs (loop repeat out collect (make-iblock inserter))))
-        (terminate
-         inserter
-         (make-instance 'bir:tprimop
-           :info info :next ibs :inputs args))
+      (check-type out (eql 2))
+      (let* ((ibs (loop repeat out collect (make-iblock inserter)))
+             (p-out (make-instance 'bir:output))
+             (p (make-instance 'bir:vprimop
+                  :info info :inputs args :outputs (list p-out))))
+        (insert inserter p)
+        (terminate inserter (make-instance 'bir:ifi
+                              :inputs (list p-out)
+                              :next ibs))
         (copy-list ibs)))))
 
 (defmacro defprimop (primop ast &rest readers)
   (let* ((info (cleavir-primop-info:info primop))
          (out (cleavir-primop-info:out-kind info))
          (ca `(,@(loop for reader in readers collect `(,reader ast)))))
-    (if (integerp out)
-        `(defmethod compile-test-asts ((ast ,ast) inserter system)
-           (with-compiled-asts (rv ,ca inserter system)
-             (let ((ibs
+    (ecase out
+      ((2)
+       `(defmethod compile-test-ast ((ast ,ast) inserter system)
+          (with-compiled-asts (rv ,ca inserter system)
+            (let* ((ibs
                      (list ,@(loop repeat out
-                                   collect `(make-iblock inserter)))))
-               (terminate
-                inserter
-                (make-instance 'bir:tprimop
-                  :info ',info :next ibs :inputs rv))
-               (copy-list ibs))))
-        `(defmethod compile-ast ((ast ,ast) inserter system)
-           (with-compiled-asts (rv ,ca inserter system)
-             (let ((outs ,(ecase out
-                            ((:value)
-                             '(list (make-instance 'bir:output)))
-                            ((:effect) nil))))
-               (insert inserter
-                       (make-instance 'bir:vprimop
-                         :info ',info :inputs rv :outputs outs))
-               (copy-list outs)))))))
+                                   collect `(make-iblock inserter))))
+                   (p-out (make-instance 'bir:output))
+                   (p (make-instance 'bir:vprimop
+                        :info ',info :inputs args :outputs (list p-out))))
+              (insert inserter p)
+              (terminate inserter (make-instance 'bir:ifi
+                                    :inputs (list p-out)
+                                    :next ibs))
+              (copy-list ibs)))))
+      ((:value :effect)
+       `(defmethod compile-ast ((ast ,ast) inserter system)
+          (with-compiled-asts (rv ,ca inserter system)
+            (let ((outs ,(ecase out
+                           ((:value)
+                            '(list (make-instance 'bir:output)))
+                           ((:effect) nil))))
+              (insert inserter
+                      (make-instance 'bir:vprimop
+                        :info ',info :inputs rv :outputs outs))
+              (copy-list outs))))))))
 
 (defprimop symbol-value ast:symbol-value-ast
   ast:symbol-ast)
