@@ -341,6 +341,17 @@
         "is used by ~a, not an ifi instruction"
         instruction (use (output instruction))))
 
+(defmethod verify progn ((instruction primop))
+  ;; For test primops, verify that the destination is an IFI.
+  (when (integerp (cleavir-primop-info:out-kind (info instruction)))
+    (let ((outputs (outputs instruction)))
+      (test (= (length outputs) 1)
+            "is a test primop, but has multiple outputs ~a"
+            instruction outputs)
+      (test (typep (use (first outputs)) '(or null ifi))
+            "is used by ~a, not an ifi instruction"
+            instruction (use (first outputs))))))
+
 (defmethod verify progn ((iblock iblock))
   ;; Iblocks can input to themselves through PHIs, so make it seen immediately
   (set:nadjoinf *seen-iblocks* iblock)
