@@ -22,6 +22,11 @@
    (%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes))))
 
+(defmethod print-object ((o info) s)
+  (print-unreadable-object (o s :type t)
+    (write (name o) :stream s))
+  o)
+
 (defmethod make-load-form ((o info) &optional env)
   (make-load-form-saving-slots o :environment env))
 
