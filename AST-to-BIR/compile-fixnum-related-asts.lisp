@@ -11,20 +11,20 @@
   (with-compiled-asts (rv ((ast:arg1-ast ast) (ast:arg2-ast ast))
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
-      (terminate inserter (make-instance 'bir:primop
-                            :inputs rv
-                            :info '#.(cleavir-primop-info:info
-                                      'cleavir-primop:fixnum-less)
-                            :next (reverse ibs)))
+      (terminate inserter 'bir:primop
+                 :inputs rv
+                 :info '#.(cleavir-primop-info:info
+                           'cleavir-primop:fixnum-less)
+                 :next (reverse ibs))
       ibs)))
 
 (defmethod compile-test-ast ((ast ast:fixnum-not-less-ast) inserter system)
   (with-compiled-asts (rv ((ast:arg1-ast ast) (ast:arg2-ast ast))
                           inserter system)
     (let ((ibs (list (make-iblock inserter) (make-iblock inserter))))
-      (terminate inserter (make-instance 'bir:primop
-                            :inputs rv
-                            :info '#.(cleavir-primop-info:info
-                                      'cleavir-primop:fixnum-not-greater)
-                            :next (reverse ibs)))
+      (terminate inserter 'bir:primop
+                 :inputs rv
+                 :info '#.(cleavir-primop-info:info
+                           'cleavir-primop:fixnum-not-greater)
+                 :next (reverse ibs))
       ibs)))

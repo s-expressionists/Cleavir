@@ -9,9 +9,8 @@
       (let ((outputs (ecase out
                        ((:value) (list (make-instance 'bir:output)))
                        ((:effect) nil))))
-        (insert inserter
-                (make-instance 'bir:primop
-                  :info info :inputs args :outputs outputs))
+        (insert inserter 'bir:primop
+                :info info :inputs args :outputs outputs)
         (copy-list outputs)))))
 
 (defmethod compile-test-ast ((ast ast:primop-ast) inserter system)
@@ -24,9 +23,8 @@
              (p (make-instance 'bir:primop
                   :info info :inputs args :outputs (list p-out))))
         (insert inserter p)
-        (terminate inserter (make-instance 'bir:ifi
-                              :inputs (list p-out)
-                              :next ibs))
+        (terminate inserter 'bir:ifi
+                   :inputs (list p-out) :next ibs)
         (copy-list ibs)))))
 
 (defmacro defprimop (primop ast &rest readers)
@@ -44,9 +42,8 @@
                    (p (make-instance 'bir:primop
                         :info ',info :inputs args :outputs (list p-out))))
               (insert inserter p)
-              (terminate inserter (make-instance 'bir:ifi
-                                    :inputs (list p-out)
-                                    :next ibs))
+              (terminate inserter 'bir:ifi
+                         :inputs (list p-out) :next ibs)
               (copy-list ibs)))))
       ((:value :effect)
        `(defmethod compile-ast ((ast ,ast) inserter system)
@@ -55,9 +52,8 @@
                            ((:value)
                             '(list (make-instance 'bir:output)))
                            ((:effect) nil))))
-              (insert inserter
-                      (make-instance 'bir:primop
-                        :info ',info :inputs rv :outputs outs))
+              (insert inserter 'bir:primop
+                      :info ',info :inputs rv :outputs outs)
               (copy-list outs))))))))
 
 (defprimop symbol-value ast:symbol-value-ast
@@ -70,8 +66,7 @@
   (with-compiled-asts (rv ((ast:name-ast ast)) inserter system)
     (let ((out (make-instance 'bir:output
                  :attributes (ast:attributes ast))))
-      (insert inserter
-              (make-instance 'bir:primop
-                :info (cleavir-primop-info:info 'fdefinition)
-                :inputs rv :outputs (list out)))
+      (insert inserter 'bir:primop
+              :info (cleavir-primop-info:info 'fdefinition)
+              :inputs rv :outputs (list out))
       (list out))))

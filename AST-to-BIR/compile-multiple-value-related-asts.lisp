@@ -26,9 +26,8 @@
              (let ((after (make-iblock inserter
                                        :name '#:mv-prog1-after
                                        :dynamic-environment de)))
-               (terminate inserter (make-instance 'bir:jump
-                                     :inputs () :outputs ()
-                                     :next (list after)))
+               (terminate inserter 'bir:jump
+                          :inputs () :outputs () :next (list after))
                (begin inserter after))
              (list read-out))
             (t
@@ -42,16 +41,16 @@
     (let ((form-asts (ast:form-asts ast)))
       (cond ((null form-asts)
              (let ((call-out (make-instance 'bir:output)))
-               (insert inserter (make-instance 'bir:call
-                                  :inputs callee
-                                  :outputs (list call-out)))
+               (insert inserter 'bir:call
+                       :inputs callee
+                       :outputs (list call-out))
                (list call-out)))
             ((null (rest form-asts))
              (with-compiled-ast (mvarg (first form-asts) inserter system)
                (let ((mv-call-out (make-instance 'bir:output)))
-                 (insert inserter (make-instance 'bir:mv-call
-                                    :inputs (list* (first callee) mvarg)
-                                    :outputs (list mv-call-out)))
+                 (insert inserter 'bir:mv-call
+                         :inputs (list* (first callee) mvarg)
+                         :outputs (list mv-call-out))
                  (list mv-call-out))))
             (t
              (loop with orig-de = (dynamic-environment inserter)
@@ -63,10 +62,9 @@
                                 rv)
                    for save-out = (make-instance 'bir:output)
                    for save = (terminate
-                               inserter
-                               (make-instance 'bir:values-save
-                                 :inputs mv :outputs (list save-out)
-                                 :next (list next)))
+                               inserter 'bir:values-save
+                               :inputs mv :outputs (list save-out)
+                               :next (list next))
                    collect save-out into save-outs
                    do (setf (bir:dynamic-environment next) save)
                       (begin inserter next)
@@ -87,21 +85,18 @@
                                     (mvcout
                                       (make-instance 'bir:output)))
                                (insert inserter c)
-                               (terminate inserter
-                                          (make-instance 'bir:jump
-                                            :inputs () :outputs ()
-                                            :next (list after)))
+                               (terminate inserter 'bir:jump
+                                          :inputs () :outputs ()
+                                          :next (list after))
                                (begin inserter after)
-                               (insert inserter
-                                       (make-instance 'bir:mv-call
-                                         :inputs (list (first callee) cout)
-                                         :outputs (list mvcout)))
+                               (insert inserter 'bir:mv-call
+                                       :inputs (list (first callee) cout)
+                                       :outputs (list mvcout))
                                (return (list mvcout))))))))))
 
 (defmethod compile-ast ((ast ast:values-ast) inserter system)
   (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
     (let ((out (make-instance 'bir:output)))
-      (insert inserter
-              (make-instance 'bir:fixed-to-multiple
-                :inputs args :outputs (list out)))
+      (insert inserter 'bir:fixed-to-multiple
+              :inputs args :outputs (list out))
       (list out))))

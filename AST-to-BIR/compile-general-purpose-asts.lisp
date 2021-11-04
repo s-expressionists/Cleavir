@@ -105,8 +105,8 @@
   (with-compiled-asts (test (ast) inserter system)
     (let ((tblock (make-iblock inserter :name '#:if-then))
           (eblock (make-iblock inserter :name '#:if-else)))
-      (terminate inserter (make-instance 'bir:ifi
-                            :inputs test :next (list tblock eblock)))
+      (terminate inserter 'bir:ifi
+                 :inputs test :next (list tblock eblock))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -173,11 +173,10 @@
     (setf (block-info ast) (list function catch mergeb))
     (let ((normal-rv (compile-ast (ast:body-ast ast) inserter system)))
       (unless (eq normal-rv :no-return)
-        (terminate inserter
-                   (make-instance 'bir:jump
-                     :inputs normal-rv
-                     :outputs (copy-list (bir:inputs mergeb))
-                     :next (list mergeb)))))
+        (terminate inserter 'bir:jump
+                   :inputs normal-rv
+                   :outputs (copy-list (bir:inputs mergeb))
+                   :next (list mergeb))))
     (begin inserter mergeb)
     (list phi)))
 
@@ -192,12 +191,10 @@
           (block-info (ast:block-ast ast))
         (if (eq function (function inserter))
             ;; local
-            (terminate
-             inserter
-             (make-instance 'bir:jump
-               :inputs rv
-               :outputs (copy-list (bir:inputs mergeb))
-               :next (list mergeb)))
+            (terminate inserter 'bir:jump
+                       :inputs rv
+                       :outputs (copy-list (bir:inputs mergeb))
+                       :next (list mergeb))
             ;; nonlocal
             (insert-unwind inserter catch mergeb rv
                            (copy-list (bir:inputs mergeb)))))))
@@ -246,9 +243,9 @@
       (terminate inserter catch)
       (begin inserter prefix-iblock)
       (unless (eq (compile-ast prefix-ast inserter system) :no-return)
-        (terminate inserter (make-instance 'bir:jump
-                              :inputs () :outputs ()
-                              :next (list (first tag-iblocks)))))
+        (terminate inserter 'bir:jump
+                   :inputs () :outputs ()
+                   :next (list (first tag-iblocks))))
       (loop for tag-ast in item-asts
             for body-ast = (ast:body-ast tag-ast)
             for (ib . rest) on tag-iblocks
@@ -265,10 +262,9 @@
                                              :name '#:tagbody-resume
                                              :dynamic-environment
                                              old-dynenv))))
-                      (terminate inserter
-                                 (make-instance 'bir:jump
-                                   :inputs () :outputs ()
-                                   :next (list next)))
+                      (terminate inserter 'bir:jump
+                                 :inputs () :outputs ()
+                                 :next (list next))
                       (unless rest
                         ;; Start on the block after the tagbody.
                         (begin inserter next)
@@ -286,9 +282,9 @@
       (cond
         ((eq function cfunction)
          ;; local
-         (terminate inserter (make-instance 'bir:jump
-                               :inputs () :outputs ()
-                               :next (list iblock))))
+         (terminate inserter 'bir:jump
+                    :inputs () :outputs ()
+                    :next (list iblock)))
         (t
          (setf (go-info catch) t)
          ;; nonlocal
@@ -303,9 +299,9 @@
   (with-compiled-ast (callee (ast:callee-ast ast) inserter system)
     (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
       (let ((call-out (make-instance 'bir:output)))
-        (insert inserter (make-instance 'bir:call
-                           :inputs (list* (first callee) args)
-                           :outputs (list call-out)))
+        (insert inserter 'bir:call
+                :inputs (list* (first callee) args)
+                :outputs (list call-out))
         (list call-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -344,12 +340,11 @@
   (let ((var (find-variable (ast:lexical-variable ast))))
     (bir:record-variable-set var)
     (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-      (insert inserter
-              (make-instance 'bir:writevar
-                :inputs rv :outputs (list var)))
+      (insert inserter 'bir:writevar
+              :inputs rv :outputs (list var))
       (let ((readvar-out (make-instance 'bir:output)))
-        (insert inserter (make-instance 'bir:readvar
-                           :inputs (list var) :outputs (list readvar-out)))
+        (insert inserter 'bir:readvar
+                :inputs (list var) :outputs (list readvar-out))
         (list readvar-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -367,11 +362,11 @@
   (if (ctype:values-subtypep (bir:ctype linear-datum) asserted-type system)
       linear-datum
       (let ((thei-out (make-instance 'bir:output)))
-        (insert inserter (make-instance 'bir:thei
-                           :inputs (list linear-datum)
-                           :outputs (list thei-out)
-                           :asserted-type asserted-type
-                           :type-check-function type-check-function))
+        (insert inserter 'bir:thei
+                :inputs (list linear-datum)
+                :outputs (list thei-out)
+                :asserted-type asserted-type
+                :type-check-function type-check-function)
         thei-out)))
 
 (defmethod compile-ast ((ast ast:the-ast) inserter system)
@@ -390,13 +385,13 @@
            ;; We do an mv-call here - see generate-type-checks.lisp
            ;; so we force receiving and outputting multiple values.
            (let ((out (make-instance 'bir:output)))
-             (insert inserter (make-instance 'bir:thei
-                                :inputs rv :outputs (list out)
-                                :asserted-type ctype
-                                :type-check-function type-check-function))
+             (insert inserter 'bir:thei
+                     :inputs rv :outputs (list out)
+                     :asserted-type ctype
+                     :type-check-function type-check-function)
              (list out)))
           ((some (lambda (ctype) (ctype:bottom-p ctype system)) required)
-           (terminate inserter (make-instance 'bir:unreachable))
+           (terminate inserter 'bir:unreachable)
            :no-return)
           (t ; arbitrary values
            (list (wrap-thei inserter (first rv)
@@ -436,9 +431,9 @@
                  :inputs obj :outputs (list tq-out)
                  :test-ctype tspec)))
       (insert inserter tq)
-      (terminate inserter (make-instance 'bir:ifi
-                            :inputs (list tq-out)
-                            :next (list tblock eblock)))
+      (terminate inserter 'bir:ifi
+                 :inputs (list tq-out)
+                 :next (list tblock eblock))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -447,7 +442,7 @@
 
 (defmethod compile-ast ((ast ast:unreachable-ast) inserter system)
   (declare (ignore system))
-  (terminate inserter (make-instance 'bir:unreachable))
+  (terminate inserter 'bir:unreachable)
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -464,8 +459,8 @@
       (t
        (bir:record-variable-ref var)
        (let ((readvar-out (make-instance 'bir:output)))
-         (insert inserter (make-instance 'bir:readvar
-                            :inputs (list var) :outputs (list readvar-out)))
+         (insert inserter 'bir:readvar
+                 :inputs (list var) :outputs (list readvar-out))
          (list readvar-out))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -481,9 +476,9 @@
              (eq-test (make-instance 'bir:eq-test
                         :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)
-        (terminate inserter (make-instance 'bir:ifi
-                              :inputs (list eq-out)
-                              :next (list tblock eblock))))
+        (terminate inserter 'bir:ifi
+                   :inputs (list eq-out)
+                   :next (list tblock eblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -499,8 +494,8 @@
              (eq-test (make-instance 'bir:eq-test
                         :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)
-        (terminate inserter (make-instance 'bir:ifi
-                              :inputs (list eq-test) :next (list eblock tblock))))
+        (terminate inserter 'bir:ifi
+                   :inputs (list eq-test) :next (list eblock tblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -512,9 +507,9 @@
     (let* ((comparees (ast:comparees ast))
            (iblocks (loop repeat (1+ (length comparees))
                           collect (make-iblock inserter))))
-      (terminate inserter (make-instance 'bir:case
-                            :inputs obj
-                            :comparees comparees :next iblocks))
+      (terminate inserter 'bir:case
+                 :inputs obj
+                 :comparees comparees :next iblocks)
       iblocks)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -525,9 +520,8 @@
   (declare (ignore system))
   (let ((const (bir:constant-in-module (ast:value ast) *current-module*))
         (constref-out (make-instance 'bir:output)))
-    (insert inserter
-            (make-instance 'bir:constant-reference
-              :inputs (list const) :outputs (list constref-out)))
+    (insert inserter 'bir:constant-reference
+            :inputs (list const) :outputs (list constref-out))
     (list constref-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -540,7 +534,6 @@
               (ast:form ast) (ast:read-only-p ast)
               *current-module*))
         (ltv-out (make-instance 'bir:output)))
-   (insert inserter
-           (make-instance 'bir:load-time-value-reference
-             :inputs (list ltv) :outputs (list ltv-out)))
+   (insert inserter 'bir:load-time-value-reference
+           :inputs (list ltv) :outputs (list ltv-out))
     (list ltv-out)))

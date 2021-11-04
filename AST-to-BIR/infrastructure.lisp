@@ -57,7 +57,7 @@
 (defun begin (inserter iblock)
   (setf (iblock inserter) iblock (insert-point inserter) nil))
 
-(defun insert (inserter instruction)
+(defun %insert (inserter instruction)
   (let ((ip (insert-point inserter))
         (ib (iblock inserter)))
     (if (null ip)
@@ -69,7 +69,32 @@
           (insert-point inserter) instruction))
   instruction)
 
-(defun terminate (inserter terminator)
+;;; Create an instruction from an "instruction designator", which is
+;;; kind of like a condition designator - either an instruction or
+;;; arguments to make-instance.
+(defun instruction (datum &rest initargs)
+  (etypecase datum
+    (bir:instruction datum)
+    (symbol (apply #'make-instance datum initargs))))
+;;; Take advantage of implementation optimizations on make-instance:
+;;; for (instruction 'classname ...), expand to make-instance.
+(define-compiler-macro instruction (&whole whole datum &rest initargs)
+  ;; CONSTANTP would be better, but without CONSTANT-FORM-VALUE it is
+  ;; slightly dicey.
+  (if (and (consp datum)
+           (eq (first datum) 'quote)
+           (consp (cdr datum))
+           (symbolp (second datum))
+           (null (cddr datum)))
+      `(make-instance ,datum ,@initargs)
+      whole))
+
+(defun insert (inserter datum &rest initargs)
+  (%insert inserter (apply #'instruction datum initargs)))
+(define-compiler-macro insert (inserter datum &rest initargs)
+  `(%insert ,inserter (instruction ,datum ,@initargs)))
+
+(defun %terminate (inserter terminator)
   (let ((ib (iblock inserter)))
     (loop for next in (bir:next terminator)
           do (set:nadjoinf (bir:predecessors next) ib))
@@ -81,6 +106,11 @@
     (setf (bir:end ib) terminator
           (bir:iblock terminator) ib))
   terminator)
+
+(defun terminate (inserter datum &rest initargs)
+  (%terminate inserter (apply #'instruction datum initargs)))
+(define-compiler-macro terminate (inserter datum &rest initargs)
+  `(%terminate ,inserter (instruction ,datum ,@initargs)))
 
 ;;; internal helper
 (defun symbolicate (&rest components)
