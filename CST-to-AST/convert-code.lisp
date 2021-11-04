@@ -491,7 +491,8 @@
             (itemize-declaration-specifiers-by-parameter-group
              itemized-lambda-list canonicalized-dspecs)
           (multiple-value-bind (lexical-lambda-list entries)
-              (lambda-list-from-parameter-groups (cst:children parsed-lambda-list))
+              (lambda-list-from-parameter-groups
+               (cst:children parsed-lambda-list) system)
             (let ((ast
                     (process-parameter-groups
                      (cst:children parsed-lambda-list)

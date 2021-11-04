@@ -38,42 +38,48 @@
 (defmethod entry-from-parameter ((parameter cst:ordinary-key-parameter))
   (init-var-to-lexicals (cst:name parameter) (cst:supplied-p parameter)))
 
-(defgeneric lambda-list-from-parameter-group (parameter-group entries))
+(defgeneric lambda-list-from-parameter-group (parameter-group entries system))
 
 (defmethod lambda-list-from-parameter-group
-    ((parameter-group cst:ordinary-required-parameter-group) entries)
-  (values entries entries))
+    ((parameter-group cst:ordinary-required-parameter-group) entries system)
+  (list (lambda-list:make-required-parameter-group entries system)))
 
 (defmethod lambda-list-from-parameter-group
-    ((parameter-group cst:optional-parameter-group) entries)
-  (values (cons '&optional entries) entries))
+    ((parameter-group cst:optional-parameter-group) entries system)
+  (list (lambda-list:make-optional-parameter-group
+         (loop for (var supplied) in entries
+               collect (lambda-list:make-optional-parameter var supplied system))
+         system)))
 
 (defmethod lambda-list-from-parameter-group
-    ((parameter-group cst:ordinary-rest-parameter-group) entries)
-  (values (cons '&rest entries) entries))
+    ((parameter-group cst:ordinary-rest-parameter-group) entries system)
+  (list (lambda-list:make-rest-parameter-group (first entries) system)))
 
 (defmethod lambda-list-from-parameter-group
-    ((parameter-group cst:key-parameter-group) entries)
-  (values (append '(&key)
-                  (mapcar (lambda (entry parameter)
-                            (cons (cst:raw (cst:keyword parameter)) entry))
-                          entries (cst:parameters parameter-group))
-                  (if (cst:allow-other-keys parameter-group)
-                      '(&allow-other-keys)
-                      '()))
-          entries))
+    ((parameter-group cst:key-parameter-group) entries system)
+  (list (lambda-list:make-key-parameter-group
+         (loop for (var supplied) in entries
+               for parameter in (cst:parameters parameter-group)
+               collect (lambda-list:make-key-parameter
+                        (cst:raw (cst:keyword parameter)) var supplied system))
+         (cst:allow-other-keys parameter-group)
+         system)))
 
 (defmethod lambda-list-from-parameter-group
-    ((parameter-group cst:aux-parameter-group) entries)
+    ((parameter-group cst:aux-parameter-group) entries system)
+  (declare (ignore entries system))
   ;; &aux doesn't contribute to the function-ast's lambda-list.
-  (values '() entries))
+  nil)
 
 ;;; Given a list of parameter groups, return a lambda list suitable
 ;;; for the FUNCTION-AST, as well as a list of lists of lexical variables.
-(defun lambda-list-from-parameter-groups (parameter-groups)
+(defun lambda-list-from-parameter-groups (parameter-groups system)
   (loop for group in parameter-groups
         for entries = (entries-from-parameter-group group)
-        for lambda-list-part = (lambda-list-from-parameter-group group entries)
+        for lambda-list-part
+          = (lambda-list-from-parameter-group group entries system)
         appending lambda-list-part into lambda-list
         collecting entries into components
-        finally (return (values lambda-list components))))
+        finally (return (values (lambda-list:make-lambda-list
+                                 lambda-list system)
+                                components))))

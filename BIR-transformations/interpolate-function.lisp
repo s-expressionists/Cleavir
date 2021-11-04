@@ -87,7 +87,7 @@
           (bir:outputs new) unwind-outputs)))
 
 ;;; Rewire control from the local call into the function body.
-(defun rewire-call-into-body (call start)
+(defun rewire-call-into-body (call start system)
   ;; Now jump with arguments into START.
   (multiple-value-bind (before after)
       (bir:split-block-after call)
@@ -118,41 +118,43 @@
                           :origin origin :policy policy)
               do (bir:insert-instruction-before ftm jump))
         ;; Compute inputs to the jump.
-        (bir:map-lambda-list
-         (lambda (state item index)
-           (declare (ignore index))
-           (let ((arg (pop ftmd-arguments)))
-             (ecase state
-               (:required
-                (push arg inputs))
-               (&optional
-                (let ((module (bir:module (bir:function call))))
-                  (cond
-                    (arg
+        (loop for req in (lambda-list:required-parameters lambda-list
+                                                          system)
+              for arg = (pop ftmd-arguments)
+              do (push arg inputs))
+        (loop with module = (bir:module (bir:function call))
+              for opt in (lambda-list:optional-parameters lambda-list
+                                                          system)
+              for v-param = (lambda-list:optional-parameter-variable
+                             opt system)
+              for s-param = (lambda-list:optional-parameter-supplied
+                             opt system)
+              for arg = (pop ftmd-arguments)
+              do (if arg
                      (let* ((const (bir:constant-in-module t module))
                             (suppliedp-out (make-instance 'bir:output
                                              :derived-type (bir:ctype
-                                                            (second item))))
+                                                            s-param)))
                             (suppliedp (make-instance 'bir:constant-reference
                                          :inputs (list const)
                                          :outputs (list suppliedp-out)
                                          :origin origin :policy policy)))
                        (bir:insert-instruction-before suppliedp jump)
                        (push arg inputs)
-                       (push suppliedp-out inputs)))
-                    (t
+                       (push suppliedp-out inputs))
                      (let* ((nil-constant
                               (bir:constant-in-module nil module))
-                            (value-out (make-instance 'bir:output
-                                         :derived-type (bir:ctype (first item))))
+                            (value-out
+                              (make-instance 'bir:output
+                                :derived-type (bir:ctype v-param)))
                             (value (make-instance
                                        'bir:constant-reference
                                      :inputs (list nil-constant)
                                      :outputs (list value-out)
                                      :origin origin :policy policy))
-                            (suppliedp-out (make-instance 'bir:output
-                                             :derived-type (bir:ctype
-                                                            (second item))))
+                            (suppliedp-out
+                              (make-instance 'bir:output
+                                :derived-type (bir:ctype s-param)))
                             (suppliedp (make-instance 'bir:constant-reference
                                          :inputs (list nil-constant)
                                          :outputs (list suppliedp-out)
@@ -160,17 +162,17 @@
                        (bir:insert-instruction-before value jump)
                        (bir:insert-instruction-before suppliedp jump)
                        (push value-out inputs)
-                       (push suppliedp-out inputs))))))
-               (&rest
-                ;; The argument is unused, so we don't need to pass anything.
-                ;; To keep the BIR consistent, we need to outright delete any
-                ;; LETI, because otherwise it would refer to a now-undefined
-                ;; ARGUMENT.
-                (assert (bir:unused-p item))
-                (let ((use (bir:use item)))
-                  (when (typep use 'bir:leti)
-                    (bir:delete-instruction use)))))))
-         lambda-list)
+                       (push suppliedp-out inputs))))
+        (let ((rest (lambda-list:rest-parameter lambda-list system)))
+          (when rest
+            ;; The argument is unused, so we don't need to pass anything.
+            ;; To keep the BIR consistent, we need to outright delete any
+            ;; LETI, because otherwise it would refer to a now-undefined
+            ;; ARGUMENT.
+            (assert (bir:unused-p item))
+            (let ((use (bir:use item)))
+              (when (typep use 'bir:leti)
+                (bir:delete-instruction use)))))
         (setf (bir:inputs jump) (nreverse inputs))))))
 
 (defun rewire-return (function return-point-block)
@@ -190,35 +192,33 @@
               (bir:inputs returni)
               '()))))
 
-(defun move-function-arguments-to-iblock (function)
+(defun move-function-arguments-to-iblock (function system)
   (let ((start (bir:start function))
-        (phis '()))
-    (bir:map-lambda-list
-     (lambda (state item index)
-       (declare (ignore index))
-       (ecase state
-         (:required
-          (let ((supplied (make-instance 'bir:phi
-                            :iblock start
-                            :derived-type (bir:ctype item))))
-            (push supplied phis)
-            (bir:replace-uses supplied item)))
-         (&optional
-          (let ((supplied (make-instance 'bir:phi
-                            :iblock start
-                            :derived-type (bir:ctype (first item))))
-                (supplied-p (make-instance 'bir:phi
-                              :iblock start
-                              :derived-type (bir:ctype
-                                             (second item)))))
-            (push supplied phis)
-            (push supplied-p phis)
-            (bir:replace-uses supplied (first item))
-            (bir:replace-uses supplied-p (second item))))
-         (&rest
-          ;; The argument is is unused, so don't do anything.
-          (assert (bir:unused-p item)))))
-     (bir:lambda-list function))
+        (phis '())
+        (ll (bir:lambda-list function)))
+    (loop for item in (lambda-list:required-parameters ll system)
+          for supplied = (make-instance 'bir:phi
+                           :iblock start :name (bir:name item)
+                           :derived-type (bir:ctype item))
+          do (push supplied phis)
+             (bir:replace-uses supplied item))
+    (loop for item in (lambda-list:optional-parameters ll system)
+          for v-param = (lambda-list:optional-parameter-variable
+                         item system)
+          for s-param = (lambda-list:optional-parameter-supplied
+                         item system)
+          for supplied = (make-instance 'bir:phi
+                           :iblock start :name (bir:name v-param)
+                           :derived-type (bir:ctype v-param))
+          for supplied-p = (make-instance 'bir:phi
+                             :iblock start :name (bir:name s-param)
+                             :derived-type (bir:ctype s-param))
+          do (push supplied phis)
+             (push supplied-p phis)
+             (bir:replace-uses supplied v-param)
+             (bir:replace-uses supplied-p s-param))
+    (let ((rest (lambda-list:rest-parameter ll system)))
+      (when rest (assert (bir:unused-p rest))))
     (setf (bir:inputs start) (nreverse phis))))
 
 ;;; Integrate the blocks of FUNCTION into TARGET-FUNCTION in the
@@ -261,7 +261,7 @@
 ;;; as long as the local function never returns normally.
 ;;; When the function does return normally, wire the return value of
 ;;; the function into the common ``transitive'' use of the local calls.
-(defun contify (function local-calls return-point common-use common-dynenv target-owner)
+(defun contify (function local-calls return-point common-use common-dynenv target-owner system)
   (let* ((returni (bir:returni function))
          ;; If there is exactly one outside call to the function, it may be in
          ;; the middle of a block, and have its output used somewhere other
@@ -298,7 +298,7 @@
       (interpolate-function function
                             target-owner
                             common-dynenv)
-      (set:doset (call local-calls) (rewire-call-into-body call start))
+      (set:doset (call local-calls) (rewire-call-into-body call start system))
       ;; Recompute the flow order, as now the iblocks of the function
       ;; have been integrated into that of TARGET-OWNER.
       (bir:compute-iblock-flow-order target-owner)
@@ -315,23 +315,24 @@
       t)))
 
 ;;; We can inline required, optional, and ignored &rest parameters.
-(defun lambda-list-too-hairy-p (lambda-list)
-  (let ((too-hairy-p nil))
-    (bir:map-lambda-list
-     (lambda (state item index)
-       (declare (ignore index))
-       (case state
-         ((:required &optional))
-         (&rest (setq too-hairy-p (not (bir:unused-p item))))
-         (t (setq too-hairy-p t))))
-     lambda-list)
-    too-hairy-p))
+(defun lambda-list-too-hairy-p (lambda-list system)
+  (or (notevery (lambda (pg)
+                  (or (lambda-list:required-parameter-group-p
+                       lambda-list system)
+                      (lambda-list:optional-parameter-group-p
+                       lambda-list system)
+                      (lambda-list:rest-parameter-group-p
+                       lambda-list system)))
+                (lambda-list:parameter-groups lambda-list system))
+      (let ((rest (lambda-list:rest-parameter lambda-list system)))
+        (and rest (not (bir:unused-p rest))))))
 
-(defun maybe-interpolate (function)
+(defun maybe-interpolate (function system)
   ;; When a function has no enclose and returns to a single control
   ;; point, it is eligible for interpolation.
   (when (and (null (bir:enclose function))
-             (not (lambda-list-too-hairy-p (bir:lambda-list function))))
+             (not (lambda-list-too-hairy-p (bir:lambda-list function)
+                                           system)))
     ;; FIXME: We should respect inline and not inline declarations.
     (let ((local-calls (bir:local-calls function)))
       (unless (or (set:empty-set-p local-calls)
@@ -347,4 +348,4 @@
             ;; are hard to maintain from outside the BIR system
             ;; itself.
             (unless (eq function target-owner)
-              (contify function local-calls return-point common-use common-dynenv target-owner))))))))
+              (contify function local-calls return-point common-use common-dynenv target-owner system))))))))

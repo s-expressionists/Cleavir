@@ -4,7 +4,8 @@
   (:use #:common-lisp)
   (:local-nicknames (#:env #:cleavir-env)
                     (#:ast #:cleavir-ast)
-                    (#:ctype #:cleavir-ctype))
+                    (#:ctype #:cleavir-ctype)
+                    (#:lambda-list #:cleavir-lambda-list))
   (:export #:cst-to-ast
            #:*compiler*
            #:convert

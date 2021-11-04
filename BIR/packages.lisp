@@ -57,7 +57,6 @@
            #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
-  (:export #:map-lambda-list)
   (:export #:verify)
   (:export #:unused-variable #:type-conflict))
 

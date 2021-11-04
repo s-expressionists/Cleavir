@@ -37,65 +37,72 @@
       ;; If there is an enclose, we can be called from pretty much anywhere,
       ;; so there's not much we can determine about the arguments. We can mark
       ;; &rest arguments as being lists, at least.
-      (bir:map-lambda-list
-       (lambda (state item index)
-         (declare (ignore index))
-         (when (eq state '&rest)
-           (derive-type-for-linear-datum
-            item
-            (let ((top-ctype (ctype:top system)))
-              ;; LIST is of course (or null cons)
-              (ctype:single-value
-               (ctype:disjoin/2
-                (ctype:member system nil)
-                (ctype:cons top-ctype top-ctype system)
-                system)
-               system))
-            system)))
-       (bir:lambda-list function))
+      (multiple-value-bind (item presentp)
+          (lambda-list:rest-parameter (bir:lambda-list function) system)
+        (when presentp
+          (derive-type-for-linear-datum
+           item
+           (let ((top-ctype (ctype:top system)))
+             ;; LIST is of course (or null cons)
+             (ctype:single-value
+              (ctype:disjoin/2
+               (ctype:member system nil)
+               (ctype:cons top-ctype top-ctype system)
+               system)
+              system))
+           system)))
       ;; If there are no local calls either, don't bother doing
       ;; anything, especially since we're deriving the type from scratch
       ;; optimistically.
-      (let ((local-calls (bir:local-calls function)))
+      (let ((local-calls (bir:local-calls function))
+            (ll (bir:lambda-list function)))
         (unless (set:notany
                  ;; Dunno how to mess with mv-local-call yet.
                  (lambda (call) (typep call 'bir:local-call))
                  local-calls)
-          (bir:map-lambda-list
-           (lambda (state item index)
-             (case state
-               ((:required &optional)
-                (let ((type (ctype:bottom system))
-                      (suppliedp (ctype:bottom system)))
-                  (set:doset (local-call local-calls)
-                    (let ((arg (nth index (rest (bir:inputs local-call)))))
-                      (setq type
-                            (ctype:disjoin/2
-                             type
-                             (if arg
-                                 (ctype:primary (bir:ctype arg) system)
-                                 (ctype:member system nil))
-                             system))
-                      (setq suppliedp
-                            (ctype:disjoin/2
-                             suppliedp
-                             (if arg
-                                 (ctype:member system t)
-                                 (ctype:member system nil))
-                             system))))
-                  (ecase state
-                    (:required
+          (let ((req (lambda-list:required-parameters ll system))
+                (opt (lambda-list:optional-parameters ll system)))
+            (loop for item in req for index from 0
+                  for type = (ctype:bottom system)
+                  do (set:doset (local-call local-calls)
+                       (let ((arg
+                               (nth index
+                                    (rest (bir:inputs local-call)))))
+                         (setf type
+                               (ctype:disjoin/2
+                                type
+                                (ctype:primary (bir:ctype arg) system)))))
                      (setf (bir:derived-type item)
                            (ctype:single-value type system)))
-                    (&optional
-                     (setf (bir:derived-type (first item))
-                           (ctype:single-value type system))
-                     (setf (bir:derived-type (second item))
-                           (ctype:single-value suppliedp system))))))
-               (&key
-                ;; too hairy for me to handle
-                )))
-           (bir:lambda-list function))))))
+            (loop for item in opt for index from (length req)
+                  for v-param
+                    = (lambda-list:optional-parameter-variable
+                       item system)
+                  for s-param
+                    = (lambda-list:optional-parameter-supplied
+                       item system)
+                  for v-type = (ctype:bottom system)
+                  for s-type = (ctype:bottom system)
+                  do (set:doset (local-call local-calls)
+                       (let ((arg
+                               (nth index
+                                    (rest (bir:inputs local-call)))))
+                         (multiple-value-bind (new-v-type new-s-type)
+                             (if arg
+                                 (values
+                                  (ctype:primary (bir:ctype arg) system)
+                                  (ctype:member system t))
+                                 (values
+                                  (ctype:member system nil)
+                                  (ctype:member system nil)))
+                           (setf v-type
+                                 (ctype:disjoin/2 v-type new-v-type
+                                                  system)
+                                 s-type
+                                 (ctype:disjoin/2 s-type new-s-type
+                                                  system)))))
+                     (setf (bir:derived-type v-param) v-type
+                           (bir:derived-type s-param) s-type)))))))
 
 (defun meta-evaluate-function (function system)
   (derive-function-argument-types function system)

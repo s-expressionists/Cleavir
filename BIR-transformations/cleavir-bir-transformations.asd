@@ -2,7 +2,7 @@
 
 (defsystem :cleavir-bir-transformations
   :depends-on (:cleavir-bir :cleavir-set
-               :cleavir-attributes :cleavir-ctype)
+               :cleavir-attributes :cleavir-ctype :cleavir-lambda-list)
   :components
   ((:file "packages")
    (:file "eliminate-catches" :depends-on ("packages"))

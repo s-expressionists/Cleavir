@@ -3,32 +3,29 @@
 ;;; We just attempted to detect local calls. See if anything is worth
 ;;; doing after. FIXME: Think of a nice CLOSy way to make this optional
 ;;; and specializable.
-(defun post-find-local-calls (function)
-  (maybe-interpolate function))
+(defun post-find-local-calls (function system)
+  (maybe-interpolate function system))
 
 ;;; Return true if the call arguments are compatible with those of the
 ;;; function lambda list. If they're not, warn and return false.
 ;;; This checks argument counts but does NOT check &key argument validity,
 ;;; which for non-constant keywords can involve complex analysis.
-(defun check-argument-list-compatible (arguments function)
-  (let ((lambda-list (bir:lambda-list function))
-        (nsupplied (length arguments))
-        (nrequired 0)
-        (noptional 0)
-        (restp nil))
-    (bir:map-lambda-list
-     (lambda (state item index)
-       (declare (ignore item index))
-       (case state
-         (:required (incf nrequired))
-         (&optional (incf noptional))
-         ((&rest &key) (setf restp t))
-         (&allow-other-keys)
-         (otherwise
-          ;; Implementation-specific keyword. We don't know how to deal
-          ;; with this, so silently give up. KLUDGEy.
-          (return-from check-argument-list-compatible nil))))
-     lambda-list)
+(defun check-argument-list-compatible (arguments function system)
+  (let* ((lambda-list (bir:lambda-list function))
+         (nsupplied (length arguments))
+         (nrequired
+           (length (lambda-list:required-parameters lambda-list system)))
+         (noptional
+           (length (lambda-list:optional-parameters lambda-list system)))
+         (restp (or (lambda-list:rest-parameter lambda-list system)
+                    (lambda-list:keys-p lambda-list system))))
+    (when (notevery
+           (lambda (pg)
+             (lambda-list:standard-parameter-group-p pg system))
+           (lambda-list:parameter-groups lambda-list system))
+      ;; Implementation-specific keyword. We don't know how to deal
+      ;; with this, so silently give up. KLUDGEy.
+      (return-from check-argument-list-compatible nil))
     (let ((nfixed (+ nrequired noptional)))
       (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
           t
@@ -49,23 +46,23 @@
 ;;; can get a runtime error. This also serves as a sort of "escape
 ;;; analysis" for functions, recording the result of the analysis
 ;;; directly into the IR.
-(defun find-function-local-calls (function)
+(defun find-function-local-calls (function system)
   (let ((enclose (bir:enclose function)))
     (when enclose
-      (fflc-use function (bir:output enclose))))
-  (post-find-local-calls function))
+      (fflc-use function (bir:output enclose) system)))
+  (post-find-local-calls function system))
 
 ;;; Find local calls for a given use of a function enclosure.
 ;;; Because the closure may be stored in a variable or etc, it is convenient
 ;;; for this function to be recursive.
-(defun fflc-use (function datum)
+(defun fflc-use (function datum system)
   (let ((use (bir:use datum)) (def (bir:definition datum)))
     (typecase use
       (bir:call
        (when (and (eq datum (bir:callee use))
                   (check-argument-list-compatible
                    (rest (bir:inputs use))
-                   function))
+                   function system))
          (change-class use 'bir:local-call)
          (bir:replace-uses function datum)
          (bir:delete-instruction def)))
@@ -79,7 +76,7 @@
        ;; which can be produced by macros.
        (when (eq datum (first (bir:inputs use)))
          (let ((out (bir:output use)))
-           (fflc-use function out)
+           (fflc-use function out system)
            (when (null (bir:use out)) ; use was deleted
              (bir:delete-instruction def)))))
       (bir:leti
@@ -88,7 +85,7 @@
          ;; sure this definition reaches the readers.
          (when (bir:immutablep variable)
            (set:doset (reader (bir:readers variable))
-             (fflc-use function (bir:output reader)))
+             (fflc-use function (bir:output reader) system))
            ;; No more references to the variable means we can clean
            ;; up the enclose.
            (when (set:empty-set-p (bir:readers variable))
@@ -100,8 +97,9 @@
       (null ; unused
        (bir:delete-instruction def)))))
 
-(defun find-module-local-calls (module)
-  (bir:map-functions #'find-function-local-calls module)
+(defun find-module-local-calls (module system)
+  (bir:do-functions (function module)
+    (find-function-local-calls function system))
   ;; Since contification depends on all non-tail local calls being in
   ;; the same function, it may be the case that contifying triggers
   ;; more contification. Therefore, we do a second pass/fixpoint loop
@@ -112,7 +110,7 @@
   (let ((did-something nil))
     (loop do (let ((changed nil))
                (bir:do-functions (function module)
-                 (when (maybe-interpolate function)
+                 (when (maybe-interpolate function system)
                    (setq changed t)))
                (setq did-something changed))
           while did-something)))

@@ -13,18 +13,8 @@
         (make-instance 'bir:argument
                        :name (ast:name lexical-variable))))
 
-(defun bind-lambda-list-arguments (lambda-list)
-  (loop for item in lambda-list
-        collect (cond ((member item lambda-list-keywords)
-                       item)
-                      ((consp item)
-                       (if (= (length item) 3)
-                           (list (first item)
-                                 (bind-lexical-as-argument (second item))
-                                 (bind-lexical-as-argument (third item)))
-                           (list (bind-lexical-as-argument (first item))
-                                 (bind-lexical-as-argument (second item)))))
-                      (t (bind-lexical-as-argument item)))))
+(defun bind-lambda-list-arguments (lambda-list system)
+  (lambda-list:map-lambda-list #'bind-lexical-as-argument lambda-list system))
 
 (defmethod compile-function ((ast ast:function-ast) system)
   (let* ((module *current-module*)
@@ -42,7 +32,8 @@
                                                 '#:-start)
                              :function function :dynamic-environment function)))
     (set:nadjoinf (bir:functions module) function)
-    (let ((lambda-list (bind-lambda-list-arguments (ast:lambda-list ast))))
+    (let ((lambda-list (bind-lambda-list-arguments (ast:lambda-list ast)
+                                                   system)))
       (setf (bir:lambda-list function) lambda-list))
     (setf (bir:start function) start)
     (begin inserter start)

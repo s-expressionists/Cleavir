@@ -9,6 +9,7 @@
 	       :cleavir-environment
 	       :cleavir-compilation-policy
                :cleavir-ctype
+               :cleavir-lambda-list
                :cleavir-conditions
                :acclimation)
   :serial t
