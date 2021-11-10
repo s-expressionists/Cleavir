@@ -298,6 +298,13 @@
   (declare (ignore sys))
   `(cl:member ,@elems))
 
+(defmethod member-p (sys ctype)
+  (declare (ignore sys))
+  (and (consp ctype) (eq (first ctype) 'cl:member)))
+(defmethod member-members (sys ctype)
+  (declare (ignore sys))
+  (rest ctype))
+
 (defmethod satisfies (fname sys)
   (declare (ignore sys))
   `(cl:satisfies ,fname))

@@ -206,6 +206,17 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions MEMBER-P, MEMBER-MEMBERS.
+;;;
+;;; Return information about a non-values ctype.
+;;; It is undefined behavior if MEMBER-MEMBERS is called on a ctype which
+;;; MEMBER-P is not true of.
+
+(defgeneric member-p (system non-values-ctype))
+(defgeneric member-members (system member-ctype))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function SATISFIES.
 
 (defgeneric satisfies (fname system))

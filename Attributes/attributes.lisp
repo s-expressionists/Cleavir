@@ -20,7 +20,9 @@
    ;; complex type system in order to allow combining information.
    ;; For example, (if test #'+ #'-) could still be seen to return two
    ;; floats if given a float.
-   (%derivers :initarg :derivers :initform nil :reader derivers)))
+   (%derivers :initarg :derivers :initform nil :reader derivers)
+   ;; List of constant folders. Similar concerns to above.
+   (%folds :initarg :folds :initform nil :reader folds)))
 
 ;;; We need to be able to externalize attributes for clients that externalize
 ;;; them as part of inline definition ASTs.
@@ -30,7 +32,8 @@
 (cleavir-io:define-save-info attributes
     (:flags (flags attributes))
   (:transforms (transforms attributes))
-  (:derivers (derivers attributes)))
+  (:derivers (derivers attributes))
+  (:folds (folds attributes)))
 
 ;;; NIL means no special attributes.
 (deftype attributes-designator () '(or attributes null))
@@ -38,6 +41,7 @@
 (defmethod flags ((attr null)) 0)
 (defmethod transforms ((attr null)) nil)
 (defmethod derivers ((attr null)) nil)
+(defmethod folds ((attr null)) nil)
 
 (defun default-attributes () nil)
 
@@ -58,7 +62,8 @@
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 attributes))
   (and (sub-flags-p (flags attr1) (flags attr2))
        (subsetp (transforms attr1) (transforms attr2) :test #'equal)
-       (subsetp (derivers attr1) (derivers attr2) :test #'equal)))
+       (subsetp (derivers attr1) (derivers attr2) :test #'equal)
+       (subsetp (folds attr1) (folds attr2) :test #'equal)))
 
 ;;; Return attributes combining both inputs; the returned attributes
 ;;; only have a given quality if both of the inputs do. Because attributes
@@ -80,7 +85,9 @@
              :transforms (intersection (transforms attr1)
                                        (transforms attr2) :test #'equal)
              :derivers (intersection (derivers attr1) (derivers attr2)
-                                     :test #'equal)))))
+                                     :test #'equal)
+             :folds (intersection (folds attr1) (folds attr2)
+                                  :test #'equal)))))
 
 (defmethod join-attributes ((attr1 null) (attr2 null)) attr1)
 (defmethod join-attributes ((attr1 null) (attr2 attributes)) attr2)
@@ -93,4 +100,5 @@
              :transforms (union (transforms attr1) (transforms attr2)
                                 :test #'equal)
              :derivers (union (derivers attr1) (derivers attr2)
-                              :test #'equal)))))
+                              :test #'equal)
+             :folds (union (folds attr1) (folds attr2))))))

@@ -17,7 +17,9 @@
   (:export #:values-conjoin #:values-disjoin #:values-disjointp)
   (:export #:class #:cons #:array #:string
            #:character #:base-char #:standard-char
-           #:complex #:range #:fixnum #:member #:satisfies #:keyword
+           #:complex #:range #:fixnum
+           #:member #:member-p #:member-members
+           #:satisfies #:keyword
            #:function #:compiled-function #:values #:coerce-to-values)
   (:export #:values-required #:values-optional #:values-rest
            #:nth-value #:primary #:single-value)

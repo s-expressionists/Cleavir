@@ -550,17 +550,92 @@
 ;; return false.
 (defgeneric transform-call (system transform call)
   (:method (system transform (call bir:abstract-call))
+    (declare (ignore system transform))
     nil))
 
+(defgeneric fold-call (system fold call arguments)
+  (:method (system fold (call bir:abstract-call) arguments)
+    (declare (ignore system fold arguments))
+    nil))
+
+(defun constant-arguments (arguments system)
+  (loop for arg in arguments
+        for ct = (ctype:primary (bir:ctype arg) system)
+        collect (if (ctype:member-p system ct)
+                    (let ((membs (ctype:member-members system ct)))
+                      (if (= (length membs) 1)
+                          (elt membs 0)
+                          (return-from constant-arguments (values nil nil))))
+                    (return-from constant-arguments (values nil nil)))
+          into rargs
+        finally (return (values rargs t))))
+
+(defun maybe-fold-call-1 (fold arguments instruction system)
+  (multiple-value-call
+      (lambda (validp &rest values)
+        (cond
+          ((not validp) nil)
+          ;; Splice in the values.
+          ;; If there's only one, this is simple.
+          ;; Otherwise we need a fixed-to-multiple.
+          ((= (length values) 1)
+           (replace-computation-by-constant-value instruction (first values))
+           t)
+          (t (let* ((module (bir:module (bir:function instruction)))
+                    (origin (bir:origin instruction))
+                    (policy (bir:policy instruction))
+                    (constants
+                      (loop for rv in values
+                            collect (bir:constant-in-module rv module)))
+                    (couts
+                      (loop for rv in values
+                            for ct = (ctype:member system rv)
+                            for vct = (ctype:single-value ct system)
+                            collect (make-instance 'bir:output
+                                      :derived-type vct)))
+                    (ftm
+                      (make-instance 'bir:fixed-to-multiple
+                        :inputs couts :origin origin :policy policy))
+                    (outs (bir:outputs instruction)))
+               (loop for constant in constants
+                     for cout in couts
+                     for cref = (make-instance 'bir:constant-reference
+                                  :inputs (list constant) :outputs (list cout)
+                                  :origin origin :policy policy)
+                     do (bir:insert-instruction-before cref instruction))
+               (setf (bir:outputs instruction) ()
+                     (bir:outputs ftm) outs)
+               (bir:insert-instruction-before ftm instruction)
+               (bir:delete-instruction instruction)
+               t))))
+    (fold-call system fold instruction arguments)))
+
+(defun maybe-fold-call (folds arguments instruction system)
+  (when (not (null folds))
+    (multiple-value-bind (args validp) (constant-arguments arguments system)
+      (when validp
+        (loop for fold in folds
+                thereis (maybe-fold-call-1 fold args instruction system))))))
+
 (defmethod meta-evaluate-instruction ((instruction bir:call) system)
-  ;; Try all client transforms in order.
-  ;; If any return true, a change has been made.
-  (some (lambda (transform) (transform-call system transform instruction))
-        (attributes:transforms (bir:attributes instruction))))
+  (let ((attr (bir:attributes instruction)))
+    (or
+     ;; Try all client constant folds in order.
+     ;; Folding is always preferable to transformation, so we try it first.
+     (maybe-fold-call (attributes:folds attr) (rest (bir:inputs instruction))
+                      instruction system)
+     ;; Try all client transforms in order.
+     ;; If any return true, a change has been made.
+     (some (lambda (transform) (transform-call system transform instruction))
+           (attributes:transforms attr)))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:primop) system)
-  (some (lambda (transform) (transform-call system transform instruction))
-        (attributes:transforms (bir:attributes instruction))))
+  (let ((attr (bir:attributes instruction)))
+    (or
+     (maybe-fold-call (attributes:folds attr) (bir:inputs instruction)
+                      instruction system)
+     (some (lambda (transform) (transform-call system transform instruction))
+           (attributes:transforms (bir:attributes instruction))))))
 
 (defgeneric derive-return-type (instruction deriver system))
 (defmethod derive-return-type ((inst bir:abstract-call) deriver system)
