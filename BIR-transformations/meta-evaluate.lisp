@@ -36,23 +36,33 @@
   (if (bir:enclose function)
       ;; If there is an enclose, we can be called from pretty much anywhere,
       ;; so there's not much we can determine about the arguments. We can mark
-      ;; &rest arguments as being lists, at least.
-      (bir:map-lambda-list
-       (lambda (state item index)
-         (declare (ignore index))
-         (when (eq state '&rest)
-           (derive-type-for-linear-datum
-            item
-            (let ((top-ctype (ctype:top system)))
-              ;; LIST is of course (or null cons)
-              (ctype:single-value
-               (ctype:disjoin/2
-                (ctype:member system nil)
-                (ctype:cons top-ctype top-ctype system)
+      ;; &rest arguments as being lists, and everything as being single values,
+      ;; at least.
+      (let* ((top (ctype:top system))
+             (svtop (ctype:single-value top system)))
+        (bir:map-lambda-list
+         (lambda (state item index)
+           (declare (ignore index))
+           (case state
+             ((:required) (derive-type-for-linear-datum item svtop system))
+             ((&optional)
+              (derive-type-for-linear-datum (first item) svtop system)
+              (derive-type-for-linear-datum (second item) svtop system))
+             ((&rest)
+              (derive-type-for-linear-datum
+               item
+               ;; LIST is of course (or null cons)
+               (ctype:single-value
+                (ctype:disjoin/2
+                 (ctype:member system nil)
+                 (ctype:cons top top system)
+                 system)
                 system)
                system))
-            system)))
-       (bir:lambda-list function))
+             ((&key)
+              (derive-type-for-linear-datum (second item) svtop system)
+              (derive-type-for-linear-datum (third item) svtop system))))
+         (bir:lambda-list function)))
       ;; If there are no local calls either, don't bother doing
       ;; anything, especially since we're deriving the type from scratch
       ;; optimistically.
