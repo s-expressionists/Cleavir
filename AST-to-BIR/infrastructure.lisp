@@ -154,7 +154,7 @@
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
         (*current-module* module)
-        (bir:*top-ctype* (ctype:coerce-to-values (ctype:top system) system)))
+        (bir:*top-ctype* (ctype:values nil nil (ctype:top system) system)))
     (compile-function ast system)))
 
 (defun compile-toplevel (ast system)

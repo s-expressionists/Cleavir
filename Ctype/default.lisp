@@ -146,7 +146,9 @@
                          required)))
         when donep
         return (if (some (lambda (req) (bottom-p req sys)) required)
-                   (values nil nil nil sys)
+                   (values (make-list (length required)
+                                      :initial-element (bottom sys))
+                           nil nil sys)
                    (values (nreverse required) (nreverse optional) rest sys))))
 
 (defmethod conjoin/2 (ct1 ct2 sys)
@@ -369,16 +371,16 @@
 (defmethod nth-value (n ctype system)
   (let* ((req (ll-required (cl:rest ctype)))
          (nreq (length req)))
-    (if (< n nreq)
-        (nth n req)
-        (disjoin
-         system
-         (member system nil)
-         (let* ((opt (ll-optional (cl:rest ctype)))
-                (nopt (length opt)))
-           (if (< n (+ nreq nopt))
-               (nth (- n nreq) opt)
-               (ll-rest (cl:rest ctype))))))))
+    (cond ((< n nreq) (nth n req))
+          ((some (lambda (ct) (bottom-p ct system)) (bottom system)))
+          (t (disjoin
+              system
+              (member system nil)
+              (let* ((opt (ll-optional (cl:rest ctype)))
+                     (nopt (length opt)))
+                (if (< n (+ nreq nopt))
+                    (nth (- n nreq) opt)
+                    (ll-rest (cl:rest ctype)))))))))
 
 (defmethod function-required (ctype system)
   (declare (ignore system))
