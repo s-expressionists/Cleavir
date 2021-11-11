@@ -166,6 +166,17 @@
 (defmethod maybe-flush-instruction ((instruction bir:fixed-to-multiple))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
+(defmethod maybe-flush-instruction ((instruction bir:constant-reference))
+  (when (bir:unused-p (bir:output instruction))
+    (bir:delete-instruction instruction)))
+
+(defmethod maybe-flush-instruction ((instruction bir:thei))
+  (when (and (bir:unused-p (bir:output instruction))
+             ;; NOTE: Haven't really thought this through. Maybe we
+             ;; actually can delete THEIs even if they will be a type check?
+             ;; Might depend on safety.
+             (symbolp (bir:type-check-function instruction)))
+    (bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction bir:abstract-call))
   (when (and (bir:unused-p (bir:output instruction))
