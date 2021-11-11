@@ -153,6 +153,9 @@
 (defmethod maybe-flush-instruction ((instruction bir:conditional-test))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
+(defmethod maybe-flush-instruction ((instruction bir:fixed-to-multiple))
+  (when (bir:unused-p (bir:output instruction))
+    (bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction bir:abstract-call))
   (when (and (bir:unused-p (bir:output instruction))
