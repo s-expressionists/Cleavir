@@ -8,7 +8,7 @@
                     (#:attributes #:cleavir-attributes))
   (:export #:module-eliminate-catches #:eliminate-catches)
   (:export #:module-optimize-variables #:function-optimize-variables)
-  (:export #:simple-unwinding-p)
+  (:export #:simple-unwinding-p #:simple-dynenv-p)
   (:export #:find-module-local-calls #:maybe-interpolate)
   (:export #:determine-function-environments)
   (:export #:determine-closure-extents)
