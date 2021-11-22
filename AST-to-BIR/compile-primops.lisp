@@ -34,7 +34,7 @@
     (ecase out
       ((2)
        `(defmethod compile-test-ast ((ast ,ast) inserter system)
-          (with-compiled-asts (rv ,ca inserter system)
+          (with-compiled-asts (args ,ca inserter system)
             (let* ((ibs
                      (list ,@(loop repeat out
                                    collect `(make-iblock inserter))))
@@ -47,13 +47,13 @@
               (copy-list ibs)))))
       ((:value :effect)
        `(defmethod compile-ast ((ast ,ast) inserter system)
-          (with-compiled-asts (rv ,ca inserter system)
+          (with-compiled-asts (args ,ca inserter system)
             (let ((outs ,(ecase out
                            ((:value)
                             '(list (make-instance 'bir:output)))
                            ((:effect) nil))))
               (insert inserter 'bir:primop
-                      :info ',info :inputs rv :outputs outs)
+                      :info ',info :inputs args :outputs outs)
               (copy-list outs))))))))
 
 (defprimop symbol-value ast:symbol-value-ast
