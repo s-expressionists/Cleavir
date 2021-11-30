@@ -63,6 +63,14 @@
     :depends-on ("generic-functions" "infrastructure" "convert-code"
                                      "convert-sequence"
                                      "conditions" "packages"))
-   (:file "convert-primop")
-   (:file "convert-cst")
-   (:file "cst-to-ast")))
+   (:file "convert-primop"
+    :depends-on ("generic-functions" "infrastructure" "conditions"
+                                     "packages"))
+   (:file "convert-cst"
+    :depends-on ("generic-functions" "convert-constant"
+                                     "infrastructure" "conditions"
+                                     "packages"))
+   (:file "cst-to-bir"
+    :depends-on ("convert-code" "infrastructure" "packages"))
+   (:file "toplevel"
+    :depends-on ("utilities" "environment-augmentation" "packages"))))

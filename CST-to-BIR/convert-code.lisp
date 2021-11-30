@@ -344,7 +344,8 @@
                                                   (mapcar #'cst:raw specs))))))
 
 (defmethod convert-code (lambda-list-cst body-cst env system
-                         &key (block-name-cst nil) origin name)
+                         &key (block-name-cst nil) (origin bir:*origin*)
+                           name)
   (let ((parsed-lambda-list
           (cst:parse-ordinary-lambda-list system lambda-list-cst :error-p nil)))
     (when (null parsed-lambda-list)

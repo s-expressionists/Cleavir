@@ -6,8 +6,7 @@
          (expander (symbol-macro-expander expansion))
          (expanded-form (expand-macro expander cst env))
          (expanded-cst (cst:reconstruct expanded-form cst system)))
-    (progn ; with-preserved-toplevel-ness
-        (convert expanded-cst inserter env system))))
+    (convert expanded-cst inserter env system)))
 
 (defmethod convert-cst
     (cst (info env:constant-variable-info) inserter env system)
@@ -24,27 +23,25 @@
   (let* ((expander (env:expander info))
          (expanded-form (expand-macro expander cst env))
          (expanded-cst (cst:reconstruct expanded-form cst system)))
-    (progn ; with-preserved-toplevel-ness
-        (convert expanded-cst inserter env system))))
+    (convert expanded-cst inserter env system)))
 
 (defmethod convert-cst
     (cst (info env:global-macro-info) inserter env system)
   (let ((compiler-macro (env:compiler-macro info))
         (notinline (eq 'notinline (env:inline info)))
         (expander (env:expander info)))
-    (progn ; with-preserved-toplevel-ness
-      (if (or notinline (null compiler-macro))
-          (let* ((expanded-form (expand-macro expander cst env))
-                 (expanded-cst (cst:reconstruct expanded-form cst system)))
-            (convert expanded-cst inserter env system))
-          (let ((expanded-form (expand-compiler-macro compiler-macro cst env)))
-            (if (eq (cst:raw cst) expanded-form)
-                (let* ((expanded-form
-                         (expand-macro expander cst env))
-                       (expanded-cst (cst:reconstruct expanded-form cst system)))
-                  (convert expanded-cst inserter env system))
-                (let ((expanded-cst (cst:reconstruct expanded-form cst system)))
-                  (convert expanded-cst inserter env system))))))))
+    (if (or notinline (null compiler-macro))
+        (let* ((expanded-form (expand-macro expander cst env))
+               (expanded-cst (cst:reconstruct expanded-form cst system)))
+          (convert expanded-cst inserter env system))
+        (let ((expanded-form (expand-compiler-macro compiler-macro cst env)))
+          (if (eq (cst:raw cst) expanded-form)
+              (let* ((expanded-form
+                       (expand-macro expander cst env))
+                     (expanded-cst (cst:reconstruct expanded-form cst system)))
+                (convert expanded-cst inserter env system))
+              (let ((expanded-cst (cst:reconstruct expanded-form cst system)))
+                (convert expanded-cst inserter env system)))))))
 
 ;;; TODO: Type declarations
 (defun make-call (cst info arguments-cst inserter env system)
@@ -61,9 +58,6 @@
 
 (defmethod convert-cst
     (cst (info env:global-function-info) inserter env system)
-  #+(or)
-  (when (and *current-form-is-top-level-p* *compile-time-too*)
-    (cst-eval-for-effect cst env system))
   (let ((compiler-macro (env:compiler-macro info))
         (notinline (eq 'notinline (env:inline info))))
     (if (or notinline (null compiler-macro))

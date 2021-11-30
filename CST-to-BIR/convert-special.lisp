@@ -92,92 +92,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting EVAL-WHEN.
+;;;
+;;; We are not at toplevel, so we only need to worry about :execute.
 
-(defun check-eval-when-syntax (cst)
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 1 nil)
-  (let ((situations-cst (cst:second cst)))
-    (unless (cst:proper-list-p situations-cst)
-      (error 'situations-must-be-proper-list :cst situations-cst))
-    ;; Check each situation
-    (loop for remaining = situations-cst then (cst:rest remaining)
-          until (cst:null remaining)
-          do (let* ((situation-cst (cst:first remaining))
-                    (situation (cst:raw situation-cst)))
-               (unless (and (symbolp situation)
-                            (member situation
-                                    '(:compile-toplevel :load-toplevel :execute
-                                      compile load eval)))
-                 (error 'invalid-eval-when-situation :cst situation-cst))))))
-
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'eval-when)) cst inserter environment system)
+    ((symbol (eql 'cl:eval-when)) cst inserter environment system)
   (check-eval-when-syntax cst)
-  (progn ;with-preserved-toplevel-ness
-    (cst:db s (eval-when-cst situations-cst . body-cst) cst
-      (declare (ignore eval-when-cst))
-      (let* ((situations (cst:raw situations-cst))
-             ;; These correspond to the abbreviations in CLHS Figure 3-7.
-             (ct (or (member :compile-toplevel situations)
-                     (member 'cl:compile situations)))
-             (lt (or (member :load-toplevel situations)
-                     (member 'cl:load situations)))
-             (e  (or (member :execute situations)
-                     (member 'cl:eval situations))))
-        (if (or (eq *compiler* 'cl:compile)
-                (eq *compiler* 'cl:eval)
-                (not *current-form-is-top-level-p*))
-            ;; If we're not in the file compiler, or we're not top-level,
-            ;; eval-when is simple: it's progn if :execute is included, or
-            ;; otherwise the whole form is discarded.
-            (if e
-                (convert-progn body-cst inserter environment system)
-                (convert (make-atom-cst nil s)
-                         inserter environment system))
-            ;; If we ARE in the file compiler, process according to Figure 3-7
-            ;; in CLHS 3.2.3.1, "Processing of Top Level Forms".
-            (cond (;; Process in compile-time-too mode
-                   (or
-                    ;; CT   LT   E    Mode
-                    ;; Yes  Yes  ---  ---
-                    ;; No   Yes  Yes  CTT
-                    (and ct lt)
-                    (and (not ct) lt e *compile-time-too*))
-                   (let ((*compile-time-too* t))
-                     (convert-progn body-cst
-                                    inserter environment system)))
-                  (;; Process in not-compile-time mode
-                   (or
-                    ;; CT   LT   E    Mode
-                    ;; No   Yes  Yes  NCT
-                    ;; No   Yes  No   ---
-                    (and (not ct) lt e (not *compile-time-too*))
-                    (and (not ct) lt (not e)))
-                   (let ((*compile-time-too* nil))
-                     (convert-progn body-cst
-                                    inserter environment system)))
-                  (;; Evaluate (and don't process)
-                   (or
-                    ;; CT   LT   E    Mode
-                    ;; Yes  No   ---  ---
-                    ;; No   No   Yes  CTT
-                    (and ct (not lt))
-                    (and (not ct) (not lt) e *compile-time-too*))
-                   (cst-eval-for-effect
-                    (cst:quasiquote
-                     s (progn (cst:unquote-splicing body-cst)))
-                    environment system)
-                   (convert (make-atom-cst nil s)
-                            inserter environment system))
-                  (;; Discard
-                   ;; CT   LT    E    Mode
-                   ;; No   No    Yes  NCT
-                   ;; No   No    No   ---
-                   ;; (But we've exhausted the cases at this point.)
-                   t
-                   (convert (make-atom-cst nil s)
-                            inserter environment system))))))))
+  (cst:db s (eval-when-cst situations-cst . body-cst) cst
+    (declare (ignore eval-when-cst))
+    (let ((situations (cst:raw situations-cst)))
+      (if (or (member :execute situations)
+              (member 'cl:eval situations))
+          (convert-progn body-cst inserter environment system)
+          (convert (make-atom-cst nil s)
+                   inserter environment system)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -272,15 +200,6 @@
         collect (let ((name (cst:first (cst:first remaining))))
                   (make-instance 'cleavir-bir:variable
                     :name (cst:raw name)))))
-
-(defun check-function-bindings (bindings operator)
-  (check-cst-proper-list bindings 'bindings-must-be-proper-list
-                         :operator operator)
-  (loop for remaining = bindings then (cst:rest remaining)
-        until (cst:null remaining)
-        do (check-cst-proper-list
-            (cst:first remaining)
-            'local-function-definition-must-be-proper-list)))
 
 ;;; FIXME: add the processing of DYNAMIC-EXTENT declarations.
 (defmethod convert-special ((symbol (eql 'flet)) cst inserter env system)
@@ -565,37 +484,18 @@
 ;;;
 ;;; Converting PROGN.
 ;;;
-;;; According to section 3.2.3.1 of the HyperSpec, PROGN processes
-;;; its subforms the same way as the form itself.
 
 (defmethod convert-special
     ((symbol (eql 'progn)) cst inserter env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
-  (progn ;with-preserved-toplevel-ness
-    (cst:db origin (progn-cst . forms-cst) cst
-      (declare (ignore progn-cst))
-      (convert-progn forms-cst inserter env system))))
+  (cst:db origin (progn-cst . forms-cst) cst
+    (declare (ignore progn-cst))
+    (convert-progn forms-cst inserter env system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting MACROLET.
 ;;;
-;;; According to section 3.2.3.1 of the HyperSpec, MACROLET processes
-;;; its subforms the same way as the form itself.
-
-;;; Given the CST for a MACROLET definition and an environment, return
-;;; a macro expander (or macro function) for the definition.
-;;; FIXME: check syntax.
-(defun expander (definition-cst environment system)
-  (cst:db origin (name-cst lambda-list-cst . body-cst) definition-cst
-    (let ((lambda-expression (cst:parse-macro system
-                                              name-cst
-                                              lambda-list-cst
-                                              (cst:raw body-cst)
-                                              environment)))
-      (env:eval lambda-expression
-                (env:compile-time environment)
-                environment))))
 
 (defmethod convert-special
     ((symbol (eql 'macrolet)) cst inserter env system)
@@ -613,12 +513,11 @@
                       (expander (expander definition-cst env system)))
                  (setf new-env
                        (env:add-local-macro new-env name expander))))
-      (progn ; with-preserved-toplevel-ness
-        (convert (cst:quasiquote origin
-                                 (locally (cst:unquote-splicing body-cst)))
-                 inserter
-                 new-env
-                 system)))))
+      (convert (cst:quasiquote origin
+                               (locally (cst:unquote-splicing body-cst)))
+               inserter
+               new-env
+               system))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -657,10 +556,9 @@
                    (setf new-env
                          (env:add-local-symbol-macro
                           new-env name expansion)))))
-      (progn ; with-preserved-toplevel-ness
-        (convert (cst:quasiquote origin
-                                 (locally (cst:unquote-splicing body-cst)))
-                 inserter new-env system)))))
+      (convert (cst:quasiquote origin
+                               (locally (cst:unquote-splicing body-cst)))
+               inserter new-env system))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -865,5 +763,4 @@
                 system (env:declarations environment) declaration-csts))
              (new-env (augment-environment-with-declarations
                        environment system canonical-declaration-specifiers)))
-        (progn ;with-preserved-toplevel-ness
-          (convert-progn forms-cst inserter new-env system))))))
+        (convert-progn forms-cst inserter new-env system)))))

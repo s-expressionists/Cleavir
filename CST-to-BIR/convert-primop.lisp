@@ -91,16 +91,18 @@
 ;;;
 ;;; Converting CLEAVIR-PRIMOP:TYPEQ.
 
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:typeq)) cst env system)
+    ((symbol (eql 'cleavir-primop:typeq)) cst inserter env system)
   (check-simple-primop-syntax cst 2)
-  (cst:db origin (typeq-cst arg1-cst arg2-cst) cst
+  (cst:db origin (typeq-cst arg-cst type-cst) cst
     (declare (ignore typeq-cst))
-    (ast:make-typeq-ast
-     (convert arg1-cst env system)
-     (env:parse-type-specifier (cst:raw arg2-cst) env system)
-     :origin origin)))
+    (with-compiled-cst (obj arg-cst inserter env system)
+      (let ((out (make-instance 'bir:output))
+            (ty (env:parse-type-specifier (cst:raw type-cst) env system)))
+        (insert inserter 'cleavir-bir:typeq-test
+                :inputs obj :outputs (list out)
+                :test-ctype ty)
+        (list out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
