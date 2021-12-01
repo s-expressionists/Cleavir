@@ -119,7 +119,7 @@
 
 #+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:case)) cst env system)
+    ((symbol (eql 'cleavir-primop:case)) cst inserter env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 2 nil) ; keyform and default case
   (cst:db origin (case-cst keyform-cst . case-csts) cst
@@ -162,17 +162,16 @@
 ;;; the resulting HIR code, the use of this operation will appear as a
 ;;; FIXED-TO-MULTIPLE-INSTRUCTION.
 
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:values)) cst env system)
+    ((symbol (eql 'cleavir-primop:values)) cst inserter env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (cst:db origin (values-cst . arguments-cst) cst
     (declare (ignore values-cst))
-    (make-instance 'ast:values-ast
-     :argument-asts (mapcar
-		     (lambda (cst) (convert cst env system))
-		     (cst:listify arguments-cst))
-     :origin origin)))
+    (with-compiled-arguments (args arguments-cst inserter env system)
+      (let ((out (make-instance 'bir:output)))
+        (insert inserter 'bir:fixed-to-multiple
+                :inputs args :outputs (list out))
+        (list out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -299,42 +298,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Converting CLEAVIR-PRIMOP:LET-UNINITIALIZED.
-;;;
-;;; A form using the operator LET-UNINITIALIZED has the following
-;;; syntax:
-;;;
-;;; (CLEAVIR-PRIMOP:LET-UNINITIALIZED (var*) form*)
-;;;
-;;; It sole purpose is to create a lexical environment for the
-;;; variables in which the forms are evaluated.  An absolute
-;;; requirement is that the variables must be assigned to before they
-;;; are used in the forms, or else things will fail spectacularly.
-
-#+(or)
-(defmethod convert-special
-    ((symbol (eql 'cleavir-primop:let-uninitialized)) cst env system)
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 1 nil)
-  (cst:db origin (let-cst variables-cst . body-cst) cst
-    (declare (ignore let-cst))
-    (assert (cst:proper-list-p variables-cst))
-    (assert (every #'symbolp (cst:raw variables-cst)))
-    (let ((new-env env))
-      (loop for rest-cst = variables-cst then (cst:rest rest-cst)
-            until (cst:null rest-cst)
-            do (let* ((variable-cst (cst:first rest-cst))
-                      (variable (cst:raw variable-cst))
-                      (variable-ast (ast:make-lexical-ast
-                                     variable
-                                     :origin (cst:source variable-cst))))
-                 (setf new-env
-                       (env:add-lexical-variable
-                        new-env variable variable-ast))))
-      (process-progn (convert-sequence body-cst new-env system)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Converting CLEAVIR-PRIMOP:FUNCALL.
 ;;;
 ;;; This primop is similar to the function CL:FUNCALL.  The difference
@@ -346,21 +309,19 @@
 ;;; that turns the first argument into a function if it is not already
 ;;; a function and then calls this primop.
 
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:funcall)) cst env system)
+    ((symbol (eql 'cleavir-primop:funcall)) cst inserter env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (funcall-cst function-cst . arguments-cst) cst
     (declare (ignore funcall-cst))
-    (ast:make-call-ast
-     (convert function-cst env system)
-     (loop for remaining = arguments-cst then (cst:rest remaining)
-           until (cst:null remaining)
-           collect (convert (cst:first remaining) env system))
-     :origin origin
-     ;; FIXME: propagate inline here somehow.
-     )))
+    (with-compiled-cst (callee function-cst inserter env system)
+      (with-compiled-arguments (args arguments-cst inserter env system)
+        (let ((call-out (make-instance 'bir:output)))
+          (insert inserter (make-instance 'bir:call
+                             :inputs (list* (first callee) args)
+                             :outputs (list call-out)))
+          (list call-out))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -375,19 +336,64 @@
 ;;; a form that turns the first argument into a function if it is not
 ;;; already a function and then calls this primop.
 
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:multiple-value-call)) cst env system)
+    ((symbol (eql 'cleavir-primop:multiple-value-call))
+     cst inserter env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (multiple-value-call-cst function-cst . arguments-cst) cst
     (declare (ignore multiple-value-call-cst))
-    (ast:make-multiple-value-call-ast
-     (convert function-cst env system)
-     (loop for remaining = arguments-cst then (cst:rest remaining)
-           until (cst:null remaining)
-           collect (convert (cst:first remaining) env system))
-     :origin origin)))
+    (with-compiled-cst (callee function-cst inserter env system)
+      (cond ((cst:null arguments-cst)
+             (let ((call-out (make-instance 'bir:output)))
+               (insert inserter 'bir:call
+                       :inputs callee
+                       :outputs (list call-out))
+               (list call-out)))
+            ((cst:null (cst:rest arguments-cst))
+             (with-compiled-cst (mvarg (cst:first arguments-cst)
+                                       inserter env system)
+               (let ((mv-call-out (make-instance 'bir:output)))
+                 (insert inserter 'bir:mv-call
+                         :inputs (list* (first callee) mvarg)
+                         :outputs (list mv-call-out))
+                 (list mv-call-out))))
+            (t
+             (loop with orig-de = (dynamic-environment inserter)
+                   ;; FIXME: inefficient to listify
+                   for form-cst in (cst:listify arguments-cst)
+                   for next = (make-iblock inserter :name '#:mv-call-temp)
+                   for rv = (convert form-cst inserter env system)
+                   for mv = (if (eq rv :no-return)
+                                (return-from convert-special :no-return)
+                                rv)
+                   for save-out = (make-instance 'bir:output)
+                   for save = (terminate
+                               inserter 'bir:values-save
+                               :inputs mv :outputs (list save-out)
+                               :next (list next))
+                   collect save-out into save-outs
+                   do (setf (bir:dynamic-environment next) save)
+                      (begin inserter next)
+                   finally (let* ((cout (make-instance 'bir:output))
+                                  (c (make-instance
+                                         'bir:values-collect
+                                       :inputs save-outs
+                                       :outputs (list cout)))
+                                  (after
+                                    (make-iblock inserter
+                                                 :dynamic-environment orig-de
+                                                 :name '#:mv-call))
+                                  (mvcout (make-instance 'bir:output)))
+                             (insert inserter c)
+                             (terminate inserter 'bir:jump
+                                        :inputs () :outputs ()
+                                        :next (list after))
+                             (begin inserter after)
+                             (insert inserter 'bir:mv-call
+                                     :inputs (list (first callee) cout)
+                                     :outputs (list mvcout))
+                             (return (list mvcout)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -550,12 +556,12 @@
 ;;; Recall that this primop indicates that execution of the form
 ;;; should be impossible.
 
-#+(or)
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:unreachable)) cst env system)
+    ((symbol (eql 'cleavir-primop:unreachable)) cst inserter env system)
   (declare (ignore env system))
   (check-simple-primop-syntax cst 0)
-  (make-instance 'ast:unreachable-ast :origin (cst:source cst)))
+  (terminate inserter 'bir:unreachable)
+  :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

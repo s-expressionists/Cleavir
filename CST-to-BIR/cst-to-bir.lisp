@@ -6,5 +6,4 @@
         (*current-module* (make-instance 'bir:module))
         (bir:*origin* (cst:source lambda-expression-cst))
         (bir:*policy* (env:environment-policy environment)))
-    (convert-code lambda-list-cst body-cst environment system)
-    *current-module*))
+    (convert-code lambda-list-cst body-cst environment system)))
