@@ -114,7 +114,13 @@
       (test (every #'outputp outputs)
             "has outputs ~a of wrong class"
             instruction (remove-if #'outputp outputs)))
-    (flet ((definerp (o) (eq instruction (definition o))))
+    (flet ((definerp (o)
+             (if (typep o 'output)
+                 (eq instruction (definition o))
+                 ;; non-outputs are reported by the previous test, so we
+                 ;; ignore them here, especially because DEFINITION may
+                 ;; not be defined for whatever class of datum it is.
+                 t)))
       (test (every #'definerp outputs)
             "is not the definer of its outputs ~a"
             instruction (remove-if #'definerp outputs)))))
@@ -205,7 +211,7 @@
 (defmethod verify progn ((instruction no-output))
   ;; verify type decl
   (test (null (outputs instruction))
-        "has >0 outputs ~a" (outputs instruction)))
+        "has >0 outputs ~a" instruction (outputs instruction)))
 
 (defmethod verify progn ((instruction one-output))
   ;; verify type decl
@@ -340,6 +346,17 @@
   (test (typep (use (output instruction)) '(or null ifi))
         "is used by ~a, not an ifi instruction"
         instruction (use (output instruction))))
+
+(defmethod verify progn ((instruction ifi))
+  (let ((next (next instruction)))
+    (test (= (length next) 2)
+          "has not two successors, but ~a" instruction next)
+    (test (null (inputs (first next)))
+          "has THEN successor ~a with nonempty inputs ~a"
+          instruction (first next) (inputs (first next)))
+    (test (null (inputs (second next)))
+          "has ELSE successor ~a with nonempty inputs ~a"
+          instruction (second next) (inputs (second next)))))
 
 (defmethod verify progn ((instruction primop))
   ;; For test primops, verify that the destination is an IFI.
@@ -506,27 +523,29 @@
 
 (defmethod verify progn ((module module))
   (let ((*problems* nil) (function-problems nil))
-    (handler-case
-        (let ((*seen-instructions* (set:empty-set))
-              (*seen-iblocks* (set:empty-set))
-              (*seen-lists* (set:empty-set))
-              (*seen-next* (set:empty-set))
-              (*verifying-module* module))
-          (do-functions (function module)
-            (let ((*problems* nil))
-              (verify function)
-              (when *problems*
-                (push (list* function *problems*) function-problems))))
-          ;; Now do module-level tests
-          ;; Check for dangling references.
-          (set:doset (constant (constants module))
-            (test (not (set:empty-set-p (readers constant)))
-                  "records a constant with no references ~a." module constant))
-          (set:doset (ltv (load-time-values module))
-            (test (not (set:empty-set-p (readers ltv)))
-                  "records an LTV with no references ~a." module ltv)))
-      (error (e)
-        (error 'verification-error :module module :original-condition e)))
+    (handler-bind
+        ((error
+           (lambda (e)
+             (error 'verification-error
+                    :module module :original-condition e))))
+      (let ((*seen-instructions* (set:empty-set))
+            (*seen-iblocks* (set:empty-set))
+            (*seen-lists* (set:empty-set))
+            (*seen-next* (set:empty-set))
+            (*verifying-module* module))
+        (do-functions (function module)
+          (let ((*problems* nil))
+            (verify function)
+            (when *problems*
+              (push (list* function *problems*) function-problems))))
+        ;; Now do module-level tests
+        ;; Check for dangling references.
+        (set:doset (constant (constants module))
+          (test (not (set:empty-set-p (readers constant)))
+                "records a constant with no references ~a." module constant))
+        (set:doset (ltv (load-time-values module))
+          (test (not (set:empty-set-p (readers ltv)))
+                "records an LTV with no references ~a." module ltv))))
     ;; Report results.
     (when (or function-problems *problems*)
       (error 'verification-failed :module module
