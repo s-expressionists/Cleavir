@@ -11,7 +11,8 @@
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
   (declare (cl:ignore use))
-  (setf (%use datum) nil))
+  (when (eql (%use datum) use)
+    (setf (%use datum) nil)))
 (defmethod remove-use ((datum variable) use)
   (set:nremovef (readers datum) use))
 (defmethod remove-use ((datum constant) use)
@@ -23,10 +24,11 @@
 
 (defgeneric add-use (datum use))
 (defmethod add-use ((datum linear-datum) use)
-  (assert (null (use datum))
-          ()
-          "Tried to add a use ~a to datum ~a, which is already in use by ~a"
-          use datum (use datum))
+  ;; Use of this and other methods (e.g. add-definition) can render the IR
+  ;; inconsistent. For example, if we have (f x) and insert (g x), the f
+  ;; instruction will no longer use x, though it has it as an input.
+  ;; The inconsistency should be temporary, as can be accomplished for
+  ;; example by deleting f. Use the verifier judiciously.
   (setf (%use datum) use))
 (defmethod add-use ((datum variable) use)
   (set:nadjoinf (readers datum) use))
@@ -46,12 +48,12 @@
 (defgeneric remove-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
 (defmethod remove-definition ((datum output) (definition instruction))
-  (setf (%definition datum) nil))
+  (when (eql (definition datum) definition)
+    (setf (%definition datum) nil)))
 
 (defgeneric add-definition (datum definition)
   (:method ((datum datum) (definition instruction))))
 (defmethod add-definition ((datum output) (definition instruction))
-  (assert (null (%definition datum)))
   (setf (%definition datum) definition))
 (defmethod add-definition ((datum variable) (definition instruction))
   (set:nadjoinf (writers datum) definition))
@@ -198,10 +200,8 @@
 
 ;;; Remove a THEI by forwarding its input to its use.
 (defun delete-thei (thei)
-  (let ((input (first (inputs thei))))
-    (setf (inputs thei) '())
-    (replace-uses input (output thei))
-    (delete-instruction thei)))
+  (replace-uses (input thei) (output thei))
+  (delete-instruction thei))
 
 ;;; Return a copy of a list containing all but the indexed element.
 (defun list-sans-index (list index)
@@ -219,7 +219,6 @@
 ;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
   (check-type instruction (and instruction (not terminator)))
-  (assert (every #'unused-p (outputs instruction)))
   (clean-up-instruction instruction)
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
@@ -292,7 +291,6 @@
 (defmethod replace-uses ((new datum) (old linear-datum))
   (replace-input new old (use old)))
 (defmethod replace-uses ((new linear-datum) (old linear-datum))
-  (assert (null (use new)))
   (when (use old)
     (setf (%use new) (%use old))
     (replace-input new old (%use old)))

@@ -280,10 +280,9 @@
                     ()
                     "Jump/phi pair inconsistent.")
             (let ((ifi (make-instance 'bir:ifi
-                         :next (copy-list next)
+                         :next (copy-list next) :inputs (list input)
                          :origin origin :policy policy)))
-              (bir:replace-terminator ifi end)
-              (setf (bir:inputs ifi) (list input))))))
+              (bir:replace-terminator ifi end)))))
       ;; Now we clean up the original IFI block.
       (bir:delete-iblock iblock)
       t)))
@@ -307,11 +306,8 @@
            (bir:constant-in-module value (bir:module (bir:function instruction))))
          (constant-reference
            (make-instance 'bir:constant-reference
-             :inputs (list constant)
-             :origin (bir:origin instruction) :policy (bir:policy instruction)))
-         (outs (bir:outputs instruction)))
-    (setf (bir:outputs instruction) nil
-          (bir:outputs constant-reference) outs)
+             :inputs (list constant) :outputs (bir:outputs instruction)
+             :origin (bir:origin instruction) :policy (bir:policy instruction))))
     (bir:insert-instruction-before constant-reference instruction)
     (bir:delete-instruction instruction)))
 
@@ -407,13 +403,11 @@
                  (fout (make-instance 'bir:output
                          :derived-type type))
                  (ftm (make-instance 'bir:fixed-to-multiple
-                        :outputs (list fout)
+                        :inputs (list input) :outputs (list fout)
                         :origin (bir:origin reader)
                         :policy (bir:policy reader))))
-            (setf (bir:inputs binder) nil)
             (bir:insert-instruction-before ftm reader)
-            (bir:replace-uses fout reader-out)
-            (setf (bir:inputs ftm) (list input)))
+            (bir:replace-uses fout reader-out))
           (bir:delete-instruction reader)
           t)))))
 
@@ -619,16 +613,14 @@
                                       :derived-type vct)))
                     (ftm
                       (make-instance 'bir:fixed-to-multiple
-                        :inputs couts :origin origin :policy policy))
-                    (outs (bir:outputs instruction)))
+                        :inputs couts :outputs (bir:outputs instruction)
+                        :origin origin :policy policy)))
                (loop for constant in constants
                      for cout in couts
                      for cref = (make-instance 'bir:constant-reference
                                   :inputs (list constant) :outputs (list cout)
                                   :origin origin :policy policy)
                      do (bir:insert-instruction-before cref instruction))
-               (setf (bir:outputs instruction) ()
-                     (bir:outputs ftm) outs)
                (bir:insert-instruction-before ftm instruction)
                (bir:delete-instruction instruction)
                t))))

@@ -177,18 +177,17 @@
   (let* ((returni (bir:returni function))
          (outputs (bir:inputs return-point-block))
          (jump (make-instance 'bir:jump
+                 :inputs (if (bir:inputs return-point-block)
+                             (bir:inputs returni)
+                             '())
                  :outputs (copy-list outputs)
                  :next (list return-point-block)
                  :origin (bir:origin returni)
                  :policy (bir:policy returni))))
-    ;; THis assertion is sort of guaranteed by LOGICAL-CONTINUATION.
+    ;; This assertion is sort of guaranteed by LOGICAL-CONTINUATION.
     (assert (<= (length (bir:inputs return-point-block))
                 (length (bir:inputs returni))))
-    (bir:replace-terminator jump returni)
-    (setf (bir:inputs jump)
-          (if (bir:inputs return-point-block)
-              (bir:inputs returni)
-              '()))))
+    (bir:replace-terminator jump returni)))
 
 (defun move-function-arguments-to-iblock (function)
   (let ((start (bir:start function))
