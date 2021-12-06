@@ -184,9 +184,10 @@
     (bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction bir:primop))
-  (let ((name (cleavir-primop-info:name (bir:info instruction))))
-    (when (and (member name '(fdefinition car cdr symbol-value))
-               (bir:unused-p (first (bir:outputs instruction))))
+  (let ((outs (bir:outputs instruction)))
+    (when (and (not (null outs))
+               (bir:unused-p (first outs))
+               (attributes:has-flag-p (bir:attributes instruction) :flushable))
       (bir:delete-instruction instruction))))
 
 (defun flush-dead-code (iblock)
