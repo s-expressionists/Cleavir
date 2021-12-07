@@ -13,6 +13,7 @@
            #:upgraded-complex-part-type)
   (:export #:conjoin/2 #:disjoin/2 #:negate #:subtract
            #:top #:bottom #:top-p #:bottom-p
+           #:values-top #:values-bottom
            #:conjoin #:disjoin #:disjointp)
   (:export #:values-conjoin #:values-disjoin #:values-disjointp)
   (:export #:class #:cons #:array #:string

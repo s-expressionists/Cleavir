@@ -86,6 +86,13 @@
   (declare (ignore sys))
   (eql ctype 'nil))
 
+(defmethod values-top (sys) (values nil nil (top sys) sys))
+(defmethod values-bottom (sys)
+  ;; Recapitulating the generic function's comment:
+  ;; This is really actually definitely not (values &rest nil)!
+  (let ((bot (bottom sys)))
+    (values (list bot) nil bot sys)))
+
 ;;; Internal
 (defun intersection-ctype-p (ctype)
   (and (consp ctype) (eq (car ctype) 'and)))

@@ -132,7 +132,7 @@
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (bir:inputs iblock))
     (let ((definitions (bir:definitions phi))
-          (type (ctype:values nil nil (ctype:bottom system) system)))
+          (type (ctype:values-bottom system)))
       (set:doset (definition definitions)
         (let ((input (nth (position phi (bir:outputs definition))
                           (bir:inputs definition))))

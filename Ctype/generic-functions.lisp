@@ -34,6 +34,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions VALUES-TOP, VALUES-BOTTOM.
+;;;
+;;; Return top or bottom values ctypes. The top values ctype is equivalent to
+;;; (values &rest t), representing any number of values, each of which may be
+;;; of any type. The bottom values ctype is equivalent to (values nil &rest nil)
+;;; and represents no number of values - which is, importantly, a distinct type
+;;; from (values &rest nil), meaning exactly zero values. That is to say, there
+;;; is no list of values that is of the bottom values ctype.
+;;; This long comment is because this is genuinely confusing.
+
+(defgeneric values-top (system))
+(defgeneric values-bottom (system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic functions TOP-P, BOTTOM-P.
 ;;;
 ;;; Return whether the given ctype is the top or bottom ctype respectively.

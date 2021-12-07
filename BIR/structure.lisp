@@ -44,7 +44,7 @@
 (defun current-top-ctype ()
   (if (boundp '*top-ctype*)
       *top-ctype*
-      (ctype:values nil nil (ctype:top nil) nil)))
+      (ctype:values-top nil)))
 
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
