@@ -140,8 +140,32 @@
                 (ctype:values-disjoin type (bir:ctype input) system))))
       (setf (bir:derived-type phi) type))))
 
+(defun compute-phi-attributes (phi)
+  ;; Unlike with types, we don't have a starting "all attributes" value
+  ;; to use, so this is a little funky.
+  (let ((definitions (bir:definitions phi)))
+    (if (set:empty-set-p definitions)
+        nil ; meaningless if there are no defs
+        (let* ((sdef (set:arb definitions))
+               (sinput (nth (position phi (bir:outputs sdef))
+                            (bir:inputs sdef)))
+               (attr (bir:attributes sinput)))
+          (set:doset (definition definitions attr)
+            (unless (eq definition sdef)
+              (let ((input (nth (position phi (bir:outputs definition))
+                                (bir:inputs definition))))
+                ;; meet due to contravariance
+                (setf attr (attributes:meet-attributes
+                            attr
+                            (bir:attributes input))))))))))
+
+(defun derive-iblock-input-attributes (iblock)
+  (dolist (phi (bir:inputs iblock))
+    (setf (bir:attributes phi) (compute-phi-attributes phi))))
+
 (defun meta-evaluate-iblock (iblock system)
   (derive-iblock-input-types iblock system)
+  (derive-iblock-input-attributes iblock)
   (bir:do-iblock-instructions (instruction iblock)
     (unless (meta-evaluate-instruction instruction system)
       (derive-types instruction system))))
