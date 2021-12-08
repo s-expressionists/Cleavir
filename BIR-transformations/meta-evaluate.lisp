@@ -129,35 +129,29 @@
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
 ;;; definitions, instead of narrowing the types conservatively.
+(defun compute-phi-type (phi system)
+  (let ((type (ctype:values-bottom system)))
+    (set:doset (inp (bir:phi-inputs phi) type)
+      (setq type (ctype:values-disjoin type (bir:ctype inp) system)))))
+
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (bir:inputs iblock))
-    (let ((definitions (bir:definitions phi))
-          (type (ctype:values-bottom system)))
-      (set:doset (definition definitions)
-        (let ((input (nth (position phi (bir:outputs definition))
-                          (bir:inputs definition))))
-          (setq type
-                (ctype:values-disjoin type (bir:ctype input) system))))
-      (setf (bir:derived-type phi) type))))
+    (setf (bir:derived-type phi) (compute-phi-type phi system))))
 
 (defun compute-phi-attributes (phi)
   ;; Unlike with types, we don't have a starting "all attributes" value
   ;; to use, so this is a little funky.
-  (let ((definitions (bir:definitions phi)))
-    (if (set:empty-set-p definitions)
+  (let ((inps (bir:phi-inputs phi)))
+    (if (set:empty-set-p inps)
         nil ; meaningless if there are no defs
-        (let* ((sdef (set:arb definitions))
-               (sinput (nth (position phi (bir:outputs sdef))
-                            (bir:inputs sdef)))
+        (let* ((sinput (set:arb inps))
                (attr (bir:attributes sinput)))
-          (set:doset (definition definitions attr)
-            (unless (eq definition sdef)
-              (let ((input (nth (position phi (bir:outputs definition))
-                                (bir:inputs definition))))
-                ;; meet due to contravariance
-                (setf attr (attributes:meet-attributes
-                            attr
-                            (bir:attributes input))))))))))
+          (set:doset (inp inps attr)
+            (unless (eq inp sinput) ; would be harmless, but no point
+              ;; meet due to contravariance
+              (setf attr (attributes:meet-attributes
+                          attr
+                          (bir:attributes inp)))))))))
 
 (defun derive-iblock-input-attributes (iblock)
   (dolist (phi (bir:inputs iblock))
@@ -503,6 +497,20 @@
 (defmethod derive-types ((instruction bir:enclose) system)
   (let ((ftype (ctype:single-value (ctype:function-top system) system)))
     (derive-type-for-linear-datum (bir:output instruction) ftype system)))
+
+;;; If the number of values to be saved is known, record that.
+(defmethod meta-evaluate-instruction ((instruction bir:values-save) system)
+  (let ((ity (bir:ctype (bir:input instruction))))
+    (cond ((and (null (ctype:values-optional ity system))
+                (ctype:bottom-p (ctype:values-rest ity system) system))
+           (change-class instruction 'bir:fixed-values-save
+                         :nvalues (length
+                                   (ctype:values-required ity system)))
+           t))))
+
+;;; If already transformed, don't use the above method.
+(defmethod meta-evaluate-instruction ((inst bir:fixed-values-save) system)
+  (declare (ignore system)))
 
 (defmethod derive-types ((instruction bir:values-save) system)
   (derive-type-for-linear-datum (bir:output instruction)

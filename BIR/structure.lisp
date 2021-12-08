@@ -208,6 +208,25 @@
             (nth (position linear-datum (inputs use))
                  (outputs use))))))
 
+;;; Get the set of data that feed into the phi.
+(defun phi-inputs (phi)
+  (let* ((ib (iblock phi))
+         (pos (position phi (inputs ib)))
+         (inputs (set:empty-set)))
+    (assert (not (null pos)))
+    (set:doset (predecessor (predecessors ib))
+      (let ((end (end predecessor)))
+        (unless (typep end 'catch)
+          (let ((in (nth pos (inputs end))))
+            (assert (not (null in)))
+            (set:nadjoinf inputs in)))))
+    (set:doset (entrance (entrances ib))
+      (let* ((end (end entrance))
+             (in (nth pos (inputs end))))
+        (assert (not (null in)))
+        (set:nadjoinf inputs in)))
+    inputs))
+
 ;;; A mutable lexical variable which must be read from and written to
 ;;; via READVAR and WRITEVAR instructions.
 (defclass variable (lexical)

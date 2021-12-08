@@ -17,7 +17,8 @@
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
   (:export #:datum #:ssa #:value #:linear-datum #:transfer #:argument #:phi
            #:delete-phi #:output #:name #:ctype #:derived-type
-           #:definition #:definitions #:use #:transitive-use #:unused-p)
+           #:definition #:definitions #:use #:transitive-use #:phi-inputs
+           #:unused-p)
   (:export #:variable #:extent #:writers #:readers #:binder
            #:use-status #:ignore
            #:record-variable-ref #:record-variable-set
@@ -39,7 +40,7 @@
            #:ifi #:conditional-test
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
-           #:values-save #:values-collect
+           #:values-save #:fixed-values-save #:nvalues #:values-collect
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes

@@ -77,6 +77,11 @@
     (dynamic-environment one-input one-output terminator1)
   ())
 
+;;; Simpler version of values-save used when the number of values is
+;;; known statically. Transformed from values-save by meta-evaluate.
+(defclass fixed-values-save (values-save)
+  ((%nvalues :initarg :nvalues :reader nvalues)))
+
 (defclass values-collect (one-output instruction) ())
 
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
