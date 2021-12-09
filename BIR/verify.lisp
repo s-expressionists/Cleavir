@@ -404,9 +404,10 @@
         "has dynamic environment ~a, which is not a dynamic-environment"
         iblock (dynamic-environment iblock))
   ;; iblock is in its dynenv's scope set
-  (test (set:presentp iblock (scope (dynamic-environment iblock)))
-        "is not in its dynamic environment ~a's scope"
-        iblock (dynamic-environment iblock))
+  (when (typep (dynamic-environment iblock) 'dynamic-environment)
+    (test (set:presentp iblock (scope (dynamic-environment iblock)))
+          "is not in its dynamic environment ~a's scope"
+          iblock (dynamic-environment iblock)))
   ;; dynenv is either the function itself or an instruction that
   ;; dominates this block (but see KLUDGE above)
   (test (or (eq (dynamic-environment iblock) *verifying-function*)

@@ -252,6 +252,16 @@
       (set:nadjoinf (predecessors n) ib)))
   (values))
 
+;; Update the iblocks in scope of a replaced terminator.
+(defmethod replace-terminator :before (new (old dynamic-environment))
+  ;; We use TYPEP instead of specialized methods because we need only
+  ;; one scope update, which would be difficult to arrange with two methods.
+  (let ((nde (if (typep new 'dynamic-environment)
+                 new
+                 (dynamic-environment old))))
+    (set:doset (s (scope old))
+      (setf (dynamic-environment s) nde))))
+
 (defmethod replace-terminator :after ((new unwind) old)
   (declare (cl:ignore old))
   (set:nadjoinf (entrances (destination new)) (iblock new)))

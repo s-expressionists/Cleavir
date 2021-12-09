@@ -6,8 +6,6 @@
   (let ((nde (bir:dynamic-environment catch))
         (fore (bir:iblock catch))
         (normal-next (first (bir:next catch))))
-    (set:doset (s (bir:scope catch))
-      (setf (bir:dynamic-environment s) nde))
     ;; Replace the instruction
     (bir:replace-terminator
      (make-instance 'bir:jump
