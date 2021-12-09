@@ -187,6 +187,9 @@
 (defmethod maybe-flush-instruction ((instruction bir:constant-reference))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
+(defmethod maybe-flush-instruction ((instruction bir:values-collect))
+  (when (bir:unused-p (bir:output instruction))
+    (bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction bir:thei))
   (when (and (bir:unused-p (bir:output instruction))
@@ -609,15 +612,26 @@
     (declare (ignore system fold arguments))
     nil))
 
+;;; Given a non-values ctype, returns two values:
+;;; The value of the constant type, or NIL if it's not constant
+;;; A boolean that's true iff it is constant
+;;; FIXME: Move to ctype?
+(defun constant-type-value (ct system)
+  (if (ctype:member-p system ct)
+      (let ((membs (ctype:member-members system ct)))
+        (if (= (length membs) 1)
+            (values (elt membs 0) t)
+            (values nil nil)))
+      (values nil nil)))
+
 (defun constant-arguments (arguments system)
   (loop for arg in arguments
         for ct = (ctype:primary (bir:ctype arg) system)
-        collect (if (ctype:member-p system ct)
-                    (let ((membs (ctype:member-members system ct)))
-                      (if (= (length membs) 1)
-                          (elt membs 0)
-                          (return-from constant-arguments (values nil nil))))
-                    (return-from constant-arguments (values nil nil)))
+        collect (multiple-value-bind (cvalue constantp)
+                    (constant-type-value ct system)
+                  (if constantp
+                      cvalue
+                      (return (values nil nil))))
           into rargs
         finally (return (values rargs t))))
 
@@ -671,7 +685,8 @@
     (or
      ;; Try all client constant folds in order.
      ;; Folding is always preferable to transformation, so we try it first.
-     (maybe-fold-call (attributes:folds attr) (rest (bir:inputs instruction))
+     (maybe-fold-call (attributes:folds attr)
+                      (rest (bir:inputs instruction))
                       instruction system)
      ;; Try all client transforms in order.
      ;; If any return true, a change has been made.
@@ -685,6 +700,32 @@
                       instruction system)
      (some (lambda (transform) (transform-call system transform instruction))
            (attributes:transforms (bir:attributes instruction))))))
+
+(defun constant-mv-arguments (input system)
+  (let ((vct (bir:ctype input)))
+    (if (and (null (ctype:values-optional vct system))
+             (ctype:bottom-p (ctype:values-rest vct system) system))
+        (loop for ct in (ctype:values-required vct system)
+              collect (multiple-value-bind (cvalue constantp)
+                          (constant-type-value ct system)
+                        (if constantp
+                            cvalue
+                            (return (values nil nil))))
+                into rargs
+              finally (return (values rargs t)))
+        (values nil nil))))
+
+(defun maybe-fold-mv-call (folds input instruction system)
+  (when (not (null folds))
+    (multiple-value-bind (args validp) (constant-mv-arguments input system)
+      (when validp
+        (loop for fold in folds
+                thereis (maybe-fold-call-1 fold args instruction system))))))
+
+(defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
+  (maybe-fold-mv-call (attributes:folds (bir:attributes instruction))
+                      (second (bir:inputs instruction))
+                      instruction system))
 
 (defgeneric derive-return-type (instruction deriver system))
 (defmethod derive-return-type ((inst bir:abstract-call) deriver system)
