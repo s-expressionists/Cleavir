@@ -121,6 +121,8 @@
     (meta-evaluate-iblock iblock system))
   (bir:do-iblocks (iblock function :backward)
     (flush-dead-code iblock)
+    ;; These transformations apply on empty iblocks, so we try them only
+    ;; after the dead code flush.
     (let ((end (bir:end iblock)))
       (typecase end
         (bir:ifi (or (eliminate-if-if end) (eliminate-degenerate-if end)))
@@ -210,6 +212,14 @@
                (bir:unused-p (first outs))
                (attributes:has-flag-p (bir:attributes instruction) :flushable))
       (bir:delete-instruction instruction))))
+
+(defmethod maybe-flush-instruction ((inst bir:values-save))
+  (when (bir:unused-p (bir:output inst))
+    (bir:replace-terminator
+     (make-instance 'bir:jump
+       :next (bir:next inst) :inputs () :outputs ()
+       :origin (bir:origin inst) :policy (bir:policy inst))
+     inst)))
 
 (defun flush-dead-code (iblock)
   (bir:map-iblock-instructions-backwards #'maybe-flush-instruction iblock)
