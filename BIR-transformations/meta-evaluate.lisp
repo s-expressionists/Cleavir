@@ -393,9 +393,15 @@
      system)))
 
 (defmethod meta-evaluate-instruction ((instruction bir:eq-test) system)
-  (declare (ignore system))
   (let ((inputs (bir:inputs instruction)))
-    (constant-fold-instruction instruction inputs #'eq)))
+    (cond ((constant-fold-instruction instruction inputs #'eq))
+          ;; Objects of different types are never EQ.
+          ((ctype:disjointp
+            (ctype:primary (bir:ctype (first inputs)) system)
+            (ctype:primary (bir:ctype (second inputs)) system)
+            system)
+           (replace-computation-by-constant-value instruction nil)
+           t))))
 
 (defmethod meta-evaluate-instruction
     ((instruction bir:typeq-test) system)
