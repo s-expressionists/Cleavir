@@ -3,6 +3,6 @@
 (defpackage #:cleavir-attributes
   (:use #:common-lisp)
   (:export #:attributes #:attributes-designator #:default-attributes
-           #:transforms #:derivers #:folds
+           #:identities
            #:meet-attributes #:join-attributes)
   (:export #:make-flags #:has-flag-p))

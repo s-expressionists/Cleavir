@@ -697,25 +697,27 @@
                 thereis (maybe-fold-call-1 fold args instruction system))))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:call) system)
-  (let ((attr (bir:attributes instruction)))
+  (let* ((attr (bir:attributes instruction))
+         (identities (attributes:identities attr)))
     (or
      ;; Try all client constant folds in order.
      ;; Folding is always preferable to transformation, so we try it first.
-     (maybe-fold-call (attributes:folds attr)
+     (maybe-fold-call identities
                       (rest (bir:inputs instruction))
                       instruction system)
      ;; Try all client transforms in order.
      ;; If any return true, a change has been made.
-     (some (lambda (transform) (transform-call system transform instruction))
-           (attributes:transforms attr)))))
+     (some (lambda (identity) (transform-call system identity instruction))
+           identities))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:primop) system)
-  (let ((attr (bir:attributes instruction)))
+  (let* ((attr (bir:attributes instruction))
+         (identities (attributes:identities attr)))
     (or
-     (maybe-fold-call (attributes:folds attr) (bir:inputs instruction)
+     (maybe-fold-call identities (bir:inputs instruction)
                       instruction system)
-     (some (lambda (transform) (transform-call system transform instruction))
-           (attributes:transforms (bir:attributes instruction))))))
+     (some (lambda (identity) (transform-call system identity instruction))
+           identities))))
 
 (defun constant-mv-arguments (input system)
   (let ((vct (bir:ctype input)))
@@ -739,27 +741,31 @@
                 thereis (maybe-fold-call-1 fold args instruction system))))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
-  (maybe-fold-mv-call (attributes:folds (bir:attributes instruction))
+  (maybe-fold-mv-call (attributes:identities (bir:attributes instruction))
                       (second (bir:inputs instruction))
                       instruction system))
 
-(defgeneric derive-return-type (instruction deriver system))
-(defmethod derive-return-type ((inst bir:abstract-call) deriver system)
+;;; FIXME: This might warrant a more complex type system in order to
+;;; allow combining information.
+;;; For example, (if test #'+ #'-) could still be seen to return two
+;;; floats if given a float.
+(defgeneric derive-return-type (instruction identity system))
+(defmethod derive-return-type ((inst bir:abstract-call) identity system)
   (declare (ignore deriver))
   (ctype:coerce-to-values (ctype:top system) system))
 
 (defmethod derive-types ((inst bir:abstract-call) system)
-  (let ((derivers (attributes:derivers (bir:attributes inst))))
-    (cond ((null derivers))
-          ((= (length derivers) 1)
-           (derive-type-for-linear-datum (bir:output inst)
-                                         (derive-return-type inst
-                                                             (first derivers)
-                                                             system)
-                                         system))
+  (let ((identities (attributes:identities (bir:attributes inst))))
+    (cond ((null identities))
+          ((= (length identities) 1)
+           (derive-type-for-linear-datum
+            (bir:output inst)
+            (derive-return-type inst (first identities) system)
+            system))
           (t
-           (let ((types (loop for deriver in derivers
-                              collect (derive-return-type inst deriver system))))
+           (let ((types
+                   (loop for identity in identities
+                         collect (derive-return-type inst identity system))))
              (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin types)
                                            system))))))
