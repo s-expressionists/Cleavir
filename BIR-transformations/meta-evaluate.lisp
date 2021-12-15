@@ -30,17 +30,6 @@
         (attributes:join-attributes
          (bir:attributes linear-datum) new-attributes)))
 
-(defun arguments-type (arguments system)
-  (ctype:values (loop for argument in arguments
-                      collecting (ctype:primary (bir:ctype argument) system))
-                nil (ctype:bottom system) system))
-
-(defgeneric call-arguments-type (call system))
-(defmethod call-arguments-type ((call bir:local-call) system)
-  (arguments-type (rest (bir:inputs call)) system))
-(defmethod call-arguments-type ((call bir:mv-local-call) system)
-  (bir:ctype (second (bir:inputs call))))
-
 (defun derive-local-call-argument-types (function local-calls system)
   (bir:map-lambda-list
    (lambda (state item index)
@@ -774,27 +763,65 @@
                       (second (bir:inputs instruction))
                       instruction system))
 
+;;; Given an instruction, its identity (e.g. function name), the VALUES type
+;;; representing the incoming arguments, and the system, return the type of
+;;; the result.
 ;;; FIXME: This might warrant a more complex type system in order to
 ;;; allow combining information.
 ;;; For example, (if test #'+ #'-) could still be seen to return two
 ;;; floats if given a float.
-(defgeneric derive-return-type (instruction identity system))
-(defmethod derive-return-type ((inst bir:abstract-call) identity system)
-  (declare (ignore deriver))
+(defgeneric derive-return-type (instruction identity argstype system))
+(defmethod derive-return-type ((inst bir:abstract-call) identity
+                               argstype system)
+  (declare (ignore identity argstype))
   (ctype:coerce-to-values (ctype:top system) system))
 
-(defmethod derive-types ((inst bir:abstract-call) system)
+(defmethod derive-types ((inst bir:call) system)
   (let ((identities (attributes:identities (bir:attributes inst))))
     (cond ((null identities))
           ((= (length identities) 1)
            (derive-type-for-linear-datum
             (bir:output inst)
-            (derive-return-type inst (first identities) system)
+            (derive-return-type inst (first identities)
+                                (ctype:values
+                                 (loop for arg in (rest (bir:inputs inst))
+                                       for ct = (bir:ctype arg)
+                                       collect (ctype:primary ct system))
+                                 nil (ctype:bottom system) system)
+                                system)
             system))
           (t
-           (let ((types
+           (let ((argstype
+                   (ctype:values (loop for arg in (rest (bir:inputs inst))
+                                       for ct = (bir:ctype arg)
+                                       collect (ctype:primary ct system))
+                                 nil (ctype:bottom system) system))
+                 (types
                    (loop for identity in identities
-                         collect (derive-return-type inst identity system))))
+                         collect (derive-return-type inst identity
+                                                     argstype system))))
              (derive-type-for-linear-datum (bir:output inst)
-                                           (apply #'ctype:values-conjoin types)
+                                           (apply #'ctype:values-conjoin
+                                                  system types)
+                                           system))))))
+
+(defmethod derive-types ((inst bir:mv-call) system)
+  (let ((identities (attributes:identities (bir:attributes inst))))
+    (cond ((null identities))
+          ((= (length identities) 1)
+           (derive-type-for-linear-datum
+            (bir:output inst)
+            (derive-return-type inst (first identities)
+                                (bir:ctype (second (bir:inputs inst)))
+                                system)
+            system))
+          (t
+           (let* ((argstype (bir:ctype (second (bir:inputs inst))))
+                  (types
+                    (loop for identity in identities
+                          collect (derive-return-type inst identity
+                                                      argstype system))))
+             (derive-type-for-linear-datum (bir:output inst)
+                                           (apply #'ctype:values-conjoin
+                                                  system types)
                                            system))))))
