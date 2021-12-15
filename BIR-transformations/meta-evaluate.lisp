@@ -759,9 +759,12 @@
                 thereis (maybe-fold-call-1 fold args instruction system))))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
-  (maybe-fold-mv-call (attributes:identities (bir:attributes instruction))
-                      (second (bir:inputs instruction))
-                      instruction system))
+  (let ((identities (attributes:identities (bir:attributes instruction))))
+    (or
+     (maybe-fold-mv-call identities (second (bir:inputs instruction))
+                         instruction system)
+     (some (lambda (identity) (transform-call system identity instruction))
+           identities))))
 
 ;;; Given an instruction, its identity (e.g. function name), the VALUES type
 ;;; representing the incoming arguments, and the system, return the type of
