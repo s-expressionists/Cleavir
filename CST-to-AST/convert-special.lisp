@@ -392,15 +392,6 @@
 ;;;
 ;;; Converting IF.
 
-(defun boolify (test-ast origin env system)
-  (if (typep test-ast 'ast:boolean-ast-mixin)
-      test-ast
-      (ast:make-neq-ast
-       test-ast
-       (convert-constant (make-atom-cst nil origin)
-                         env system)
-       :origin origin)))
-
 (defmethod convert-special ((symbol (eql 'if)) cst env system)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 2 3)
