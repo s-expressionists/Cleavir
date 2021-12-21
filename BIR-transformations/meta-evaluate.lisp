@@ -209,6 +209,9 @@
 (defmethod maybe-flush-instruction ((instruction bir:constant-reference))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
+(defmethod maybe-flush-instruction ((instruction bir:values-restore))
+  (when (bir:unused-p (bir:output instruction))
+    (bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction bir:values-collect))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
@@ -578,6 +581,11 @@
   (declare (ignore system)))
 
 (defmethod derive-types ((instruction bir:values-save) system)
+  (derive-type-for-linear-datum (bir:output instruction)
+                                (bir:ctype (bir:input instruction))
+                                system))
+
+(defmethod derive-types ((instruction bir:values-restore) system)
   (derive-type-for-linear-datum (bir:output instruction)
                                 (bir:ctype (bir:input instruction))
                                 system))

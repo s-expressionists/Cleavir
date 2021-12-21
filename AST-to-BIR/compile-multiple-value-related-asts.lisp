@@ -16,7 +16,7 @@
                    :inputs rv
                    :outputs (list save-out) :next (list during)))
            (read-out (make-instance 'bir:output))
-           (read (make-instance 'bir:values-collect
+           (read (make-instance 'bir:values-restore
                    :inputs (list save-out) :outputs (list read-out))))
       (setf (bir:dynamic-environment during) save)
       (terminate inserter save)

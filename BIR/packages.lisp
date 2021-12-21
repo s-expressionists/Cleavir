@@ -40,7 +40,8 @@
            #:ifi #:conditional-test
            #:case #:comparees
            #:catch #:unwinds #:unwind #:destination
-           #:values-save #:fixed-values-save #:nvalues #:values-collect
+           #:values-save #:fixed-values-save #:nvalues
+           #:values-restore #:values-collect
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes
