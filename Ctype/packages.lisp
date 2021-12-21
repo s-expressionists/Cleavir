@@ -15,7 +15,9 @@
            #:top #:bottom #:top-p #:bottom-p
            #:values-top #:values-bottom
            #:conjoin #:disjoin #:disjointp)
-  (:export #:values-conjoin #:values-disjoin #:values-disjointp)
+  (:export #:values-conjoin/2 #:values-disjoin/2 #:values-disjointp
+           #:values-conjoin #:values-disjoin
+           #:values-append/2 #:values-append)
   (:export #:class #:cons #:array #:string
            #:character #:base-char #:standard-char
            #:complex #:range #:fixnum

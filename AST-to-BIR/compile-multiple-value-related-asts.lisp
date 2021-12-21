@@ -85,13 +85,13 @@
                                     (mvcout
                                       (make-instance 'bir:output)))
                                (insert inserter c)
+                               (insert inserter 'bir:mv-call
+                                       :inputs (list (first callee) cout)
+                                       :outputs (list mvcout))
                                (terminate inserter 'bir:jump
                                           :inputs () :outputs ()
                                           :next (list after))
                                (begin inserter after)
-                               (insert inserter 'bir:mv-call
-                                       :inputs (list (first callee) cout)
-                                       :outputs (list mvcout))
                                (return (list mvcout))))))))))
 
 (defmethod compile-ast ((ast ast:values-ast) inserter system)

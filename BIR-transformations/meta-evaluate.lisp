@@ -22,7 +22,7 @@
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
   (setf (bir:derived-type linear-datum)
-        (ctype:values-conjoin (bir:ctype linear-datum) derived-type system)))
+        (ctype:values-conjoin system (bir:ctype linear-datum) derived-type)))
 
 (defun derive-attributes (linear-datum new-attributes)
   (setf (bir:attributes linear-datum)
@@ -55,7 +55,9 @@
                   ;; types could be totally excluded.
                   (bir:mv-local-call
                    ;; Parse the values type of the argument and use that info.
-                   (let* ((vty (bir:ctype (second (bir:inputs local-call))))
+                   (let* ((vty
+                            (append-input-types (rest (bir:inputs local-call))
+                                                system))
                           (req (ctype:values-required vty system))
                           (lreq (length req))
                           (opt (ctype:values-optional vty system))
@@ -152,7 +154,7 @@
 (defun compute-phi-type (phi system)
   (let ((type (ctype:values-bottom system)))
     (set:doset (inp (bir:phi-inputs phi) type)
-      (setq type (ctype:values-disjoin type (bir:ctype inp) system)))))
+      (setq type (ctype:values-disjoin system type (bir:ctype inp))))))
 
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (bir:inputs iblock))
@@ -580,43 +582,14 @@
                                 (bir:ctype (bir:input instruction))
                                 system))
 
-(defun values-ctype-appender (system)
-  (lambda (ct1 ct2)
-    ;; This function computes the type you get from appending two sets of
-    ;; values together; in lisp terms, the type of
-    ;; (multiple-value-call #'values a b) given the types of A and B.
-    ;; This is considerably complicated by nontrivial &optional and &rest.
-    ;; For a start (to be improved? FIXME) we take the required values of the
-    ;; first form, and record the minimum number of required values, which is
-    ;; just the sum of those of the values types.
-    ;; Also, if the number of values of the first type is fixed (no &optional
-    ;; and the &rest is bottom) we give the simple exact result.
-    (let ((req1 (ctype:values-required ct1 system))
-          (opt1 (ctype:values-optional ct1 system))
-          (rest1 (ctype:values-rest ct1 system))
-          (req2 (ctype:values-required ct2 system))
-          (opt2 (ctype:values-optional ct2 system))
-          (rest2 (ctype:values-rest ct2 system)))
-      (if (and (null opt1) (ctype:bottom-p rest1 system))
-          ;; simple case
-          (ctype:values (append req1 req2) opt2 rest2 system)
-          ;; Approximate as described
-          (ctype:values
-           (append req1 (make-list (length req2)
-                                   :initial-element (ctype:top system)))
-           nil
-           (ctype:top system)
-           system)))))
+(defun append-input-types (inputs system)
+  (apply #'ctype:values-append system (mapcar #'bir:ctype inputs)))
 
 (defmethod derive-types ((instruction bir:values-collect) system)
-  (let* ((ins (mapcar #'bir:ctype (bir:inputs instruction)))
-         (out (bir:output instruction))
-         (ct
-           (cond ((zerop (length ins)) ; degenerate cases
-                  (ctype:values nil nil (ctype:bottom system) system))
-                 ((= (length ins) 1) (first ins))
-                 (t (reduce (values-ctype-appender system) ins)))))
-    (derive-type-for-linear-datum out ct system)))
+  (derive-type-for-linear-datum
+   (bir:output instruction)
+   (append-input-types (bir:inputs instruction) system)
+   system))
 
 (defmethod meta-evaluate-instruction ((instruction bir:thei) system)
   (let ((ctype (bir:ctype (bir:input instruction))))
@@ -647,7 +620,7 @@
      (bir:output instruction)
      (if (eq type-check-function :external)
          ctype
-         (ctype:values-conjoin (bir:asserted-type instruction) ctype system))
+         (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
      system)
     ;; Propagate the type of the input into function.
     ;; FIXME: Extend this to values types.
@@ -763,23 +736,23 @@
      (some (lambda (identity) (transform-call system identity instruction))
            identities))))
 
-(defun constant-mv-arguments (input system)
-  (let ((vct (bir:ctype input)))
-    (if (and (null (ctype:values-optional vct system))
-             (ctype:bottom-p (ctype:values-rest vct system) system))
-        (loop for ct in (ctype:values-required vct system)
-              collect (multiple-value-bind (cvalue constantp)
-                          (constant-type-value ct system)
-                        (if constantp
-                            cvalue
-                            (return (values nil nil))))
-                into rargs
-              finally (return (values rargs t)))
-        (values nil nil))))
+(defun constant-mv-arguments (vct system)
+  (if (and (null (ctype:values-optional vct system))
+           (ctype:bottom-p (ctype:values-rest vct system) system))
+      (loop for ct in (ctype:values-required vct system)
+            collect (multiple-value-bind (cvalue constantp)
+                        (constant-type-value ct system)
+                      (if constantp
+                          cvalue
+                          (return (values nil nil))))
+              into rargs
+            finally (return (values rargs t)))
+      (values nil nil)))
 
-(defun maybe-fold-mv-call (folds input instruction system)
+(defun maybe-fold-mv-call (folds input-type instruction system)
   (when (not (null folds))
-    (multiple-value-bind (args validp) (constant-mv-arguments input system)
+    (multiple-value-bind (args validp)
+        (constant-mv-arguments input-type system)
       (when validp
         (loop for fold in folds
                 thereis (maybe-fold-call-1 fold args instruction system))))))
@@ -787,7 +760,9 @@
 (defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
   (let ((identities (attributes:identities (bir:attributes instruction))))
     (or
-     (maybe-fold-mv-call identities (second (bir:inputs instruction))
+     (maybe-fold-mv-call identities
+                         (append-input-types (rest (bir:inputs instruction))
+                                             system)
                          instruction system)
      (some (lambda (identity) (transform-call system identity instruction))
            identities))))
@@ -820,15 +795,15 @@
                                 system)
             system))
           (t
-           (let ((argstype
-                   (ctype:values (loop for arg in (rest (bir:inputs inst))
-                                       for ct = (bir:ctype arg)
-                                       collect (ctype:primary ct system))
-                                 nil (ctype:bottom system) system))
-                 (types
-                   (loop for identity in identities
-                         collect (derive-return-type inst identity
-                                                     argstype system))))
+           (let* ((argstype
+                    (ctype:values (loop for arg in (rest (bir:inputs inst))
+                                        for ct = (bir:ctype arg)
+                                        collect (ctype:primary ct system))
+                                  nil (ctype:bottom system) system))
+                  (types
+                    (loop for identity in identities
+                          collect (derive-return-type inst identity
+                                                      argstype system))))
              (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
                                                   system types)
@@ -841,11 +816,13 @@
            (derive-type-for-linear-datum
             (bir:output inst)
             (derive-return-type inst (first identities)
-                                (bir:ctype (second (bir:inputs inst)))
+                                (append-input-types
+                                 (rest (bir:inputs inst)) system)
                                 system)
             system))
           (t
-           (let* ((argstype (bir:ctype (second (bir:inputs inst))))
+           (let* ((argstype (append-input-types
+                             (rest (bir:inputs inst)) system))
                   (types
                     (loop for identity in identities
                           collect (derive-return-type inst identity

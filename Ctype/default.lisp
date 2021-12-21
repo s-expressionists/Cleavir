@@ -104,7 +104,7 @@
   (and (consp ctype) (eq (car ctype) 'cl:function)))
 (defun function-return (ctype) (third ctype))
 
-(defmethod values-conjoin (vct1 vct2 sys)
+(defmethod values-conjoin/2 (vct1 vct2 sys)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2))
           () "An argument to ~s is not a values ctype: args are ~s ~s"
           'values-conjoin vct1 vct2)
@@ -176,7 +176,7 @@
              nil
              ty)))))
 
-(defmethod values-disjoin (vct1 vct2 sys)
+(defmethod values-disjoin/2 (vct1 vct2 sys)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
@@ -245,6 +245,28 @@
         ((bottom-p ct2 sys) ct1)
         ((top-p ct2 sys) 'nil)
         (t `(and ,ct1 (not ,ct2)))))
+
+(defmethod values-append/2 (ct1 ct2 system)
+    ;; This is considerably complicated by nontrivial &optional and &rest.
+  ;; For a start (to be improved? FIXME) we take the required values of the
+  ;; first form, and record the minimum number of required values, which is
+  ;; just the sum of those of the values types.
+  ;; Also, if the number of values of the first type is fixed (no &optional
+  ;; and the &rest is bottom) we give the simple exact result.
+  (let ((req1 (values-required ct1 system))
+        (opt1 (values-optional ct1 system))
+        (rest1 (values-rest ct1 system))
+        (req2 (values-required ct2 system))
+        (opt2 (values-optional ct2 system))
+        (rest2 (values-rest ct2 system)))
+    (if (and (null opt1) (bottom-p rest1 system))
+        ;; simple case
+        (values (append req1 req2) opt2 rest2 system)
+        ;; Approximate as described
+        (values
+         (append req1 (make-list (length req2)
+                                 :initial-element (top system)))
+         nil (top system) system))))
 
 (defun function-returns (fctype) (third fctype))
 
