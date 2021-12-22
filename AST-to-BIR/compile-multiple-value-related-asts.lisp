@@ -47,10 +47,23 @@
                (list call-out)))
             ((null (rest form-asts))
              (with-compiled-ast (mvarg (first form-asts) inserter system)
-               (let ((mv-call-out (make-instance 'bir:output)))
+               (let* ((mv-call-out (make-instance 'bir:output))
+                      (collect-out (make-instance 'bir:output))
+                      (mv-block (make-iblock inserter :name '#:mv-call))
+                      (collect (terminate inserter 'bir:values-collect
+                                          :inputs mvarg
+                                          :outputs (list collect-out)
+                                          :next (list mv-block)))
+                      (after (make-iblock inserter :name '#:mv-call-after)))
+                 (setf (bir:dynamic-environment mv-block) collect)
+                 (begin inserter mv-block)
                  (insert inserter 'bir:mv-call
-                         :inputs (list* (first callee) mvarg)
+                         :inputs (list (first callee) collect-out)
                          :outputs (list mv-call-out))
+                 (terminate inserter 'bir:jump
+                            :inputs () :outputs ()
+                            :next (list after))
+                 (begin inserter after)
                  (list mv-call-out))))
             (t
              (loop with orig-de = (dynamic-environment inserter)
@@ -74,17 +87,21 @@
                                (return-from compile-ast :no-return))
                              (let* ((mv rv)
                                     (cout (make-instance 'bir:output))
-                                    (c (make-instance
-                                           'bir:values-collect
-                                         :inputs (nconc save-outs mv)
-                                         :outputs (list cout)))
                                     (after
                                       (make-iblock inserter
                                                    :dynamic-environment orig-de
-                                                   :name '#:mv-call))
+                                                   :name '#:mv-call-after))
+                                    (mv-block
+                                      (make-iblock inserter :name '#:mv-call))
+                                    (c (terminate
+                                        inserter 'bir:values-collect
+                                        :inputs (nconc save-outs mv)
+                                        :outputs (list cout)
+                                        :next (list mv-block)))
                                     (mvcout
                                       (make-instance 'bir:output)))
-                               (insert inserter c)
+                               (setf (bir:dynamic-environment mv-block) c)
+                               (begin inserter mv-block)
                                (insert inserter 'bir:mv-call
                                        :inputs (list (first callee) cout)
                                        :outputs (list mvcout))

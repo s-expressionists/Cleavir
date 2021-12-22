@@ -212,9 +212,6 @@
 (defmethod maybe-flush-instruction ((instruction bir:values-restore))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
-(defmethod maybe-flush-instruction ((instruction bir:values-collect))
-  (when (bir:unused-p (bir:output instruction))
-    (bir:delete-instruction instruction)))
 
 (defmethod maybe-flush-instruction ((instruction bir:thei))
   (when (and (bir:unused-p (bir:output instruction))
@@ -237,6 +234,13 @@
       (bir:delete-instruction instruction))))
 
 (defmethod maybe-flush-instruction ((inst bir:values-save))
+  (when (bir:unused-p (bir:output inst))
+    (bir:replace-terminator
+     (make-instance 'bir:jump
+       :next (bir:next inst) :inputs () :outputs ()
+       :origin (bir:origin inst) :policy (bir:policy inst))
+     inst)))
+(defmethod maybe-flush-instruction ((inst bir:values-collect))
   (when (bir:unused-p (bir:output inst))
     (bir:replace-terminator
      (make-instance 'bir:jump
