@@ -864,9 +864,7 @@
    (%form-asts :initarg :form-asts :reader form-asts)))
 
 (defun make-multiple-value-call-ast
-    (function-form-ast form-asts
-     &key origin (policy *policy*)
-       (attributes (cleavir-attributes:default-attributes)))
+    (function-form-ast form-asts &key origin (policy *policy*))
   (make-instance 'multiple-value-call-ast
     :origin origin :policy policy
     :function-form-ast function-form-ast :form-asts form-asts))
