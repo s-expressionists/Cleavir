@@ -38,8 +38,9 @@
 (defgeneric has-flag-p (attributes flag-name))
 
 (defmethod has-flag-p ((attributes null) flag-name)
-  (declare (ignore has-flag-p))
+  (declare (ignore flag-name))
   nil)
+
 (defmethod has-flag-p ((attributes attributes) flag-name)
   (%has-flag-p (flags attributes) flag-name))
 

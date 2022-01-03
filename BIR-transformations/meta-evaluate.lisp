@@ -820,7 +820,7 @@
                                 system)
             system))
           (t
-           (let ((argstype
+           (let* ((argstype
                    (ctype:values (loop for arg in (rest (bir:inputs inst))
                                        for ct = (bir:ctype arg)
                                        collect (ctype:primary ct system))

@@ -261,6 +261,7 @@
 ;;; When the function does return normally, wire the return value of
 ;;; the function into the common ``transitive'' use of the local calls.
 (defun contify (function local-calls return-point common-use common-dynenv target-owner)
+  (declare (ignore common-use))
   (let* ((returni (bir:returni function))
          ;; If there is exactly one outside call to the function, it may be in
          ;; the middle of a block, and have its output used somewhere other

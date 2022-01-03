@@ -1,6 +1,7 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defun compile-m-v-p1-save (inserter system mv form-asts))
+(defun compile-m-v-p1-save (inserter system mv form-asts)
+  (declare (ignore inserter system mv form-asts)))
 
 (defmethod compile-ast ((ast ast:multiple-value-prog1-ast) inserter system)
   (with-compiled-ast (rv (ast:first-form-ast ast) inserter system)
