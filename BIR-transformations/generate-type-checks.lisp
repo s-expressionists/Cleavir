@@ -21,11 +21,38 @@
             :origin (bir:origin thei)))))
 
 (defun generate-type-check (thei)
-  (let ((input (bir:input thei))
-        (type-check-function (bir:type-check-function thei)))
+  (let ((type-check-function (bir:type-check-function thei)))
     (unless (symbolp type-check-function)
-      (change-class thei 'bir:mv-local-call
-                    :inputs (list type-check-function input)))))
+      ;; See AST-to-BIR/compile-multiple-value-related-asts.lisp
+      ;; We split the iblock twice, in order to transform
+      ;; a single block {... -> thei -> ...}
+      ;; into three blocks
+      ;; {... -> values-collect} -> {mv-local-call -> jump} -> {...}
+      (let* ((input (bir:input thei))
+             (output (bir:output thei))
+             (origin (bir:origin thei)) (policy (bir:policy thei))
+             (before (bir:split-block-after thei))
+             (mv-block (nth-value 1 (bir:split-block-after thei)))
+             (function (bir:function thei))
+             (collect-out (make-instance 'bir:output
+                            :derived-type (bir:ctype output)))
+             (collect (make-instance 'bir:values-collect
+                        :inputs (list input)
+                        :outputs (list collect-out)
+                        :origin origin :policy policy
+                        :next (list mv-block)))
+             (call (make-instance 'bir:mv-local-call
+                     :inputs (list type-check-function collect-out)
+                     :outputs (list (bir:output thei))
+                     :origin origin :policy policy)))
+        (bir:replace-terminator collect (bir:end before))
+        (setf (bir:dynamic-environment mv-block) collect)
+        (bir:insert-instruction-before call (bir:end mv-block))
+        ;; Delete the THEI; make sure the type-check-function is no longer
+        ;; relevant
+        (setf (bir:type-check-function thei) :external)
+        (bir:delete-instruction thei)
+        (bir:verify (bir:module function))))))
 
 (defun generate-type-checks (function system)
   (let ((theis '()))
