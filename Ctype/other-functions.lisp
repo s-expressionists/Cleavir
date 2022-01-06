@@ -13,13 +13,33 @@
          (reduce (lambda (ct1 ct2) (disjoin/2 ct1 ct2 system))
                  ctypes))))
 
+(defun values-conjoin (system &rest ctypes)
+  (cond ((null ctypes) (values-top system))
+        ((null (cl:rest ctypes)) (first ctypes))
+        (t
+         (reduce (lambda (vct1 vct2) (values-conjoin/2 vct1 vct2 system))
+                 ctypes))))
+(defun values-disjoin (system &rest ctypes)
+  (cond ((null ctypes) (values-bottom system))
+        ((null (cl:rest ctypes)) (first ctypes))
+        (t
+         (reduce (lambda (vct1 vct2) (values-disjoin/2 vct1 vct2 system))
+                 ctypes))))
+
+(defun values-append (system &rest ctypes)
+  (cond ((null ctypes) (values-bottom system))
+        ((null (cl:rest ctypes)) (first ctypes))
+        (t
+         (reduce (lambda (vct1 vct2) (values-append/2 vct1 vct2 system))
+                 ctypes))))
+
 (defun disjointp (ct1 ct2 system)
   (bottom-p (conjoin/2 ct1 ct2 system) system))
 
 ;;; FIXME: Normalizing values types harder should eliminate these degenerate
 ;;; bottom types.
 (defun values-disjointp (vct1 vct2 system)
-  (let* ((vcc (values-conjoin vct1 vct2 system))
+  (let* ((vcc (values-conjoin system vct1 vct2))
          (required (values-required vcc system)))
     (flet ((botp (ct) (bottom-p ct system)))
       (or (some #'botp required)

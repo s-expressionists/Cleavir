@@ -80,8 +80,23 @@
 ;;;
 ;;; Given two values ctypes, compute their conjunction or disjunction.
 
-(defgeneric values-conjoin (ctype1 ctype2 system))
-(defgeneric values-disjoin (ctype1 ctype2 system))
+(defgeneric values-conjoin/2 (ctype1 ctype2 system))
+(defgeneric values-disjoin/2 (ctype1 ctype2 system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function VALUES-APPEND/2.
+;;;
+;;; Given two values ctypes, append them.
+;;; In more detail, if forms A and B have types Avt and Bvt,
+;;; (values-append Avt Bvt) is the type of (multiple-value-call #'values A B).
+;;; This operation is useful when dealing with multiple-value-call.
+;;; FIXME: This cannot always be exactly expressed as a values type, e.g.
+;;; (values-append '(values &optional a) '(values b)) is not
+;;; (values &optional a b) which would allow no values. Further thinking may
+;;; be required.
+
+(defgeneric values-append/2 (ctype1 ctype2 system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

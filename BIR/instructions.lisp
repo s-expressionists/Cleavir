@@ -82,7 +82,9 @@
 (defclass fixed-values-save (values-save)
   ((%nvalues :initarg :nvalues :reader nvalues)))
 
-(defclass values-collect (one-output instruction) ())
+(defclass values-restore (one-input one-output instruction) ())
+
+(defclass values-collect (dynamic-environment one-output terminator1) ())
 
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds

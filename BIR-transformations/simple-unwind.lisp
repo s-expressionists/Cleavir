@@ -32,8 +32,8 @@
 ;;; TODO: Much extension is possible:
 
 ;;; In cases where the unwind's dynamic environment has been
-;;; altered by the function that's unwinding, this pass does not understand
-;;; the unwind as simple. Those unwinds could be made simple by
+;;; augmented by the function that's unwinding, this pass does not
+;;; understand the unwind as simple. Those unwinds could be made simple by
 ;;; preceding them with an appropriate local-unwind.
 ;;; This insertion can and probably should be done back in AST-to-BIR,
 ;;; not here, since it's valid regardless.
@@ -44,58 +44,75 @@
 
 ;;; ALSO, might want to cache this information?
 
-;;; Nesting of dynamically safe functions is not understood by this
-;;; pass, e.g. the unwind and catch in
-;;; (block nil (mapc (lambda (x) (mapc (lambda (y) (return y)) x)) z))
-;;; are considered non-simple. This may not happen much in real code
-;;; anyway, though, so it may not be worth the effort?
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; A using-instruction of a function location is amenable to the
-;;; simplification process if
-;;; a) it's a call to a function that doesn't augment the dynamic
-;;;    environment for calls to the function, or
-;;; b) it's a call to the function
-(defun simplifiable-user-p (user fn)
-  (typecase user
-    (bir:abstract-call
-     (or (attributes:has-flag-p (bir:attributes user) :dyn-call)
-         (eq (bir:callee user) fn)))
-    (t nil)))
+;;; Used to treat recursive functions correctly.
+(defvar *seen*)
 
-;;; Detect whether a function is ever called or closed over in an
-;;; intermediate dynamic environment. If the function escapes, check
-;;; if it is passed into a "good" call.
-(defun find-intermediate-dynenv (catch function seen)
-  (when (set:presentp function seen)
-    (return-from find-intermediate-dynenv nil))
-  (set:nadjoinf seen function)
+;;; The below functions generally take a thing, and a destination dynamic
+;;; environment, and determine if the thing is simple with respect to that
+;;; destination.
+
+(defgeneric simple-dynenv-p (dynenv dest system)
+  (:method ((dynenv bir:dynamic-environment) (dest bir:dynamic-environment)
+            system)
+    (declare (ignore system))
+    (eq dynenv dest)))
+
+(defmethod simple-dynenv-p ((dynenv bir:function)
+                            (dest bir:dynamic-environment)
+                            system)
+  (function-called-simply-p dynenv dest system))
+
+(defgeneric simple-user-p (user dest datum system)
+  (:method ((user bir:instruction) (dest bir:dynamic-environment)
+            datum system)
+    (declare (ignore datum system))
+    nil))
+
+(defmethod simple-user-p ((user bir:abstract-call)
+                          (dest bir:dynamic-environment)
+                          datum system)
+  (and (or (eq (bir:callee user) datum)
+           (attributes:has-flag-p (bir:attributes user) :dyn-call))
+       (simple-instruction-p user dest system)))
+
+(defmethod simple-user-p ((user bir:abstract-local-call)
+                          (dest bir:dynamic-environment)
+                          (datum bir:function)
+                          system)
+  (and (eq (bir:callee user) datum)
+       (simple-instruction-p user dest system)))
+
+(defun function-called-simply-p (function catch system)
+  ;; If we've already analyzing this function, we must have hit a recursive
+  ;; call. In that case, we return true so the prior analysis can continue.
+  (when (set:presentp function *seen*)
+    (return-from function-called-simply-p t))
+  (set:nadjoinf *seen* function)
+  ;; If the function is closed over, in general we cannot conclude it's
+  ;; called simply - as it could be stored somewhere and called later, etc.
+  ;; However there are a few special cases we can handle.
   (let ((enclose (bir:enclose function)))
     (when enclose
       (let* ((eout (bir:output enclose))
              (user (bir:use eout)))
         (when (and user
-                   (not (and (eq (bir:dynamic-environment user)
-                                 catch)
-                             (simplifiable-user-p user enclose))))
-          (return-from find-intermediate-dynenv t)))))
-  (set:doset (call (bir:local-calls function))
-    (let ((dynamic-environment (bir:dynamic-environment call))
-          (function (bir:function call)))
-      (cond ((eq catch dynamic-environment))
-            ((eq function dynamic-environment)
-             (find-intermediate-dynenv catch function seen))
-            (t
-             (return-from find-intermediate-dynenv t))))))
+                   (not (simple-user-p user catch function system)))
+          (return-from function-called-simply-p nil)))))
+  ;; Now check over the local calls. They must all be simple.
+  (set:doset (call (bir:local-calls function) t)
+    (unless (simple-user-p call catch function system)
+      (return nil))))
 
-(defgeneric simple-unwinding-p (instruction))
-(defmethod simple-unwinding-p ((unwind bir:unwind))
-  (let ((function (bir:function unwind))
-        (catch (bir:catch unwind)))
-    (and (eq (bir:dynamic-environment unwind) function)
-         (not (find-intermediate-dynenv
-               catch
-               function
-               (set:empty-set))))))
+(defun simple-instruction-p (inst dest system)
+  (simple-dynenv-p (bir:dynamic-environment inst) dest system))
 
-(defmethod simple-unwinding-p ((inst bir:catch))
-  (set:every #'simple-unwinding-p (bir:unwinds inst)))
+(defgeneric simple-unwinding-p (instruction system))
+(defmethod simple-unwinding-p ((unwind bir:unwind) system)
+  (let ((*seen* (set:empty-set)))
+    (simple-instruction-p unwind (bir:catch unwind) system)))
+
+(defmethod simple-unwinding-p ((inst bir:catch) system)
+  (set:every (lambda (unw) (simple-unwinding-p unw system))
+             (bir:unwinds inst)))
