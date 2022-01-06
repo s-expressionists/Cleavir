@@ -10,7 +10,6 @@
 
 (defgeneric remove-use (datum use))
 (defmethod remove-use ((datum linear-datum) use)
-  (declare (cl:ignore use))
   (when (eql (%use datum) use)
     (setf (%use datum) nil)))
 (defmethod remove-use ((datum variable) use)

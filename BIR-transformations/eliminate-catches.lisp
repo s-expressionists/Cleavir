@@ -3,8 +3,7 @@
 (defun catch-eliminable-p (catch) (set:empty-set-p (bir:unwinds catch)))
 
 (defun eliminate-catch (catch)
-  (let ((nde (bir:dynamic-environment catch))
-        (fore (bir:iblock catch))
+  (let ((fore (bir:iblock catch))
         (normal-next (first (bir:next catch))))
     ;; Replace the instruction
     (bir:replace-terminator

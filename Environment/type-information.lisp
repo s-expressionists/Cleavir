@@ -169,6 +169,7 @@
   (parse-array-type-specifier 'array 'bit '(*) env sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:boolean)) env sys)
+  (declare (cl:ignore env))
   (cleavir-ctype:member sys nil t))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:character)) env sys)
@@ -200,12 +201,14 @@
     double-float long-float))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:extended-char)) env sys)
+  (declare (cl:ignore env))
   (cleavir-ctype:conjoin sys
                          (cleavir-ctype:character sys)
                          (cleavir-ctype:negate (cleavir-ctype:base-char sys)
                                                sys)))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:fixnum)) env sys)
+  (declare (cl:ignore env))
   (cleavir-ctype:fixnum sys))
 
 (defmethod parse-expanded-type-specifier
@@ -418,6 +421,7 @@
 
 (defmethod parse-compound-type-specifier ((head (eql 'signed-byte))
                                           rest env sys)
+  (declare (cl:ignore env))
   (destructuring-bind (&optional (bits '*)) rest
     (if (eq bits '*)
         (cleavir-ctype:range 'integer '* '* sys)
@@ -452,6 +456,7 @@
 
 (defmethod parse-compound-type-specifier ((head (eql 'unsigned-byte))
                                           rest env sys)
+  (declare (cl:ignore env))
   (destructuring-bind (&optional (bits '*)) rest
     (cleavir-ctype:range 'integer 0 (if (eq bits '*) '* (1- (ash 1 bits)))
                          sys)))
