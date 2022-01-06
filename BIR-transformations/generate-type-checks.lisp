@@ -33,7 +33,6 @@
              (origin (bir:origin thei)) (policy (bir:policy thei))
              (before (bir:split-block-after thei))
              (mv-block (nth-value 1 (bir:split-block-after thei)))
-             (function (bir:function thei))
              (collect-out (make-instance 'bir:output
                             :derived-type (bir:ctype output)))
              (collect (make-instance 'bir:values-collect
@@ -51,8 +50,7 @@
         ;; Delete the THEI; make sure the type-check-function is no longer
         ;; relevant
         (setf (bir:type-check-function thei) :external)
-        (bir:delete-instruction thei)
-        (bir:verify (bir:module function))))))
+        (bir:delete-instruction thei)))))
 
 (defun generate-type-checks (function system)
   (let ((theis '()))
