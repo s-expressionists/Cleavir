@@ -93,6 +93,9 @@
   (let ((bot (bottom sys)))
     (values (list bot) nil bot sys)))
 
+(defun values-bottom-p (vct sys)
+  (some (lambda (ct) (bottom-p ct sys)) (values-required vct sys)))
+
 ;;; Internal
 (defun intersection-ctype-p (ctype)
   (and (consp ctype) (eq (car ctype) 'and)))
@@ -178,6 +181,15 @@
 
 (defmethod values-disjoin/2 (vct1 vct2 sys)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
+  ;; If either type is bottom, return the other
+  ;; (the general case below does not handle bottom types optimally;
+  ;;  e.g. (values nil &rest t) (values t t) will disjoin to
+  ;;  (values t &optional t))
+  (cond ((values-bottom-p vct1 sys)
+         (return-from values-disjoin/2 vct2))
+        ((values-bottom-p vct2 sys)
+         (return-from values-disjoin/2 vct1)))
+  ;; General case
   (loop with required1 = (values-required vct1 sys)
         with optional1 = (values-optional vct1 sys)
         with rest1 = (values-rest vct1 sys)
