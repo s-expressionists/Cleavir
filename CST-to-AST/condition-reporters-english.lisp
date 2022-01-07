@@ -248,6 +248,16 @@
 	  (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
+    ((condition bind-constant-variable)
+     stream
+     (language acclimation:english))
+  (format stream
+          "Bound variables should not be constant variables,~@
+           but the following constant variable was found:~@
+           ~s"
+          (cst:raw (cst condition))))
+
+(defmethod acclimation:report-condition
     ((condition special-symbol-macro)
      stream
      (language acclimation:english))

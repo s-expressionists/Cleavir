@@ -243,6 +243,16 @@
     (compilation-program-error)
   ())
 
+;;; This condition is signaled when a variable binding is encountered,
+;;; but one of the s ymbols it applies to is a constant.
+;;; Note that the CLHS specifies that this has undefined consequences
+;;; rather than necessarily being an error. That is why this is a
+;;; warning rather than an error. Clients that want other
+;;; behavior should handle and suppress this condition.
+(define-condition bind-constant-variable
+    (compilation-warning)
+  ())
+
 ;;; This condition is signaled when a SPECIAL declaration is
 ;;; encountered, but one of the variables it applies to is a symbol
 ;;; macro.

@@ -201,10 +201,9 @@
 ;;; the binding form is compiled, return true if and only if the
 ;;; variable to be bound is special.  Return a second value indicating
 ;;; whether the variable is globally special.
-(defun variable-is-special-p (variable declarations env system)
-  (let* ((existing-var-info (env:variable-info system env variable))
-         (special-var-p
-           (typep existing-var-info 'env:special-variable-info)))
+(defun variable-is-special-p (variable declarations existing-var-info)
+  (let ((special-var-p
+          (typep existing-var-info 'env:special-variable-info)))
     (cond ((loop for declaration in declarations
                  thereis (and (eq (cst:raw (cst:first declaration)) 'special)
                               (eq (cst:raw (cst:second declaration)) variable)))
@@ -244,12 +243,15 @@
 ;;; the same as ENV.
 (defun augment-environment-with-variable
     (variable-cst declarations system env orig-env)
-  (let ((new-env env)
-        (raw-variable (cst:raw variable-cst))
-        (origin (cst:source variable-cst))
-        (raw-declarations (mapcar #'cst:raw declarations)))
+  (let* ((new-env env)
+         (raw-variable (cst:raw variable-cst))
+         (origin (cst:source variable-cst))
+         (raw-declarations (mapcar #'cst:raw declarations))
+         (info (env:variable-info system orig-env raw-variable)))
+    (when (typep info 'env:constant-variable-info)
+      (warn 'bind-constant-variable :cst variable-cst))
     (multiple-value-bind (special-p globally-p)
-        (variable-is-special-p raw-variable declarations orig-env system)
+        (variable-is-special-p raw-variable declarations info)
       (if special-p
           (unless globally-p
             (setf new-env

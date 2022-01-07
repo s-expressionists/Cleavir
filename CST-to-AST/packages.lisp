@@ -61,6 +61,7 @@
            #:setq-must-have-even-number-of-arguments
            #:setq-var-must-be-symbol
            #:setq-constant-variable
+           #:bind-constant-variable
            #:no-info
            #:no-function-info #:no-variable-info
            #:no-tag-info #:no-block-info
