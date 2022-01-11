@@ -180,13 +180,6 @@
                    (augment-environment-from-fdef result definition-cst)))
         finally (return result)))
 
-;;; Given an environment and the name of a function, return the
-;;; LEXICAL-VARIABLE that will have the function with that name as a
-;;; value.  It is known that the environment contains an entry
-;;; corresponding to the name given as an argument.
-(defun function-lexical (system environment name)
-  (env:identity (env:function-info system environment name)))
-
 ;;; Convert a local function definition.
 (defun convert-local-function (definition-cst operator environment system)
   ;; FIXME: The error message if this check fails needs improvement.
@@ -222,13 +215,16 @@
 ;;; AST of each function in a list of function ASTs to its associated
 ;;; LEXICAL-VARIABLE.  FUNCTIONS is a list of CONS cells.  Each CONS
 ;;; cell has a function name in its CAR and an AST in its CDR.
+;;; It is known that the environment contains an entry
+;;; corresponding to each function name.
 (defun compute-function-init-asts (functions env system)
   (loop for (name . fun-ast) in functions
+        for info = (env:function-info system env name)
         collect (ast:make-lexical-bind-ast
-                 (function-lexical system env name)
+                 (env:identity info)
                  fun-ast
                  :origin (ast:origin fun-ast)
-                 ;; TODO: propagate ignore declaration
+                 :ignore (env:ignore info)
                  )))
 
 (defun check-function-bindings (bindings operator)
@@ -254,10 +250,10 @@
                 system (env:declarations env) declaration-csts))
              (defs (convert-local-functions definitions-cst symbol env system))
              (new-env (augment-environment-from-fdefs env definitions-cst))
-             (init-asts
-               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
-                         new-env system canonical-declaration-specifiers)))
+                         new-env system canonical-declaration-specifiers))
+             (init-asts
+               (compute-function-init-asts defs final-env system)))
         (process-progn
          (append init-asts
                  (list
@@ -282,10 +278,10 @@
                 system (env:declarations env) declaration-csts))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
-             (init-asts
-               (compute-function-init-asts defs new-env system))
              (final-env (augment-environment-with-declarations
-                         new-env system canonical-declaration-specifiers)))
+                         new-env system canonical-declaration-specifiers))
+             (init-asts
+               (compute-function-init-asts defs final-env system)))
         (process-progn
          (append init-asts
                  (list
