@@ -7,5 +7,4 @@
 
 (defun convert-constant (constant-cst env system)
   (declare (ignore env system))
-  (ast:make-constant-ast (cst:raw constant-cst)
-    :origin (cst:source constant-cst)))
+  (ast:make-constant-ast (cst:raw constant-cst) :origin constant-cst))

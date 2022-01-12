@@ -25,18 +25,18 @@
               ;; simpler, as arguments in BIR are linear data.
               (if supplied-p-cst
                   (convert-variable supplied-p-cst env system)
-                  (ast:make-lexical-ast supplied-p :origin origin))
+                  (ast:make-lexical-ast supplied-p :origin var-cst))
               (convert-constant (make-atom-cst nil origin) env system)
-              :origin origin)
+              :origin var-cst)
              init-ast
-             (ast:make-lexical-ast var :origin origin)
-             :origin origin)
+             (ast:make-lexical-ast var :origin var-cst)
+             :origin var-cst)
             next-ast
             env system)))
     (if (null supplied-p-cst)
         next-ast
         (set-or-bind-variable supplied-p-cst
-                              (ast:make-lexical-ast supplied-p :origin origin)
+                              (ast:make-lexical-ast supplied-p :origin var-cst)
                               next-ast
                               env
                               system))))

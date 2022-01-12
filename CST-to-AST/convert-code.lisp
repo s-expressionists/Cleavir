@@ -310,8 +310,7 @@
         (var-cst (cst:name parameter)))
     (set-or-bind-variable
      var-cst
-     (ast:make-lexical-ast lexical-variable
-       :origin (cst:source var-cst))
+     (ast:make-lexical-ast lexical-variable :origin var-cst)
      (process-parameters-in-group remaining-parameters-in-group
                                   remaining-parameter-groups
                                   remaining-idspecs-in-group
@@ -497,7 +496,8 @@
                      (cst:children parsed-lambda-list)
                      idspecs
                      entries
-                     (make-body rdspecs (cst-for-body forms-cst block-name-cst origin))
+                     (make-body rdspecs (cst-for-body forms-cst block-name-cst
+                                                      (cst:source origin)))
                      env
                      system))
                   (bound-declarations

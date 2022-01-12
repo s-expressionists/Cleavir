@@ -14,6 +14,6 @@
     (assert (eql (cst:raw lambda-cst) 'cl:lambda) nil
             'lambda-call-first-symbol-not-lambda :cst lambda-cst)
     (ast:make-call-ast
-     (convert-code lambda-list-cst body-cst env system :origin origin)
+     (convert-code lambda-list-cst body-cst env system :origin cst)
      (convert-sequence args-cst env system)
-     :origin origin)))
+     :origin cst)))

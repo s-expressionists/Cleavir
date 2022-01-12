@@ -245,7 +245,6 @@
     (variable-cst declarations system env orig-env)
   (let* ((new-env env)
          (raw-variable (cst:raw variable-cst))
-         (origin (cst:source variable-cst))
          (raw-declarations (mapcar #'cst:raw declarations))
          (info (env:variable-info system orig-env raw-variable)))
     (when (typep info 'env:constant-variable-info)
@@ -256,7 +255,7 @@
           (unless globally-p
             (setf new-env
                   (env:add-special-variable new-env raw-variable)))
-          (let ((lexical-variable (ast:make-lexical-variable raw-variable :origin origin)))
+          (let ((lexical-variable (ast:make-lexical-variable raw-variable :origin variable-cst)))
             (setf new-env
                   (env:add-lexical-variable
                    new-env raw-variable lexical-variable)))))
@@ -295,6 +294,5 @@
 
 (defun augment-environment-with-local-function-name (name-cst environment)
   (let* ((name (cst:raw name-cst))
-         (origin (cst:source name-cst))
-         (lexical-variable (ast:make-lexical-variable name :origin origin)))
+         (lexical-variable (ast:make-lexical-variable name :origin name-cst)))
     (env:add-local-function environment name lexical-variable)))

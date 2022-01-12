@@ -9,7 +9,8 @@
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct expanded-form cst system)))
+         (expanded-cst (cst:reconstruct expanded-form cst system
+                                        :default-source cst)))
     (with-preserved-toplevel-ness
       (convert expanded-cst env system))))
 
@@ -46,7 +47,8 @@
     (cst (info env:local-macro-info) env system)
   (let* ((expander (env:expander info))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct expanded-form cst system)))
+         (expanded-cst (cst:reconstruct expanded-form cst system
+                                        :default-source cst)))
     (with-preserved-toplevel-ness
       (convert expanded-cst env system))))
 
@@ -66,7 +68,8 @@
           ;; so we just apply the macro expander, and then convert
           ;; the resulting form.
           (let* ((expanded-form (expand-macro expander cst env))
-                 (expanded-cst (cst:reconstruct expanded-form cst system)))
+                 (expanded-cst (cst:reconstruct expanded-form cst system
+                                                :default-source cst)))
             (convert expanded-cst env system))
           ;; There is a compiler macro, so we must see whether it will
           ;; accept or decline.
@@ -78,13 +81,15 @@
                 ;; when there was no compiler macro present.
                 (let* ((expanded-form
                          (expand-macro expander cst env))
-                       (expanded-cst (cst:reconstruct expanded-form cst system)))
+                       (expanded-cst (cst:reconstruct expanded-form cst system
+                                                      :default-source cst)))
                   (convert expanded-cst env system))
                 ;; If the two are not EQ, this means that the compiler
                 ;; macro replaced the original form with a new form.
                 ;; This new form must then again be converted without
                 ;; taking into account the real macro expander.
-                (let ((expanded-cst (cst:reconstruct expanded-form cst system)))
+                (let ((expanded-cst (cst:reconstruct expanded-form cst system
+                                                     :default-source cst)))
                   (convert expanded-cst env system))))))))
 
 ;;; Construct a CALL-AST representing a function-call form.  CST is
@@ -131,12 +136,12 @@
                                               (ctype:top system))
                                             rest)))
                                system)
-                              origin env system))
+                              cst env system))
                            argument-asts)
-                          :origin origin
+                          :origin cst
                           :inline (env:inline info))
        values
-       origin
+       cst
        env
        system))))
 
@@ -168,7 +173,8 @@
               ;; If the two are not EQ, this means that the compiler
               ;; macro replaced the original form with a new form.
               ;; This new form must then be converted.
-              (let ((expanded-cst (cst:reconstruct expanded-form cst system)))
+              (let ((expanded-cst (cst:reconstruct expanded-form cst system
+                                                   :default-source cst)))
                 (convert expanded-cst env system)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -188,11 +194,10 @@
 
 (defmethod convert-special-variable (cst info global-env system)
   (declare (ignore global-env system))
-  (let ((symbol (env:name info))
-        (origin (cst:source cst)))
+  (let ((symbol (env:name info)))
     (ast:make-symbol-value-ast
-     (ast:make-constant-ast symbol :origin origin)
-     :origin origin)))
+     (ast:make-constant-ast symbol :origin cst)
+     :origin cst)))
 
 (defmethod convert-cst
     (cst (info env:special-variable-info) env system)
@@ -208,11 +213,10 @@
   (when (eq (env:ignore info) 'ignore)
     (warn 'ignored-variable-referenced :cst cst))
   (let ((origin (cst:source cst)))
-    (type-wrap (ast:make-lexical-ast (env:identity info)
-                 :origin origin)
+    (type-wrap (ast:make-lexical-ast (env:identity info) :origin cst)
                (ctype:values (list (env:type info))
                                      nil (ctype:bottom system)
                                      system)
-               origin
+               cst
                env
                system)))

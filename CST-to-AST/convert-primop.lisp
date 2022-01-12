@@ -14,7 +14,7 @@
         :info info
         :argument-asts (convert-sequence args-cst env system)
         :attributes (cleavir-primop-info:attributes info)
-        :origin origin))))
+        :origin cst))))
 
 (defmacro defprimop (symbol)
   `(defmethod convert-special
@@ -48,7 +48,7 @@
     (ast:make-eq-ast
      (convert arg1-cst env system)
      (convert arg2-cst env system)
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -74,7 +74,7 @@
        (convert form-cst env system)
        vctype
        nil
-       :origin origin))))
+       :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -88,7 +88,7 @@
     (ast:make-typeq-ast
      (convert arg1-cst env system)
      (env:parse-type-specifier (cst:raw arg2-cst) env system)
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -127,15 +127,15 @@
                        (ast:make-case-ast
                         (convert keyform-cst env system)
                         comparees
-                        :origin origin)
+                        :origin cst)
                        (loop for body in dests
                              collect (process-progn
                                       (convert-sequence body env system)
-                                      origin))
+                                      cst))
                        (process-progn
                         (convert-sequence (cst:rest default) env system)
-                        origin)
-                       :origin origin))))))
+                        cst)
+                       :origin cst))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -156,7 +156,7 @@
      :argument-asts (mapcar
 		     (lambda (cst) (convert cst env system))
 		     (cst:listify arguments-cst))
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -195,7 +195,7 @@
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
                                       (cst:raw variable-cst) env system)
-                                     :origin origin)))
+                                     :origin cst)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -211,7 +211,7 @@
                                      (convert arg2-cst env system)
                                      (find-lexical-variable
                                       (cst:raw variable-cst) env system)
-                                     :origin origin)))
+                                     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -231,7 +231,7 @@
     (make-instance 'ast:fixnum-not-greater-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
-      :origin origin)))
+      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -245,7 +245,7 @@
     (make-instance 'ast:fixnum-greater-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
-      :origin origin)))
+      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -259,7 +259,7 @@
     (make-instance 'ast:fixnum-not-less-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
-      :origin origin)))
+      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -273,7 +273,7 @@
     (make-instance 'ast:fixnum-equal-ast
       :arg1-ast (convert arg1-cst env system)
       :arg2-ast (convert arg2-cst env system)
-      :origin origin)))
+      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -304,7 +304,7 @@
                       (variable (cst:raw variable-cst))
                       (variable-ast (ast:make-lexical-ast
                                      variable
-                                     :origin (cst:source variable-cst))))
+                                     :origin variable-cst)))
                  (setf new-env
                        (env:add-lexical-variable
                         new-env variable variable-ast))))
@@ -334,7 +334,7 @@
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
            collect (convert (cst:first remaining) env system))
-     :origin origin
+     :origin cst
      ;; FIXME: propagate inline here somehow.
      )))
 
@@ -362,7 +362,7 @@
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
            collect (convert (cst:first remaining) env system))
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -396,7 +396,7 @@
       :element-type (cst:raw type-cst)
       :simple-p (cst:raw simple-p-cst)
       :boxed-p (cst:raw boxed-p-cst)
-      :origin origin)))
+      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -424,7 +424,7 @@
       :element-type (cst:raw type-cst)
       :simple-p (cst:raw simple-p-cst)
       :boxed-p (cst:raw boxed-p-cst)
-      :origin origin)))
+      :origin cst)))
 
 ;;; The following macro is used to generate a method on
 ;;; CONVERT-SPECIAL for binary floating-point primops.
@@ -438,7 +438,7 @@
          :subtype (cst:raw type-cst)
          :arg1-ast (convert arg1-cst env system)
          :arg2-ast (convert arg2-cst env system)
-         :origin origin))))
+         :origin cst))))
 
 (define-float-binop cleavir-primop:float-add
   ast:float-add-ast)
@@ -470,7 +470,7 @@
        (make-instance ',ast
          :subtype (cst:raw type-cst)
          :arg-ast (convert arg-cst env system)
-         :origin origin))))
+         :origin cst))))
 
 (define-float-unop cleavir-primop:float-sin
   ast:float-sin-ast)
@@ -503,7 +503,7 @@
     (make-instance 'ast:coerce-ast
      :from (cst:raw type1-cst) :to (cst:raw type2-cst)
      :arg-ast (convert form-cst env system)
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -516,7 +516,7 @@
     ((symbol (eql 'cleavir-primop:unreachable)) cst env system)
   (declare (ignore env system))
   (check-simple-primop-syntax cst 0)
-  (make-instance 'ast:unreachable-ast :origin (cst:source cst)))
+  (make-instance 'ast:unreachable-ast :origin cst))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -540,4 +540,4 @@
                           'cl:compile)))
       (ast:make-constant-ast
        (convert form-cst (env:compile-time env) system)
-       :origin (cst:source form-cst)))))
+       :origin form-cst))))
