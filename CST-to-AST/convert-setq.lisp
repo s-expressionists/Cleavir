@@ -11,17 +11,17 @@
 
 (defmethod convert-setq
     (var-cst form-cst (info env:lexical-variable-info) env system)
-  (let ((origin (cst:source var-cst)))
-    (ast:make-setq-ast (env:identity info)
-                       (convert form-cst env system)
-                       :origin origin)))
+  (ast:make-setq-ast (env:identity info)
+                     (convert form-cst env system)
+                     :origin var-cst))
 
 (defmethod convert-setq
     (var-cst form-cst (info env:symbol-macro-info) env system)
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-variable (expand-macro expander var-cst env))
-         (expanded-cst (cst:reconstruct expanded-variable var-cst system))
+         (expanded-cst (cst:reconstruct expanded-variable var-cst system
+                                        :default-source var-cst))
          (origin (cst:source var-cst)))
     (convert (cst:quasiquote origin
                              (setf (cst:unquote expanded-cst)
@@ -31,17 +31,16 @@
 (defmethod convert-setq-special-variable
     (var-cst form-ast info global-env system)
   (declare (ignore global-env system))
-  (let* ((origin (cst:source var-cst))
-         (temp (ast:make-lexical-variable (gensym) :origin origin)))
+  (let ((temp (ast:make-lexical-variable (gensym) :origin var-cst)))
     (process-progn
-     (list (ast:make-lexical-bind-ast temp form-ast :origin origin)
+     (list (ast:make-lexical-bind-ast temp form-ast :origin var-cst)
 	   (ast:make-set-symbol-value-ast
 	    (ast:make-constant-ast (env:name info)
-              :origin origin)
-	    (ast:make-lexical-ast temp :origin origin)
-	    :origin origin)
-           (ast:make-lexical-ast temp :origin origin))
-     origin)))
+              :origin var-cst)
+	    (ast:make-lexical-ast temp :origin var-cst)
+	    :origin var-cst)
+           (ast:make-lexical-ast temp :origin var-cst))
+     var-cst)))
 
 (defmethod convert-setq
     (var-cst form-cst (info env:special-variable-info) env system)

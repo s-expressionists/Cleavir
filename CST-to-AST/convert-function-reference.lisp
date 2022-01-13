@@ -2,11 +2,10 @@
 
 (defmethod convert-global-function-reference (cst info global-env system)
   (declare (ignore global-env system))
-  (let ((source (cst:source cst)))
-    (ast:make-fdefinition-ast
-     (ast:make-constant-ast (env:name info) :origin source)
-     :attributes (env:attributes info)
-     :origin source)))
+  (ast:make-fdefinition-ast
+   (ast:make-constant-ast (env:name info) :origin cst)
+   :attributes (env:attributes info)
+   :origin cst))
 
 (defmethod convert-function-reference
     (cst (info env:global-function-info) env system)
@@ -16,8 +15,7 @@
 (defmethod convert-function-reference
     (cst (info env:local-function-info) env system)
   (declare (ignore env system))
-  (ast:make-lexical-ast (env:identity info)
-    :origin (cst:source cst)))
+  (ast:make-lexical-ast (env:identity info) :origin cst))
 
 (defmethod convert-function-reference
     (cst (info env:global-macro-info) env system)
@@ -51,8 +49,7 @@
 (defmethod convert-called-function-reference
     (cst (info env:local-function-info) env system)
   (declare (ignore env system))
-  (ast:make-lexical-ast (env:identity info)
-    :origin (cst:source cst)))
+  (ast:make-lexical-ast (env:identity info) :origin cst))
 
 (defmethod convert-called-function-reference
     (cst (info env:global-macro-info) env system)

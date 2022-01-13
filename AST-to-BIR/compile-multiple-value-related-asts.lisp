@@ -9,11 +9,13 @@
     ;; could be rewritten to account for this kind of context.
     (let* ((during (make-iblock inserter :name '#:mv-prog1-body))
            (de (dynamic-environment inserter))
-           (save-out (make-instance 'bir:output))
+           (save-out (make-instance 'bir:output
+                       :name '#:saved-values))
            (save (make-instance 'bir:values-save
                    :inputs rv
                    :outputs (list save-out) :next (list during)))
-           (read-out (make-instance 'bir:output))
+           (read-out (make-instance 'bir:output
+                       :name '#:restored-values))
            (read (make-instance 'bir:values-restore
                    :inputs (list save-out) :outputs (list read-out))))
       (setf (bir:dynamic-environment during) save)
@@ -46,7 +48,8 @@
             ((null (rest form-asts))
              (with-compiled-ast (mvarg (first form-asts) inserter system)
                (let* ((mv-call-out (make-instance 'bir:output))
-                      (collect-out (make-instance 'bir:output))
+                      (collect-out (make-instance 'bir:output
+                                     :name '#:collected-values))
                       (mv-block (make-iblock inserter :name '#:mv-call))
                       (collect (terminate inserter 'bir:values-collect
                                           :inputs mvarg
@@ -71,7 +74,8 @@
                    for mv = (if (eq rv :no-return)
                                 (return-from compile-ast :no-return)
                                 rv)
-                   for save-out = (make-instance 'bir:output)
+                   for save-out = (make-instance 'bir:output
+                                    :name '#:saved-values)
                    for save = (terminate
                                inserter 'bir:values-save
                                :inputs mv :outputs (list save-out)

@@ -11,11 +11,15 @@
 
 (defmethod acclimation:report-condition
     ((condition type-conflict) stream (language acclimation:english))
-  (format stream "The derived type of ~a~&is ~a~&but is asserted as ~a~&by ~a."
-          (datum condition)
+  (format stream "The derived type of ~:[<nameless datum>~;~:*~a~]
+is ~s~%but is asserted as ~s
+by ~a~:[~; in ~s~]."
+          (name (datum condition))
           (derived-type condition)
           (asserted-type condition)
-          (asserted-by condition)))
+          (asserted-by condition)
+          (conditions:origin condition)
+          (cst:raw (conditions:origin condition))))
 
 (defun group-problems (problems)
   ;; Group by subject. Also, put function problems before iblock problems, and

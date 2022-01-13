@@ -83,7 +83,11 @@
   (verify-outputs instruction)
   (let ((outputs (outputs instruction)))
     (test (or (null outputs) (not (set:presentp outputs *seen-lists*)))
-          "has shared output list ~a" instruction outputs)))
+          "has shared output list ~a" instruction outputs))
+  ;; verify source info is a CST if it exists
+  (let ((origin (origin instruction)))
+    (test (typep origin '(or null cst:cst))
+          "has invalid origin ~a" instruction origin)))
 
 (defmethod verify-outputs ((instruction writevar))
   (let ((outputs (outputs instruction)))

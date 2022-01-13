@@ -310,7 +310,7 @@
 
 (defmethod compile-ast ((ast ast:function-ast) inserter system)
   (let* ((f (compile-function ast system))
-         (enclose-out (make-instance 'bir:output))
+         (enclose-out (make-instance 'bir:output :name (bir:name f)))
          (enclose (make-instance 'bir:enclose
                     :code f :outputs (list enclose-out))))
     (setf (bir:enclose f) enclose)
@@ -342,7 +342,7 @@
     (with-compiled-ast (rv (ast:value-ast ast) inserter system)
       (insert inserter 'bir:writevar
               :inputs rv :outputs (list var))
-      (let ((readvar-out (make-instance 'bir:output)))
+      (let ((readvar-out (make-instance 'bir:output :name (bir:name var))))
         (insert inserter 'bir:readvar
                 :inputs (list var) :outputs (list readvar-out))
         (list readvar-out)))))
@@ -361,7 +361,8 @@
                   type-check-function system)
   (if (ctype:values-subtypep (bir:ctype linear-datum) asserted-type system)
       linear-datum
-      (let ((thei-out (make-instance 'bir:output)))
+      (let ((thei-out (make-instance 'bir:output
+                        :name (bir:name linear-datum))))
         (insert inserter 'bir:thei
                 :inputs (list linear-datum)
                 :outputs (list thei-out)
@@ -384,7 +385,8 @@
           ((not (symbolp type-check-function))
            ;; We do an mv-call here - see generate-type-checks.lisp
            ;; so we force receiving and outputting multiple values.
-           (let ((out (make-instance 'bir:output)))
+           (let ((out (make-instance 'bir:output
+                        :name (bir:name (first rv)))))
              (insert inserter 'bir:thei
                      :inputs rv :outputs (list out)
                      :asserted-type ctype
@@ -426,7 +428,9 @@
            (eblock (make-iblock inserter
                                 :name (symbolicate
                                        '#:typeq- tspec-str '#:-else)))
-           (tq-out (make-instance 'bir:output))
+           (tq-out (make-instance 'bir:output
+                     :name (symbolicate
+                            '#:typeq- tspec-str '#:-result)))
            (tq (make-instance 'bir:typeq-test
                  :inputs obj :outputs (list tq-out)
                  :test-ctype tspec)))
@@ -458,7 +462,7 @@
       (bir:argument (list var))
       (t
        (bir:record-variable-ref var)
-       (let ((readvar-out (make-instance 'bir:output)))
+       (let ((readvar-out (make-instance 'bir:output :name (bir:name var))))
          (insert inserter 'bir:readvar
                  :inputs (list var) :outputs (list readvar-out))
          (list readvar-out))))))
@@ -472,7 +476,8 @@
                             inserter system)
     (let ((tblock (make-iblock inserter :name '#:eq-then))
           (eblock (make-iblock inserter :name '#:eq-else)))
-      (let* ((eq-out (make-instance 'bir:output))
+      (let* ((eq-out (make-instance 'bir:output
+                       :name '#:eq-result))
              (eq-test (make-instance 'bir:eq-test
                         :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)
@@ -490,7 +495,8 @@
                             inserter system)
     (let ((tblock (make-iblock inserter :name '#:neq-then))
           (eblock (make-iblock inserter :name '#:neq-else)))
-      (let* ((eq-out (make-instance 'bir:output))
+      (let* ((eq-out (make-instance 'bir:output
+                       :name '#:neq-result))
              (eq-test (make-instance 'bir:eq-test
                         :inputs args :outputs (list eq-out))))
         (insert inserter eq-test)

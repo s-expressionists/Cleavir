@@ -17,8 +17,7 @@
             :datum input
             :asserted-type (bir:asserted-type thei)
             :derived-type (bir:ctype input)
-            :asserted-by thei
-            :origin (bir:origin thei)))))
+            :asserted-by thei))))
 
 (defun generate-type-check (thei)
   (let ((type-check-function (bir:type-check-function thei)))

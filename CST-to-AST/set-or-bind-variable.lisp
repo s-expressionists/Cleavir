@@ -20,7 +20,7 @@
 	 (list (ast:make-lexical-bind-ast
 		(env:identity info)
 		value-ast
-                :origin (cst:source variable-cst)
+                :origin variable-cst
                 :ignore (env:ignore info))
 	       next-ast)
-         :origin (cst:source variable-cst)))))
+         :origin variable-cst))))

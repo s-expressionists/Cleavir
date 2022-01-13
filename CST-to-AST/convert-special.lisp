@@ -32,11 +32,11 @@
     (let ((name (cst:raw name-cst)))
       (unless (symbolp name)
         (error 'block-name-must-be-a-symbol :cst name-cst))
-      (let* ((ast (ast:make-block-ast nil :name name :origin origin))
+      (let* ((ast (ast:make-block-ast nil :name name :origin cst))
              (new-env (env:add-block env name ast)))
         (setf (ast:body-ast ast)
               (process-progn (convert-sequence body-cst new-env system)
-                             origin))
+                             cst))
         ast))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,7 +58,7 @@
       (ast:make-return-from-ast
        (env:identity info)
        (convert value-cst env system)
-       :origin origin))))
+       :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -195,7 +195,7 @@
                     system
                     :name (list operator (cst:raw name-cst))
                     :block-name-cst block-name-cst
-                    :origin origin))))
+                    :origin definition-cst))))
 
 ;;; Convert a CST representing a list of local function definitions.
 (defun convert-local-functions (definitions-cst operator environment system)
@@ -258,8 +258,8 @@
          (append init-asts
                  (list
                   (process-progn (convert-sequence forms-cst final-env system)
-                                 origin)))
-         origin)))))
+                                 cst)))
+         cst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -287,8 +287,8 @@
                  (list
                   (process-progn
                    (convert-sequence forms-cst final-env system)
-                   origin)))
-         origin)))))
+                   cst)))
+         cst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -343,7 +343,7 @@
               (loop for (tag-cst) in tag-specs
                     collect (ast:make-tag-ast
                              (cst:raw tag-cst)
-                             :origin (cst:source tag-cst))))
+                             :origin tag-cst)))
             (new-env env))
         ;; Set up the environment for the inside of the tagbody.
         (loop for ast in tag-asts
@@ -352,21 +352,21 @@
                 (process-progn
                  (loop for prefix-cst in prefix-csts
                        collect (convert prefix-cst new-env system))
-                 origin)))
+                 cst)))
           ;; Now compile the bodies of the tags and insert them into the
           ;; TAG-ASTs.
           (loop for tag-ast in tag-asts
                 for (ignore . form-csts) in tag-specs
                 for seq = (loop for form-cst in form-csts
                                 collect (convert form-cst new-env system))
-                for progn = (process-progn seq origin)
+                for progn = (process-progn seq cst)
                 do (setf (ast:body-ast tag-ast) progn))
           ;; Finally, put together the tagbody, with NIL constant as described.
           (process-progn
            (list (ast:make-tagbody-ast
-                  prefix-ast tag-asts :origin origin)
+                  prefix-ast tag-asts :origin cst)
                  (convert-constant (make-atom-cst nil origin) env system))
-           origin))))))
+           cst))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -380,9 +380,7 @@
   (cst:db origin (go-cst tag-cst) cst
     (declare (ignore go-cst))
     (let ((info (tag-info env tag-cst)))
-      (ast:make-go-ast
-       (env:identity info)
-       :origin origin))))
+      (ast:make-go-ast (env:identity info) :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -402,7 +400,7 @@
                            (convert else-cst env system)))))
       (ast:make-if-ast
        test-ast
-       true-ast false-ast :origin origin))))
+       true-ast false-ast :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -433,10 +431,10 @@
       ;; up.
       (if (and (eq *compiler* 'cl:compile-file)
                (not (constantp form env)))
-          (ast:make-load-time-value-ast form read-only-p :origin origin)
+          (ast:make-load-time-value-ast form read-only-p :origin cst)
           (ast:make-constant-ast
            (cst-eval form-cst (env:compile-time env) system)
-           :origin origin)))))
+           :origin cst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -450,7 +448,7 @@
   (with-preserved-toplevel-ness
     (cst:db origin (progn-cst . form-csts) cst
       (declare (ignore progn-cst))
-      (process-progn (convert-sequence form-csts env system) origin))))
+      (process-progn (convert-sequence form-csts env system) cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -549,7 +547,7 @@
 (defun convert-lambda-function (lambda-form-cst env system)
   (convert-code (cst:second lambda-form-cst)
                 (cst:rest (cst:rest lambda-form-cst)) env system
-                :origin (cst:source lambda-form-cst)))
+                :origin lambda-form-cst))
 
 (defun check-function-syntax (cst)
   (check-cst-proper-list cst 'form-must-be-proper-list)
@@ -574,7 +572,7 @@
     (let ((result (if (proper-function-name-p name-cst)
                       (convert-named-function name-cst env system)
                       (convert-lambda-function name-cst env system))))
-      (reinitialize-instance result :origin origin))))
+      (reinitialize-instance result :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -591,7 +589,7 @@
                (env:parse-values-type-specifier
                 (cst:raw value-type-cst)
                 environment system)
-               origin environment system)))
+               cst environment system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -606,7 +604,7 @@
     (ast:make-multiple-value-prog1-ast
      (convert first-cst environment system)
      (convert-sequence rest-cst environment system)
-     :origin origin)))
+     :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -706,4 +704,4 @@
              (new-env (augment-environment-with-declarations
                        environment system canonical-declaration-specifiers)))
         (with-preserved-toplevel-ness
-          (process-progn (convert-sequence forms-cst new-env system) origin))))))
+          (process-progn (convert-sequence forms-cst new-env system) cst))))))
