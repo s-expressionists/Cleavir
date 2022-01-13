@@ -4,11 +4,14 @@
                                    conditions:program-style-warning)
   ((%variable :initarg :variable :reader variable)))
 
-(define-condition type-conflict (conditions:origin conditions:program-warning)
+(define-condition type-conflict (conditions:program-warning)
   ((%derived-type :initarg :derived-type :reader derived-type)
    (%asserted-type :initarg :asserted-type :reader asserted-type)
    (%datum :initarg :datum :reader datum)
    (%asserted-by :initarg :asserted-by :reader asserted-by)))
+
+(defmethod conditions:origin ((condition type-conflict))
+  (origin (asserted-by condition)))
 
 ;;; BIR failing the verifier means that something is wrong with the compiler,
 ;;; not the source code. So this is NOT a program-error.
