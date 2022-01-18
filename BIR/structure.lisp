@@ -38,6 +38,8 @@
 ;;; This type represents the type of the datum that we can assume when
 ;;; making inferences.
 (defgeneric ctype (linear-datum))
+;;; This type represents the type of the datum the code declares.
+(defgeneric asserted-type (linear-datum))
 
 ;;; Default for ctypes.
 (defvar *top-ctype*)
@@ -50,6 +52,10 @@
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
          :type (or null instruction))
+   ;; A type that the code declares holds for this linear-datum.
+   (%asserted-type :initform (current-top-ctype)
+                   :initarg :asserted-type
+                   :accessor asserted-type)
    ;; A type the compiler has proven holds for this linear-datum.
    (%derived-type :initform (current-top-ctype)
                   :initarg :derived-type

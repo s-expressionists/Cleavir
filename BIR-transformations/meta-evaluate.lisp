@@ -23,6 +23,11 @@
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
   (setf (bir:derived-type linear-datum)
         (ctype:values-conjoin system (bir:ctype linear-datum) derived-type)))
+;;; Pass along an assertion that LINEAR-DATUM is of type ASSERTED-TYPE.
+(defun assert-type-for-linear-datum (linear-datum asserted-type system)
+  (setf (bir:asserted-type linear-datum)
+        (ctype:values-conjoin system (bir:asserted-type linear-datum)
+                              asserted-type)))
 
 (defun derive-attributes (linear-datum new-attributes)
   (setf (bir:attributes linear-datum)
@@ -56,8 +61,9 @@
                   (bir:mv-local-call
                    ;; Parse the values type of the argument and use that info.
                    (let* ((vty
-                            (append-input-types (rest (bir:inputs local-call))
-                                                system))
+                            (append-input-types
+                             (mapcar #'bir:ctype (rest (bir:inputs local-call)))
+                             system))
                           (req (ctype:values-required vty system))
                           (lreq (length req))
                           (opt (ctype:values-optional vty system))
@@ -215,9 +221,7 @@
 
 (defmethod maybe-flush-instruction ((instruction bir:thei))
   (when (and (bir:unused-p (bir:output instruction))
-             ;; NOTE: Haven't really thought this through. Maybe we
-             ;; actually can delete THEIs even if they will be a type check?
-             ;; Might depend on safety.
+             ;; If this doesn't represent a check, it can be deleted.
              (symbolp (bir:type-check-function instruction)))
     (bir:delete-instruction instruction)))
 
@@ -409,6 +413,15 @@
     (when (= (length inputs) 1)
       (derive-attributes (bir:output instruction)
                          (bir:attributes (first inputs))))
+    (assert-type-for-linear-datum
+     (bir:output instruction)
+     (ctype:values
+      (loop for inp in inputs
+            collect (ctype:primary (bir:asserted-type inp) system))
+      nil
+      (ctype:bottom system)
+      system)
+     system)
     (derive-type-for-linear-datum
      (bir:output instruction)
      (ctype:values
@@ -539,6 +552,15 @@
       (set:doset (reader (bir:readers variable))
         (let ((out (bir:output reader)))
           (derive-type-for-linear-datum out type system)))))
+(defun assert-type-for-variable (variable system)
+  (when (bir:immutablep variable)
+    (let* ((atype (ctype:primary
+                   (bir:asserted-type (bir:input (bir:binder variable)))
+                   system))
+           (type (ctype:single-value atype system)))
+      (set:doset (reader (bir:readers variable))
+        (let ((out (bir:output reader)))
+          (assert-type-for-linear-datum out type system))))))
 
 (defun derive-attributes-for-variable (variable)
   (when (bir:immutablep variable)
@@ -556,15 +578,18 @@
   (let ((variable (bir:output instruction)))
     (when variable
       (derive-attributes-for-variable variable)
+      (assert-type-for-variable variable system)
       (derive-type-for-variable variable system))))
 
 (defmethod derive-types ((instruction bir:returni) system)
   ;; Propagate the return type to local calls and enclose of the function.
   (let ((function (bir:function instruction))
-        (return-type (bir:ctype (bir:input instruction))))
+        (return-type (bir:ctype (bir:input instruction)))
+        (areturn-type (bir:asserted-type (bir:input instruction))))
     (set:doset (local-call (bir:local-calls function))
-      (derive-type-for-linear-datum (bir:output local-call) return-type
-                                    system))))
+      (let ((out (bir:output local-call)))
+        (assert-type-for-linear-datum out areturn-type system)
+        (derive-type-for-linear-datum out return-type system)))))
 
 (defmethod derive-types ((instruction bir:enclose) system)
   (let ((ftype (ctype:single-value (ctype:function-top system) system)))
@@ -585,23 +610,34 @@
   (declare (ignore system)))
 
 (defmethod derive-types ((instruction bir:values-save) system)
+  (assert-type-for-linear-datum (bir:output instruction)
+                                (bir:asserted-type (bir:input instruction))
+                                system)
   (derive-type-for-linear-datum (bir:output instruction)
                                 (bir:ctype (bir:input instruction))
                                 system))
 
 (defmethod derive-types ((instruction bir:values-restore) system)
+  (assert-type-for-linear-datum (bir:output instruction)
+                                (bir:asserted-type (bir:input instruction))
+                                system)
   (derive-type-for-linear-datum (bir:output instruction)
                                 (bir:ctype (bir:input instruction))
                                 system))
 
-(defun append-input-types (inputs system)
-  (apply #'ctype:values-append system (mapcar #'bir:ctype inputs)))
+(defun append-input-types (types system)
+  (apply #'ctype:values-append system types))
 
 (defmethod derive-types ((instruction bir:values-collect) system)
-  (derive-type-for-linear-datum
-   (bir:output instruction)
-   (append-input-types (bir:inputs instruction) system)
-   system))
+  (let ((inputs (bir:inputs instruction)))
+    (assert-type-for-linear-datum
+     (bir:output instruction)
+     (append-input-types (mapcar #'bir:asserted-type inputs) system)
+     system)
+    (derive-type-for-linear-datum
+     (bir:output instruction)
+     (append-input-types (mapcar #'bir:ctype inputs) system)
+     system)))
 
 (defmethod meta-evaluate-instruction ((instruction bir:thei) system)
   (let ((ctype (bir:ctype (bir:input instruction))))
@@ -621,18 +657,23 @@
     ;; For THEI, the type we use to make inferences is the intersection
     ;; of what the compiler has proven about the input and what is
     ;; explicitly asserted when we are trusting THEI or explicitly type
-    ;; checking. However, when the type check is marked as being done
-    ;; externally, that means the compiler has not yet proven that the
-    ;; asserted type holds, and so it must return the type of the
-    ;; input. This gives us freedom to trust or explicitly check the
-    ;; assertion as needed while making this decision transparent to
-    ;; inference, and also type conflict when the type is checked
-    ;; externally.
+    ;; checking. However, when the type check is marked as neither,
+    ;; that means the compiler has not yet proven that the asserted type
+    ;; holds, and so it must return the type of the input. This gives us
+    ;; freedom to trust or explicitly check the assertion as needed while
+    ;; making this decision transparent to inference, and also type conflict
+    ;; when the type is checked elsewhere.
     (derive-type-for-linear-datum
      (bir:output instruction)
      (if (eq type-check-function nil)
          ctype
          (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
+     system)
+    ;; The asserted type can be propagated even if it's not checked.
+    (assert-type-for-linear-datum
+     (bir:output instruction)
+     (ctype:values-conjoin system (bir:asserted-type instruction)
+                           (bir:asserted-type input))
      system)
     ;; Propagate the type of the input into function.
     ;; FIXME: Extend this to values types.
@@ -773,8 +814,9 @@
   (let ((identities (attributes:identities (bir:attributes instruction))))
     (or
      (maybe-fold-mv-call identities
-                         (append-input-types (rest (bir:inputs instruction))
-                                             system)
+                         (append-input-types
+                          (mapcar #'bir:ctype (rest (bir:inputs instruction)))
+                          system)
                          instruction system)
      (some (lambda (identity) (transform-call system identity instruction))
            identities))))
@@ -829,12 +871,14 @@
             (bir:output inst)
             (derive-return-type inst (first identities)
                                 (append-input-types
-                                 (rest (bir:inputs inst)) system)
+                                 (mapcar #'bir:ctype (rest (bir:inputs inst)))
+                                 system)
                                 system)
             system))
           (t
            (let* ((argstype (append-input-types
-                             (rest (bir:inputs inst)) system))
+                             (mapcar #'bir:ctype (rest (bir:inputs inst)))
+                             system))
                   (types
                     (loop for identity in identities
                           collect (derive-return-type inst identity
