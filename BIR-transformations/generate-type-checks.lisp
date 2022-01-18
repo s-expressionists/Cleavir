@@ -48,7 +48,7 @@
         (bir:insert-instruction-before call (bir:end mv-block))
         ;; Delete the THEI; make sure the type-check-function is no longer
         ;; relevant
-        (setf (bir:type-check-function thei) :external)
+        (setf (bir:type-check-function thei) nil)
         (bir:delete-instruction thei)))))
 
 (defun generate-type-checks (function system)

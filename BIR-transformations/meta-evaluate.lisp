@@ -630,7 +630,7 @@
     ;; externally.
     (derive-type-for-linear-datum
      (bir:output instruction)
-     (if (eq type-check-function :external)
+     (if (eq type-check-function nil)
          ctype
          (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
      system)

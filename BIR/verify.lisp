@@ -373,6 +373,13 @@
             "is used by ~a, not an ifi instruction"
             instruction (use (first outputs))))))
 
+(defmethod verify progn ((instruction thei))
+  ;; Verify type decl
+  (test (typep (type-check-function instruction)
+               '(or (member :trusted nil) function))
+        "has invalid type-check-function ~a"
+        instruction (type-check-function instruction)))
+
 (defmethod verify progn ((iblock iblock))
   ;; Iblocks can input to themselves through PHIs, so make it seen immediately
   (set:nadjoinf *seen-iblocks* iblock)

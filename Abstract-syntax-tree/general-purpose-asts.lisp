@@ -710,8 +710,9 @@
    (%ctype :initarg :ctype :reader ctype)
    ;; This slot holds either a function which checks the FORM-AST,
    ;; :TRUSTED if we want to treat this as trusted type assertion with
-   ;; no check needed, or :EXTERNAL if a type check is needed but done
-   ;; elsewhere.
+   ;; no check needed, or NIL if the declaration is untrusted but not
+   ;; necessarily checked. See BIR/instructions.lisp for the canonical
+   ;; definition.
    (%type-check-function-ast :initarg :type-check-function-ast :reader type-check-function-ast)))
 
 (defun make-the-ast (form-ast ctype type-check-function-ast &key origin (policy *policy*))

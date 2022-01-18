@@ -143,10 +143,20 @@
 ;;; Represents a type assertion on the first input.
 (defclass thei (one-input one-output instruction)
   ((%asserted-type :initarg :asserted-type :accessor asserted-type)
-   ;; This slot holds either a function which checks the input,
-   ;; :TRUSTED if we want to treat this as trusted type assertion with
-   ;; no check needed, or :EXTERNAL if a type check is needed but done
-   ;; elsewhere.
-   (%type-check-function :initarg :type-check-function
+   ;; This slot holds either:
+   ;; * A (BIR) function, that will be called to determine if the input
+   ;;   is of the given type, and return it if so.
+   ;;   This is intended to be used in high-safety code, or to guard calls
+   ;;   to functions that would have bad behavior if given the wrong types.
+   ;;   The type declaration is propagated to both asserted and derived types.
+   ;; * :TRUSTED, meaning that this will be treated as a trusted type assertion.
+   ;;   This is intended to be used in low-safety code, or for the client to
+   ;;   communicate information it is completely sure of (e.g. CONS always
+   ;;   returns a cons, and this does not need to be checked).
+   ;;   The type declaration is propagated to both asserted and derived types.
+   ;; * NIL, meaning that this declaration is untrusted.
+   ;;   This is intended to be used to translate THE in normal code.
+   ;;   The type declaration is propagated to asserted types only.
+   (%type-check-function :initarg :type-check-function :initform nil
                          :accessor type-check-function
-                         :type (or (member :trusted :external) function))))
+                         :type (or (member :trusted nil) function))))
