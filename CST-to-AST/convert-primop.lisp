@@ -59,7 +59,8 @@
 ;;; Clients may choose to expand CL:THE forms into uses of
 ;;; this operator in situations where a type check is not
 ;;; what they want to do.
-;;; This operator has the same syntax as CL:THE.
+;;; This operator has the same syntax as CL:THE, except
+;;; it is unaffected by client logic in type-wrap etc.
 
 (defmethod convert-special
     ((symbol (eql 'cleavir-primop:the)) cst env system)
@@ -75,6 +76,55 @@
        vctype
        nil
        :origin cst))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Converting CLEAVIR-PRIMOP:TRULY-THE.
+;;;
+;;; This primitive operation represents a trusted type
+;;; declaration that the compiler should not bother
+;;; checking. Use of this may be dangerous.
+
+(defmethod convert-special
+    ((symbol (eql 'cleavir-primop:truly-the)) cst env system)
+  (check-cst-proper-list cst 'form-must-be-proper-list)
+  (check-argument-count cst 2 2)
+  (cst:db origin (the-cst value-type-cst form-cst) cst
+    (declare (ignore the-cst))
+    (let ((vctype (env:parse-values-type-specifier
+                   (cst:raw value-type-cst)
+                   env system)))
+      (ast:make-the-ast
+       (convert form-cst env system)
+       vctype
+       :trusted
+       :origin cst))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Converting CLEAVIR-PRIMOP:ENSURE-THE.
+;;;
+;;; This primitive operation represents a type check.
+;;; The checking function must be provided.
+
+(defmethod convert-special
+    ((symbol (eql 'cleavir-primop:ensure-the)) cst env system)
+  (check-cst-proper-list cst 'form-must-be-proper-list)
+  (check-argument-count cst 3 3)
+  (cst:db origin (the-cst value-type-cst
+                          type-check-function-cst form-cst)
+      cst
+    (declare (ignore the-cst))
+    (let ((vctype (env:parse-values-type-specifier
+                   (cst:raw value-type-cst)
+                   env system)))
+      (ast:make-the-ast
+       (convert form-cst env system)
+       vctype
+       ;; FIXME: Check that it's a lambda expression
+       (convert type-check-function-cst env system)
+       :origin cst))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

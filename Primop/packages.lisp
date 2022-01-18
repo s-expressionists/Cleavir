@@ -35,7 +35,7 @@
    #:aref #:aset
    #:call-with-variable-bound
    #:let-uninitialized
-   #:the
+   #:the #:truly-the #:ensure-the
    #:funcall
    #:multiple-value-call
    #:multiple-value-extract
