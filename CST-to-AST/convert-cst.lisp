@@ -214,9 +214,5 @@
     (warn 'ignored-variable-referenced :cst cst))
   (let ((origin (cst:source cst)))
     (type-wrap (ast:make-lexical-ast (env:identity info) :origin cst)
-               (ctype:values (list (env:type info))
-                                     nil (ctype:bottom system)
-                                     system)
-               cst
-               env
-               system)))
+               (ctype:single-value (env:type info) system)
+               cst env system)))
