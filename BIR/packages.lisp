@@ -55,6 +55,7 @@
            #:do-iblock-instructions)
   (:export #:map-local-instructions
            #:insert-instruction-before #:insert-instruction-after
+           #:move-instruction-before #:move-instruction-after
            #:delete-instruction
            #:replace-uses #:replace-terminator
            #:split-block-after #:delete-iblock #:maybe-delete-iblock

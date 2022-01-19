@@ -639,23 +639,157 @@
      (append-input-types (mapcar #'bir:ctype inputs) system)
      system)))
 
+;;; Move a thei to earlier in the code.
+;;; It is not clear if this is permissible in general; while the behavior
+;;; of a program with a violated type declaration is undefined, users might
+;;; not expect an error until at earliest when the declaration is, so we don't
+;;; lift checks unless there is a (possibly unchecked) declaration.
+;;; See the meta-evaluate-instruction method below.
+;;; Anyway, so we try to move the thei as far back as possible given
+;;; this restriction. We try the point just after the input is defined,
+;;; and then if the definition is one of certain instructions we keep moving
+;;; up. We don't move past other checks in order to avoid repeated shuffling.
+;;; Also, on non-SSAs we don't do anything.
+(defgeneric lift-thei (input thei system)
+  (:method ((input bir:datum) (thei bir:thei) system)
+    (declare (ignore system))
+    nil))
+
+(defun lift-thei-after (input thei inst system)
+  (let ((new-out (make-instance 'bir:output
+                   :derived-type (ctype:values-conjoin
+                                  system
+                                  ;; This thei is a check, therefore
+                                  (bir:asserted-type thei)
+                                  (bir:ctype input))
+                   :asserted-type (ctype:values-conjoin
+                                   system
+                                   (bir:asserted-type thei)
+                                   (bir:asserted-type input))
+                   :attributes (bir:attributes input)
+                   :name (bir:name input))))
+    ;; Remove the old thei assignment
+    (bir:replace-uses (bir:input thei) (bir:output thei))
+    ;; Put in the new output
+    (bir:replace-uses new-out input)
+    (setf (bir:inputs thei) (list input) (bir:outputs thei) (list new-out))
+    ;; Move
+    (bir:move-instruction-after thei inst)
+    t))
+(defun lift-thei-before (input thei inst system)
+  (let ((new-out (make-instance 'bir:output
+                   :derived-type (ctype:values-conjoin
+                                  system
+                                  ;; This thei is a check, therefore
+                                  (bir:asserted-type thei)
+                                  (bir:ctype input))
+                   :asserted-type (ctype:values-conjoin
+                                   system
+                                   (bir:asserted-type thei)
+                                   (bir:asserted-type input))
+                   :attributes (bir:attributes input)
+                   :name (bir:name input))))
+    ;; Remove the old thei assignment
+    (bir:replace-uses (bir:input thei) (bir:output thei))
+    ;; Put in the new output
+    (bir:replace-uses new-out input)
+    (setf (bir:inputs thei) input (bir:outputs thei) (list new-out))
+    ;; Move
+    (bir:move-instruction-before thei inst)
+    t))
+
+(defgeneric lift-thei-through-inst (output thei inst system)
+  (:method ((datum bir:output) (thei bir:thei) (inst bir:instruction) system)
+    (lift-thei-after datum thei inst system)))
+
+(defmethod lift-thei-through-inst ((thei-input bir:output) (thei bir:thei)
+                                   (inst bir:thei) system)
+  (let ((tcf (bir:type-check-function inst)))
+    (if (symbolp tcf)
+        ;; This might be the thei providing a specific enough
+        ;; type for us to do the lift, in which case we
+        ;; shouldn't lift past it.
+        (if (ctype:values-subtypep
+             (bir:asserted-type (bir:input inst))
+             (bir:asserted-type thei)
+             system)
+            ;; We're good, continue.
+            (lift-thei (bir:input inst) thei system)
+            ;; Nope we're done.
+            (call-next-method))
+        ;; Don't move past other checks, in order to avoid
+        ;; repeated shuffling or any weird ordering issues.
+        ;; Also to avoid propagating too tight a type to the type check
+        ;; function itself before we move it.
+        (call-next-method))))
+
+(defmethod lift-thei-through-inst ((thei-input bir:output) (thei bir:thei)
+                                   (inst bir:readvar) system)
+  (let ((var (bir:input inst)))
+    (if (bir:immutablep var)
+        (let ((wvinput (bir:input (bir:binder var))))
+          ;; This check probably isn't actually necessary
+          ;; (because where else would a declaration come from?)
+          ;; but I am not totally sure.
+          (if (ctype:values-subtypep
+               (bir:asserted-type wvinput)
+               (bir:asserted-type thei)
+               system)
+              ;; Lift past the readvar and leti.
+              (lift-thei wvinput thei system)
+              (call-next-method)))
+        ;; For now, at least, don't duplicate checks as we'd need to do
+        ;; with multiple writers.
+        (call-next-method))))
+
+;;; TODO: fixed-to-multiple, at least?
+
+(defmethod lift-thei ((input bir:output) (thei bir:thei) system)
+  (lift-thei-through-inst input thei (bir:definition input) system))
+
+(defmethod lift-thei ((thei-input bir:phi) (thei bir:thei) system)
+  ;; For a phi with multiple sources, we'd have to replicate the THEI.
+  ;; We don't do that. The THEI is just moved to the start of the phi's iblock.
+  ;; Maybe in the future it could be good though?
+  (lift-thei-before thei-input thei (bir:start (bir:iblock thei-input))
+                    system))
+
+(defmethod lift-thei ((thei-input bir:argument) (thei bir:thei) system)
+  ;; TODO: For an argument to a function that is only called in one place
+  ;; locally, we could move the thei out of the function.
+  (lift-thei-before thei-input thei
+                    (bir:start (bir:start (bir:function thei))) system))
+
 (defmethod meta-evaluate-instruction ((instruction bir:thei) system)
-  (cond
-    ;; Remove THEI when its input's type is a subtype of the
-    ;; THEI's asserted type.
-    ((ctype:values-subtypep (bir:ctype (bir:input instruction))
-                            (bir:asserted-type instruction) system)
-     (bir:delete-thei instruction)
-     t)
-    ;; Also remove THEI when it's not a check and its input's asserted type
-    ;; is a subtype of the THEI's.
-    ((and (symbolp (bir:type-check-function instruction))
-          (ctype:values-subtypep
-           (bir:asserted-type (bir:input instruction))
-           (bir:asserted-type instruction)
-           system))
-     (bir:delete-thei instruction)
-     t)))
+  (let ((input (bir:input instruction))
+        (tcf (bir:type-check-function instruction)))
+    (cond
+      ;; Remove THEI when its input's type is a subtype of the
+      ;; THEI's asserted type.
+      ((ctype:values-subtypep (bir:ctype input)
+                              (bir:asserted-type instruction)
+                              system)
+       (bir:delete-thei instruction)
+       t)
+      ;; Also remove THEI when it's not a check and its input's asserted type
+      ;; is a subtype of the THEI's.
+      ((and (symbolp tcf)
+            (ctype:values-subtypep
+             (bir:asserted-type input)
+             (bir:asserted-type instruction)
+             system))
+       (bir:delete-thei instruction)
+       t)
+      ;; If this is a check and the check&derived type is a subtype of the
+      ;; input's asserted type, lift it.
+      ((and clasp-cleavir::*dis*
+            (not (symbolp tcf))
+            (ctype:values-subtypep
+             (ctype:values-conjoin system (bir:asserted-type instruction)
+                                   (bir:ctype input))
+             (bir:asserted-type input)
+             system))
+       (lift-thei input instruction system)))))
 
 (defmethod derive-types ((instruction bir:thei) system)
   (derive-attributes (bir:output instruction)

@@ -102,6 +102,14 @@
           (iblock new) (iblock existing)))
   (values))
 
+(defun move-instruction-before (movant existing)
+  (unlink-instruction movant)
+  (insert-instruction-before movant existing))
+
+(defun move-instruction-after (movant existing)
+  (unlink-instruction movant)
+  (insert-instruction-after movant existing))
+
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
   (:method-combination progn)
@@ -215,10 +223,9 @@
         (setf (outputs def) (list-sans-index (outputs def) pos))
         (setf (inputs def) (list-sans-index (inputs def) pos))))))
 
-;;; Delete an instruction. Must not be a terminator.
-(defun delete-instruction (instruction)
-  (check-type instruction (and instruction (not terminator)))
-  (clean-up-instruction instruction)
+;;; Remove an instruction from control flow without cleaning it up.
+;;; This can be used to move instructions.
+(defun unlink-instruction (instruction)
   ;; Delete from the control flow.
   (let ((pred (predecessor instruction))
         (succ (successor instruction)))
@@ -229,6 +236,13 @@
            (setf (start (iblock instruction)) succ))
           (t
            (setf (successor pred) succ))))
+  (values))
+
+;;; Delete an instruction. Must not be a terminator.
+(defun delete-instruction (instruction)
+  (check-type instruction (and instruction (not terminator)))
+  (clean-up-instruction instruction)
+  (unlink-instruction instruction)
   (values))
 
 (defgeneric replace-terminator (new old))
