@@ -640,12 +640,22 @@
      system)))
 
 (defmethod meta-evaluate-instruction ((instruction bir:thei) system)
-  (let ((ctype (bir:ctype (bir:input instruction))))
+  (cond
     ;; Remove THEI when its input's type is a subtype of the
     ;; THEI's asserted type.
-    (when (ctype:values-subtypep ctype (bir:asserted-type instruction) system)
-      (bir:delete-thei instruction)
-      t)))
+    ((ctype:values-subtypep (bir:ctype (bir:input instruction))
+                            (bir:asserted-type instruction) system)
+     (bir:delete-thei instruction)
+     t)
+    ;; Also remove THEI when it's not a check and its input's asserted type
+    ;; is a subtype of the THEI's.
+    ((and (symbolp (bir:type-check-function instruction))
+          (ctype:values-subtypep
+           (bir:asserted-type (bir:input instruction))
+           (bir:asserted-type instruction)
+           system))
+     (bir:delete-thei instruction)
+     t)))
 
 (defmethod derive-types ((instruction bir:thei) system)
   (derive-attributes (bir:output instruction)
@@ -663,12 +673,9 @@
     ;; freedom to trust or explicitly check the assertion as needed while
     ;; making this decision transparent to inference, and also type conflict
     ;; when the type is checked elsewhere.
-    (derive-type-for-linear-datum
-     (bir:output instruction)
-     (if (eq type-check-function nil)
-         ctype
-         (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
-     system)
+    (unless (eq type-check-function nil)
+      (derive-type-for-linear-datum
+       (bir:output instruction) ctype system))
     ;; The asserted type can be propagated even if it's not checked.
     (assert-type-for-linear-datum
      (bir:output instruction)
