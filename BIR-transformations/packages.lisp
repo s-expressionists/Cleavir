@@ -14,5 +14,6 @@
   (:export #:determine-closure-extents)
   (:export #:determine-variable-extents)
   (:export #:meta-evaluate-module
+           #:generate-type-check-function
            #:transform-call #:fold-call #:derive-return-type)
   (:export #:module-generate-type-checks))

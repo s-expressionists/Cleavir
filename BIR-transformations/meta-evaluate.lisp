@@ -467,17 +467,55 @@
                (bir:delete-instruction instruction)
                t))))))
 
+(defgeneric generate-type-check-function (module origin ctype system)
+  ;; If the client does not specialize this function, do not reduce
+  ;; typeq in the declared-but-not-verified case.
+  (:method ((module bir:module) origin ctype system)
+    (declare (ignore origin ctype system))
+    nil))
+
+(defun insert-type-check-before (ctype input inst system)
+  (let ((tcf (generate-type-check-function (bir:module (bir:function inst))
+                                           (bir:origin inst) ctype system)))
+    (if tcf
+        (let* ((actype (bir:asserted-type input))
+               (cctype (ctype:conjoin system ctype
+                                      (ctype:primary (bir:ctype input) system)))
+               (out (make-instance 'bir:output
+                      :asserted-type actype
+                      :derived-type (ctype:single-value cctype system)
+                      :attributes (bir:attributes input)
+                      :name (bir:name input)))
+               (thei (make-instance 'bir:thei
+                       :inputs (list input) :outputs (list out)
+                       :origin (bir:origin inst) :policy (bir:policy inst)
+                       :asserted-type (ctype:single-value ctype system)
+                       :type-check-function tcf)))
+          (bir:insert-instruction-before thei inst)
+          t)
+        nil)))
+
 (defmethod meta-evaluate-instruction
     ((instruction bir:typeq-test) system)
-  (let ((ctype (ctype:primary
-                (bir:ctype (bir:input instruction)) system))
-        (test-ctype (bir:test-ctype instruction)))
+  (let* ((input (bir:input instruction))
+         (ctype (ctype:primary (bir:ctype input) system))
+         (actype (ctype:primary (bir:asserted-type input) system))
+         (test-ctype (bir:test-ctype instruction)))
     (cond ((ctype:subtypep ctype test-ctype system)
            (replace-computation-by-constant-value instruction t)
            t)
           ((ctype:disjointp ctype test-ctype system)
            (replace-computation-by-constant-value instruction nil)
-           t))))
+           t)
+          ((ctype:subtypep actype test-ctype system)
+           (when (insert-type-check-before test-ctype input instruction system)
+             (replace-computation-by-constant-value instruction t)
+             t))
+          ((ctype:disjointp actype test-ctype system)
+           (when (insert-type-check-before (ctype:negate test-ctype system)
+                                           input instruction system)
+             (replace-computation-by-constant-value instruction nil)
+             t)))))
 
 (defmethod derive-types ((instruction bir:constant-reference) system)
   (derive-type-for-linear-datum
