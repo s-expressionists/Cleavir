@@ -704,6 +704,7 @@
                                    (bir:asserted-type input))
                    :attributes (bir:attributes input)
                    :name (bir:name input))))
+    (assert (typep inst '(not bir:terminator)))
     ;; Remove the old thei assignment
     (bir:replace-uses (bir:input thei) (bir:output thei))
     ;; Put in the new output
@@ -729,10 +730,23 @@
     (bir:replace-uses (bir:input thei) (bir:output thei))
     ;; Put in the new output
     (bir:replace-uses new-out input)
-    (setf (bir:inputs thei) input (bir:outputs thei) (list new-out))
+    (setf (bir:inputs thei) (list input) (bir:outputs thei) (list new-out))
     ;; Move
     (bir:move-instruction-before thei inst)
     t))
+(defun lift-thei-to-iblock-start (input thei iblock system)
+  ;; In order to avoid repeated shuffling, we do not move THEIs up past other
+  ;; THEIs, even for other data, etc.
+  (when (not (eq (bir:iblock thei) iblock))
+    (bir:do-iblock-instructions (inst iblock)
+      (if (typep inst 'bir:thei)
+          (when (eq inst thei)
+            ;; thei is already at head of iblock and only has other THEIs in
+            ;; front of it. So don't move.
+            (return-from lift-thei-to-iblock-start nil))
+          ;; Found a non-THEI, so we can do the move.
+          (return-from lift-thei-to-iblock-start
+            (lift-thei-before input thei inst system))))))
 
 (defgeneric lift-thei-through-inst (output thei inst system)
   (:method ((datum bir:output) (thei bir:thei) (inst bir:instruction) system)
@@ -787,14 +801,13 @@
   ;; For a phi with multiple sources, we'd have to replicate the THEI.
   ;; We don't do that. The THEI is just moved to the start of the phi's iblock.
   ;; Maybe in the future it could be good though?
-  (lift-thei-before thei-input thei (bir:start (bir:iblock thei-input))
-                    system))
+  (lift-thei-to-iblock-start thei-input thei (bir:iblock thei-input) system))
 
 (defmethod lift-thei ((thei-input bir:argument) (thei bir:thei) system)
   ;; TODO: For an argument to a function that is only called in one place
   ;; locally, we could move the thei out of the function.
-  (lift-thei-before thei-input thei
-                    (bir:start (bir:start (bir:function thei))) system))
+  (lift-thei-to-iblock-start thei-input thei (bir:start (bir:function thei))
+                             system))
 
 (defmethod meta-evaluate-instruction ((instruction bir:thei) system)
   (let ((input (bir:input instruction))

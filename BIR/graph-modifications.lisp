@@ -103,10 +103,12 @@
   (values))
 
 (defun move-instruction-before (movant existing)
+  (assert (not (eql movant existing)))
   (unlink-instruction movant)
   (insert-instruction-before movant existing))
 
 (defun move-instruction-after (movant existing)
+  (assert (not (eql movant existing)))
   (unlink-instruction movant)
   (insert-instruction-after movant existing))
 
