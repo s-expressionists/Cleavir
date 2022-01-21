@@ -818,8 +818,7 @@
        t)
       ;; If this is a check and the check&derived type is a subtype of the
       ;; input's asserted type, lift it.
-      ((and clasp-cleavir::*dis*
-            (not (symbolp tcf))
+      ((and (not (symbolp tcf))
             (ctype:values-subtypep
              (ctype:values-conjoin system (bir:asserted-type instruction)
                                    (bir:ctype input))
