@@ -821,7 +821,7 @@
        (bir:delete-thei instruction)
        t)
       ;; Also remove THEI when it's not a check and its input's asserted type
-      ;; is a subtype of the THEI's.
+      ;; is a subtype of the THEI's. Means this THEI is redundant.
       ((and (symbolp tcf)
             (ctype:values-subtypep
              (bir:asserted-type input)
@@ -829,13 +829,15 @@
              system))
        (bir:delete-thei instruction)
        t)
-      ;; If this is a check and the check&derived type is a subtype of the
-      ;; input's asserted type, lift it.
+      ;; If this is a check and the asserted type is a subtype of the
+      ;; check's type, we can lift the check.
+      ;; e.g. if X is asserted as an (unsigned-byte 8), and we have
+      ;; a check for type FIXNUM, we can move that check up to the
+      ;; declaration.
       ((and (not (symbolp tcf))
             (ctype:values-subtypep
-             (ctype:values-conjoin system (bir:asserted-type instruction)
-                                   (bir:ctype input))
              (bir:asserted-type input)
+             (bir:asserted-type instruction)
              system))
        (lift-thei input instruction system)))))
 
