@@ -2,7 +2,7 @@
 
 ;;;; Load an example environment full of stuff from the host.
 
-(defun load-environment (env)
+(defun load-environment (&optional (env *environment*))
   (do-external-symbols (s "CL")
     (cond ((constantp s)
            (%defconstant s (cl:eval s) env))

@@ -22,6 +22,9 @@
               :accessor optimize* :type list)
    (%policy :accessor policy :type list)))
 
+;;; And we use this variable as the "global" environment in the compiler.
+(defvar *environment* (make-instance 'environment))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Basic definitions

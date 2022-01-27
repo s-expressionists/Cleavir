@@ -3,6 +3,8 @@
 (defsystem :cleavir-example
   :depends-on (:cleavir-ctype :cleavir-environment :cleavir-compilation-policy
                               :cleavir-primop
+               :cleavir-cst-to-ast :cleavir-ast-to-bir
+               :cleavir-bir-transformations
                :concrete-syntax-tree)
   :components
   ((:file "packages")
@@ -12,4 +14,5 @@
                                                              "packages"))
    (:file "macros" :depends-on ("packages"))
    (:file "load-environment" :depends-on ("macros" "environment"
-                                                   "packages"))))
+                                                   "packages"))
+   (:file "compile" :depends-on ("system" "environment" "packages"))))
