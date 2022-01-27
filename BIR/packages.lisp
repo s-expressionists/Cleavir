@@ -70,4 +70,5 @@
   (:export #:display #:disassemble)
   (:export #:display-module-disassembly #:display-function-disassembly
            #:display-iblock-disassembly #:display-instruction-disassembly)
-  (:export #:with-disassembly))
+  (:export #:with-disassembly)
+  (:export #:*show-dynenv* #:*show-ctype*))

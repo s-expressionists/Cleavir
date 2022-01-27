@@ -21,10 +21,10 @@
 (defvar *ids*)
 (defvar *name-ids*)
 
-;;; Control parameters, maybe export these later?
+;;; Control parameters
 
-(defvar *show-dynenv* t)
-(defvar *show-ctype* t)
+(defvar cleavir-bir-disassembler:*show-dynenv* t)
+(defvar cleavir-bir-disassembler:*show-ctype* nil)
 
 ;;; More advanced usage: You can use the WITH-DISASSEMBLY macro around multiple
 ;;; disassembly operations. All disassemble operations in the dynamic extent of
@@ -179,7 +179,7 @@
                        (functions module)))))
 
 (defun cleavir-bir-disassembler:display-instruction-disassembly
-    (inst-disasm &key (show-ctype *show-ctype*))
+    (inst-disasm &key (show-ctype cleavir-bir-disassembler:*show-ctype*))
   (destructuring-bind (assign outs . rest) inst-disasm
     (declare (cl:ignore assign))
     (format t "~&     ")
@@ -198,8 +198,10 @@
   (values))
 
 (defun cleavir-bir-disassembler:display-iblock-disassembly
-    (iblock-disasm &key (show-dynenv *show-dynenv*)
-                     ((:show-ctype *show-ctype*) *show-ctype*))
+    (iblock-disasm &key
+                     (show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+                     ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+                      cleavir-bir-disassembler:*show-ctype*))
   (destructuring-bind ((label . args) dynenv entrances &rest insts)
       iblock-disasm
     (format t "~&  iblock ~a ~:a:" label args)
@@ -211,8 +213,11 @@
   (values))
 
 (defun cleavir-bir-disassembler:display-function-disassembly
-    (function-disasm &key ((:show-dynenv *show-dynenv*) *show-dynenv*)
-                     ((:show-ctype *show-ctype*) *show-ctype*))
+    (function-disasm &key
+                     ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+                      cleavir-bir-disassembler:*show-dynenv*)
+                     ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+                      cleavir-bir-disassembler:*show-ctype*))
   (destructuring-bind ((name start args env) . iblocks)
       function-disasm
     (format t "~&function ~a ~:a ~&     with environment ~(~:a~) ~&     with start iblock ~a"
@@ -221,8 +226,11 @@
   (values))
 
 (defun cleavir-bir-disassembler:display-module-disassembly
-    (disasm &key ((:show-dynenv *show-dynenv*) *show-dynenv*)
-            ((:show-ctype *show-ctype*) *show-ctype*))
+    (disasm &key
+              ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+               cleavir-bir-disassembler:*show-dynenv*)
+              ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+               cleavir-bir-disassembler:*show-ctype*))
   (format t "~&-------module-------")
   (destructuring-bind (constants . funs) disasm
     (format t "~&constants: ~:s" constants)
@@ -232,24 +240,31 @@
 (defgeneric cleavir-bir-disassembler:display (bir &key))
 (defmethod cleavir-bir-disassembler:display
     ((module module)
-     &key ((:show-dynenv *show-dynenv*) *show-dynenv*)
-       ((:show-ctype *show-ctype*) *show-ctype*))
+     &key ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+           cleavir-bir-disassembler:*show-dynenv*)
+       ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+        cleavir-bir-disassembler:*show-ctype*))
   (cleavir-bir-disassembler:display-module-disassembly
    (cleavir-bir-disassembler:disassemble module)))
 (defmethod cleavir-bir-disassembler:display
     ((function function)
-     &key ((:show-dynenv *show-dynenv*) *show-dynenv*)
-       ((:show-ctype *show-ctype*) *show-ctype*))
+     &key ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+           cleavir-bir-disassembler:*show-dynenv*)
+       ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+        cleavir-bir-disassembler:*show-ctype*))
   (cleavir-bir-disassembler:display-function-disassembly
    (cleavir-bir-disassembler:disassemble function)))
 (defmethod cleavir-bir-disassembler:display
     ((iblock iblock)
-     &key ((:show-dynenv *show-dynenv*) *show-dynenv*)
-       ((:show-ctype *show-ctype*) *show-ctype*))
+     &key ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)
+           cleavir-bir-disassembler:*show-dynenv*)
+       ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+        cleavir-bir-disassembler:*show-ctype*))
   (cleavir-bir-disassembler:display-iblock-disassembly
    (cleavir-bir-disassembler:disassemble iblock)))
 (defmethod cleavir-bir-disassembler:display
     ((instruction instruction)
-     &key ((:show-ctype *show-ctype*) *show-ctype*))
+     &key ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
+           cleavir-bir-disassembler:*show-ctype*))
   (cleavir-bir-disassembler:display-instruction-disassembly
    (cleavir-bir-disassembler:disassemble instruction)))
