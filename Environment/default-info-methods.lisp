@@ -2,7 +2,7 @@
 
 ;;;; This file contains methods on the generic functions defined in
 ;;;; the file query.lisp that are specialized to the classed defined
-;;;; in the file default-augmentation-classes.lisp.  
+;;;; in the file default-augmentation-classes.lisp.
 ;;;;
 ;;;; The implementation here is a bit twisted in that we pretty much
 ;;;; call a generic function for each elementary step.  The reason for
@@ -24,7 +24,7 @@
 ;;;
 ;;; Finding info about a variable is a bit tricky, because there can
 ;;; be local entries modifying the properties of the variable, in
-;;; particular the type of the variable. 
+;;; particular the type of the variable.
 ;;;
 ;;; We proceed by first finding the DEFINING INFO for the variable.
 ;;; This info might come from the global environment, or it can come
@@ -112,7 +112,7 @@
   (list (type defining-info)))
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod variable-type ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (variable-type (next environment) defining-info))
@@ -124,7 +124,7 @@
 ;;; the one that resulted in the creation of the defining info
 ;;; instance.  In other words, we have found no variable type entries
 ;;; before entry that resulted in the creation of the defining info.
-;;; If the names are not the same, we continue the search. 
+;;; If the names are not the same, we continue the search.
 
 (defmethod variable-type ((environment lexical-variable)
 			  (defining-info lexical-variable-info))
@@ -188,7 +188,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod variable-ignore ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (variable-ignore (next environment) defining-info))
@@ -200,7 +200,7 @@
 ;;; the one that resulted in the creation of the defining info
 ;;; instance.  In other words, we have found no variable type entries
 ;;; before entry that resulted in the creation of the defining info.
-;;; If the names are not the same, we continue the search. 
+;;; If the names are not the same, we continue the search.
 
 (defmethod variable-ignore ((environment lexical-variable)
 			    (defining-info lexical-variable-info))
@@ -249,7 +249,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod variable-dynamic-extent ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (variable-dynamic-extent (next environment) defining-info))
@@ -328,7 +328,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; The main method on VARIABLE-INFO specialized to ENTRY. 
+;;; The main method on VARIABLE-INFO specialized to ENTRY.
 
 (defmethod variable-info (system (environment entry) symbol)
   (let ((defining-info (defining-variable-info system environment symbol)))
@@ -424,7 +424,7 @@
   (list (type defining-info)))
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod function-type ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (function-type (next environment) defining-info))
@@ -436,7 +436,7 @@
 ;;; the one that resulted in the creation of the defining info
 ;;; instance.  In other words, we have found no function type entries
 ;;; before entry that resulted in the creation of the defining info.
-;;; If the names are not the same, we continue the search. 
+;;; If the names are not the same, we continue the search.
 
 (defmethod function-type ((environment function)
 			  (defining-info local-function-info))
@@ -487,7 +487,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod function-ignore ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (function-ignore (next environment) defining-info))
@@ -499,7 +499,7 @@
 ;;; the one that resulted in the creation of the defining info
 ;;; instance.  In other words, we have found no function type entries
 ;;; before entry that resulted in the creation of the defining info.
-;;; If the names are not the same, we continue the search. 
+;;; If the names are not the same, we continue the search.
 
 (defmethod function-ignore ((environment function)
 			  (defining-info local-function-info))
@@ -560,7 +560,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod function-dynamic-extent ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (function-dynamic-extent (next environment) defining-info))
@@ -609,7 +609,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod function-inline ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
   (function-inline (next environment) defining-info))
@@ -670,7 +670,7 @@
   nil)
 
 ;;; This method is called when the entry is not related to the
-;;; defining info instance. 
+;;; defining info instance.
 (defmethod function-inline-expansion
     ((environment entry) defining-info)
   (declare (cl:ignorable environment defining-info))
@@ -778,10 +778,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; The main method on FUNCTION-INFO specialized to ENTRY. 
+;;; The main method on FUNCTION-INFO specialized to ENTRY.
 
 (defmethod function-info (system (environment entry) symbol)
-  (declare (ignore system))
+  (declare (cl:ignore system))
   (let ((defining-info (defining-function-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that FUNCTION-INFO
@@ -797,7 +797,7 @@
 ;;; BLOCK-INFO
 ;;;
 ;;; Finding info about a BLOCK is particularly easy because there can
-;;; be no entries modifying the properties of the block. 
+;;; be no entries modifying the properties of the block.
 
 ;;; This method implements the action to take when the argument is a
 ;;; BLOCK entry.
@@ -834,7 +834,7 @@
 ;;; TAG-INFO
 ;;;
 ;;; Finding info about a TAG is particularly easy because there can
-;;; be no entries modifying the properties of the tag. 
+;;; be no entries modifying the properties of the tag.
 
 ;;; This method implements the action to take when the argument is a
 ;;; TAG entry.
