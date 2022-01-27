@@ -176,7 +176,7 @@
 
 ;;; A terminator with exactly one next iblock (abstract)
 (defclass terminator1 (terminator)
-  ((%next :type (cons iblock null))))
+  ((%next :type (or null (cons iblock null))))) ; can be null after metaevaluate
 
 ;;; An argument to a function.
 (defclass argument (value transfer) ())
