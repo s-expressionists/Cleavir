@@ -87,7 +87,7 @@
          (let ((mergeb (make-iblock inserter :name '#:merge)))
            ;; Dump everything into multiple-values.
            (let ((phi (make-instance 'bir:phi :iblock mergeb)))
-             (loop for (ins ib rv) in map
+             (loop for (ins nil rv) in map
                    do (terminate
                        ins
                        (make-instance 'bir:jump

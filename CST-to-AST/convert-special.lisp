@@ -356,7 +356,7 @@
           ;; Now compile the bodies of the tags and insert them into the
           ;; TAG-ASTs.
           (loop for tag-ast in tag-asts
-                for (ignore . form-csts) in tag-specs
+                for (nil . form-csts) in tag-specs
                 for seq = (loop for form-cst in form-csts
                                 collect (convert form-cst new-env system))
                 for progn = (process-progn seq cst)

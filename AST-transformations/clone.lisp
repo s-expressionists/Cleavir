@@ -124,6 +124,5 @@
 		 for class-name = (class-name class)
 		 collect `(,variable (make-instance ',class-name)))
        ,@(loop for key being each hash-key of dictionary
-		 using (hash-value variable)
 	       collect (codegen-finalize key dictionary))
        ,(gethash ast dictionary))))

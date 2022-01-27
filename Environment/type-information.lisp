@@ -146,7 +146,7 @@
     ((ts (eql 'cl:atom)) environment system)
   (declare (cl:ignore environment))
   (let ((top (cleavir-ctype:top system)))
-    (cleavir-ctype:negate (cleavir-ctype:cons top top))))
+    (cleavir-ctype:negate (cleavir-ctype:cons top top system) system)))
 
 (defmethod parse-expanded-type-specifier
     ((ts (eql 'cl:base-char)) environment system)
