@@ -8,6 +8,8 @@
   ((:file "packages")
    (:file "system" :depends-on ("packages"))
    (:file "environment" :depends-on ("system" "packages"))
+   (:file "environment-interface" :depends-on ("environment" "system"
+                                                             "packages"))
    (:file "macros" :depends-on ("packages"))
    (:file "load-environment" :depends-on ("macros" "environment"
                                                    "packages"))))
