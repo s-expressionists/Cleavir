@@ -781,7 +781,6 @@
 ;;; The main method on FUNCTION-INFO specialized to ENTRY.
 
 (defmethod function-info (system (environment entry) symbol)
-  (declare (cl:ignore system))
   (let ((defining-info (defining-function-info system environment symbol)))
     (if (null defining-info)
 	;; If DEFINING-INFO is NIL, this means that FUNCTION-INFO
