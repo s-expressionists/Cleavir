@@ -40,6 +40,8 @@
      nil)
     (otherwise nil)))
 
+(defvar *folds* (make-hash-table :test #'equal)) ; filled in fold.lisp
+
 (defmethod env:function-info ((system example) (env environment) name)
   (let ((info (gethash name (functions env))))
     (if (null info)
@@ -52,10 +54,15 @@
              (make-instance 'env:global-macro-info
                :name name :expander extra))
             ((:function)
-             (make-instance 'env:global-function-info
-               :name name
-               :type (env:parse-type-specifier 'function
-                                               env system))))))))
+             (let ((fold (gethash name *folds*)))
+               (make-instance 'env:global-function-info
+                 :name name
+                 :type (env:parse-type-specifier 'function
+                                                 env system)
+                 :attributes (if fold
+                                 (make-instance 'attributes:attributes
+                                   :identities (list name))
+                                 (attributes:default-attributes))))))))))
 
 (defmethod env:declarations ((env environment)) '())
 

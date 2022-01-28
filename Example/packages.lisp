@@ -1,6 +1,7 @@
 (defpackage #:cleavir-example
   (:use #:cl)
   (:local-nicknames (#:ast-to-bir #:cleavir-ast-to-bir)
+                    (#:attributes #:cleavir-attributes)
                     (#:bir #:cleavir-bir)
                     (#:bir-transformations #:cleavir-bir-transformations)
                     (#:cst-to-ast #:cleavir-cst-to-ast)

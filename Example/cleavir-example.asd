@@ -12,6 +12,7 @@
    (:file "environment" :depends-on ("system" "packages"))
    (:file "environment-interface" :depends-on ("environment" "system"
                                                              "packages"))
+   (:file "fold" :depends-on ("environment-interface" "system" "packages"))
    (:file "macros" :depends-on ("packages"))
    (:file "load-environment" :depends-on ("macros" "environment"
                                                    "packages"))
