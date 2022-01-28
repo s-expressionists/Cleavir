@@ -10,13 +10,15 @@
                  (macroexpand-1 s)
                (when expandedp
                  (%defsmacro s expansion env)))))
-    (cond ((and (fboundp s)
-                (not (macro-function s))
-                (not (special-operator-p s)))
+    (cond ((or (and (fboundp s)
+                    (not (macro-function s))
+                    (not (special-operator-p s)))
+               (member s *functions*))
            (%defun s env))
           (t (let ((pair (assoc s *macros*)))
                (when pair
                  (%defmacro s (cdr pair) env)))))
+    (loop for f in *functions* do (%defun f env))
     (cond ((find-class s nil)
            (%defclass s (find-class s) env))))
   ;; Force computing a policy

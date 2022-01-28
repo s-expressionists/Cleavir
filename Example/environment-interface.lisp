@@ -31,12 +31,10 @@
             multiple-value-prog1 progn quote
             return-from setq symbol-macrolet tagbody the)
      t)
-    ((primop:funcall primop:multiple-value-call)
+    ((primop:funcall primop:multiple-value-call primop:ast)
      t)
-    ((multiple-value-call) ; defined as a macro in macros.lisp
-     nil)
-    ((catch progv throw unwind-protect)
-     (warn "The example system does not define the standard special operator ~s" name)
+    ;; Defined as macros in macros.lisp
+    ((catch multiple-value-call progv throw unwind-protect)
      nil)
     (otherwise nil)))
 

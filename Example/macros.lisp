@@ -1,6 +1,11 @@
 (in-package #:cleavir-example)
 
 (defvar *macros* nil)
+(defvar *functions* nil)
+
+(defun cleavir-primop:call-with-variable-bound (variable value thunk)
+  (progv (list variable) (list value) (funcall thunk)))
+(push 'cleavir-primop:call-with-variable-bound *functions*)
 
 (defmacro define-example-macro (name lambda-list &body body)
   `(push (cons ',name
@@ -22,6 +27,15 @@
         (t (let ((s (gensym "VAL")))
              `(let ((,s ,(first forms)))
                 (if ,s ,s (or ,@(rest forms))))))))
+
+(defun fcatch (tag thunk) (catch tag (funcall thunk)))
+(defun fthrow (tag thunk) (throw tag (funcall thunk)))
+(push 'fcatch *functions*)
+(push 'fthrow *functions*)
+(define-example-macro catch (tag &body body)
+  `(fcatch ,tag (lambda () ,@body)))
+(define-example-macro throw (tag result)
+  `(fthrow ,tag (lambda () ,result)))
 
 (define-example-macro cond (&rest clauses)
   (if (null clauses)
@@ -93,6 +107,11 @@
   (let ((s (gensym "RESULT")))
     `(progn ,first (let ((,s ,result)) ,@body ,s))))
 
+(defun fprogv (vars vals thunk) (progv vars vals (funcall thunk)))
+(push 'fprogv *functions*)
+(define-example-macro progv (vars vals &body body)
+  `(fprogv ,vars ,vals (lambda () ,@body)))
+
 (define-example-macro return (&optional result)
   `(return-from ,nil ,result))
 
@@ -100,3 +119,9 @@
   `(if ,condition nil (progn ,@body)))
 (define-example-macro when (condition &body body)
   `(if ,condition (progn ,@body) nil))
+
+(defun funwind-protect (protected-thunk cleanup-thunk)
+  (unwind-protect (funcall protected-thunk) (funcall cleanup-thunk)))
+(push 'funwind-protect *functions*)
+(define-example-macro unwind-protect (protected &body cleanup)
+  `(funwind-protect (lambda () ,protected) (lambda () ,@cleanup)))
