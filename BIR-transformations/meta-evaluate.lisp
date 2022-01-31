@@ -534,7 +534,7 @@
           #+(or)
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let* ((input (bir:input binder))
-                 (type (ctype:coerce-to-values
+                 (type (ctype:single-value
                         (ctype:primary (bir:ctype input) system)
                         system))
                  (fout (make-instance 'bir:output
@@ -1024,7 +1024,7 @@
 (defmethod derive-return-type ((inst bir:abstract-call) identity
                                argstype system)
   (declare (ignore identity argstype))
-  (ctype:coerce-to-values (ctype:top system) system))
+  (ctype:values-top system))
 
 (defmethod derive-types ((inst bir:call) system)
   (let ((identities (attributes:identities (bir:attributes inst))))

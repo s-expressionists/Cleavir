@@ -3,6 +3,7 @@
 (defpackage #:cleavir-environment
   (:nicknames #:cleavir-env)
   (:use #:common-lisp)
+  (:local-nicknames (#:ctype #:cleavir-ctype))
   (:shadow #:identity
            #:type
            #:ignore
@@ -47,10 +48,6 @@
    #:expander
    #:compiler-macro
    #:type-expand
-   #:has-extended-char-p
-   #:float-types
-   #:upgraded-complex-part-types
-   #:upgraded-array-element-types
    #:declarations
    #:add-lexical-variable
    #:add-special-variable

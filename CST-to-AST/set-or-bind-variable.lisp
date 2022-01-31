@@ -17,8 +17,9 @@
          ;; bound declarations do apply to the initial value of the binding.
          ;; (The page on the TYPE declaration also specifically says it
          ;;  applies to the initial values of bindings.)
+         ;; Note that we use coerce-to-values instead of single-value
          (value-ast
-           (type-wrap value-ast (ctype:single-value (env:type info) system)
+           (type-wrap value-ast (ctype:coerce-to-values (env:type info) system)
                       (ast:origin value-ast) env system)))
     (declare (ignore _))
     (if (typep info 'env:special-variable-info)

@@ -53,5 +53,14 @@
 (defun primary (values-ctype system)
   (nth-value 0 values-ctype system))
 
+;;; Given a non-values ctype, return a values ctype for it.
+;;; This applies fuzz, so e.g. NULL -> (VALUES &OPTIONAL NULL &REST T)
+;;; while CONS -> (VALUES CONS &REST T)
+(defun coerce-to-values (ctype sys)
+  (cond ((top-p ctype sys) (values-top sys))
+        ((disjointp ctype (member sys nil) sys)
+         (values (list ctype) nil (top sys) sys))
+        (t (values nil (list ctype) (top sys) sys))))
+
 (defun single-value (non-values-ctype system)
   (values (list non-values-ctype) nil (bottom system) system))

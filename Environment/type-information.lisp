@@ -16,52 +16,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Function HAS-EXTENDED-CHAR-P.
-;;;
-;;; Returns a boolean indicating whether the implementation has a
-;;; non-empty EXTENDED-CHAR type. (An implementation may decide to
-;;; have all characters be BASE-CHARs, in which case this returns
-;;; NIL.)
-;;; Used during type inference.
-
-(defgeneric has-extended-char-p (environment))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Function FLOAT-TYPES.
-;;;
-;;; Returns a list of floating point types available in the
-;;; implementation, that is, a list with SHORT-FLOAT, SINGLE-FLOAT,
-;;; DOUBLE-FLOAT, and LONG-FLOAT zero or one times each. If two of
-;;; the types are the same, only one should be returned.
-;;; For example, in an implementation where (subtypep short single)
-;;; this might return (SINGLE-FLOAT DOUBLE-FLOAT LONG-FLOAT).
-;;; Used during type inference.
-
-(defgeneric float-types (environment))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Function UPGRADED-COMPLEX-PART-TYPES.
-;;;
-;;; Returns a list of element types for distinct complex types in
-;;; the implementation, e.g. (SINGLE-FLOAT DOUBLE-FLOAT REAL)
-;;; Used during type inference.
-
-(defgeneric upgraded-complex-part-types (environment))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Function UPGRADED-ARRAY-ELEMENT-TYPES.
-;;;
-;;; Returns a list of element types for distinct array types in the
-;;; implementation, e.g. the minimum is (BIT BASE-CHAR CHARACTER T)
-;;; Used during type inference.
-
-(defgeneric upgraded-array-element-types (environment))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Function FIND-CLASS.
 ;;;
 ;;; As CL:FIND-CLASS, but a generic function with different
@@ -92,10 +46,10 @@
 ;;;
 ;;; The default methods on PARSE-EXPANDED-TYPE-SPECIFIER are
 ;;; as follows:
-;;; * If the specifier is a class, it is passed to CLEAVIR-CTYPE:CLASS.
+;;; * If the specifier is a class, it is passed to CTYPE:CLASS.
 ;;; * If the specifier is a symbol, it is looked up in the
 ;;;   environment using FIND-CLASS (above). If a class exists,
-;;;   it is passed to CLEAVIR-CTYPE:CLASS. Otherwise, if it is a
+;;;   it is passed to CTYPE:CLASS. Otherwise, if it is a
 ;;;   standard atomic type specifier, it is passed to the appropriate
 ;;;   protocol function.
 ;;; * If the specifier is a cons, PARSE-COMPOUND-TYPE-SPECIFIER
@@ -123,16 +77,16 @@
     ((type-specifier symbol) environment system)
   (let ((class (find-class type-specifier environment system nil)))
     (if class
-        (cleavir-ctype:class class system)
+        (ctype:class class system)
         (call-next-method))))
 
 ;;: Internal helper.
 (defun parse-array-type-specifier
     (simplicity element-type dimensions environment system)
-  (cleavir-ctype:array
+  (ctype:array
    (if (eql element-type '*)
        element-type
-       (cleavir-ctype:upgraded-array-element-type
+       (ctype:upgraded-array-element-type
         (parse-type-specifier element-type environment system)
         system))
    dimensions simplicity system))
@@ -140,18 +94,18 @@
 (defmethod parse-expanded-type-specifier
     ((ts (eql 'cl:array)) environment system)
   (declare (cl:ignore environment))
-  (cleavir-ctype:array '* '* 'array system))
+  (ctype:array '* '* 'array system))
 
 (defmethod parse-expanded-type-specifier
     ((ts (eql 'cl:atom)) environment system)
   (declare (cl:ignore environment))
-  (let ((top (cleavir-ctype:top system)))
-    (cleavir-ctype:negate (cleavir-ctype:cons top top system) system)))
+  (let ((top (ctype:top system)))
+    (ctype:negate (ctype:cons top top system) system)))
 
 (defmethod parse-expanded-type-specifier
     ((ts (eql 'cl:base-char)) environment system)
   (declare (cl:ignore environment))
-  (cleavir-ctype:base-char system))
+  (ctype:base-char system))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:base-string)) env sys)
   ;; Could just parse '(vector base-char) here, but I think it's better to
@@ -160,41 +114,41 @@
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:bignum)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:conjoin
+  (ctype:conjoin
    sys
-   (cleavir-ctype:range 'integer '* '* sys)
-   (cleavir-ctype:negate (cleavir-ctype:fixnum sys) sys)))
+   (ctype:range 'integer '* '* sys)
+   (ctype:negate (ctype:fixnum sys) sys)))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:bit-vector)) env sys)
   (parse-array-type-specifier 'array 'bit '(*) env sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:boolean)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:member sys nil t))
+  (ctype:member sys nil t))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:character)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:character sys))
+  (ctype:character sys))
 
 (defmethod parse-expanded-type-specifier
     ((ts (eql 'cl:compiled-function)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:compiled-function sys))
+  (ctype:compiled-function sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:complex)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:complex '* sys))
+  (ctype:complex '* sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:cons)) env sys)
   (declare (cl:ignore env))
-  (let ((top (cleavir-ctype:top sys)))
-    (cleavir-ctype:cons top top sys)))
+  (let ((top (ctype:top sys)))
+    (ctype:cons top top sys)))
 
 (macrolet ((defreal (head)
              `(defmethod parse-expanded-type-specifier
                   ((ts (eql ',head)) env sys)
                 (declare (cl:ignore env))
-                (cleavir-ctype:range ts '* '* sys)))
+                (ctype:range ts '* '* sys)))
            (defreals (&rest heads)
              `(progn ,@(loop for head in heads collect `(defreal ,head)))))
   (defreals integer rational real float short-float single-float
@@ -202,35 +156,34 @@
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:extended-char)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:conjoin sys
-                         (cleavir-ctype:character sys)
-                         (cleavir-ctype:negate (cleavir-ctype:base-char sys)
-                                               sys)))
+  (ctype:conjoin sys
+                 (ctype:character sys)
+                 (ctype:negate (ctype:base-char sys) sys)))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:fixnum)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:fixnum sys))
+  (ctype:fixnum sys))
 
 (defmethod parse-expanded-type-specifier
     ((type-specifier (eql 'cl:function)) environment system)
   (declare (cl:ignore environment))
-  (cleavir-ctype:function-top system))
+  (ctype:function-top system))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:keyword)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:keyword sys))
+  (ctype:keyword sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:nil)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:bottom sys))
+  (ctype:bottom sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:signed-byte)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:range 'integer '* '* sys))
+  (ctype:range 'integer '* '* sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:simple-array)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:array '* '* 'simple-array sys))
+  (ctype:array '* '* 'simple-array sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:simple-base-string))
                                           env sys)
@@ -243,7 +196,7 @@
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:simple-string))
                                           env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:string '* 'simple-array sys))
+  (ctype:string '* 'simple-array sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:simple-vector))
                                           env sys)
@@ -252,20 +205,20 @@
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:standard-char))
                                           env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:standard-char sys))
+  (ctype:standard-char sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:t)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:top sys))
+  (ctype:top sys))
 
 (defmethod parse-expanded-type-specifier ((ts (eql 'cl:unsigned-byte)) env sys)
   (declare (cl:ignore env))
-  (cleavir-ctype:range 'integer 0 '* sys))
+  (ctype:range 'integer 0 '* sys))
 
 (defmethod parse-expanded-type-specifier
     ((type-specifier class) environment system)
   (declare (cl:ignore environment))
-  (cleavir-ctype:class type-specifier system))
+  (ctype:class type-specifier system))
 
 (defmethod parse-expanded-type-specifier
     ((type-specifier cons) environment system)
@@ -283,7 +236,7 @@
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'and)) rest environment system)
-  (apply #'cleavir-ctype:conjoin
+  (apply #'ctype:conjoin
          system
          (parse-type-specifier-list rest environment system)))
 
@@ -305,10 +258,10 @@
 (defmethod parse-compound-type-specifier
     ((head (eql 'complex)) rest environment system)
   (destructuring-bind (&optional (et '*)) rest
-    (cleavir-ctype:complex
+    (ctype:complex
      (if (eql et '*)
          et
-         (cleavir-ctype:upgraded-complex-part-type
+         (ctype:upgraded-complex-part-type
           (parse-type-specifier et environment system)
           system))
      system)))
@@ -318,7 +271,7 @@
   (destructuring-bind (&optional (car 't) (cdr 't)) rest
     (when (eql car '*) (setf car 't))
     (when (eql cdr '*) (setf cdr 't))
-    (cleavir-ctype:cons
+    (ctype:cons
      (parse-type-specifier car environment system)
      (parse-type-specifier cdr environment system)
      system)))
@@ -326,7 +279,7 @@
 (defmethod parse-compound-type-specifier ((head (eql 'eql)) rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (object) rest
-    (cleavir-ctype:member sys object)))
+    (ctype:member sys object)))
 
 (defun parse-function-type-lambda-list (lambda-list env system)
   ;; FIXME?: Use a parser generator.
@@ -375,41 +328,41 @@
                            (nreverse optional)
                            (if restp
                                rest
-                               (cleavir-ctype:bottom system))
+                               (ctype:bottom system))
                            keyp (nreverse keys) aokp))))
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'cl:function)) rest environment system)
   (destructuring-bind (&optional (arg '*) (value '*)) rest
-    (multiple-value-call #'cleavir-ctype:function
+    (multiple-value-call #'ctype:function
       (if (eq arg '*)
-          (values nil nil (cleavir-ctype:top system) nil nil nil)
+          (values nil nil (ctype:top system) nil nil nil)
           (parse-function-type-lambda-list arg environment system))
       (if (eq value '*)
-          (cleavir-ctype:values nil nil (cleavir-ctype:top system) system)
+          (ctype:values nil nil (ctype:top system) system)
           (parse-values-type-specifier value environment system))
       system)))
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'member)) rest environment system)
   (declare (cl:ignore environment))
-  (apply #'cleavir-ctype:member system rest))
+  (apply #'ctype:member system rest))
 
 (defmethod parse-compound-type-specifier ((head (eql 'mod)) rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (max) rest
-    (cleavir-ctype:range 'integer 0 max sys)))
+    (ctype:range 'integer 0 max sys)))
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'not)) rest environment system)
   (destructuring-bind (under) rest
-    (cleavir-ctype:negate
+    (ctype:negate
      (parse-type-specifier under environment system)
      system)))
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'or)) rest environment system)
-  (apply #'cleavir-ctype:disjoin
+  (apply #'ctype:disjoin
          system
          (parse-type-specifier-list rest environment system)))
 
@@ -417,16 +370,16 @@
     ((head (eql 'satisfies)) rest environment system)
   (declare (cl:ignore environment))
   (destructuring-bind (fname) rest
-    (cleavir-ctype:satisfies fname system)))
+    (ctype:satisfies fname system)))
 
 (defmethod parse-compound-type-specifier ((head (eql 'signed-byte))
                                           rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (&optional (bits '*)) rest
     (if (eq bits '*)
-        (cleavir-ctype:range 'integer '* '* sys)
+        (ctype:range 'integer '* '* sys)
         (let ((n (ash 1 (- bits 1))))
-          (cleavir-ctype:range 'integer (- n) (- n 1) sys)))))
+          (ctype:range 'integer (- n) (- n 1) sys)))))
 
 (defmethod parse-compound-type-specifier
     ((head (eql 'simple-array)) rest environment system)
@@ -442,7 +395,7 @@
     ((head (eql 'simple-string)) rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (&optional (dimension '*)) rest
-    (cleavir-ctype:string dimension 'simple-array sys)))
+    (ctype:string dimension 'simple-array sys)))
 
 (defmethod parse-compound-type-specifier ((head (eql 'simple-vector))
                                           rest env sys)
@@ -452,14 +405,13 @@
 (defmethod parse-compound-type-specifier ((head (eql 'string)) rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (&optional (dimension '*)) rest
-    (cleavir-ctype:string dimension 'array sys)))
+    (ctype:string dimension 'array sys)))
 
 (defmethod parse-compound-type-specifier ((head (eql 'unsigned-byte))
                                           rest env sys)
   (declare (cl:ignore env))
   (destructuring-bind (&optional (bits '*)) rest
-    (cleavir-ctype:range 'integer 0 (if (eq bits '*) '* (1- (ash 1 bits)))
-                         sys)))
+    (ctype:range 'integer 0 (if (eq bits '*) '* (1- (ash 1 bits))) sys)))
 
 (defmethod parse-compound-type-specifier ((head (eql 'vector)) rest env sys)
   (destructuring-bind (&optional (et '*) (dimension '*)) rest
@@ -468,7 +420,7 @@
 ;;; Internal helper.
 (defun parse-range (head rest system)
   (destructuring-bind (&optional (low '*) (high '*)) rest
-    (cleavir-ctype:range head low high system)))
+    (ctype:range head low high system)))
 
 (macrolet ((defreal (head)
              `(defmethod parse-compound-type-specifier
@@ -494,19 +446,70 @@
 ;;; the "fuzziness" required by THE, etc.
 ;;;
 ;;; A client with a different ctype implementation should
-;;; specialize CLEAVIR-CTYPE:VALUES.
+;;; specialize CTYPE:VALUES.
+
+(defgeneric parse-compound-values-type-specifier (head rest env sys))
+(defgeneric parse-expanded-values-type-specifier (spec env sys))
+
+;;; Given lists of required and optional ctypes, and RESTP and the REST
+;;; ctype (or some junk if RESTP is false), return
+;;; (values required optional rest) with fuzziness applied. That is, the
+;;; result is strict (at least (LENGTH REQUIRED) values must actually be
+;;; supplied, etc.)
+(defun fuzz-values-tspec (required optional rest restp system)
+  ;; Quoth the standard:
+  ;; "It is permissible for FORM to yield a different number of values than
+  ;;  those that are specified by VALUE-TYPE, provided that the values for
+  ;;  which types are declared are indeed of those types. Missing values are
+  ;;  treated as NIL for the purposes of checking their types."
+  ;; Based on this and the examples, I believe the consequences are as follows:
+  ;; (1) if a &rest is not declared, &rest t is implicit. Not declaring &rest
+  ;;     counts as not declaring those types, so they can be missing or w/e.
+  ;; (2) if a suffix of the "required" types includes NULL, that value is not
+  ;;     actually required, since missing values are treated as being NIL.
+  ;; (3) if a required type is disjoint from NULL, it is actually required.
+  ;; This is, frankly, a very messy part of the standard. The description in
+  ;; THE completely contradicts the description of the VALUES specifier.
+  (let* ((null (ctype:member system nil))
+         (rest (if restp rest (ctype:top system)))
+         ;; Find the actually-optional suffix of the required types.
+         (rpos (position-if (lambda (ct) (ctype:disjointp ct null system))
+                            required :from-end t))
+         (rrpos (if rpos (1+ rpos) 0))
+         (rreq (subseq required 0 rrpos))
+         (opt (append (nthcdr rrpos required) optional)))
+    (values rreq opt rest)))
 
 (defun parse-values-type-specifier (type-specifier
                                     environment system)
   (let ((spec (type-expand environment type-specifier)))
-    (if (and (consp spec) (eql (car spec) 'values))
-        (multiple-value-call #'cleavir-ctype:values
-          (parse-values-type-lambda-list
-           (rest spec) environment system)
-          system)
-        (cleavir-ctype:coerce-to-values
-         (parse-expanded-type-specifier spec environment system)
-         system))))
+    (if (consp spec)
+        (parse-compound-values-type-specifier (car spec) (cdr spec)
+                                              environment system)
+        (parse-expanded-values-type-specifier spec environment system))))
+
+;;; We assume all non-cons type specifiers are single value specifiers.
+;;; So we treat this the same as if we'd seen (values whatever).
+(defmethod parse-expanded-values-type-specifier (spec env sys)
+  (let ((sv (parse-expanded-type-specifier spec env sys)))
+    (multiple-value-bind (req opt rest)
+        (fuzz-values-tspec (list sv) nil nil nil sys)
+      (ctype:values req opt rest sys))))
+
+(defmethod parse-compound-values-type-specifier ((head (eql 'values))
+                                                 rest env sys)
+  (multiple-value-bind (req opt rest)
+      (multiple-value-bind (req opt rest restp)
+          (parse-values-type-lambda-list rest env sys)
+        (fuzz-values-tspec req opt rest restp sys))
+    (ctype:values req opt rest sys)))
+
+;;; Ditto parse-expanded-values-type-specifier above.
+(defmethod parse-compound-values-type-specifier (head rest env sys)
+  (let ((sv (parse-compound-type-specifier head rest env sys)))
+    (multiple-value-bind (req opt rest)
+        (fuzz-values-tspec (list sv) nil nil nil sys)
+      (ctype:values req opt rest sys))))
 
 (defun parse-values-type-lambda-list (lambda-list env sys)
   (loop with state = nil
@@ -529,8 +532,4 @@
         finally
            (assert (not (member state '(&rest))))
            (return (values (nreverse required) (nreverse optional)
-                           ;; Apply "fuzziness". See the comment on
-                           ;; CLEAVIR-CTYPE:VALUES for more info.
-                           (if restp
-                               rest
-                               (cleavir-ctype:top sys))))))
+                           rest restp))))

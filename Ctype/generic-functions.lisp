@@ -302,33 +302,22 @@
 ;;; The first four parameters represent the parsed lambda list.
 ;;; REQUIRED and OPTIONAL are lists of ctypes. REST is a ctype.
 ;;;
-;;; Note that REST must always be provided. To match the semantics of CL:THE, a
-;;; values type specifier with no &rest may be considered to have an implicit
-;;; &rest T, and that T ctype is expected to be provided by whatever code calls
-;;; this function.
+;;; The semantics of values types in the standard are self contradictory.
+;;; This function uses the strict semantics described for the VALUES type
+;;; specifier. A client expecting fuzziness, as it needs to to implement
+;;; CL:THE, should apply that before using this function. See the parsing in
+;;; the cleavir-environment system for an example of this.
 ;;;
-;;; The semantics of values types in the standard are self contradictory. For
-;;; this system, the strict semantics described in the page on VALUES are
-;;; ignored as being impractical. The semantics for CL:THE are used instead.
-;;; So for example, (values 0 '(x)), (values 4), (values 23 nil 'values) are
-;;; all valid forms in (the (values integer list) form), but (values) wouldn't
-;;; be. This values type would be passed to this function with a REST that is
-;;; the ctype for T.
+;;; Strictness means that, for example, (values integer &rest nil) is disjoint
+;;; from (values integer integer &rest nil), which is very different from how
+;;; CL:THE works. Strict types are useful for when the compiler can derive
+;;; exacting types; e.g. (values-list '(nil)) is of type (values null &rest nil)
+;;; and cannot be zero values.
 ;;;
 ;;; Values ctypes are only used in certain contexts, as described for the
 ;;; operators above.
 
 (defgeneric values (required optional rest system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Generic function COERCE-TO-VALUES.
-;;;
-;;; Given a ctype, return a values ctype. In more detail, if the ctype is a
-;;; values ctype, it is returned; otherwise, a values ctype for an equivalent to
-;;; (values type &rest t) is returned, thus incorporating the fuzziness.
-
-(defgeneric coerce-to-values (ctype system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -113,14 +113,11 @@
                            (lambda (argument-ast)
                              (type-wrap-argument
                               argument-ast
-                              ;; FIXME: figure out if we need
-                              ;; this to be a values
-                              ;; specifier.
                               (ctype:coerce-to-values
                                (cond (required (pop required))
                                      (optional (pop optional))
                                      ;; FIXME: Actually treat &key properly!
-                                     (keysp t)
+                                     (keysp (ctype:top system))
                                      (t (if (ctype:bottom-p rest system)
                                             (progn
                                               ;; FIXME: Use a
