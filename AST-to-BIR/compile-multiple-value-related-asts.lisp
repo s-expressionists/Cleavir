@@ -13,27 +13,27 @@
                        :name '#:saved-values))
            (save (make-instance 'bir:values-save
                    :inputs rv
-                   :outputs (list save-out) :next (list during)))
-           (read-out (make-instance 'bir:output
-                       :name '#:restored-values))
-           (read (make-instance 'bir:values-restore
-                   :inputs (list save-out) :outputs (list read-out))))
+                   :outputs (list save-out) :next (list during))))
       (setf (bir:dynamic-environment during) save)
       (terminate inserter save)
       (begin inserter during)
       (cond ((compile-sequence-for-effect (ast:form-asts ast) inserter system)
-             (insert inserter read)
-             (let ((after (make-iblock inserter
+             (let* ((read-out (make-instance 'bir:output
+                                :name '#:restored-values))
+                    (read (make-instance 'bir:values-restore
+                            :inputs (list save-out) :outputs (list read-out)))
+                    (after (make-iblock inserter
                                        :name '#:mv-prog1-after
                                        :dynamic-environment de)))
+               (insert inserter read)
                (terminate inserter 'bir:jump
                           :inputs () :outputs () :next (list after))
-               (begin inserter after))
-             (list read-out))
+               (begin inserter after)
+               (list read-out)))
             (t
              ;; the forms did not return.
              ;; This makes our saving pointless, so hypothetically we could go back
-             ;; and change that stuff.
+             ;; and change that stuff. But meta-evaluate should delete it.
              :no-return)))))
 
 (defmethod compile-ast ((ast ast:multiple-value-call-ast) inserter system)
