@@ -179,7 +179,8 @@
   ((%next :type (or null (cons iblock null))))) ; can be null after metaevaluate
 
 ;;; An argument to a function.
-(defclass argument (value transfer) ())
+(defclass argument (value transfer)
+  ((%function :initarg :function :reader function :type function)))
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.

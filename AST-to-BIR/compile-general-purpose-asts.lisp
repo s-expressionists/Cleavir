@@ -4,27 +4,32 @@
 ;;;
 ;;; COMPILE-FUNCTION
 
-(defun bind-lexical-as-argument (lexical-variable)
+(defun bind-lexical-as-argument (lexical-variable function)
   (assert (not (nth-value 1 (gethash lexical-variable *variables*)))
           ()
           "Lexical variable ~a bound to ~a already."
           lexical-variable (gethash lexical-variable *variables*))
   (setf (gethash lexical-variable *variables*)
         (make-instance 'bir:argument
-                       :name (ast:name lexical-variable))))
+          :name (ast:name lexical-variable)
+          :function function)))
 
-(defun bind-lambda-list-arguments (lambda-list)
+(defun bind-lambda-list-arguments (lambda-list function)
   (loop for item in lambda-list
         collect (cond ((member item lambda-list-keywords)
                        item)
                       ((consp item)
                        (if (= (length item) 3)
                            (list (first item)
-                                 (bind-lexical-as-argument (second item))
-                                 (bind-lexical-as-argument (third item)))
-                           (list (bind-lexical-as-argument (first item))
-                                 (bind-lexical-as-argument (second item)))))
-                      (t (bind-lexical-as-argument item)))))
+                                 (bind-lexical-as-argument (second item)
+                                                           function)
+                                 (bind-lexical-as-argument (third item)
+                                                           function))
+                           (list (bind-lexical-as-argument (first item)
+                                                           function)
+                                 (bind-lexical-as-argument (second item)
+                                                           function))))
+                      (t (bind-lexical-as-argument item function)))))
 
 (defmethod compile-function ((ast ast:function-ast) system)
   (let* ((module *current-module*)
@@ -42,7 +47,8 @@
                                                 '#:-start)
                              :function function :dynamic-environment function)))
     (set:nadjoinf (bir:functions module) function)
-    (let ((lambda-list (bind-lambda-list-arguments (ast:lambda-list ast))))
+    (let ((lambda-list (bind-lambda-list-arguments (ast:lambda-list ast)
+                                                   function)))
       (setf (bir:lambda-list function) lambda-list))
     (setf (bir:start function) start)
     (begin inserter start)

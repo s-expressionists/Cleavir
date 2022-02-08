@@ -37,7 +37,8 @@
 (defun copy-argument (argument map)
   (setf (copy-of argument map)
         (make-instance 'bir:argument
-          :name (bir:name argument))))
+          :name (bir:name argument)
+          :function (copy-of (bir:function argument) map))))
 
 (defun copy-lambda-list (lambda-list map)
   (loop for thing in lambda-list

@@ -469,6 +469,14 @@
       (verify i)
       (set:nadjoinf *seen-instructions* i))))
 
+(defun verify-argument (argument function)
+  (let ((sbp (slot-boundp argument '%function)))
+    (test sbp "has argument ~a with unbound FUNCTION slot" function argument)
+    (when sbp
+      (test (eq (function argument) function)
+            "has argument ~a with incorrect FUNCTION ~a"
+            function argument (function argument)))))
+
 (defmethod verify progn ((function function))
   (let ((start (start function))
         (returni (returni function))
@@ -484,6 +492,18 @@
     (when (boundp '*verifying-module*)
       (test (eq (module function) *verifying-module*)
             "in the wrong module" function))
+    ;; Check that all arguments have this function as their function
+    (map-lambda-list
+     (lambda (state item index)
+       (declare (cl:ignore state index))
+       (cond ((atom item) (verify-argument item function))
+             ((= (length item) 2)
+              (verify-argument (first item) function)
+              (verify-argument (second item) function))
+             ((= (length item) 3)
+              (verify-argument (second item) function)
+              (verify-argument (third item) function))))
+     (lambda-list function))
     ;; Reachability etc
     (let ((reachable (set:empty-set))
           (iblocks (set:empty-set)))
