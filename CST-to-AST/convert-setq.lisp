@@ -12,7 +12,10 @@
 (defmethod convert-setq
     (var-cst form-cst (info env:lexical-variable-info) env system)
   (ast:make-setq-ast (env:identity info)
-                     (convert form-cst env system)
+                     (type-wrap (convert form-cst env system)
+                                (ctype:coerce-to-values (env:type info)
+                                                        system)
+                                var-cst env system)
                      :origin var-cst))
 
 (defmethod convert-setq
@@ -25,6 +28,7 @@
          (origin (cst:source var-cst)))
     (convert (cst:quasiquote origin
                              (setf (cst:unquote expanded-cst)
+                                   ;; FIXME: wrap declared type
                                    (cst:unquote form-cst)))
              env system)))
 
@@ -46,7 +50,10 @@
     (var-cst form-cst (info env:special-variable-info) env system)
   (let ((global-env (env:global-environment env)))
     (convert-setq-special-variable var-cst
-                                   (convert form-cst env system)
+                                   (type-wrap (convert form-cst env system)
+                                              (ctype:coerce-to-values
+                                               (env:type info) system)
+                                              var-cst env system)
 				   info
 				   global-env
 				   system)))
