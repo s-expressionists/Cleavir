@@ -4,4 +4,4 @@
   :depends-on (:cleavir-bir)
   :components
   ((:file "packages")
-   (:file "decompile" :depends-on ("packages"))))
+   (:file "translate" :depends-on ("packages"))))

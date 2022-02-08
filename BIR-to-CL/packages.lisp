@@ -2,4 +2,6 @@
 
 (defpackage #:cleavir-bir-to-cl
   (:use #:cl)
-  (:export #:decompile))
+  (:local-nicknames (#:bir #:cleavir-bir)
+                    (#:set #:cleavir-set))
+  (:export #:translate))
