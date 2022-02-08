@@ -570,30 +570,25 @@
              t)
             (t nil)))))))
 
-;;; For an immutable variable, we prove that the type of its readers
-;;; is just the type of its definition.
+;;; For a variable, we prove that the type of its readers is just the union of
+;;; the types of its writers. As with PHI we have to recompute each time around.
+;;; Also: variables are always exactly one value.
+(defun compute-variable-type (variable getter system)
+  (let ((type (ctype:bottom system)))
+    (set:doset (writer (bir:writers variable) (ctype:single-value type system))
+      (let* ((inp (bir:input writer))
+             (ity (ctype:primary (funcall getter inp) system)))
+        (setq type (ctype:disjoin system type ity))))))
 (defun derive-type-for-variable (variable system)
-  (let* ((dtype (if (bir:immutablep variable)
-                    ;; We can get the type from the definition.
-                    (ctype:primary
-                     (bir:ctype (bir:input (bir:binder variable)))
-                     system)
-                    ;; Can't use the definition's type, but we can still
-                    ;; derive that it's exactly one value.
-                    (ctype:top system)))
-         (type (ctype:single-value dtype system)))
+  (let* ((type (compute-variable-type variable #'bir:ctype system)))
       (set:doset (reader (bir:readers variable))
         (let ((out (bir:output reader)))
           (derive-type-for-linear-datum out type system)))))
 (defun assert-type-for-variable (variable system)
-  (when (bir:immutablep variable)
-    (let* ((atype (ctype:primary
-                   (bir:asserted-type (bir:input (bir:binder variable)))
-                   system))
-           (type (ctype:single-value atype system)))
-      (set:doset (reader (bir:readers variable))
-        (let ((out (bir:output reader)))
-          (assert-type-for-linear-datum out type system))))))
+  (let* ((type (compute-variable-type variable #'bir:asserted-type system)))
+    (set:doset (reader (bir:readers variable))
+      (let ((out (bir:output reader)))
+        (assert-type-for-linear-datum out type system)))))
 
 (defun derive-attributes-for-variable (variable)
   (when (bir:immutablep variable)
