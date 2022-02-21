@@ -666,7 +666,7 @@
                                       :cst variable-cst)
                           collect (convert-elementary-setq
                                    variable-cst form-cst environment system))))
-    (process-progn form-asts (cst:source cst))))
+    (process-progn form-asts cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
