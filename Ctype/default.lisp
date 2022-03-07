@@ -217,7 +217,8 @@
   (cond
     ((or (values-ctype-p ct1) (values-ctype-p ct2))
      (error "values ctypes ~a ~a input to disjoin" ct1 ct2))
-    ((or (top-p ct1 sys) (top-p ct2 sys)) 't)
+    ((top-p ct1 sys) ct1)
+    ((top-p ct2 sys) ct2)
     ((bottom-p ct1 sys) ct2)
     ((bottom-p ct2 sys) ct1)
     ((cl:subtypep ct1 ct2) ct2)
