@@ -7,7 +7,7 @@
   (ctype:subtypep ty1 ty2 (system domain)))
 (defmethod sv-join/2 ((domain type) ty1 ty2)
   (ctype:disjoin (system domain) ty1 ty2))
-(defmethod sv-infimum ((domain type)) (bottom (system domain)))
+(defmethod sv-infimum ((domain type)) (ctype:bottom (system domain)))
 (defmethod values-info ((domain type) required optional rest)
   (ctype:values required optional rest (system domain)))
 (defmethod values-required ((domain type) vtype)
@@ -16,6 +16,12 @@
   (ctype:values-optional vtype (system domain)))
 (defmethod values-rest ((domain type) vtype)
   (ctype:values-rest vtype (system domain)))
+
+(defgeneric derive-return-type (instruction identity argstype system))
+(defmethod derive-return-type ((inst bir:abstract-call) identity
+                               argstype system)
+  (declare (ignore identity argstype))
+  (ctype:values-top system))
 
 (defmethod interpret-instruction ((domain type) (inst bir:call))
   (let* ((attr (bir:attributes inst))
@@ -52,6 +58,7 @@
     (flet ((next () (or (pop req) (pop opt) rest)))
       (bir:map-lambda-list
        (lambda (state item index)
+         (declare (ignore index))
          (ecase state
            ((:required)
             (flow-datum domain item (ctype:single-value (next) system)))
@@ -102,8 +109,8 @@
   (setf (bir:derived-type datum) newtype))
 
 (defmethod interpret-instruction ((domain derived-type) (inst bir:thei))
-  (let* ((type-check-function (bir:type-check-function instruction))
-         (input (bir:input instruction))
+  (let* ((type-check-function (bir:type-check-function inst))
+         (input (bir:input inst))
          (ctype (info domain input)))
     (flow-datum domain
                 (bir:output inst)

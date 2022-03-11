@@ -8,9 +8,9 @@
    (:file "association" :depends-on ("packages"))
    (:file "domain" :depends-on ("packages"))
    (:file "values" :depends-on ("domain" "packages"))
-   (:file "interpreter" :depends-on ("packages"))
-   (:file "control" :depends-on ("interpreter" "domain"))
-   (:file "data" :depends-on ("interpreter" "domain" "packages"))
-   (:file "values-data" :depends-on ("interpreter" "domain" "values"
+   (:file "interpret" :depends-on ("packages"))
+   (:file "control" :depends-on ("interpret" "domain"))
+   (:file "data" :depends-on ("interpret" "domain" "packages"))
+   (:file "values-data" :depends-on ("interpret" "domain" "values"
                                                    "packages"))
    (:file "type" :depends-on ("values-data" "packages"))))

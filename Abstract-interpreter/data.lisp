@@ -61,12 +61,12 @@
 
 (defmethod interpret-instruction ((domain forward-data)
                                   (instruction bir:instruction))
-  (loop for output in (bir:outputs inst)
+  (loop for output in (bir:outputs instruction)
         do (flow-datum domain output (supremum domain))))
 
 (defmethod interpret-instruction ((domain backward-data)
                                   (instruction bir:instruction))
-  (loop for input in (bir:inputs inst)
+  (loop for input in (bir:inputs instruction)
         do (flow-datum domain input (supremum domain))))
 
 (defmethod interpret-instruction ((domain forward-data) (inst bir:jump))

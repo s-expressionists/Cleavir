@@ -14,6 +14,7 @@
 ;;(defgeneric sv-meet/2 (domain info1 info2))
 (defgeneric sv-join/2 (domain info1 info2))
 (defgeneric sv-infimum (domain))
+(defgeneric sv-supremum (domain))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -51,10 +52,10 @@
         (first req))))
 
 (defun single-value (domain sv-info)
-  (info-values (list sv-info) nil (sv-infimum domain)))
+  (values-info domain (list sv-info) nil (sv-infimum domain)))
 
 (defun ftm-info (domain required)
-  (info-values domain required nil (sv-infimum domain)))
+  (values-info domain required nil (sv-infimum domain)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -140,5 +141,5 @@
                    (push (sv-join/2 domain (pop required1) (pop required2))
                          required)))
         when donep
-        return (info-values domain
+        return (values-info domain
                             (nreverse required) (nreverse optional) rest)))

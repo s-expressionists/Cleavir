@@ -89,7 +89,6 @@
 
 (defmethod interpret-instruction ((domain backward-values-data)
                                   (inst bir:local-call))
-  (let* ((callee (bir:callee inst)) (args (rest (bir:inputs inst)))
-         (returni (bir:returni callee)))
+  (let* ((callee (bir:callee inst)) (args (rest (bir:inputs inst))))
     (flow-arguments domain (bir:lambda-list callee) args)
     (flow-call domain callee (info domain (bir:output inst)))))
