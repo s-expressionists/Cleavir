@@ -28,18 +28,28 @@
   (:identities (identities attributes)))
 
 ;;; NIL means no special attributes.
-(deftype attributes-designator () '(or attributes null))
+;;; T means all attributes. This will never be the case for any real function,
+;;; but is useful as a theoretical dual to NIL. It's kind of like NIL type.
+(deftype attributes-designator () '(or attributes null (eql t)))
 
 (defmethod flags ((attr null)) 0)
 (defmethod identities ((attr null)) nil)
 
 (defun default-attributes () nil)
 
+(defmethod flags ((attr (eql t))) -1)
+;;; Technically this should be all possible identities, but in practice we
+;;; want to behave as if nothing special is happening.
+(defmethod identities ((attr (eql t))) nil)
+
 (defgeneric has-flag-p (attributes flag-name))
 
 (defmethod has-flag-p ((attributes null) flag-name)
   (declare (ignore flag-name))
   nil)
+(defmethod has-flag-p ((attributes (eql t)) flag-name)
+  (declare (ignore flag-name))
+  t)
 (defmethod has-flag-p ((attributes attributes) flag-name)
   (%has-flag-p (flags attributes) flag-name))
 
@@ -52,6 +62,9 @@
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 attributes))
   (and (sub-flags-p (flags attr1) (flags attr2))
        (subsetp (identities attr1) (identities attr2) :test #'equal)))
+(defmethod sub-attributes-p ((attr1 null) (attr2 (eql t))) t)
+(defmethod sub-attributes-p ((attr1 attributes) (attr2 (eql t))) t)
+(defmethod sub-attributes-p ((attr1 (eql t)) (attr2 (eql t))) t)
 
 ;;; Return attributes combining both inputs; the returned attributes
 ;;; only have a given quality if both of the inputs do. Because attributes
@@ -72,6 +85,11 @@
              :flags (meet-flags (flags attr1) (flags attr2))
              :identities (intersection (identities attr1)
                                        (identities attr2) :test #'equal)))))
+(defmethod meet-attributes ((attr1 null) (attr2 (eql t))) attr1)
+(defmethod meet-attributes ((attr1 (eql t)) (attr2 null)) attr2)
+(defmethod meet-attributes ((attr1 attributes) (attr2 (eql t))) attr1)
+(defmethod meet-attributes ((attr1 (eql t)) (attr2 attributes)) attr2)
+(defmethod meet-attributes ((attr1 (eql t)) (attr2 (eql t))) attr1)
 
 (defmethod join-attributes ((attr1 null) (attr2 null)) attr1)
 (defmethod join-attributes ((attr1 null) (attr2 attributes)) attr2)
@@ -83,3 +101,8 @@
              :flags (join-flags (flags attr1) (flags attr2))
              :identities (union (identities attr1) (identities attr2)
                                 :test #'equal)))))
+(defmethod join-attributes ((attr1 null) (attr2 (eql t))) attr2)
+(defmethod join-attributes ((attr1 (eql t)) (attr2 null)) attr1)
+(defmethod join-attributes ((attr1 attributes) (attr2 (eql t))) attr2)
+(defmethod join-attributes ((attr1 (eql t)) (attr2 attributes)) attr1)
+(defmethod join-attributes ((attr1 (eql t)) (attr2 (eql t))) attr1)

@@ -165,19 +165,9 @@
     (setf (bir:derived-type phi) (compute-phi-type phi system))))
 
 (defun compute-phi-attributes (phi)
-  ;; Unlike with types, we don't have a starting "all attributes" value
-  ;; to use, so this is a little funky.
-  (let ((inps (bir:phi-inputs phi)))
-    (if (set:empty-set-p inps)
-        nil ; meaningless if there are no defs
-        (let* ((sinput (set:arb inps))
-               (attr (bir:attributes sinput)))
-          (set:doset (inp inps attr)
-            (unless (eq inp sinput) ; would be harmless, but no point
-              ;; meet due to contravariance
-              (setf attr (attributes:meet-attributes
-                          attr
-                          (bir:attributes inp)))))))))
+  (let ((attr t))
+    (set:doset (inp (bir:phi-inputs phi) attr)
+      (setq attr (attributes:meet-attributes attr (bir:attributes inp))))))
 
 (defun derive-iblock-input-attributes (iblock)
   (dolist (phi (bir:inputs iblock))

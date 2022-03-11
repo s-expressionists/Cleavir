@@ -4,5 +4,5 @@
   (:use #:common-lisp)
   (:export #:attributes #:attributes-designator #:default-attributes
            #:identities
-           #:meet-attributes #:join-attributes)
+           #:sub-attributes-p #:meet-attributes #:join-attributes)
   (:export #:make-flags #:has-flag-p))
