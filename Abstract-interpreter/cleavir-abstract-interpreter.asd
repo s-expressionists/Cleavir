@@ -13,4 +13,5 @@
    (:file "data" :depends-on ("interpret" "domain" "packages"))
    (:file "values-data" :depends-on ("interpret" "domain" "values"
                                                    "packages"))
-   (:file "type" :depends-on ("values-data" "packages"))))
+   (:file "type" :depends-on ("values-data" "interpret" "packages"))
+   (:file "attribute" :depends-on ("values-data" "packages"))))
