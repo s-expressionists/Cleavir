@@ -8,6 +8,7 @@
 (defmethod sv-join/2 ((domain type) ty1 ty2)
   (ctype:disjoin (system domain) ty1 ty2))
 (defmethod sv-infimum ((domain type)) (ctype:bottom (system domain)))
+(defmethod sv-supremum ((domain type)) (ctype:top (system domain)))
 (defmethod values-info ((domain type) required optional rest)
   (ctype:values required optional rest (system domain)))
 (defmethod values-required ((domain type) vtype)
@@ -24,7 +25,7 @@
   (ctype:values-top system))
 
 (defmethod interpret-instruction ((domain type) (inst bir:call))
-  (let* ((attr (bir:attributes inst))
+  (let* ((attr (attributes (bir:callee inst)))
          (identities (attributes:identities attr))
          (system (system domain))
          (output (bir:output inst)))
@@ -86,11 +87,6 @@
 
 (defclass asserted-type (type) ())
 
-(defmethod info ((domain asserted-type) (datum bir:datum))
-  (bir:asserted-type datum))
-(defmethod (setf info) (newtype (domain asserted-type) (datum bir:datum))
-  (setf (bir:asserted-type datum) newtype))
-
 (defmethod interpret-instruction ((domain asserted-type) (inst bir:thei))
   (flow-datum domain
               (bir:output inst)
@@ -100,13 +96,8 @@
 
 ;;;
 
-(defclass derived-type (forward-values-data)
+(defclass derived-type (type)
   ((system :initarg :system :reader system)))
-
-(defmethod info ((domain derived-type) (datum bir:datum))
-  (bir:ctype datum))
-(defmethod (setf info) (newtype (domain derived-type) (datum bir:datum))
-  (setf (bir:derived-type datum) newtype))
 
 (defmethod interpret-instruction ((domain derived-type) (inst bir:thei))
   (let* ((type-check-function (bir:type-check-function inst))

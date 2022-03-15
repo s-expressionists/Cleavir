@@ -69,6 +69,9 @@
   ;; really kind of awkward.
   (single-value domain (sv-infimum domain)))
 
+(defmethod supremum ((domain values-domain))
+  (values-info domain nil nil (sv-supremum domain)))
+
 (defmethod subinfop ((domain values-domain) info1 info2)
   (let* ((required1 (values-required domain info1))
          (required1-count (length required1))

@@ -50,9 +50,13 @@
      (lambda (state item index)
        (ecase state
          ((:required)
-          (flow-datum domain item (info-values-nth domain index info)))
+          (flow-datum domain item
+                      (single-value domain
+                                    (info-values-nth domain index info))))
          ((&optional)
-          (flow-datum domain (first item) (info-values-nth domain index info))
+          (flow-datum domain (first item)
+                      (single-value domain
+                                    (info-values-nth domain index info)))
           ;; Dunno what's going on with -p, so default.
           (flow-datum domain (second item) svtop))
          ((&rest) (flow-datum domain item svtop))
