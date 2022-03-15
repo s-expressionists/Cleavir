@@ -64,6 +64,8 @@
        (subsetp (identities attr1) (identities attr2) :test #'equal)))
 (defmethod sub-attributes-p ((attr1 null) (attr2 (eql t))) t)
 (defmethod sub-attributes-p ((attr1 attributes) (attr2 (eql t))) t)
+(defmethod sub-attributes-p ((attr1 (eql t)) (attr2 null)) nil)
+(defmethod sub-attributes-p ((attr1 (eql t)) (attr2 attributes)) nil)
 (defmethod sub-attributes-p ((attr1 (eql t)) (attr2 (eql t))) t)
 
 ;;; Return attributes combining both inputs; the returned attributes
