@@ -11,8 +11,9 @@
 ;;;
 
 (defgeneric sv-subinfop (domain info1 info2))
-;;(defgeneric sv-meet/2 (domain info1 info2))
+(defgeneric sv-meet/2 (domain info1 info2))
 (defgeneric sv-join/2 (domain info1 info2))
+(defgeneric sv-wjoin/2 (domain info1 info2))
 (defgeneric sv-infimum (domain))
 (defgeneric sv-supremum (domain))
 
@@ -142,6 +143,105 @@
                              optional))
                    ;; required v required
                    (push (sv-join/2 domain (pop required1) (pop required2))
+                         required)))
+        when donep
+        return (values-info domain
+                            (nreverse required) (nreverse optional) rest)))
+
+(defmethod wjoin/2 ((domain values-domain) info1 info2)
+  ;; (the general case below is not minimal)
+  (loop with required1 = (values-required domain info1)
+        with optional1 = (values-optional domain info1)
+        with rest1 = (values-rest domain info1)
+        with required2 = (values-required domain info2)
+        with optional2 = (values-optional domain info2)
+        with rest2 = (values-rest domain info2)
+        with required with optional with rest
+        with donep = nil
+        do (if (null required1)
+               (if (null optional1)
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; rest v rest
+                           (setf rest (sv-wjoin/2 domain rest1 rest2)
+                                 donep t)
+                           ;; rest v opt
+                           (push (sv-wjoin/2 domain rest1 (pop optional2))
+                                 optional))
+                       ;; rest v req
+                       (push (sv-wjoin/2 domain rest1 (pop required2))
+                             optional))
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; optional v rest
+                           (push (sv-wjoin/2 domain (pop optional1) rest2)
+                                 optional)
+                           ;; optional v optional
+                           (push (sv-wjoin/2 domain
+                                            (pop optional1) (pop optional2))
+                                 optional))
+                       ;; optional v req
+                       (push (sv-wjoin/2 domain (pop optional1) (pop required2))
+                             optional)))
+               (if (null required2)
+                   (if (null optional2)
+                       ;; required v rest
+                       (push (sv-wjoin/2 domain (pop required1) rest2)
+                             optional)
+                       ;; required v optional
+                       (push (sv-wjoin/2 domain (pop required1) (pop optional2))
+                             optional))
+                   ;; required v required
+                   (push (sv-wjoin/2 domain (pop required1) (pop required2))
+                         required)))
+        when donep
+        return (values-info domain
+                            (nreverse required) (nreverse optional) rest)))
+
+(defmethod meet/2 ((domain values-domain) info1 info2)
+  (loop with required1 = (values-required domain info1)
+        with optional1 = (values-optional domain info1)
+        with rest1 = (values-rest domain info1)
+        with required2 = (values-required domain info2)
+        with optional2 = (values-optional domain info2)
+        with rest2 = (values-rest domain info2)
+        with required with optional with rest
+        with donep = nil
+        do (if (null required1)
+               (if (null optional1)
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; rest v rest
+                           (setf rest (sv-meet/2 domain rest1 rest2)
+                                 donep t)
+                           ;; rest v opt
+                           (push (sv-meet/2 domain rest1 (pop optional2))
+                                 optional))
+                       ;; rest v req
+                       (push (sv-meet/2 domain rest1 (pop required2))
+                             required))
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; optional v rest
+                           (push (sv-meet/2 domain (pop optional1) rest2)
+                                 optional)
+                           ;; optional v optional
+                           (push (sv-meet/2 domain
+                                            (pop optional1) (pop optional2))
+                                 optional))
+                       ;; optional v req
+                       (push (sv-meet/2 domain (pop optional1) (pop required2))
+                             required)))
+               (if (null required2)
+                   (if (null optional2)
+                       ;; required v rest
+                       (push (sv-meet/2 domain (pop required1) rest2)
+                             required)
+                       ;; required v optional
+                       (push (sv-meet/2 domain (pop required1) (pop optional2))
+                             required))
+                   ;; required v required
+                   (push (sv-meet/2 domain (pop required1) (pop required2))
                          required)))
         when donep
         return (values-info domain

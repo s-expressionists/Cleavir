@@ -4,94 +4,165 @@
 
 ;;; Call FLOW-DATUM-THROUGH when the existing info is not a subinfo of the
 ;;; provided new info.
-(defgeneric flow-datum (domain datum info))
+(defgeneric flow-datum (strategy domain datum info))
 ;;; Mark instructions related to the data for further flow.
-(defgeneric flow-datum-through (domain datum))
+(defgeneric flow-datum-through (strategy domain datum))
 
-(defmethod flow-datum ((domain domain) (datum bir:datum) info)
-  (let* ((old (info domain datum))
+(defmethod flow-datum ((strategy optimism) (domain domain) (datum bir:datum)
+                       info)
+  (let* ((old (info strategy domain datum))
          (new (join domain old info)))
     ;; We check for a definite not-subinfo instead of just not subinfo
     ;; so that, if the relation can't be determined, we don't just keep
     ;; repeating.
     (multiple-value-bind (sub surety) (subinfop domain new old)
       (when (and surety (not sub))
-        (setf (info domain datum) new)
-        (flow-datum-through domain datum)))))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
 
-(defmethod flow-datum ((domain domain) (datum bir:variable) info)
-  (let* ((old (info domain datum))
+(defmethod flow-datum ((strategy pessimism) (domain domain) (datum bir:datum)
+                       info)
+  (let* ((old (info strategy domain datum))
+         (new (meet domain old info)))
+    (multiple-value-bind (sub surety) (subinfop domain old new)
+      (when (and surety (not sub))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
+
+(defmethod flow-datum ((strategy optimism) (domain domain) (datum bir:variable)
+                       info)
+  (let* ((old (info strategy domain datum))
          ;; widening join to ensure termination
          (new (wjoin domain old info)))
     (multiple-value-bind (sub surety) (subinfop domain new old)
       (when (and surety (not sub))
-        (setf (info domain datum) new)
-        (flow-datum-through domain datum)))))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
 
-(defmethod flow-datum-through ((domain forward-data) (datum bir:linear-datum))
+(defmethod flow-datum ((strategy pessimism) (domain forward-data)
+                       (datum bir:variable) info)
+  (declare (ignore info))
+  (let* ((old (info strategy domain datum))
+         (new (infimum domain)))
+    (set:doset (writer (bir:writers datum))
+      (let ((in (bir:input writer)))
+        (setf new (wjoin domain new (info strategy domain in)))))
+    (setf new (meet domain old new))
+    (multiple-value-bind (sub surety) (subinfop domain old new)
+      (when (and surety (not sub))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
+
+(defmethod flow-datum ((strategy pessimism) (domain backward-data)
+                       (datum bir:variable) info)
+  (declare (ignore info))
+  (let* ((old (info strategy domain datum))
+         (new (infimum domain)))
+    (set:doset (reader (bir:readers datum))
+      (let ((in (bir:input reader)))
+        (setf new (wjoin domain new (info strategy domain in)))))
+    (setf new (meet domain old new))
+    (multiple-value-bind (sub surety) (subinfop domain old new)
+      (when (and surety (not sub))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
+
+(defmethod flow-datum-through ((strategy strategy) (domain forward-data)
+                               (datum bir:linear-datum))
   (let ((use (bir:use datum)))
-    (when use (mark use))))
+    (when use (mark strategy use))))
 
-(defmethod flow-datum-through ((domain forward-data) (datum bir:variable))
-  (set:mapset nil #'mark (bir:readers datum)))
+(defmethod flow-datum-through ((strategy strategy) (domain forward-data)
+                               (datum bir:variable))
+  (set:doset (reader (bir:readers datum)) (mark strategy reader)))
 
-(defmethod flow-datum-through ((domain backward-data) (datum bir:output))
-  (mark (bir:definition datum)))
+(defmethod flow-datum-through ((strategy strategy) (domain backward-data)
+                               (datum bir:output))
+  (mark strategy (bir:definition datum)))
 
-(defmethod flow-datum-through ((domain backward-data) (datum bir:phi))
-  (set:mapset nil #'mark (bir:definitions datum)))
+  (defmethod flow-datum-through ((strategy strategy) (domain backward-data)
+                                 (datum bir:phi))
+  (set:doset (def (bir:definitions datum)) (mark strategy def)))
 
-(defmethod flow-datum-through ((domain backward-data) (datum bir:variable))
-  (set:mapset nil #'mark (bir:writers datum)))
+(defmethod flow-datum-through ((strategy strategy) (domain backward-data)
+                               (datum bir:variable))
+  (set:doset (writer (bir:writers datum)) (mark strategy writer)))
 
-(defmethod flow-datum-through ((domain backward-data) (datum bir:value)))
+(defmethod flow-datum-through ((strategy strategy) (domain backward-data)
+                               (datum bir:value)))
 
 ;;; We mark calls regardless of direction because if we were to track what
 ;;; calls encloses, anything interpreted backwards through the arguments would
 ;;; still need to result in forward propagation to calls to the function.
-(defmethod flow-datum-through ((domain data) (datum bir:function))
-  (set:mapset nil #'mark (bir:local-calls datum))
+(defmethod flow-datum-through ((strategy strategy) (domain data)
+                               (datum bir:function))
+  (set:doset (call (bir:local-calls datum)) (mark strategy call))
   (let ((enclose (bir:enclose datum)))
-    (when enclose (mark enclose))))
+    (when enclose (mark strategy enclose))))
 
 ;;; TODO
-(defmethod flow-datum-through ((domain backward-data) (datum bir:argument)))
+(defmethod flow-datum-through ((strategy strategy) (domain backward-data)
+                               (datum bir:argument)))
 
 ;;;
 
-(defmethod interpret-instruction ((domain forward-data)
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
                                   (instruction bir:instruction))
   (loop for output in (bir:outputs instruction)
-        do (flow-datum domain output (supremum domain))))
+        do (flow-datum strategy domain output (supremum domain))))
 
-(defmethod interpret-instruction ((domain backward-data)
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
                                   (instruction bir:instruction))
   (loop for input in (bir:inputs instruction)
-        do (flow-datum domain input (supremum domain))))
+        do (flow-datum strategy domain input (supremum domain))))
 
-(defmethod interpret-instruction ((domain forward-data) (inst bir:jump))
-  (loop for inp in (bir:inputs inst)
-        for info = (info domain inp)
-        for oup in (bir:outputs inst)
-        do (flow-datum domain oup info)))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (instruction bir:values-save))
+  (flow-datum strategy domain (bir:output instruction)
+              (info strategy domain (bir:input instruction))))
 
-(defmethod interpret-instruction ((domain backward-data) (inst bir:jump))
-  (loop for inp in (bir:inputs inst)
-        for oup in (bir:outputs inst)
-        for info = (info domain oup)
-        do (flow-datum domain inp info)))
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (instruction bir:values-save))
+  (flow-datum strategy domain (bir:input instruction)
+              (info strategy domain (bir:output instruction))))
 
-(defmethod interpret-instruction ((domain forward-data) (inst bir:unwind))
-  (loop for inp in (bir:inputs inst)
-        for info = (info domain inp)
-        for oup in (bir:outputs inst)
-        do (flow-datum domain oup info)))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (instruction bir:values-restore))
+  (flow-datum strategy domain (bir:output instruction)
+              (info strategy domain (bir:input instruction))))
 
-(defmethod interpret-instruction ((domain backward-data) (inst bir:unwind))
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (instruction bir:values-restore))
+  (flow-datum strategy domain (bir:input instruction)
+              (info strategy domain (bir:output instruction))))
+
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (inst bir:jump))
+  (loop for inp in (bir:inputs inst)
+        for info = (info strategy domain inp)
+        for oup in (bir:outputs inst)
+        do (flow-datum strategy domain oup info)))
+
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (inst bir:jump))
   (loop for inp in (bir:inputs inst)
         for oup in (bir:outputs inst)
-        for info = (info domain oup)
-        do (flow-datum domain inp info)))
+        for info = (info strategy domain oup)
+        do (flow-datum strategy domain inp info)))
+
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (inst bir:unwind))
+  (loop for inp in (bir:inputs inst)
+        for info = (info strategy domain inp)
+        for oup in (bir:outputs inst)
+        do (flow-datum strategy domain oup info)))
+
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (inst bir:unwind))
+  (loop for inp in (bir:inputs inst)
+        for oup in (bir:outputs inst)
+        for info = (info strategy domain oup)
+        do (flow-datum strategy domain inp info)))
 
 ;;; functions:
 ;;; We associate domain information with each function. This represents the
@@ -101,27 +172,35 @@
 ;;; the join of that obtainable by abstract interpretation from all call sites.
 ;;; This could be refined (FIXME).
 
-(defmethod interpret-instruction ((domain forward-data) (inst bir:returni))
-  (flow-datum domain (bir:function inst) (info domain (bir:input inst))))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (inst bir:returni))
+  (flow-datum strategy domain (bir:function inst)
+              (info strategy domain (bir:input inst))))
 
-(defmethod interpret-instruction ((domain backward-data) (inst bir:returni))
-  (flow-datum domain (bir:input inst) (info domain (bir:function inst))))
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (inst bir:returni))
+  (flow-datum strategy domain (bir:input inst)
+              (info strategy domain (bir:function inst))))
 
 ;;; For local-call we need values, so that's in values-data, but for mv calls
 ;;; we can proceed simply.
-(defmethod interpret-instruction ((domain forward-data)
+(defmethod interpret-instruction ((strategy strategy) (domain forward-data)
                                   (inst bir:mv-local-call))
   (let ((callee (bir:callee inst)))
-    (flow-call domain callee (info domain (second (bir:inputs inst))))
-    (flow-datum domain (bir:output inst) (info domain callee))))
+    (flow-call strategy domain callee
+               (info strategy domain (second (bir:inputs inst))))
+    (flow-datum strategy domain (bir:output inst)
+                (info strategy domain callee))))
 
-(defmethod flow-call ((domain backward-data) (function bir:function) info)
-  (flow-datum domain function info)
+(defmethod flow-call ((strategy strategy) (domain backward-data)
+                      (function bir:function) info)
+  (flow-datum strategy domain function info)
   (let ((returni (bir:returni function)))
-    (when returni (mark returni))))
+    (when returni (mark strategy returni))))
 
-(defmethod interpret-instruction ((domain backward-data)
+(defmethod interpret-instruction ((strategy strategy) (domain backward-data)
                                   (inst bir:mv-local-call))
   (let ((callee (bir:callee inst)))
-    (flow-call domain callee (info domain (bir:output inst)))
-    (flow-datum domain (second (bir:inputs inst)) (info domain callee))))
+    (flow-call strategy domain callee (info strategy domain (bir:output inst)))
+    (flow-datum strategy domain (second (bir:inputs inst))
+                (info strategy domain callee))))

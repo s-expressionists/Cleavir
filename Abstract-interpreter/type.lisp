@@ -18,25 +18,32 @@
 (defmethod values-rest ((domain type) vtype)
   (ctype:values-rest vtype (system domain)))
 
+;;; Use ctype values-conjoin to get strictness, i.e. that any required type
+;;; being bottom means the type as a whole is bottom.
+(defmethod meet/2 ((domain type) vty1 vty2)
+  (ctype:values-conjoin (system domain) vty1 vty2))
+
 (defgeneric derive-return-type (instruction identity argstype system))
 (defmethod derive-return-type ((inst bir:abstract-call) identity
                                argstype system)
   (declare (ignore identity argstype))
   (ctype:values-top system))
 
-(defmethod interpret-instruction ((domain type) (inst bir:call))
-  (let* ((attr (attributes (bir:callee inst)))
+(defmethod interpret-instruction ((strategy strategy) (domain type)
+                                  (inst bir:call))
+  (let* (;; FIXME: Better cross-domain access
+         (attr (bir:attributes (bir:callee inst)))
          (identities (attributes:identities attr))
          (system (system domain))
          (output (bir:output inst)))
     (flow-datum
-     domain output
+     strategy domain output
      (if (null identities)
          (ctype:values-top system)
          (let ((argtype
                  (ctype:values
                   (loop for arg in (rest (bir:inputs inst))
-                        for ct = (info domain arg)
+                        for ct = (info strategy domain arg)
                         collect (ctype:primary ct system))
                   nil (ctype:bottom system) system)))
            (if (= (length identities) 1)
@@ -47,7 +54,8 @@
                             collect (derive-return-type
                                      inst id argtype system)))))))))
 
-(defmethod flow-call ((domain type) (function bir:function) info)
+(defmethod flow-call ((strategy strategy) (domain type) (function bir:function)
+                      info)
   (let* ((system (system domain))
          (req (ctype:values-required info system))
          (opt (ctype:values-optional info system))
@@ -62,48 +70,51 @@
          (declare (ignore index))
          (ecase state
            ((:required)
-            (flow-datum domain item (ctype:single-value (next) system)))
+            (flow-datum strategy domain item
+                        (ctype:single-value (next) system)))
            ((&optional)
             (let ((certainly-provided-p (not (null req)))
                   (n (next)))
-              (flow-datum domain (first item) n)
-              (flow-datum domain (second item)
+              (flow-datum strategy domain (first item) n)
+              (flow-datum strategy domain (second item)
                           (cond (certainly-provided-p true)
                                 ((ctype:bottom-p n system) false)
                                 (t svtop)))))
            ((&rest)
-            (flow-datum domain item
+            (flow-datum strategy domain item
                         ;; LIST type
                         (ctype:single-value
                          (ctype:disjoin system false (ctype:cons top top system))
                          system)))
            ((&key)
             ;; FIXME: This is a punt.
-            (flow-datum domain (second item) svtop)
-            (flow-datum domain (third item) svtop))))
+            (flow-datum strategy domain (second item) svtop)
+            (flow-datum strategy domain (third item) svtop))))
        (bir:lambda-list function)))))
 
 ;;;
 
 (defclass asserted-type (type) ())
 
-(defmethod interpret-instruction ((domain asserted-type) (inst bir:thei))
-  (flow-datum domain
+(defmethod interpret-instruction ((strategy strategy) (domain asserted-type)
+                                  (inst bir:thei))
+  (flow-datum strategy domain
               (bir:output inst)
               (ctype:values-conjoin (system domain)
                                     (bir:asserted-type inst)
-                                    (info domain (bir:input inst)))))
+                                    (info strategy domain (bir:input inst)))))
 
 ;;;
 
 (defclass derived-type (type)
   ((system :initarg :system :reader system)))
 
-(defmethod interpret-instruction ((domain derived-type) (inst bir:thei))
+(defmethod interpret-instruction ((strategy strategy) (domain derived-type)
+                                  (inst bir:thei))
   (let* ((type-check-function (bir:type-check-function inst))
          (input (bir:input inst))
-         (ctype (info domain input)))
-    (flow-datum domain
+         (ctype (info strategy domain input)))
+    (flow-datum strategy domain
                 (bir:output inst)
                 (if (eq type-check-function nil)
                     ctype

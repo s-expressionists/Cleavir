@@ -14,11 +14,10 @@
 ;;;;   NIL T meaning false, or NIL NIL meaning undetermined.
 ;;;; * JOIN/2: The lattice join operation with two info operands. The variable
 ;;;;   arity JOIN is defined on top of this generic function.
-;;;; The following should also be defined, although they are not part of the
-;;;; strictest idea of a lattice:
 ;;;; * SUPREMUM: Return the largest element in the lattice. This is used as a
 ;;;;   default when the abstract interpreter does not know how to handle some
 ;;;;   instruction.
+;;;; * MEET/2: The lattice meet operation with two info operands.
 ;;;; * WJOIN/2: Widening join. This is like JOIN/2, but works on a Noetherian
 ;;;;   sublattice, i.e. some finite number of WJOIN operations will eventually
 ;;;;   converge. This is necessary for abstract interpretation to terminate.
@@ -28,6 +27,7 @@
 (defgeneric infimum (domain))
 (defgeneric subinfop (domain info1 info2))
 (defgeneric join/2 (domain info1 info2))
+(defgeneric meet/2 (domain info1 info2))
 
 (defgeneric supremum (domain))
 (defgeneric wjoin/2 (domain info1 info2))
@@ -44,6 +44,18 @@
               (consp (cdr infos))
               (null (cddr infos)))
          `(join/2 ,domain ,(first infos) ,(second infos)))
+        (t form)))
+
+(defun meet (domain &rest infos)
+  (cond ((null infos) (supremum domain))
+        ((null (rest infos)) (first infos))
+        (t (reduce (lambda (i1 i2) (meet/2 domain i1 i2)) infos))))
+(define-compiler-macro meet (&whole form domain &rest infos)
+  (cond ((null infos) `(supremum ,domain))
+        ((and (consp infos)
+              (consp (cdr infos))
+              (null (cddr infos)))
+         `(meet/2 ,domain ,(first infos) ,(second infos)))
         (t form)))
 
 (defun wjoin (domain &rest infos)
