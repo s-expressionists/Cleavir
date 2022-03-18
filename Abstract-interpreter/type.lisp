@@ -56,6 +56,15 @@
                             collect (derive-return-type
                                      inst id argtype system)))))))))
 
+(defmethod interpret-instruction ((strategy strategy) (domain type)
+                                  (inst bir:constant-reference))
+  (flow-datum
+   strategy domain (bir:output inst)
+   (let ((sys (system domain)))
+     (ctype:single-value
+      (ctype:member sys (bir:constant-value (bir:input inst)))
+      sys))))
+
 (defmethod flow-call ((strategy strategy) (domain type) (function bir:function)
                       info)
   (let* ((system (system domain))
