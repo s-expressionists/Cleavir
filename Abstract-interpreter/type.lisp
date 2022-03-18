@@ -7,6 +7,8 @@
   (ctype:subtypep ty1 ty2 (system domain)))
 (defmethod sv-join/2 ((domain type) ty1 ty2)
   (ctype:disjoin (system domain) ty1 ty2))
+(defmethod sv-meet/2 ((domain type) ty1 ty2)
+  (ctype:conjoin (system domain) ty1 ty2))
 (defmethod sv-infimum ((domain type)) (ctype:bottom (system domain)))
 (defmethod sv-supremum ((domain type)) (ctype:top (system domain)))
 (defmethod values-info ((domain type) required optional rest)

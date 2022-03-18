@@ -32,6 +32,16 @@
 
 ;;; Treat NIL as meaning (&rest nil), and an attribute as meaning
 ;;; (attr &rest nil).
+(defmethod values-required ((domain attribute) (vattr null)) ())
+(defmethod values-optional ((domain attribute) (vattr null)) ())
+(defmethod values-rest ((domain attribute) (vattr null)) vattr)
+(defmethod values-required ((domain attribute) (vattr attributes:attributes))
+  (list vattr))
+(defmethod values-optional ((domain attribute) (vattr attributes:attributes))
+  ())
+(defmethod values-rest ((domain attribute) (vattr attributes:attributes))
+  nil)
+
 (defmethod subinfop ((domain attribute) (attr1 attributes:attributes)
                      (attr2 attributes:attributes))
   (values (attributes:sub-attributes-p attr2 attr1) t))

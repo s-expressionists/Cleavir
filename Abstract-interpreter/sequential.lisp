@@ -30,7 +30,7 @@
         (loop for domain in domains
               do (flow-call strategy domain function (supremum domain))))
       ;; Unconditionally interpret every instruction (forward, arbitrarily)
-      (interpret-function-forward table domains function (constantly t)))
+      (interpret-function-forward strategy domains function (constantly t)))
     ;; Now iterate through every instruction repeatedly until we hit a fixpoint.
     (flet ((markedp (instruction)
              (values (gethash instruction table))))
