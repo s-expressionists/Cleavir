@@ -150,6 +150,8 @@
 
 (defmethod wjoin/2 ((domain values-domain) info1 info2)
   ;; (the general case below is not minimal)
+  ;; FIXME: We're also not actually Noetherian here, as we can keep adding
+  ;; values on to the right.
   (loop with required1 = (values-required domain info1)
         with optional1 = (values-optional domain info1)
         with rest1 = (values-rest domain info1)

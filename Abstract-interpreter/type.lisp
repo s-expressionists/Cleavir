@@ -7,6 +7,8 @@
   (ctype:subtypep ty1 ty2 (system domain)))
 (defmethod sv-join/2 ((domain type) ty1 ty2)
   (ctype:disjoin (system domain) ty1 ty2))
+(defmethod sv-wjoin/2 ((domain type) ty1 ty2)
+  (ctype:wdisjoin (system domain) ty1 ty2))
 (defmethod sv-meet/2 ((domain type) ty1 ty2)
   (ctype:conjoin (system domain) ty1 ty2))
 (defmethod sv-infimum ((domain type)) (ctype:bottom (system domain)))
