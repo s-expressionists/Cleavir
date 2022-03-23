@@ -213,6 +213,61 @@
         when donep
           return (values (nreverse required) (nreverse optional) rest sys)))
 
+(defmethod values-wdisjoin/2 (vct1 vct2 sys)
+  ;; FIXME: This is not actually Noetherian right now, since more values can
+  ;; get tacked on indefinitely!
+  (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
+  (cond ((values-bottom-p vct1 sys)
+         (return-from values-wdisjoin/2 vct2))
+        ((values-bottom-p vct2 sys)
+         (return-from values-wdisjoin/2 vct1)))
+  ;; General case
+  (loop with required1 = (values-required vct1 sys)
+        with optional1 = (values-optional vct1 sys)
+        with rest1 = (values-rest vct1 sys)
+        with required2 = (values-required vct2 sys)
+        with optional2 = (values-optional vct2 sys)
+        with rest2 = (values-rest vct2 sys)
+        with required with optional with rest
+        with donep = nil
+        do (if (null required1)
+               (if (null optional1)
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; rest v rest
+                           (setf rest (wdisjoin/2 rest1 rest2 sys)
+                                 donep t)
+                           ;; rest v opt
+                           (push (wdisjoin/2 rest1 (pop optional2) sys)
+                                 optional))
+                       ;; rest v req
+                       (push (wdisjoin/2 rest1 (pop required2) sys)
+                             optional))
+                   (if (null required2)
+                       (if (null optional2)
+                           ;; optional v rest
+                           (push (wdisjoin/2 (pop optional1) rest2 sys)
+                                 optional)
+                           ;; optional v optional
+                           (push (wdisjoin/2 (pop optional1) (pop optional2) sys)
+                                 optional))
+                       ;; optional v req
+                       (push (wdisjoin/2 (pop optional1) (pop required2) sys)
+                             optional)))
+               (if (null required2)
+                   (if (null optional2)
+                       ;; required v rest
+                       (push (wdisjoin/2 (pop required1) rest2 sys)
+                             optional)
+                       ;; required v optional
+                       (push (wdisjoin/2 (pop required1) (pop optional2) sys)
+                             optional))
+                   ;; required v required
+                   (push (wdisjoin/2 (pop required1) (pop required2) sys)
+                         required)))
+        when donep
+          return (values (nreverse required) (nreverse optional) rest sys)))
+
 (defmethod disjoin/2 (ct1 ct2 sys)
   (cond
     ((or (values-ctype-p ct1) (values-ctype-p ct2))
@@ -224,6 +279,36 @@
     ((cl:subtypep ct1 ct2) ct2)
     ((cl:subtypep ct2 ct1) ct1)
     (t `(or ,ct1 ,ct2))))
+
+(defmethod wdisjoin/2 (ct1 ct2 sys)
+  (cond
+    ((top-p ct1 sys) ct1)
+    ((top-p ct2 sys) ct2)
+    ((bottom-p ct1 sys) ct2)
+    ((bottom-p ct2 sys) ct1)
+    (t (let ((sum `(or ,ct1 ,ct2)))
+         (macrolet ((tcases (&rest type-specifiers)
+                      `(cond
+                         ,@(loop for ts in type-specifiers
+                                 collect `((cl:subtypep sum ',ts) ',ts))
+                         (t (top sys)))))
+           (tcases cl:nil cl:cons cl:null cl:symbol cl:base-char cl:character
+                   cl:hash-table cl:function cl:readtable cl:package
+                   cl:pathname cl:stream cl:random-state cl:condition
+                   cl:restart cl:structure-object cl:condition
+                   cl:standard-object
+                   short-float long-float double-float single-float ratio
+                   cl:complex
+                   bit (unsigned-byte 4) (signed-byte 4)
+                   (unsigned-byte 8) (signed-byte 8)
+                   (unsigned-byte 16) (signed-byte 16)
+                   (unsigned-byte 29) (signed-byte 29)
+                   (unsigned-byte 32) (signed-byte 32)
+                   (unsigned-byte 61) (signed-byte 61)
+                   (unsigned-byte 64) (signed-byte 64)
+                   integer rational real
+                   simple-vector cl:string (simple-array * (*)) vector
+                   simple-array cl:array))))))
 
 (defmethod negate (ct sys)
   (cond ((top-p ct sys) 'nil)
@@ -237,7 +322,7 @@
         (t `(and ,ct1 (not ,ct2)))))
 
 (defmethod values-append/2 (ct1 ct2 system)
-    ;; This is considerably complicated by nontrivial &optional and &rest.
+  ;; This is considerably complicated by nontrivial &optional and &rest.
   ;; For a start (to be improved? FIXME) we take the required values of the
   ;; first form, and record the minimum number of required values, which is
   ;; just the sum of those of the values types.

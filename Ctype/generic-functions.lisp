@@ -76,12 +76,37 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic functions VALUES-CONJOIN, VALUES-DISJOIN.
+;;; Generic function WDISJOIN/2.
+;;;
+;;; Widening disjunction: As DISJOIN/2, but the result lattice must be
+;;; Noetherian, i.e. any sequence of WDISJOIN operations must be
+;;; eventually stationary.
+;;;
+;;; Called by the n-ary WDISJOIN.
+
+(defgeneric wdisjoin/2 (ctype1 ctype2 system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions VALUES-CONJOIN/2, VALUES-DISJOIN/2.
 ;;;
 ;;; Given two values ctypes, compute their conjunction or disjunction.
+;;;
+;;; Called by the n-ary VALUES-CONJOIN, VALUES-DISJOIN.
 
 (defgeneric values-conjoin/2 (ctype1 ctype2 system))
 (defgeneric values-disjoin/2 (ctype1 ctype2 system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic function VALUES-WDISJOIN/2.
+;;;
+;;; Widening values disjunction, analogous to VALUES-DISJOIN/2 using
+;;; WDISJOIN/2.
+;;;
+;;; Called by the n-ary VALUES-WDISJOIN.
+
+(defgeneric values-wdisjoin/2 (ctype1 ctype2 system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

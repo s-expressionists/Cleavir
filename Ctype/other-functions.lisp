@@ -12,6 +12,12 @@
         (t
          (reduce (lambda (ct1 ct2) (disjoin/2 ct1 ct2 system))
                  ctypes))))
+(defun wdisjoin (system &rest ctypes)
+  (cond ((null ctypes) (bottom system))
+        ((null (cl:rest ctypes)) (first ctypes))
+        (t
+         (reduce (lambda (ct1 ct2) (wdisjoin/2 ct1 ct2 system))
+                 ctypes))))
 
 (defun values-conjoin (system &rest ctypes)
   (cond ((null ctypes) (values-top system))
@@ -24,6 +30,12 @@
         ((null (cl:rest ctypes)) (first ctypes))
         (t
          (reduce (lambda (vct1 vct2) (values-disjoin/2 vct1 vct2 system))
+                 ctypes))))
+(defun values-wdisjoin (system &rest ctypes)
+  (cond ((null ctypes) (values-bottom system))
+        ((null (cl:rest ctypes)) (first ctypes))
+        (t
+         (reduce (lambda (vct1 vct2) (values-wdisjoin/2 vct1 vct2 system))
                  ctypes))))
 
 (defun values-append (system &rest ctypes)

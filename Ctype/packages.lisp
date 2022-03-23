@@ -18,6 +18,7 @@
   (:export #:values-conjoin/2 #:values-disjoin/2 #:values-disjointp
            #:values-conjoin #:values-disjoin
            #:values-append/2 #:values-append)
+  (:export #:wdisjoin/2 #:wdisjoin #:values-wdisjoin/2 #:values-wdisjoin)
   (:export #:class #:cons #:array #:string
            #:character #:base-char #:standard-char
            #:complex #:range #:fixnum
