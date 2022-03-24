@@ -6,13 +6,15 @@
   :components
   ((:file "packages")
    (:file "domain" :depends-on ("packages"))
+   (:file "product" :depends-on ("packages"))
    (:file "values" :depends-on ("domain" "packages"))
    (:file "interpret" :depends-on ("packages"))
-   (:file "sequential" :depends-on ("interpret" "packages"))
-   (:file "control" :depends-on ("interpret" "domain"))
-   (:file "data" :depends-on ("interpret" "domain" "packages"))
+   (:file "sequential" :depends-on ("product" "interpret" "packages"))
+   (:file "control" :depends-on ("product" "interpret" "domain"))
+   (:file "data" :depends-on ("product" "interpret" "domain" "packages"))
    (:file "values-data" :depends-on ("interpret" "domain" "values" "packages"))
-   (:file "type" :depends-on ("values-data" "interpret" "packages"))
    (:file "attribute" :depends-on ("values-data" "packages"))
+   (:file "type" :depends-on ("product" "attribute" "values-data" "interpret"
+                                        "packages"))
    (:file "slots" :depends-on ("sequential" "attribute" "type" "interpret"
                                             "packages"))))

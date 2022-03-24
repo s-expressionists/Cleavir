@@ -33,10 +33,14 @@
   (declare (ignore identity argstype))
   (ctype:values-top system))
 
+(defun attribute (product)
+  (product-domain-of-type 'attribute product))
+
 (defmethod interpret-instruction ((strategy strategy) (domain type)
-                                  (inst bir:call))
-  (let* (;; FIXME: Better cross-domain access
-         (attr (bir:attributes (bir:callee inst)))
+                                  (product product) (inst bir:call))
+  (let* ((callee (bir:callee inst))
+         (attr-domain (attribute product))
+         (attr (info strategy attr-domain callee))
          (identities (attributes:identities attr))
          (system (system domain))
          (output (bir:output inst)))
@@ -59,6 +63,7 @@
                                      inst id argtype system)))))))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain type)
+                                  (product product)
                                   (inst bir:constant-reference))
   (flow-datum
    strategy domain (bir:output inst)
@@ -110,7 +115,7 @@
 (defclass asserted-type (type) ())
 
 (defmethod interpret-instruction ((strategy strategy) (domain asserted-type)
-                                  (inst bir:thei))
+                                  (product product) (inst bir:thei))
   (flow-datum strategy domain
               (bir:output inst)
               (ctype:values-conjoin (system domain)
@@ -123,7 +128,7 @@
   ((system :initarg :system :reader system)))
 
 (defmethod interpret-instruction ((strategy strategy) (domain derived-type)
-                                  (inst bir:thei))
+                                  (product product) (inst bir:thei))
   (let* ((type-check-function (bir:type-check-function inst))
          (input (bir:input inst))
          (ctype (info strategy domain input)))

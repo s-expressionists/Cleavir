@@ -11,9 +11,9 @@
         (mark strategy instruction)))))
 
 ;;; By default, mark all successors with the supremum.
-(defmethod flow-instruction ((strategy strategy)
-                             (domain forward-control)
-                             (instruction bir:instruction))
+(defmethod interpret-instruction ((strategy strategy)
+                                  (domain forward-control) (product product)
+                                  (instruction bir:instruction))
   (let ((succ (bir:successor instruction))
         (sup (supremum domain)))
     (if (null succ)
@@ -24,20 +24,20 @@
         ;; normal instruction
         (flow-control strategy domain succ sup))))
 
-(defmethod flow-instruction ((strategy strategy) (domain forward-control)
-                             (instruction bir:unwind))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
+                                  (product product) (instruction bir:unwind))
   (let* ((dest (bir:destination instruction))
          (ninst (bir:start dest)))
     (flow-control strategy domain ninst (supremum domain))))
 
-(defmethod flow-instruction ((strategy strategy) (domain forward-control)
-                             (instruction bir:local-call))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
+                                  (product product) (instruction bir:local-call))
   (flow-control strategy domain
                 (bir:start (bir:start (bir:callee instruction)))
                 (supremum domain)))
 
-(defmethod flow-instruction ((strategy strategy) (domain forward-control)
-                             (instruction bir:thei))
+(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
+                                  (product product) (instruction bir:thei))
   (let ((tcf (bir:type-check-function instruction)))
     (unless (symbolp tcf)
       (flow-control strategy domain (bir:start (bir:start tcf))

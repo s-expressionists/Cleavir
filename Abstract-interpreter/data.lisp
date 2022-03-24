@@ -107,36 +107,43 @@
 ;;;
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (instruction bir:instruction))
   (loop for output in (bir:outputs instruction)
         do (flow-datum strategy domain output (supremum domain))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (instruction bir:instruction))
   (loop for input in (bir:inputs instruction)
         do (flow-datum strategy domain input (supremum domain))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (instruction bir:values-save))
   (flow-datum strategy domain (bir:output instruction)
               (info strategy domain (bir:input instruction))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (instruction bir:values-save))
   (flow-datum strategy domain (bir:input instruction)
               (info strategy domain (bir:output instruction))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (instruction bir:values-restore))
   (flow-datum strategy domain (bir:output instruction)
               (info strategy domain (bir:input instruction))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (instruction bir:values-restore))
   (flow-datum strategy domain (bir:input instruction)
               (info strategy domain (bir:output instruction))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (inst bir:jump))
   (loop for inp in (bir:inputs inst)
         for info = (info strategy domain inp)
@@ -144,6 +151,7 @@
         do (flow-datum strategy domain oup info)))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (inst bir:jump))
   (loop for inp in (bir:inputs inst)
         for oup in (bir:outputs inst)
@@ -151,6 +159,7 @@
         do (flow-datum strategy domain inp info)))
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (inst bir:unwind))
   (loop for inp in (bir:inputs inst)
         for info = (info strategy domain inp)
@@ -158,6 +167,7 @@
         do (flow-datum strategy domain oup info)))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (inst bir:unwind))
   (loop for inp in (bir:inputs inst)
         for oup in (bir:outputs inst)
@@ -173,11 +183,13 @@
 ;;; This could be refined (FIXME).
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (inst bir:returni))
   (flow-datum strategy domain (bir:function inst)
               (info strategy domain (bir:input inst))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (inst bir:returni))
   (flow-datum strategy domain (bir:input inst)
               (info strategy domain (bir:function inst))))
@@ -185,6 +197,7 @@
 ;;; For local-call we need values, so that's in values-data, but for mv calls
 ;;; we can proceed simply.
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
+                                  (product product)
                                   (inst bir:mv-local-call))
   (let ((callee (bir:callee inst)))
     (flow-call strategy domain callee
@@ -199,6 +212,7 @@
     (when returni (mark strategy returni))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
+                                  (product product)
                                   (inst bir:mv-local-call))
   (let ((callee (bir:callee inst)))
     (flow-call strategy domain callee (info strategy domain (bir:output inst)))

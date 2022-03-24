@@ -33,11 +33,11 @@
 (defgeneric flow-call (strategy domain function info))
 
 ;;; Perform abstract interpretation on a module.
-(defgeneric interpret-module (strategy domains module))
+(defgeneric interpret-module (strategy product module))
 
 ;;; Perform abstract interpretation of an instruction. This should result in
 ;;; info changes and marking if there is better information. Called for effect.
-(defgeneric interpret-instruction (strategy domain instruction))
+(defgeneric interpret-instruction (strategy domain product instruction))
 
 ;;; Access the information in a domain for a given program object.
 (defgeneric info (strategy domain object))

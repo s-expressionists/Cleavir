@@ -17,8 +17,10 @@
 
 ;;;
 
-(defmethod interpret-module ((strategy sequential) domains (module bir:module))
-  (let ((table (mark-table strategy)))
+(defmethod interpret-module ((strategy sequential) (product product)
+                             (module bir:module))
+  (let ((table (mark-table strategy))
+        (domains (domains product)))
     (bir:do-functions (function module)
       ;; If a function is not enclosed and has no local calls, it is the entry
       ;; point, and we must proceed as though it could be called externally.
@@ -30,30 +32,30 @@
         (loop for domain in domains
               do (flow-call strategy domain function (supremum domain))))
       ;; Unconditionally interpret every instruction (forward, arbitrarily)
-      (interpret-function-forward strategy domains function (constantly t)))
+      (interpret-function-forward strategy product function (constantly t)))
     ;; Now iterate through every instruction repeatedly until we hit a fixpoint.
     (flet ((markedp (instruction)
              (values (gethash instruction table))))
       (loop
         (bir:do-functions (function module)
           (when (zerop (hash-table-count table)) (return-from interpret-module))
-          (interpret-function-backward strategy domains function #'markedp)
+          (interpret-function-backward strategy product function #'markedp)
           (when (zerop (hash-table-count table)) (return-from interpret-module))
-          (interpret-function-forward strategy domains function #'markedp))))))
+          (interpret-function-forward strategy product function #'markedp))))))
 
-(defun interpret-function-forward (strategy domains function predicate)
+(defun interpret-function-forward (strategy product function predicate)
   (bir:do-iblocks (ib function :forward)
     (bir:do-iblock-instructions (inst ib :forward)
-      (maybe-interpret-instruction strategy domains inst predicate))))
+      (maybe-interpret-instruction strategy product inst predicate))))
 
-(defun interpret-function-backward (strategy domains function predicate)
+(defun interpret-function-backward (strategy product function predicate)
   (bir:do-iblocks (ib function :backward)
     (bir:do-iblock-instructions (inst ib :backward)
-      (maybe-interpret-instruction strategy domains inst predicate))))
+      (maybe-interpret-instruction strategy product inst predicate))))
 
-(defun maybe-interpret-instruction (strategy domains instruction predicate)
+(defun maybe-interpret-instruction (strategy product instruction predicate)
   (when (funcall predicate instruction)
     (unmark strategy instruction)
-    (loop for domain in domains
-          do (interpret-instruction strategy domain instruction)))
+    (loop for domain in (domains product)
+          do (interpret-instruction strategy domain product instruction)))
   (values))

@@ -3,7 +3,7 @@
 ;;;; Forward and backward data flows for values data.
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-values-data)
+                                  (domain forward-values-data) (product product)
                                   (inst bir:fixed-to-multiple))
   (loop for inp in (bir:inputs inst)
         collect (primary domain (info strategy domain inp)) into in-infos
@@ -12,7 +12,7 @@
                             (ftm-info domain in-infos))))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-values-data)
+                                  (domain backward-values-data) (product product)
                                   (inst bir:fixed-to-multiple))
   (loop with output = (bir:output inst)
         with out-info = (info strategy domain output)
@@ -23,7 +23,7 @@
         do (flow-datum strategy domain inp vinfo)))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-values-data)
+                                  (domain forward-values-data) (product product)
                                   (inst bir:writevar))
   (let* ((input (bir:input inst)) (variable (bir:output inst))
          (input-info (primary domain (info strategy domain input)))
@@ -31,19 +31,19 @@
     (flow-datum strategy domain variable vinput-info)))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-values-data)
+                                  (domain backward-values-data) (product product)
                                   (inst bir:writevar))
   (flow-datum strategy domain (bir:input inst)
               (info strategy domain (bir:output inst))))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-values-data)
+                                  (domain forward-values-data) (product product)
                                   (inst bir:readvar))
   (flow-datum strategy domain (bir:output inst)
               (info strategy domain (bir:input inst))))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-values-data)
+                                  (domain backward-values-data) (product product)
                                   (inst bir:readvar))
   (let* ((variable (bir:input inst)) (output (bir:output inst))
          (output-info (primary domain (info strategy domain output)))
@@ -75,7 +75,7 @@
      (bir:lambda-list function))))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-values-data)
+                                  (domain forward-values-data) (product product)
                                   (inst bir:local-call))
   (let ((callee (bir:callee inst)) (args (rest (bir:inputs inst))))
     (flow-call strategy domain callee
@@ -105,7 +105,7 @@
           do (flow-datum strategy domain arg svtop))))
 
 (defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-values-data)
+                                  (domain backward-values-data) (product product)
                                   (inst bir:local-call))
   (let* ((callee (bir:callee inst)) (args (rest (bir:inputs inst))))
     (flow-arguments strategy domain (bir:lambda-list callee) args)
