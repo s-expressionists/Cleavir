@@ -5,6 +5,7 @@
                               :cleavir-primop
                :cleavir-cst-to-ast :cleavir-ast-to-bir
                :cleavir-bir-transformations
+               :cleavir-abstract-interpreter
                :concrete-syntax-tree)
   :components
   ((:file "packages")

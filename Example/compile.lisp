@@ -9,6 +9,19 @@
 (defun cst->bir (cst)
   (ast->bir (cst->ast cst)))
 
+(defun abstract-interpret (module)
+  (let* ((strategy (make-instance 'abstract-interpreter:sequential-slots))
+         (system *system*)
+         (atype (make-instance 'abstract-interpreter:asserted-type
+                  :system system))
+         (dtype (make-instance 'abstract-interpreter:derived-type
+                  :system system))
+         (attr (make-instance 'abstract-interpreter:attribute))
+         (domains (list atype dtype attr))
+         (product (make-instance 'abstract-interpreter:product
+                    :domains domains)))
+    (abstract-interpreter:interpret-module strategy product module)))
+
 (defun transform1 (bir phase)
   (ecase phase
     ((:eliminate-catches)
@@ -19,6 +32,8 @@
      (bir-transformations:module-optimize-variables bir))
     ((:meta-evaluate)
      (bir-transformations:meta-evaluate-module bir *system*))
+    ((:abstract-interpret)
+     (abstract-interpret bir))
     ((:generate-type-checks)
      (bir-transformations:module-generate-type-checks bir *system*))
     ((:extents)
