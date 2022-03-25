@@ -40,7 +40,9 @@
                                   (product product) (inst bir:call))
   (let* ((callee (bir:callee inst))
          (attr-domain (attribute product))
-         (attr (info strategy attr-domain callee))
+         (attr (if attr-domain
+                   (info strategy attr-domain callee)
+                   (attributes:default-attributes)))
          (identities (attributes:identities attr))
          (system (system domain))
          (output (bir:output inst)))
@@ -70,6 +72,43 @@
    (let ((sys (system domain)))
      (ctype:single-value
       (ctype:member sys (bir:constant-value (bir:input inst)))
+      sys))))
+
+(defmethod interpret-instruction ((strategy strategy) (domain type)
+                                  (product product) (inst bir:typeq-test))
+  (flow-datum
+   strategy domain (bir:output inst)
+   (let* ((sys (system domain))
+          (inp (bir:input inst))
+          (itype (info strategy domain inp))
+          (ivtype (ctype:primary itype sys))
+          (ttype (bir:test-ctype inst))
+          (nttype (ctype:negate ttype sys)))
+     (ctype:single-value
+      (if (ctype:disjointp ivtype ttype sys)
+          (if (ctype:disjointp ivtype nttype sys)
+              (ctype:bottom sys)
+              (ctype:member sys nil))
+          (if (ctype:disjointp ivtype nttype sys)
+              (ctype:negate (ctype:member sys nil) sys)
+              (ctype:top sys)))
+      sys))))
+
+(defmethod interpret-instruction ((strategy strategy) (domain type)
+                                  (product product) (inst bir:eq-test))
+  (flow-datum
+   strategy domain (bir:output inst)
+   (let* ((sys (system domain))
+          (inputs (bir:inputs inst))
+          (inp1 (first inputs)) (inp2 (second inputs))
+          (i1type (info strategy domain inp1))
+          (i2type (info strategy domain inp2))
+          (i1vtype (ctype:primary i1type sys))
+          (i2vtype (ctype:primary i2type sys)))
+     (ctype:single-value
+      (if (ctype:disjointp i1vtype i2vtype sys)
+          (ctype:member sys nil)
+          (ctype:top sys))
       sys))))
 
 (defmethod flow-call ((strategy strategy) (domain type) (function bir:function)
@@ -126,6 +165,9 @@
 
 (defclass derived-type (type)
   ((system :initarg :system :reader system)))
+
+(defun derived-type (product)
+  (product-domain-of-type 'derived-type product))
 
 (defmethod interpret-instruction ((strategy strategy) (domain derived-type)
                                   (product product) (inst bir:thei))

@@ -10,11 +10,14 @@
    (:file "values" :depends-on ("domain" "packages"))
    (:file "interpret" :depends-on ("packages"))
    (:file "sequential" :depends-on ("product" "interpret" "packages"))
-   (:file "control" :depends-on ("product" "interpret" "domain"))
-   (:file "data" :depends-on ("product" "interpret" "domain" "packages"))
+   (:file "control" :depends-on ("product" "interpret" "domain" "packages"))
+   (:file "reachability" :depends-on ("product" "control" "domain" "packages"))
+   (:file "data" :depends-on ("reachability" "product" "interpret" "domain"
+                                             "packages"))
    (:file "values-data" :depends-on ("interpret" "domain" "values" "packages"))
    (:file "attribute" :depends-on ("values-data" "packages"))
    (:file "type" :depends-on ("product" "attribute" "values-data" "interpret"
                                         "packages"))
+   (:file "typed-reachability" :depends-on ("type" "reachability" "packages"))
    (:file "slots" :depends-on ("sequential" "attribute" "type" "interpret"
                                             "packages"))))

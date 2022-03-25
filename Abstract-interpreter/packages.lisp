@@ -22,8 +22,9 @@
   (:export #:strategy #:optimism #:pessimism
            #:mark #:flow-call #:interpret-module #:interpret-instruction
            #:info)
-  (:export #:attribute
-           #:type #:derived-type #:asserted-type
+  (:export #:attribute)
+  (:export #:type #:derived-type #:asserted-type
            #:derive-return-type)
+  (:export #:reachability)
   (:export #:sequential)
   (:export #:slots #:sequential-slots))

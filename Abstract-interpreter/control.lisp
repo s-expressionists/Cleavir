@@ -42,3 +42,7 @@
     (unless (symbolp tcf)
       (flow-control strategy domain (bir:start (bir:start tcf))
                     (supremum domain)))))
+
+(defmethod flow-call ((strategy strategy) (domain forward-control)
+                      (function bir:function) info)
+  (flow-control strategy domain (bir:start (bir:start function)) info))

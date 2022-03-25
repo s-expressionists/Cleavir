@@ -109,14 +109,43 @@
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
                                   (product product)
                                   (instruction bir:instruction))
-  (loop for output in (bir:outputs instruction)
-        do (flow-datum strategy domain output (supremum domain))))
+  (loop with sup = (supremum domain)
+        for output in (bir:outputs instruction)
+        do (flow-datum strategy domain output sup)))
+
+(defmethod interpret-instruction :around ((strategy strategy)
+                                          (domain forward-data)
+                                          (product product)
+                                          (instruction bir:instruction))
+  ;; If an instruction is not reachable, its outputs must all be the infimum.
+  (let* ((reachability (reachability product))
+         (reachablep (if reachability
+                         (info strategy reachability instruction)
+                         t)))
+    (if reachablep
+        (call-next-method)
+        (loop with inf = (infimum domain)
+              for output in (bir:outputs instruction)
+              do (flow-datum strategy domain output inf)))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain backward-data)
                                   (product product)
                                   (instruction bir:instruction))
-  (loop for input in (bir:inputs instruction)
-        do (flow-datum strategy domain input (supremum domain))))
+  (loop with sup = (supremum domain)
+        for input in (bir:inputs instruction)
+        do (flow-datum strategy domain input sup)))
+
+(defmethod interpret-instruction :around ((strategy strategy)
+                                          (domain backward-data)
+                                          (product product)
+                                          (instruction bir:instruction))
+  (let* ((reachability (reachability product))
+         (reachablep (info strategy reachability instruction)))
+    (if reachablep
+        (call-next-method)
+        (loop with inf = (infimum domain)
+              for input in (bir:inputs instruction)
+              do (flow-datum strategy domain input inf)))))
 
 (defmethod interpret-instruction ((strategy strategy) (domain forward-data)
                                   (product product)

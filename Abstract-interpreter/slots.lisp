@@ -21,3 +21,9 @@
 (defmethod (setf info) (new (strategy slots)
                         (domain attribute) (datum bir:datum))
   (setf (bir:attributes datum) new))
+
+(defmethod info ((strategy slots) (domain reachability) (inst bir:instruction))
+  (bir:reachablep inst))
+(defmethod (setf info) (new (strategy slots)
+                        (domain reachability) (inst bir:instruction))
+  (setf (bir:reachablep inst) new))
