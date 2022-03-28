@@ -21,20 +21,6 @@
 (defmethod cleavir-env:type-expand ((env visualizer-environment) type)
   (cleavir-env:type-expand (environment env) type))
 
-(defmethod cleavir-env:has-extended-char-p ((env visualizer-environment))
-  (cleavir-env:has-extended-char-p (environment env)))
-
-(defmethod cleavir-env:float-types ((env visualizer-environment))
-  (cleavir-env:float-types (environment env)))
-
-(defmethod cleavir-env:upgraded-complex-part-types
-    ((env visualizer-environment))
-  (cleavir-env:upgraded-complex-part-types (environment env)))
-
-(defmethod cleavir-env:upgraded-array-element-types
-    ((env visualizer-environment))
-  (cleavir-env:upgraded-array-element-types (environment env)))
-
 (defmethod cleavir-compilation-policy:policy-qualities append ((env visualizer-environment))
   (loop :for (quality value) :in (optimize* env)
         :collect `(,quality (integer 0 3) ,value)))
