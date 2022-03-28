@@ -16,7 +16,22 @@
   (;; A name, for debugging/display/etc. NIL means no name.
    (%name :initarg :name :initform nil :reader name
           :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
-                    null))))
+                    null))
+   ;; A type that the code declares holds for this datum.
+   (%asserted-type :initform (current-top-ctype)
+                   :initarg :asserted-type
+                   :accessor asserted-type)
+   ;; A type the compiler has proven holds for this datum.
+   (%derived-type :initform (current-top-ctype)
+                  :initarg :derived-type
+                  :writer (setf derived-type)
+                  ;; For a generic datum, the type we use to
+                  ;; make inferences is just the type the compiler has
+                  ;; proven about this datum.
+                  :reader ctype)
+   ;; Additional flow attributes
+   (%attributes :initarg :attributes :accessor attributes
+                :initform (attributes:default-attributes))))
 
 ;;; A lexical is a datum that can be bound in an environment.
 (defclass lexical (datum) ())
@@ -51,22 +66,7 @@
 ;;; A datum with only one use.
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
-         :type (or null instruction))
-   ;; A type that the code declares holds for this linear-datum.
-   (%asserted-type :initform (current-top-ctype)
-                   :initarg :asserted-type
-                   :accessor asserted-type)
-   ;; A type the compiler has proven holds for this linear-datum.
-   (%derived-type :initform (current-top-ctype)
-                  :initarg :derived-type
-                  :writer (setf derived-type)
-                  ;; For a generic linear datum, the type we use to
-                  ;; make inferences is just the type the compiler has
-                  ;; proven about this datum.
-                  :reader ctype)
-   ;; Additional flow attributes
-   (%attributes :initarg :attributes :accessor attributes
-                :initform (attributes:default-attributes))))
+         :type (or null instruction))))
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
@@ -122,6 +122,8 @@
             :type sequence);; Sequence of data.
    (%outputs :initform '() :initarg :outputs :accessor outputs
              :type sequence)
+   ;; Used in abstract interpretation
+   (%reachablep :initform t :accessor reachablep :type boolean)
    ;; The iblock this instruction belongs to.
    (%iblock :initarg :iblock :accessor iblock :type iblock)
    (%policy :initform (current-policy) :initarg :policy :reader policy)

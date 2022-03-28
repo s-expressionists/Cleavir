@@ -28,7 +28,7 @@
   (:export #:instruction #:inputs #:outputs #:input
            #:no-input #:one-input #:no-output #:one-output
            #:terminator #:terminator0 #:terminator1
-           #:successor #:predecessor #:next
+           #:successor #:predecessor #:next #:reachablep
            #:origin #:policy)
   (:export #:*origin* #:*policy* #:*top-ctype*)
   (:export #:fixed-to-multiple
