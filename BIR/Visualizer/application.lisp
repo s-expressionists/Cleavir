@@ -147,14 +147,7 @@
    (output            output-pane :display-function   'display-output
                                   :end-of-page-action :allow)
    (disassembly       output-pane :display-function   'display-disassembly
-                                  :end-of-page-action :allow)
-   (tabs              (clim-tab-layout:with-tab-layout ('clim-tab-layout:tab-page)
-                        ("Output"
-                         (clim:scrolling () output))
-                        ("Intermediate Representation"
-                         (clim:scrolling (:scroll-bars :both) ir))
-                        ("Disassembly"
-                         (clim:scrolling () disassembly)))))
+                                  :end-of-page-action :allow))
   (:layouts
    (default
     (clim:spacing (:thickness 4)
@@ -173,7 +166,13 @@
             (clim:horizontally (:spacing 8)
               safe default fast)
             :fill))
-        (:fill tabs)))))
+        (:fill (clim-tab-layout:with-tab-layout ('clim-tab-layout:tab-page :name 'tabs)
+                 ("Output"
+                  (clim:scrolling () output))
+                 ("Intermediate Representation"
+                  (clim:scrolling (:scroll-bars :both) ir))
+                 ("Disassembly"
+                  (clim:scrolling () disassembly))))))))
   (:menu-bar nil)
   (:pointer-documentation t)
   (:command-table (ir-inspector-command-table
