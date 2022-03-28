@@ -34,11 +34,10 @@
   (declare (ignore info))
   (let* ((old (info strategy domain datum))
          (new (infimum domain)))
-    (set:doset (writer (bir:writers datum))
-      (let ((in (bir:input writer)))
-        ;; In the way we construct BIR, it's not possible for a phi to be
-        ;; dependent on itself. As such we should not need to widen.
-        (setf new (join domain new (info strategy domain in)))))
+    (set:doset (inp (bir:phi-inputs datum))
+      ;; In the way we construct BIR, it's not possible for a phi to be
+      ;; dependent on itself. As such we should not need to widen.
+      (setf new (join domain new (info strategy domain inp))))
     (setf new (meet domain old new))
     (multiple-value-bind (sub surety) (subinfop domain old new)
       (when (and surety (not sub))
