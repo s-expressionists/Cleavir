@@ -103,7 +103,7 @@
                                                 (stream clim:extended-output-stream))
   (call-next-method)
   (let ((*print-right-margin* most-positive-fixnum))
-    (format stream " ~A ~S" (bir:name object) (bir:lambda-list object))))
+    (format stream " ~A ~:S" (bir:name object) (bir:lambda-list object))))
 
 (defun draw-control-arc (stream from to x1 y1 x2 y2
                          &rest args &key &allow-other-keys)
