@@ -18,9 +18,11 @@
   ())
 
 (defun inspect-datum (datum container stream)
-  (clouseau:formatting-place
-      (container 'datum-place datum nil present-object)
-    (present-object stream)))
+  (if (typep datum 'bir:function)
+      (princ datum stream) ; TODO do something better
+      (clouseau:formatting-place
+          (container 'datum-place datum nil present-object)
+        (present-object stream))))
 
 ;;; Type utilities
 
