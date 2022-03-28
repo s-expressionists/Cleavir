@@ -80,6 +80,19 @@
                ~0@T        (+ x y)~@
                ~0@T        (list x))))"))
 
+(defvar *all-transforms*
+  '(cleavir-bir-transformations:module-eliminate-catches
+    cleavir-bir-transformations:find-module-local-calls
+    cleavir-bir-transformations:module-optimize-variables
+    (cleavir-bir-transformations:meta-evaluate-module)
+    (cleavir-bir-transformations:module-generate-type-checks)
+    ;; These should happen last since they are like "post passes" which
+    ;; do not modify the flow graph.
+    ;; NOTE: These must come in this order to maximize analysis.
+    cleavir-bir-transformations:determine-function-environments
+    cleavir-bir-transformations:determine-closure-extents
+    cleavir-bir-transformations:determine-variable-extents))
+
 (clim:define-application-frame ir-inspector ()
   ((%cst         :accessor cst)
    (%policy      :accessor policy
@@ -88,6 +101,11 @@
                                  (list 'debug             1)
                                  (list 'space             1)
                                  (list 'compilation-speed 1)))
+   (%all-transforms :initarg  :all-transforms
+                    :reader   all-transforms
+                    :initform *all-transforms*)
+   (%last-transform :accessor last-transform
+                    :initform nil)
    (%output      :accessor output
                  :initform '())
    (%disassembly :accessor disassembly
@@ -121,6 +139,10 @@
                        clim:*application-frame* "Fast"
                        '((speed 3) (safety 0) (debug 0) (space 0) (compilation-speed 0))
                        :background clim:+salmon+))
+   (transforms        :list-pane :items (all-transforms clim:*application-frame*)
+                                 :value-changed-callback
+                                 (lambda (gadget value)
+                                   (setf (last-transform (clim:gadget-client gadget)) value)))
    (ir                 clouseau:inspector-pane)
    (output            output-pane :display-function   'display-output
                                   :end-of-page-action :allow)
@@ -133,6 +155,8 @@
         (clim:horizontally (:spacing 8)
           (:fill (clim:labelling (:label "Lambda Expression")
                    form-editor))
+          (clim:labelling (:label "Transforms")
+            transforms)
           (clim:vertically (:spacing 8)
             speed
             safety
@@ -155,7 +179,7 @@
                    :inherit-from (clouseau:inspector-command-table)))
   (:pretty-name "BIR Inspector"))
 
-(defun update (frame cst policy)
+(defun update (frame cst policy transforms)
   (a:when-let ((ir (clim:find-pane-named frame 'ir)))
     (handler-bind
         ((error (lambda (condition)
@@ -165,11 +189,11 @@
         (setf (values (clouseau:root-object ir :run-hook-p t)
                       (output frame)
                       (disassembly frame))
-              (module<-cst cst policy))))
+              (module<-cst cst policy transforms))))
   nil)
 
 (defmethod (setf cst) :after ((new-value t) (frame ir-inspector))
-  (update frame new-value (policy frame)))
+  (update frame new-value (policy frame) (effective-transforms frame)))
 
 (defmethod (setf policy) :after ((new-value t) (frame ir-inspector))
   (labels ((update-slider (quality)
@@ -178,7 +202,19 @@
                (setf (clim:gadget-value slider :value-changed-callback nil)
                      (second (find quality new-value :key #'first))))))
     (map nil #'update-slider '(speed safety debug space compilation-speed)))
-  (update frame (cst frame) new-value))
+  (update frame (cst frame) new-value (effective-transforms frame)))
+
+(defmethod effective-transforms ((frame ir-inspector))
+  (let* ((all-transforms (all-transforms frame))
+         (last           (last-transform frame))
+         (index          (when last
+                           (position last all-transforms))))
+    (if index
+        (subseq all-transforms 0 (1+ index))
+        all-transforms)))
+
+(defmethod (setf last-transform) :after ((new-value t) (frame ir-inspector))
+  (update frame (cst frame) (policy frame) (effective-transforms frame)))
 
 (defmethod (setf output) :after ((new-value t) (frame ir-inspector))
   (a:when-let ((output (clim:find-pane-named frame 'output)))
