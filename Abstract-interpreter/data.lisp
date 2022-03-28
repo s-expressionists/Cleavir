@@ -29,6 +29,22 @@
         (setf (info strategy domain datum) new)
         (flow-datum-through strategy domain datum)))))
 
+(defmethod flow-datum ((strategy pessimism) (domain domain) (datum bir:phi)
+                       info)
+  (declare (ignore info))
+  (let* ((old (info strategy domain datum))
+         (new (infimum domain)))
+    (set:doset (writer (bir:writers datum))
+      (let ((in (bir:input writer)))
+        ;; In the way we construct BIR, it's not possible for a phi to be
+        ;; dependent on itself. As such we should not need to widen.
+        (setf new (join domain new (info strategy domain in)))))
+    (setf new (meet domain old new))
+    (multiple-value-bind (sub surety) (subinfop domain old new)
+      (when (and surety (not sub))
+        (setf (info strategy domain datum) new)
+        (flow-datum-through strategy domain datum)))))
+
 (defmethod flow-datum ((strategy optimism) (domain domain) (datum bir:variable)
                        info)
   (let* ((old (info strategy domain datum))
