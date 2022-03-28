@@ -27,20 +27,26 @@
 ;;; Type utilities
 
 (deftype single-value-type-specifier ()
-  '(cons (eql values) (cons t (cons (eql &optional) null))))
+  '(cons (eql values) (cons t (cons (eql &optional) (cons (eql &rest) (cons (eql nil) null))))))
+
+(deftype *-type-specifier ()
+  '(cons (eql values) (cons (eql &optional) (cons (eql &rest) (cons (eql t) null)))))
 
 (defun print-ctype (ctype stream)
-  (let* ((specifier (sb-c::type-specifier ctype))
-         (specifier (if (typep specifier 'single-value-type-specifier)
-                        (second specifier)
-                        specifier)))
+  (let* ((specifier ctype)
+         (specifier (cond ((typep specifier 'single-value-type-specifier)
+                           (second specifier))
+                          ((typep specifier '*-type-specifier)
+                           '*)
+                          (t
+                           specifier))))
     (let ((*print-right-margin* most-positive-fixnum))
       (princ specifier stream))))
 
 (defun print-type-annotation (ctype stream)
   (clim:with-drawing-options (stream :text-size :tiny :ink clim:+dark-green+)
     (write-char #\Space stream)
-    (princ ctype stream)))
+    (print-ctype ctype stream)))
 
 ;;; `module'
 
@@ -234,7 +240,7 @@
               (inspect-datum output object stream))))
 
 (defmethod clouseau:inspect-object-using-state :around ((object bir:linear-datum)
-                                                        (state  inspected-instruction)
+                                                        (state  clouseau:inspected-instance)
                                                         (style  (eql :collapsed))
                                                         (stream clim:extended-output-stream))
   (call-next-method)
