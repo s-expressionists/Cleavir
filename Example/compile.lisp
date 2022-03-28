@@ -17,7 +17,8 @@
          (dtype (make-instance 'abstract-interpreter:derived-type
                   :system system))
          (attr (make-instance 'abstract-interpreter:attribute))
-         (domains (list atype dtype attr))
+         (reach (make-instance 'abstract-interpreter:reachability))
+         (domains (list atype dtype attr reach))
          (product (make-instance 'abstract-interpreter:product
                     :domains domains)))
     (abstract-interpreter:interpret-module strategy product module)))
