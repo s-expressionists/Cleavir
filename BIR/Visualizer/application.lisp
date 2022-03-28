@@ -2,8 +2,7 @@
 
 ;;; Form
 
-(defclass form-editor (clime:always-repaint-background-mixin ; TDOO should not be needed
-                       clim:outlined-pane
+(defclass form-editor (clim:outlined-pane
                        clim:value-gadget)
   ()
   (:default-initargs
