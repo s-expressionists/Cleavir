@@ -48,6 +48,19 @@
     (write-char #\Space stream)
     (print-ctype ctype stream)))
 
+;;; `inspected-ir-instance'
+
+(defclass inspected-ir-instance (clouseau:inspected-instance)
+  ())
+
+(defmethod clouseau:object-state-class ((object bir:datum)
+                                        (place  t))
+  'inspected-ir-instance)
+
+(defmethod clouseau:object-state-class ((object bir:instruction)
+                                        (place  t))
+  'inspected-ir-instance)
+
 ;;; `module'
 
 (defmethod clouseau:inspect-object-using-state ((object bir:module)
@@ -98,7 +111,7 @@
       (call-next-method)))
 
 (defmethod clouseau:inspect-object-using-state ((object bir:function)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :expanded-header))
                                                 (stream clim:extended-output-stream))
   (call-next-method)
@@ -139,7 +152,7 @@
            (when ink (list :ink ink)))))
 
 (defmethod clouseau:inspect-object-using-state ((object bir:function)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :expanded-body))
                                                 (stream clim:extended-output-stream))
   (clouseau:with-section (stream) "BIR Control Flow Graph"
@@ -205,19 +218,19 @@
 
 ;;; `instruction'
 
-(defclass inspected-instruction (clouseau:inspected-instance)
+(defclass inspected-instruction (inspected-ir-instance)
   ())
 
 (defmethod clouseau:object-state-class ((object bir:instruction)
                                         (place  datum-place))
-  'clouseau:inspected-instance)
+  'inspected-ir-instance)
 
 (defmethod clouseau:object-state-class ((object bir:instruction)
                                         (place  t))
   'inspected-instruction)
 
 (defmethod clouseau:inspect-object-using-state ((object bir:instruction)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :collapsed))
                                                 (stream clim:extended-output-stream))
   (clim:with-drawing-options (stream :text-family :fix :ink clim:+dark-blue+)
@@ -240,14 +253,14 @@
               (inspect-datum output object stream))))
 
 (defmethod clouseau:inspect-object-using-state :around ((object bir:linear-datum)
-                                                        (state  clouseau:inspected-instance)
+                                                        (state  inspected-ir-instance)
                                                         (style  (eql :collapsed))
                                                         (stream clim:extended-output-stream))
   (call-next-method)
   (print-type-annotation (bir:ctype object) stream))
 
 (defmethod clouseau:inspect-object-using-state ((object bir:primop)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :collapsed))
                                                 (stream clim:extended-output-stream))
   (clim:with-drawing-options (stream :text-family :fix :ink clim:+dark-red+)
@@ -260,7 +273,7 @@
 ;;; feature.
 
 (defmethod clouseau:inspect-object-using-state ((object bir:datum)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :collapsed))
                                                 (stream clim:extended-output-stream))
   (if (typep object '(or bir:function bir:instruction)) ; HACK
@@ -270,9 +283,40 @@
           (format stream "~D" (or (bir:name object) number))))))
 
 (defmethod clouseau:inspect-object-using-state ((object bir:constant)
-                                                (state  clouseau:inspected-instance)
+                                                (state  inspected-ir-instance)
                                                 (style  (eql :collapsed))
                                                 (stream clim:extended-output-stream))
   (let ((number (datum-number object)))
     (clim:with-drawing-options (stream :ink (datum-ink number))
       (format stream "~S" (bir:constant-value object)))))
+
+;;; Source forms
+
+(flet ((draw-source-form (stream object source-form)
+         (declare (ignore object))
+         (clim:with-output-to-output-record (stream)
+           (clim:surrounding-output-with-border (stream :shape      :rectangle
+                                                        :outline    clim:+black+
+                                                        :background clim:+white+
+                                                        :shadow     t)
+             (print source-form stream)))))
+
+  (clim:define-presentation-method clim:highlight-presentation
+      ((type   inspected-ir-instance)
+       (record t)
+       (stream clim:extended-output-stream)
+       (state  t))
+    (let* ((state1      (clim:presentation-object record))
+           (object      (clouseau:object state1))
+           (source-form (ignore-errors (cst:raw (bir:origin object)))))
+      (when source-form
+        (clim:with-bounding-rectangle* (x1 y1) record
+          (let ((highlight-record (draw-source-form stream object source-form)))
+            (setf (clim:output-record-position highlight-record)
+                  (values x1 (+ y1 60)))
+            (ecase state
+              (:highlight
+               (clim:replay-output-record highlight-record stream))
+              (:unhighlight
+               (clim:repaint-sheet stream (clim:bounding-rectangle highlight-record))))))))
+    (call-next-method)))
