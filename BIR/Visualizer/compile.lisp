@@ -78,7 +78,7 @@
             (let ((string (get-output-stream-string output)))
               (if (a:emptyp string) nil string))
             (with-output-to-string (*standard-output*)
-              (cleavir-bir-disassembler:disassemble module)))))
+              (cleavir-bir-disassembler:display module)))))
 
 (defun module<-string (string policy)
   (module<-cst (cst<-string string) policy))
