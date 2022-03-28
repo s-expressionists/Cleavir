@@ -45,7 +45,7 @@
                  (a:rcurry #'cleavir-bir-transformations:meta-evaluate-module system)
                  ;; cc-bir-to-bmir:reduce-module-typeqs
                  ;; cc-bir-to-bmir:reduce-module-primops
-                 'cleavir-bir-transformations:module-generate-type-checks
+                 (a:rcurry #'cleavir-bir-transformations:module-generate-type-checks system)
                  ;; These should happen last since they are like "post passes" which
                  ;; do not modify the flow graph.
                  ;; NOTE: These must come in this order to maximize analysis.
