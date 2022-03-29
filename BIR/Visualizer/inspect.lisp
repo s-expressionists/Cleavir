@@ -298,7 +298,7 @@
            (clim:surrounding-output-with-border (stream :shape      :rectangle
                                                         :outline    clim:+black+
                                                         :background clim:+white+
-                                                        :shadow     t)
+                                                        :shadow     clim:+black+)
              (print source-form stream)))))
 
   (clim:define-presentation-method clim:highlight-presentation
