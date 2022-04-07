@@ -266,7 +266,9 @@
 
 ;;; Interface
 
-(defun run (&key new-process)
+(defun run (&key new-process
+              ((:environment *global-environment*) (sb-c::make-null-lexenv))
+              ((:system *system*) :visualizer))
   (let ((frame (clim:make-application-frame 'ir-inspector)))
     (flet ((do-it ()
              (clim:run-frame-top-level frame)))

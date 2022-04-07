@@ -4,7 +4,7 @@
 
 (defclass visualizer-environment ()
   ((%environment :reader   environment
-                 :initform (sb-c::make-null-lexenv))
+                 :initarg  :environment)
    (%optimize    :initarg  :optimize
                  :reader   optimize*)))
 
@@ -51,13 +51,18 @@
 (defun cst<-string (string)
   (eclector.concrete-syntax-tree:read-from-string string))
 
+(defvar *global-environment*)
+(defvar *system*)
+
 (defun module<-cst (cst policy transforms)
-  (let* ((system :visualizer)
+  (let* ((system *system*)
          (output (make-string-output-stream))
          (bir    (let ((*standard-output* output)
                        (*error-output*    output)
                        (*trace-output*    output))
-                   (let* ((environment (make-instance 'visualizer-environment :optimize policy))
+                   (let* ((environment (make-instance 'visualizer-environment
+                                         :environment *global-environment*
+                                         :optimize policy))
                           (ast         (cleavir-cst-to-ast:cst-to-ast
                                         cst environment system)))
                      (cleavir-ast-to-bir:compile-toplevel ast system))))

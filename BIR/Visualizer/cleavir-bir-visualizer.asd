@@ -14,7 +14,7 @@
 
                 "mcclim"
                 "clouseau")
-
+  :serial t
   :components  ((:file "package")
                 (:file "compile")
                 (:file "inspect")
