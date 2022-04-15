@@ -14,7 +14,7 @@ This makes it harder to get started on understanding and using Cleavir. To recti
 This example system can be used with the BIR visualizer (in BIR/Visualizer) as follows:
 
 1. Load the `cleavir-example` and `cleavir-bir-visualizer` systems.
-2. Run `(cleavir-example:load-environment)` to ste up the compilation environment.
+2. Run `(cleavir-example:load-environment)` to set up the compilation environment.
 3. Run `(cleavir.bir.visualizer:run :environment cleavir-example:*environment* :system cleavir-example:*system*)` to start the visualizer. `:new-process t` can additionally be passed in order to run the visualizer in a new thread, freeing up your REPL.
 4. Enter code in the "Lambda Expression" field (or leave the default), use the Safe/Default/Fast buttons and the optimize sliders to run a compilation, and freely inspect the IR in the "Intermediate Representation" tab.
 
