@@ -48,18 +48,33 @@
     (write-char #\Space stream)
     (print-ctype ctype stream)))
 
-;;; `inspected-ir-instance'
+;;; `origin-mixin'
+
+(defclass origin-mixin () ())
+
+;;; `inspected-ir-instance[-with-origin]'
 
 (defclass inspected-ir-instance (clouseau:inspected-instance)
   ())
 
+(defclass inspected-ir-instance-with-origin (origin-mixin
+                                             inspected-ir-instance)
+  ())
+
+(defun select-state-class (object
+                           &key (with-origin    'inspected-ir-instance-with-origin)
+                                (without-origin 'inspected-ir-instance))
+  (if (compute-applicable-methods #'bir:origin (list object))
+      with-origin
+      without-origin))
+
 (defmethod clouseau:object-state-class ((object bir:datum)
                                         (place  t))
-  'inspected-ir-instance)
+  (select-state-class object))
 
 (defmethod clouseau:object-state-class ((object bir:instruction)
                                         (place  t))
-  'inspected-ir-instance)
+  (select-state-class object))
 
 ;;; `module'
 
@@ -221,13 +236,18 @@
 (defclass inspected-instruction (inspected-ir-instance)
   ())
 
+(defclass inspected-instruction-with-origin (inspected-instruction
+                                             inspected-ir-instance-with-origin)
+  ())
+
 (defmethod clouseau:object-state-class ((object bir:instruction)
                                         (place  datum-place))
-  'inspected-ir-instance)
+  (select-state-class object))
 
 (defmethod clouseau:object-state-class ((object bir:instruction)
                                         (place  t))
-  'inspected-instruction)
+  (select-state-class object :with-origin    'inspected-instruction-with-origin
+                             :without-origin 'inspected-instruction))
 
 (defmethod clouseau:inspect-object-using-state ((object bir:instruction)
                                                 (state  inspected-ir-instance)
@@ -302,13 +322,13 @@
              (print source-form stream)))))
 
   (clim:define-presentation-method clim:highlight-presentation
-      ((type   inspected-ir-instance)
+      ((type   origin-mixin)
        (record t)
        (stream clim:extended-output-stream)
        (state  t))
     (let* ((state1      (clim:presentation-object record))
            (object      (clouseau:object state1))
-           (source-form (ignore-errors (cst:raw (bir:origin object)))))
+           (source-form (cst:raw (bir:origin object))))
       (when source-form
         (clim:with-bounding-rectangle* (x1 y1) record
           (let ((highlight-record (draw-source-form stream object source-form)))
