@@ -4,4 +4,5 @@
   (:use #:common-lisp)
   (:export
    #:class-stealth-mixins
+   #:add-mixin
    #:define-stealth-mixin))
