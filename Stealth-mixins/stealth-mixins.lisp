@@ -1,68 +1,69 @@
 (cl:in-package :cleavir-stealth-mixins)
 
-;;; The following hack is due to Gilbert Baumann.  It allows us to
-;;; dynamically mix in classes into a class without the latter being
-;;; aware of it.  
+(defclass victim-class (standard-class)
+  (;; A list of classes (not names!)
+   (%stealth-mixins :initarg :stealth-mixins :initform nil
+                    :reader stealth-mixins)))
 
-;; First of all we need to keep track of added mixins, we use a hash
-;; table here. Better would be to stick this information to the victim
-;; class itself.
+(defmethod closer-mop:validate-superclass ((class victim-class)
+                                           (super standard-class))
+  t)
 
-(defvar *stealth-mixins* (make-hash-table))
+;;; This is sort of like UNION, except we need to preserve the order of
+;;; the original direct superclasses, so we can't use UNION directly.
+;;; (We leave the order of stealth mixins in relation to each other
+;;;  unspecified.)
+(defun merge-mixins (mixins original-supers)
+  (loop for mixin in mixins
+        do (setf original-supers (adjoin mixin original-supers)))
+  original-supers)
 
-(defmacro class-stealth-mixins (class)
-  `(gethash ,class *stealth-mixins*))
+(defmethod reinitialize-instance ((instance victim-class)
+                                  &rest initargs
+                                  &key (stealth-mixins nil smp)
+                                    (direct-superclasses nil dsp))
+  ;; If new mixins are being put in, we use the argument, and otherwise
+  ;; we used the stored mixins. This means that non-stealth-mixin-aware
+  ;; redefinitions, e.g. of the original defclass, use the stealth
+  ;; information properly.
+  (apply #'call-next-method instance
+         :direct-superclasses (merge-mixins
+                               (if smp
+                                   stealth-mixins
+                                   (stealth-mixins instance))
+                               (if dsp
+                                   direct-superclasses
+                                   (closer-mop:class-direct-superclasses
+                                    instance)))
+         initargs))
 
-;; The 'direct-superclasses' argument to ensure-class is a list of
-;; either classes or their names. Since we want to avoid duplicates,
-;; we need an appropriate equivalence predicate:
+(defun resolve-class-designator (class-designator)
+  (if (typep class-designator 'class)
+      class-designator
+      (find-class class-designator)))
 
-(defun class-equalp (c1 c2)
-  (when (symbolp c1) (setf c1 (find-class c1)))
-  (when (symbolp c2) (setf c2 (find-class c2)))
-  (eq c1 c2))
-
-(defun add-mixin (mixin-name victim-class)
-  ;; Add the class to the mixins of the victim
-  (closer-mop:ensure-class
-   victim-class
-   :direct-superclasses (adjoin mixin-name
-                                (and (find-class victim-class nil)
-                                     (closer-mop:class-direct-superclasses
-				      (find-class victim-class)))
-                                :test #'class-equalp))
-
-  ;; Register it as a new mixin for the victim class
-  (pushnew mixin-name (class-stealth-mixins victim-class))
-
-  ;; When one wants to [re]define the victim class the new mixin
-  ;; should be present too. We do this by 'patching' ensure-class:
-  (defmethod closer-mop:ensure-class-using-class :around
-      (class (name (eql victim-class))
-       &rest arguments
-       &key (direct-superclasses nil direct-superclasses-p)
-       &allow-other-keys)
-    (cond (direct-superclasses-p
-           ;; Silently modify the super classes to include our new
-           ;; mixin.
-           (dolist (k (class-stealth-mixins name))
-             (pushnew k direct-superclasses
-                      :test #'class-equalp))
-           (apply #'call-next-method class name 
-                  :direct-superclasses direct-superclasses
-                  arguments))
-          (t
-           (call-next-method)))))
+(defun add-stealth-mixin (mixin victim-class-name)
+  ;; Add the class to the mixins of the victim.
+  ;; The victim class must have been defined already.
+  (let ((victim (find-class victim-class-name))
+        (mixin (resolve-class-designator mixin)))
+    (closer-mop:ensure-class
+     victim-class-name
+     :stealth-mixins (adjoin mixin (stealth-mixins victim))
+     ;; Necessary because E-C-U-C is specified to use STANDARD-CLASS
+     ;; if no :metaclass is provided, rather than the existing
+     ;; metaclass.
+     :metaclass (class-of victim))))
 
 (defmacro define-stealth-mixin (name super-classes victim-class-desig
-				&rest for-defclass)
+		                slots &rest options)
   "Like DEFCLASS but adds the newly defined class to the super classes
 of 'victim-class'."
   `(progn
      ;; First define the class we talk about
-     (defclass ,name ,super-classes ,@for-defclass)
+     (defclass ,name ,super-classes ,slots ,@options)
      ,@(loop for victim-class in (if (listp victim-class-desig)
                                      victim-class-desig
                                      (list victim-class-desig))
-             collect `(add-mixin ',name ',victim-class))
+             collect `(add-stealth-mixin ',name ',victim-class))
     ',name))

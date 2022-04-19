@@ -7,7 +7,8 @@
                     (#:set #:cleavir-set)
                     (#:attributes #:cleavir-attributes)
                     (#:conditions #:cleavir-conditions)
-                    (#:ctype #:cleavir-ctype))
+                    (#:ctype #:cleavir-ctype)
+                    (#:stealth-mixins #:cleavir-stealth-mixins))
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches

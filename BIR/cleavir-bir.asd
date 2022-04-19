@@ -3,6 +3,7 @@
 (defsystem :cleavir-bir
   :depends-on (:cleavir-primop :cleavir-set :cleavir-attributes
                                :acclimation :cleavir-conditions :cleavir-ctype
+               :cleavir-stealth-mixins
                :concrete-syntax-tree)
   :components
   ((:file "packages")

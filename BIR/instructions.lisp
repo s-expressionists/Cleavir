@@ -90,7 +90,8 @@
   ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (set:empty-set)
              ;; A set of corresponding UNWINDs
-             :type set:set)))
+             :type set:set))
+  (:metaclass stealth-mixins:victim-class))
 
 ;;; Mark a lexical binding.
 (defclass leti (writevar) ())

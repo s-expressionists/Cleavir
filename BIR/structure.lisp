@@ -16,10 +16,12 @@
   (;; A name, for debugging/display/etc. NIL means no name.
    (%name :initarg :name :initform nil :reader name
           :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
-                    null))))
+                    null)))
+  (:metaclass stealth-mixins:victim-class))
 
 ;;; A lexical is a datum that can be bound in an environment.
-(defclass lexical (datum) ())
+(defclass lexical (datum) ()
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod print-object ((o datum) stream)
   (print-unreadable-object (o stream :type t :identity t)
@@ -32,7 +34,8 @@
 (defgeneric ssa-p (datum))
 
 ;;; A datum with only one definition (static single assignment).
-(defclass ssa (datum) ())
+(defclass ssa (datum) ()
+  (:metaclass stealth-mixins:victim-class))
 (defmethod ssa-p ((ssa datum)) t)
 
 ;;; This type represents the type of the datum that we can assume when
@@ -66,19 +69,23 @@
                   :reader ctype)
    ;; Additional flow attributes
    (%attributes :initarg :attributes :accessor attributes
-                :initform (attributes:default-attributes))))
+                :initform (attributes:default-attributes)))
+  (:metaclass stealth-mixins:victim-class))
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
 ;;; A datum with one definition and one use.
-(defclass transfer (ssa linear-datum) ())
+(defclass transfer (ssa linear-datum) ()
+  (:metaclass stealth-mixins:victim-class))
 
 ;;; An SSA datum with only one definition - itself.
-(defclass value (ssa) ())
+(defclass value (ssa) ()
+  (:metaclass stealth-mixins:victim-class))
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -87,7 +94,8 @@
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:metaclass stealth-mixins:victim-class))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -140,7 +148,8 @@
 ;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initform nil :initarg :definition
-                :reader definition :accessor %definition)))
+                :reader definition :accessor %definition))
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod definitions ((datum output))
   (set:make-set (definition datum)))
@@ -180,7 +189,8 @@
 
 ;;; An argument to a function.
 (defclass argument (value transfer)
-  ((%function :initarg :function :reader function :type function)))
+  ((%function :initarg :function :reader function :type function))
+  (:metaclass stealth-mixins:victim-class))
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.
@@ -192,7 +202,8 @@
 ;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
-            :type iblock)))
+            :type iblock))
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
@@ -266,7 +277,8 @@
    (%use-status :initarg :use-status :initform nil :reader use-status
                 :type (member nil set read))
    ;; What kind of ignore declaration is on this variable?
-   (%ignore :initarg :ignore :reader ignore)))
+   (%ignore :initarg :ignore :reader ignore))
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod origin ((datum variable)) (origin (binder datum)))
 
@@ -380,7 +392,8 @@
    (%attributes :initarg :attributes :accessor attributes
                 :initform (attributes:default-attributes))
    ;; The module containing this function.
-   (%module :initarg :module :reader module :type module)))
+   (%module :initarg :module :reader module :type module))
+  (:metaclass stealth-mixins:victim-class))
 
 (defmethod print-object ((o function) s)
   (print-unreadable-object (o s :type t)
