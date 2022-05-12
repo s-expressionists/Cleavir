@@ -627,17 +627,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Methods specialized to operators for which we do not provide a
-;;; conversion method.
+;;; Converting MULTIPLE-VALUE-CALL.
+;;; We essentially treat it as a macro that expands into a use of the primop.
+;;; An implementation may override this, make it an actual macro, etc.
 
-;;; Implementations should probably convert this in terms of
-;;; CLEAVIR-PRIMOP:MULTIPLE-VALUE-CALL.
 (defmethod convert-special
     ((symbol (eql 'multiple-value-call)) cst environment system)
-  (declare (ignore environment system))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
-  (error 'no-default-method :operator symbol :cst cst))
+  (cst:db origin (mvc fdesignator . args) cst
+    (declare (ignore mvc))
+    (let ((f (make-atom-cst (gensym "FDESIGNATOR") origin)))
+      (convert (cst:quasiquote
+                origin
+                (let (((cst:unquote f) (cst:unquote fdesignator)))
+                  (cleavir-primop:multiple-value-call
+                      (etypecase (cst:unquote f)
+                        (function (cst:unquote f))
+                        (symbol (fdefinition (cst:unquote f))))
+                    (cst:unquote-splicing args))))
+               environment system))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Methods specialized to operators for which we do not provide a
+;;; conversion method.
 
 (defmethod convert-special
     ((symbol (eql 'catch)) cst environment system)
