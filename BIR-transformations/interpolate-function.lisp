@@ -14,7 +14,7 @@
     (loop (typecase successor
             (bir:jump
              ;; Make sure no dynamic environment actions happen.
-             ;; FIXME: Maybe also ignore CATCH dynenvs.
+             ;; FIXME: Maybe also ignore COME-FROM dynenvs.
              (if (bir:unwindp successor)
                  (return successor)
                  (progn
@@ -224,7 +224,7 @@
 ;;; dynamic environment DYNENV.
 (defun interpolate-function (function target-function dynenv)
   (set:nunionf (bir:variables target-function) (bir:variables function))
-  (set:nunionf (bir:catches target-function) (bir:catches function))
+  (set:nunionf (bir:come-froms target-function) (bir:come-froms function))
   ;; Re-home iblocks (and indirectly, instructions), and if the
   ;; function unwinds to its target function, change it to a local
   ;; unwind.
@@ -309,9 +309,9 @@
       (when unique-call
         (bir:merge-successor-if-possible (bir:iblock unique-call)))
       ;; We've interpolated and there are potentially useless
-      ;; catches in TARGET-OWNER, so now that the IR is in a
+      ;; come-froms in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.
-      (eliminate-catches target-owner)
+      (eliminate-come-froms target-owner)
       t)))
 
 ;;; We can inline required, optional, and ignored &rest parameters.

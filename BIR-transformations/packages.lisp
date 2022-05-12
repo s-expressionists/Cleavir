@@ -6,7 +6,7 @@
                     (#:set #:cleavir-set)
                     (#:ctype #:cleavir-ctype)
                     (#:attributes #:cleavir-attributes))
-  (:export #:module-eliminate-catches #:eliminate-catches)
+  (:export #:module-eliminate-come-froms #:eliminate-come-froms)
   (:export #:module-optimize-variables #:function-optimize-variables)
   (:export #:simple-unwinding-p #:simple-dynenv-p)
   (:export #:find-module-local-calls #:maybe-interpolate)

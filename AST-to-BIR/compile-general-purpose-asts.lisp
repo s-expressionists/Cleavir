@@ -145,12 +145,12 @@
 (defun (setf block-info) (new-info block-ast)
   (setf (gethash block-ast *block-info*) new-info))
 
-(defun insert-unwind (inserter catch dest &optional inputs outputs)
+(defun insert-unwind (inserter come-from dest &optional inputs outputs)
   (let ((uw (make-instance 'bir:unwind
-              :inputs inputs :outputs outputs :catch catch
+              :inputs inputs :outputs outputs :come-from come-from
               :destination dest)))
     (terminate inserter uw)
-    (set:nadjoinf (bir:unwinds catch) uw)
+    (set:nadjoinf (bir:unwinds come-from) uw)
     (set:nadjoinf (bir:entrances dest) (iblock inserter)))
   (values))
 
@@ -168,15 +168,15 @@
                               :function function
                               :dynamic-environment de))
          (phi (make-instance 'bir:phi :iblock mergeb))
-         (catch (make-instance 'bir:catch
-                  :next (list during mergeb)
-                  :name (ast:name ast))))
-    (set:nadjoinf (bir:catches function) catch)
+         (come-from (make-instance 'bir:come-from
+                      :next (list during mergeb)
+                      :name (ast:name ast))))
+    (set:nadjoinf (bir:come-froms function) come-from)
     (setf (bir:inputs mergeb) (list phi))
-    (setf (bir:dynamic-environment during) catch)
-    (terminate inserter catch)
+    (setf (bir:dynamic-environment during) come-from)
+    (terminate inserter come-from)
     (begin inserter during)
-    (setf (block-info ast) (list function catch mergeb))
+    (setf (block-info ast) (list function come-from mergeb))
     (let ((normal-rv (compile-ast (ast:body-ast ast) inserter system)))
       (unless (eq normal-rv :no-return)
         (terminate inserter 'bir:jump
@@ -193,7 +193,7 @@
 (defmethod compile-ast ((ast ast:return-from-ast) inserter system)
   (let ((rv (compile-ast (ast:form-ast ast) inserter system)))
     (unless (eq rv :no-return)
-      (destructuring-bind (function catch mergeb)
+      (destructuring-bind (function come-from mergeb)
           (block-info (ast:block-ast ast))
         (if (eq function (function inserter))
             ;; local
@@ -202,7 +202,7 @@
                        :outputs (copy-list (bir:inputs mergeb))
                        :next (list mergeb))
             ;; nonlocal
-            (insert-unwind inserter catch mergeb rv
+            (insert-unwind inserter come-from mergeb rv
                            (copy-list (bir:inputs mergeb)))))))
   :no-return)
 
@@ -236,17 +236,17 @@
                    for tagname = (write-to-string (ast:name tag-ast))
                    for bname = (symbolicate '#:tag- tagname)
                    collecting (make-iblock inserter :name bname)))
-           (catch (make-instance 'bir:catch
-                    :next (list* prefix-iblock tag-iblocks))))
-      (set:nadjoinf (bir:catches function) catch)
-      ;; this is used to check whether the catch is actually necessary.
-      (setf (go-info catch) nil)
-      (setf (bir:dynamic-environment prefix-iblock) catch)
+           (come-from (make-instance 'bir:come-from
+                        :next (list* prefix-iblock tag-iblocks))))
+      (set:nadjoinf (bir:come-froms function) come-from)
+      ;; this is used to check whether the come-from is actually necessary.
+      (setf (go-info come-from) nil)
+      (setf (bir:dynamic-environment prefix-iblock) come-from)
       (loop for tag-ast in item-asts
             for tag-iblock in tag-iblocks
-            do (setf (bir:dynamic-environment tag-iblock) catch
-                     (go-info tag-ast) (list catch tag-iblock function)))
-      (terminate inserter catch)
+            do (setf (bir:dynamic-environment tag-iblock) come-from
+                     (go-info tag-ast) (list come-from tag-iblock function)))
+      (terminate inserter come-from)
       (begin inserter prefix-iblock)
       (unless (eq (compile-ast prefix-ast inserter system) :no-return)
         (terminate inserter 'bir:jump
@@ -283,7 +283,7 @@
 
 (defmethod compile-ast ((ast ast:go-ast) inserter system)
   (declare (ignore system))
-  (destructuring-bind (catch iblock cfunction) (go-info (ast:tag-ast ast))
+  (destructuring-bind (come-from iblock cfunction) (go-info (ast:tag-ast ast))
     (let ((function (function inserter)))
       (cond
         ((eq function cfunction)
@@ -292,9 +292,9 @@
                     :inputs () :outputs ()
                     :next (list iblock)))
         (t
-         (setf (go-info catch) t)
+         (setf (go-info come-from) t)
          ;; nonlocal
-         (insert-unwind inserter catch iblock)))))
+         (insert-unwind inserter come-from iblock)))))
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

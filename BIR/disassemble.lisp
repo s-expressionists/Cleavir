@@ -66,7 +66,7 @@
   (or (gethash value *ids*)
       (setf (gethash value *ids*)
             (name-id (name value)))))
-(defmethod disassemble-datum ((datum catch))
+(defmethod disassemble-datum ((datum come-from))
   (name-id (or (name datum) 'unnamed-tag)))
 
 (defun label (instruction)
@@ -114,11 +114,11 @@
 (defmethod disassemble-instruction-extra append ((inst enclose))
   (list (disassemble-datum (code inst))))
 
-(defmethod disassemble-instruction-extra append ((inst catch))
+(defmethod disassemble-instruction-extra append ((inst come-from))
   (list (disassemble-datum inst)))
 
 (defmethod disassemble-instruction-extra append ((inst unwind))
-  (list (disassemble-datum (catch inst))
+  (list (disassemble-datum (come-from inst))
         (iblock-id (destination inst))))
 
 (defmethod disassemble-instruction-extra append ((inst load-time-value))

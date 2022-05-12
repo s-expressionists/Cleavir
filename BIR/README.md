@@ -187,9 +187,9 @@ function (LAMBDA (F X)) (f x)
   iblock (LAMBDA (F X))-START:
    dynenv = (FUNCTION (LAMBDA (F X)))
      (leti x) -> X
-     (catch tag (block-nil block-nil-merge))
+     (come-from tag (block-nil block-nil-merge))
   iblock BLOCK-NIL ():
-   dynenv = (CATCH IN (LAMBDA (F X))-START)
+   dynenv = (COME-FROM IN (LAMBDA (F X))-START)
      (enclose (lambda ())) -> (LAMBDA ())-0
      (call f (lambda ())-0) -> 1
      (jump 1 block-nil-merge)
@@ -206,8 +206,8 @@ function (LAMBDA ()) ()
      (unwind x-0 tag block-nil-merge) -> 0
 ```
 
-The outer function, `(lambda (f x))`, binds `x` and then uses the `catch` instruction. This instruction indicates a nonlocal entrance point, i.e. a point another function can immediately exit to using `return-from`, `go`, etc. The outer function then proceeds to `BLOCK-NIL`, which creates a closure and calls `f` with this closure. If this call returns normally, the result is passed to `BLOCK-NIL-MERGE`.
+The outer function, `(lambda (f x))`, binds `x` and then uses the `come-from` instruction. This instruction indicates a nonlocal entrance point, i.e. a point another function can immediately exit to using `return-from`, `go`, etc. The outer function then proceeds to `BLOCK-NIL`, which creates a closure and calls `f` with this closure. If this call returns normally, the result is passed to `BLOCK-NIL-MERGE`.
 
-The inner function simply reads the variable `x`, and then uses the `unwind` instruction. This performs a nonlocal exit. The second input to the `unwind` instruction, `tag`, represents the nonlocal entrance at the catch, and may have to exist at runtime as a sort of closure variable representing the target stack frame. `unwind` passes its first input, the read variable, to `BLOCK-NIL-MERGE` in the outer function.
+The inner function simply reads the variable `x`, and then uses the `unwind` instruction. This performs a nonlocal exit. The second input to the `unwind` instruction, `tag`, represents the nonlocal entrance at the come-from, and may have to exist at runtime as a sort of closure variable representing the target stack frame. `unwind` passes its first input, the read variable, to `BLOCK-NIL-MERGE` in the outer function.
 
 `BLOCK-NIL-MERGE` simply returns its input, whether it's received from the outer function, or a nonlocal exit from the inner function. The input `0` is a phi node that is only used once, but which can be assigned by multiple `jump` and `unwind` instructions.

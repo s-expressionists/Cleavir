@@ -52,7 +52,7 @@ Dynamic environments
 
 A dynamic environment that binds variables is an instance of the also-abstract class `lexical-bind`. The `bindings` of a `lexical-bind` can be read.
 
-`function`s (below) are `lexical-bind`s, and some instructions (e.g. `catch`) are dynamic environments or `lexical-bind`s also.
+`function`s (below) are `lexical-bind`s, and some instructions (e.g. `come-from`) are dynamic environments or `lexical-bind`s also.
 
 Lexical variable binding is distinguished so that clients may easily see the dynamic extent of variable bindings for stack allocating closure cells.
 

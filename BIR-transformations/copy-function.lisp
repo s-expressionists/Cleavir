@@ -173,7 +173,7 @@
 
 (defmethod initialize-copy :after ((term bir:unwind))
   (set:nadjoinf (bir:unwinds
-                         (bir:catch term))
+                         (bir:come-from term))
                         term)
   (set:nadjoinf (bir:entrances
                          (bir:destination term))
@@ -182,8 +182,8 @@
 (defmethod initialize-copy :after ((bind bir:leti))
   (setf (bir:binder bind) (first (bir:outputs bind))))
 
-(defmethod initialize-copy :after ((c bir:catch))
-  (set:nadjoinf (bir:catches (bir:function c)) c))
+(defmethod initialize-copy :after ((c bir:come-from))
+  (set:nadjoinf (bir:come-froms (bir:function c)) c))
 
 (defmethod initialize-copy :after ((e bir:enclose))
   (setf (bir:enclose (bir:code e)) e))
@@ -225,11 +225,11 @@
     ((instruction bir:unwind) stack map)
   (let* ((original-dest (bir:destination instruction))
          (original-dest-function (bir:function original-dest))
-         (original-catch (bir:catch instruction)))
+         (original-come-from (bir:come-from instruction)))
     (if (member original-dest-function stack)
-        (list :catch (copy-of original-catch map)
+        (list :come-from (copy-of original-come-from map)
               :destination (copy-of original-dest map))
-        (list :catch original-catch :destination original-dest))))
+        (list :come-from original-come-from :destination original-dest))))
 
 (defmethod clone-initargs append
     ((instruction bir:jump) stack map)

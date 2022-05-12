@@ -2,7 +2,7 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:unwind-protect #:variable
+  (:shadow #:function #:unwind-protect #:variable
            #:load-time-value #:case #:ignore)
   (:local-nicknames (#:primop-info #:cleavir-primop-info)
                     (#:set #:cleavir-set)
@@ -11,7 +11,7 @@
                     (#:ctype #:cleavir-ctype))
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
-  (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
+  (:export #:function #:iblocks #:start #:end #:inputs #:variables #:come-froms
            #:environment
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
@@ -41,7 +41,7 @@
            #:ifi #:conditional-test
            #:case #:comparees
            #:unwind-protect
-           #:catch #:unwinds #:unwind #:destination
+           #:come-from #:unwinds #:unwind #:destination
            #:values-save #:fixed-values-save #:nvalues
            #:values-restore #:values-collect
            #:abstract-call #:callee #:call #:local-call

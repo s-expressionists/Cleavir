@@ -81,7 +81,7 @@
                ~0@T        (list x))))"))
 
 (defvar *all-transforms*
-  '(cleavir-bir-transformations:module-eliminate-catches
+  '(cleavir-bir-transformations:module-eliminate-come-froms
     cleavir-bir-transformations:find-module-local-calls
     cleavir-bir-transformations:module-optimize-variables
     (cleavir-bir-transformations:meta-evaluate-module)

@@ -91,7 +91,8 @@
                           terminator1)
   ())
 
-(defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
+(defclass come-from (no-input no-output lexical ssa
+                     dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (set:empty-set)
              ;; A set of corresponding UNWINDs
@@ -112,8 +113,8 @@
 ;;; Nonlocal control transfer.
 ;;; Inputs are passed to the destination.
 (defclass unwind (terminator0)
-  ((%catch :initarg :catch :reader catch
-           :type catch)
+  ((%come-from :initarg :come-from :reader come-from
+               :type come-from)
    (%destination :initarg :destination :reader destination
                  :type iblock)))
 
