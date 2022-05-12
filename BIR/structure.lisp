@@ -371,6 +371,9 @@
    ;; The set of local calls of this function.
    (%local-calls :initform (set:empty-set) :accessor local-calls
                  :type set:set)
+   ;; Other uses of this function, e.g. THE or UNWIND-PROTECT.
+   (%other-uses :initform (set:empty-set) :accessor other-uses
+                :type set:set)
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%policy :initarg :policy :initform nil :reader policy)

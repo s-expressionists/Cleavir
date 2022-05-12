@@ -378,6 +378,13 @@
   (test (typep (type-check-function instruction)
                '(or (member :trusted nil) function))
         "has invalid type-check-function ~a"
+        instruction (type-check-function instruction))
+  ;; Make sure we're a use of our tcf
+  (test (let ((tcf (type-check-function instruction)))
+          (if (typep tcf 'function)
+              (set:presentp instruction (other-uses tcf))
+              t))
+        "is not a use of its type-check-function ~a"
         instruction (type-check-function instruction)))
 
 (defmethod verify progn ((iblock iblock))

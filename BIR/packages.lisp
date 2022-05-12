@@ -12,7 +12,7 @@
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:come-froms
-           #:environment
+           #:environment #:other-uses
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
