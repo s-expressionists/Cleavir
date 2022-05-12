@@ -169,6 +169,11 @@
     (check-ubd instruction (rest inputs))
     (check-usedness instruction (rest inputs))))
 
+(defmethod verify-inputs ((instruction unwind-protect))
+  (test (typep (input instruction) 'function)
+        "has non-function cleanup ~a"
+        instruction (input instruction)))
+
 (defmethod verify-inputs ((instruction constant-reference))
   (let* ((inputs (inputs instruction))
          (constant (first inputs)))

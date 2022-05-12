@@ -302,23 +302,24 @@
 ;;; UNWIND-PROTECT-AST
 
 (defmethod compile-ast ((ast ast:unwind-protect-ast) inserter system)
-  (with-compiled-ast (fu (ast:cleanup-ast ast) inserter system)
-    (let* ((uw (make-instance 'bir:unwind-protect :inputs fu))
-           (ode (dynamic-environment inserter))
-           (during (make-iblock inserter :dynamic-environment uw)))
-      (setf (bir:next uw) (list during))
-      (terminate inserter uw)
-      (begin inserter during)
-      (with-compiled-ast (rv (ast:body-ast ast) inserter system)
-        ;; Pass the return values through a phi so that they're easy for
-        ;; the client to get at. KLUDGEy.
-        (let* ((next (make-iblock inserter :dynamic-environment ode))
-               (phi (make-instance 'bir:phi :iblock next)))
-          (setf (bir:inputs next) (list phi))
-          (terminate inserter 'bir:jump
-                     :inputs rv :outputs (list phi) :next (list next))
-          (begin inserter next)
-          (list phi))))))
+  (let* ((cleanup (compile-function (ast:cleanup-ast ast) system))
+         (uw (make-instance 'bir:unwind-protect
+               :inputs (list cleanup)))
+         (ode (dynamic-environment inserter))
+         (during (make-iblock inserter :dynamic-environment uw)))
+    (setf (bir:next uw) (list during))
+    (terminate inserter uw)
+    (begin inserter during)
+    (with-compiled-ast (rv (ast:body-ast ast) inserter system)
+      ;; Pass the return values through a phi so that they're easy for
+      ;; the client to get at. KLUDGEy.
+      (let* ((next (make-iblock inserter :dynamic-environment ode))
+             (phi (make-instance 'bir:phi :iblock next)))
+        (setf (bir:inputs next) (list phi))
+        (terminate inserter 'bir:jump
+                   :inputs rv :outputs (list phi) :next (list next))
+        (begin inserter next)
+        (list phi)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
