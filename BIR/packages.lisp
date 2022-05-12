@@ -2,7 +2,8 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:variable #:load-time-value #:case #:ignore)
+  (:shadow #:function #:catch #:unwind-protect #:variable
+           #:load-time-value #:case #:ignore)
   (:local-nicknames (#:primop-info #:cleavir-primop-info)
                     (#:set #:cleavir-set)
                     (#:attributes #:cleavir-attributes)
@@ -39,6 +40,7 @@
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
            #:case #:comparees
+           #:unwind-protect
            #:catch #:unwinds #:unwind #:destination
            #:values-save #:fixed-values-save #:nvalues
            #:values-restore #:values-collect

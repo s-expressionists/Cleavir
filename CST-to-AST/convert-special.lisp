@@ -608,6 +608,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Converting UNWIND-PROTECT.
+
+(defmethod convert-special
+    ((symbol (eql 'unwind-protect)) cst environment system)
+  (check-cst-proper-list cst 'form-must-be-proper-list)
+  (check-argument-count cst 1 nil)
+  (cst:db origin (protected . cleanup) (cst:rest cst)
+    (make-instance 'ast:unwind-protect-ast
+      :body-ast (convert protected environment system)
+      :cleanup-ast (convert
+                    (cst:quasiquote (cst:source cleanup)
+                                    (lambda ()
+                                      (progn ; to handle errant DECLARE
+                                        (cst:unquote-splicing cleanup))))
+                    environment system)
+      :origin cst)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Methods specialized to operators for which we do not provide a
 ;;; conversion method.
 
@@ -615,13 +634,6 @@
 ;;; CLEAVIR-PRIMOP:MULTIPLE-VALUE-CALL.
 (defmethod convert-special
     ((symbol (eql 'multiple-value-call)) cst environment system)
-  (declare (ignore environment system))
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 1 nil)
-  (error 'no-default-method :operator symbol :cst cst))
-
-(defmethod convert-special
-    ((symbol (eql 'unwind-protect)) cst environment system)
   (declare (ignore environment system))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)

@@ -86,6 +86,11 @@
 
 (defclass values-collect (dynamic-environment one-output terminator1) ())
 
+;;; The one input is the cleanup thunk.
+(defclass unwind-protect (dynamic-environment one-input no-output
+                          terminator1)
+  ())
+
 (defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (set:empty-set)

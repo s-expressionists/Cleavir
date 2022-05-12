@@ -48,6 +48,7 @@
    #:setq-ast #:make-setq-ast #:value-ast
    #:tagbody-ast #:make-tagbody-ast #:prefix-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
+   #:unwind-protect-ast #:cleanup-ast
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype
    #:type-check-function-ast
