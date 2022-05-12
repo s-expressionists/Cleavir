@@ -376,6 +376,26 @@
                 :inputs (list var) :outputs (list readvar-out))
         (list readvar-out)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; DYNAMIC-BIND-AST
+
+(defmethod compile-ast ((ast ast:dynamic-bind-ast) inserter system)
+  (with-compiled-asts (args ((ast:name-ast ast) (ast:value-ast ast))
+                            inserter system)
+    (let* ((during (make-iblock inserter))
+           (ode (dynamic-environment inserter))
+           (bind (make-instance 'bir:bind :inputs args :next (list during))))
+      (setf (bir:dynamic-environment during) bind)
+      (terminate inserter bind)
+      (begin inserter during)
+      (with-compiled-ast (rv (cleavir-ast:body-ast ast) inserter system)
+        (let ((next (make-iblock inserter :dynamic-environment ode)))
+          (terminate inserter 'bir:jump
+                     :inputs () :outputs () :next (list next))
+          (begin inserter next))
+        rv))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; THE-AST

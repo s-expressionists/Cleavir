@@ -105,6 +105,10 @@
 (defclass dynamic-leti (leti terminator1 dynamic-environment)
   ())
 
+;;; Dynamic binding. Inputs are the symbol and the new value.
+(defclass bind (dynamic-environment no-output terminator1)
+  ())
+
 ;;; Nonlocal control transfer.
 ;;; Inputs are passed to the destination.
 (defclass unwind (terminator0)

@@ -640,6 +640,26 @@
 
 (define-children lexical-bind-ast (lexical-variable value-ast))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Class DYNAMIC-BIND-AST
+;;;
+;;; This AST represents the binding of a special variable.
+;;;
+
+(defclass dynamic-bind-ast (ast)
+  ((%name :initarg :name-ast :reader name-ast)
+   (%value :initarg :value-ast :reader value-ast)
+   (%body :initarg :body-ast :reader body-ast)))
+
+(cleavir-io:define-save-info dynamic-bind-ast
+    (:name-ast name-ast)
+  (:value-ast value-ast)
+  (:body-ast body-ast))
+
+(define-children dynamic-bind-ast
+    (name-ast value-ast body-ast))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Class TAG-AST.
