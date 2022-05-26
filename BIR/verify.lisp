@@ -75,7 +75,7 @@
   ;; iblock is correct
   (test (eq (iblock instruction) *verifying-iblock*)
         "Instruction ~a's iblock ~a does not match its presence in ~a"
-        instruction (iblock instruction) *verifying-iblock*)
+        instruction instruction (iblock instruction) *verifying-iblock*)
   (verify-inputs instruction)
   (let ((inputs (inputs instruction)))
     (test (or (null inputs) (not (set:presentp inputs *seen-lists*)))
