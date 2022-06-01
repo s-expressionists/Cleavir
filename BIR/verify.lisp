@@ -74,7 +74,7 @@
           instruction (successor instruction)))
   ;; iblock is correct
   (test (eq (iblock instruction) *verifying-iblock*)
-        "Instruction ~a's iblock ~a does not match its presence in ~a"
+        "has iblock ~a which does not match its presence in ~a"
         instruction (iblock instruction) *verifying-iblock*)
   (verify-inputs instruction)
   (let ((inputs (inputs instruction)))
