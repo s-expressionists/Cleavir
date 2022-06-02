@@ -4,8 +4,9 @@
            #:upgraded-array-element-type
            #:upgraded-complex-part-type
            #:class #:cons #:array #:string
+           #:consp #:arrayp #:array-element-type #:array-dimensions
            #:character #:base-char #:standard-char
-           #:complex #:fixnum #:member
+           #:complex #:fixnum #:member #:complexp
            #:satisfies #:keyword #:function #:compiled-function
            #:values #:nth-value #:funcall #:apply)
   (:export #:subtypep
@@ -19,8 +20,10 @@
            #:values-conjoin #:values-disjoin
            #:values-append/2 #:values-append)
   (:export #:class #:cons #:array #:string
+           #:consp #:arrayp #:array-element-type #:array-dimensions
            #:character #:base-char #:standard-char
-           #:complex #:range #:fixnum
+           #:complex #:range #:fixnum #:complexp #:complex-part-type
+           #:rangep #:range-high #:range-low
            #:member #:member-p #:member-members
            #:satisfies #:keyword
            #:function #:compiled-function #:values #:coerce-to-values)
