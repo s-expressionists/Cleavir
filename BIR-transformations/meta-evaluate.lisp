@@ -187,8 +187,12 @@
   (derive-iblock-input-types iblock system)
   (derive-iblock-input-attributes iblock)
   (bir:do-iblock-instructions (instruction iblock)
-    (unless (meta-evaluate-instruction instruction system)
-      (derive-types instruction system))))
+    ;; We derive types first. The type derivations should be correct regardless
+    ;; of whether a rewrite is on the way, and if we do things in this order we
+    ;; can derive types through any amount of straight line code during a single
+    ;; meta-evaluate pass, promoting flow.
+    (derive-types instruction system)
+    (meta-evaluate-instruction instruction system)))
 
 (defgeneric maybe-flush-instruction (instruction))
 
