@@ -23,7 +23,7 @@
            #:consp #:arrayp #:array-element-type #:array-dimensions
            #:character #:base-char #:standard-char
            #:complex #:range #:fixnum #:complexp #:complex-part-type
-           #:rangep #:range-high #:range-low
+           #:rangep #:range-kind #:range-high #:range-low
            #:member #:member-p #:member-members
            #:satisfies #:keyword
            #:function #:compiled-function #:values #:coerce-to-values)

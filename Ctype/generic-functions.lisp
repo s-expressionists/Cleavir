@@ -255,14 +255,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic functions RANGEP, RANGE-LOW, RANGE-HIGH.
-;;; Determine if a ctype is a range ctype and return its interval bounds, resp.
+;;; Generic functions RANGEP, RANGE-KIND, RANGE-LOW, RANGE-HIGH.
+;;; Determine if a ctype is a range ctype and return its kind (e.g. INTEGER) and
+;;; interval bounds, respectively.
 ;;; RANGE-LOW and RANGE-HIGH return two values. The first value is the bound, or
 ;;; NIL if there is no bound (i.e. * was supplied). The second value is whether
 ;;; the bound is exclusive. Non-bounds are always non exclusive.
-;;; RANGE-LOW and RANGE-HIGH must only be used on RANGEP ctypes.
+;;; RANGE-KIND, RANGE-LOW, and RANGE-HIGH must only be used on RANGEP ctypes.
 
 (defgeneric rangep (ctype system))
+(defgeneric range-kind (range-ctype system))
 (defgeneric range-low (range-ctype system))
 (defgeneric range-high (range-ctype system))
 
