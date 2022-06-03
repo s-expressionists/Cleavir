@@ -355,7 +355,8 @@
   (and (cl:consp type) (cl:member (car type) '(cl:integer cl:ratio cl:rational
                                                cl:float cl:single-float cl:double-float
                                                cl:short-float cl:long-float cl:real))
-       (cl:consp (cdr type)) (cl:null (cddr type))))
+       (cl:consp (cdr type))
+       (cl:consp (cddr type)) (cl:null (cdddr type))))
 (defun process-interval-designator (desig)
   (cond ((eq desig '*) (cl:values nil nil))
         ((listp desig) (cl:values (first desig) t))
