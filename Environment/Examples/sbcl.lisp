@@ -68,7 +68,9 @@
       (sb-cltl2:variable-information symbol env)
     (let ((dynamic-extent (cdr (assoc 'dynamic-extent decls)))
           (ignore (cdr (assoc 'ignore decls)))
-          (type (or (cdr (assoc 'type decls)) 't)))
+          (type (cleavir-env:parse-type-specifier
+                 (or (cdr (assoc 'type decls)) 't)
+                 env system)))
       (ecase binding
         ((nil) nil) ; unbound
         ((:constant)
@@ -110,7 +112,9 @@
                             ;; again, global
                             (sb-kernel:coerce-to-lexenv nil)
                             nil)))))
-           (ftype (or (cdr (assoc 'ftype decls)) 'function))
+           (ftype (cleavir-env:parse-type-specifier
+                   (or (cdr (assoc 'ftype decls)) 'function)
+                   env system))
            ;; sbcl doesn't seem to actually give you this one rn
            (ignore (cdr (assoc 'ignore decls))))
       ;; SBCL defines a few special operators that also have macro definitions,
@@ -250,6 +254,9 @@
                    :optimize optimize
                    :policy policy)))
 
+(defmethod cleavir-env:type-expand ((env sb-kernel:lexenv) ts)
+  (sb-ext:typexpand ts env))
+
 (defmethod cleavir-env:optimize-qualities ((env sb-kernel:lexenv))
   (loop for (opt) in (sb-cltl2:declaration-information 'optimize env)
         collect `(,opt (integer 0 3) 3)))
@@ -258,21 +265,6 @@
   ;; CLTL2 only has accessors for information on a given decl, not
   ;; a list of all DECLAIM DECLARATION'd declarations.
   nil)
-
-(defmethod cleavir-env:type-expand ((env sb-kernel:lexenv) type)
-  (sb-ext:typexpand type env))
-
-(defmethod cleavir-env:has-extended-char-p ((env sb-kernel:lexenv))
-  t)
-(defmethod cleavir-env:float-types ((env sb-kernel:lexenv))
-  '(single-float double-float #+long-float long-float))
-(defmethod cleavir-env:upgraded-complex-part-types
-    ((env sb-kernel:lexenv))
-  '(single-float double-float #+long-float long-float))
-(defmethod cleavir-env:upgraded-array-element-types
-    ((env sb-kernel:lexenv))
-  (break) ; sb-kernel::*specialized-array-element-types*
-  )
 
 #+#.(cl:if (cl:find-package "CLEAVIR-KILDALL-TYPE-INFERENCE")
            '(:and)

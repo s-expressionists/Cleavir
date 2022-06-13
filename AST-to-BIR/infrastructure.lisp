@@ -164,9 +164,9 @@
 (defgeneric compile-ast (ast inserter system)
   (:method :around ((ast ast:ast) inserter system)
     (declare (ignore inserter system))
-    (let ((bir:*origin* (ast:origin ast))
-          (bir:*policy* (ast:policy ast))
-          (result (call-next-method)))
+    (let* ((bir:*origin* (ast:origin ast))
+           (bir:*policy* (ast:policy ast))
+           (result (call-next-method)))
       (assert (or (listp result) (eq result :no-value) (eq result :no-return)))
       result)))
 

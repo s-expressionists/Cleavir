@@ -10,7 +10,8 @@
           (interactor :interactor :scroll-bars nil))
   (:layouts (default (clim:vertically (:width 1200 :height 900)
                        (4/5 (clim:scrolling () application))
-                       (1/5 (clim:scrolling () interactor))))))
+                       (1/5 (clim:scrolling () interactor)))))
+  (:menu-bar nil))
 
 (defgeneric label (ast))
 
@@ -84,12 +85,13 @@
 
 (defun display-layout (table pane layout)
   (unless (indirect-p layout)
-    (let* ((position (position layout))
-           (x (+ (x position) 10))
-           (y (+ (y position) 10)))
-      (draw (ast layout) pane x y)
-      (loop for child in (children layout)
-            do (display-layout table pane child)))))
+    (clim:with-output-as-presentation (pane layout 'layout :single-box t)
+      (let* ((position (position layout))
+             (x (+ (x position) 10))
+             (y (+ (y position) 10)))
+        (draw (ast layout) pane x y)
+        (loop for child in (children layout)
+              do (display-layout table pane child))))))
 
 (defun compute-positions (layout)
   (let ((table (make-hash-table :test #'eq)))
@@ -169,7 +171,7 @@
   (clim:frame-exit clim:*application-frame*))
 
 (define-visualizer-command (com-inspect-ast :name t)
-    ((ast 'cleavir-ast:ast))
+    ((ast 'cleavir-ast:ast :gesture :select))
   (clouseau:inspect ast :new-process t))
 
 (define-visualizer-command (com-inspect-layout :name t)
