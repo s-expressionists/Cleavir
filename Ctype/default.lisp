@@ -319,7 +319,7 @@
   (cond ((bottom-p ct1 sys) 'nil)
         ((bottom-p ct2 sys) ct1)
         ((top-p ct2 sys) 'nil)
-        (t `(and ,ct1 (not ,ct2)))))
+        (t (conjoin/2 ct1 (negate ct2 sys) sys))))
 
 (defmethod values-append/2 (ct1 ct2 system)
   ;; This is considerably complicated by nontrivial &optional and &rest.
@@ -531,18 +531,18 @@
   (ll-rest (cl:rest ctype)))
 
 (defmethod nth-value (n ctype system)
-  (let* ((req (ll-required (cl:rest ctype)))
+  (let* ((req (values-required ctype system))
          (nreq (length req)))
     (cond ((< n nreq) (nth n req))
-          ((some (lambda (ct) (bottom-p ct system)) (bottom system)))
+          ((some (lambda (ct) (bottom-p ct system)) req) (bottom system))
           (t (disjoin
               system
               (member system nil)
-              (let* ((opt (ll-optional (cl:rest ctype)))
+              (let* ((opt (values-optional ctype system))
                      (nopt (length opt)))
                 (if (< n (+ nreq nopt))
                     (nth (- n nreq) opt)
-                    (ll-rest (cl:rest ctype)))))))))
+                    (values-rest ctype system))))))))
 
 (defmethod function-required (ctype system)
   (declare (ignore system))
