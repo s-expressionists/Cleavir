@@ -6,7 +6,7 @@
                     (#:bir #:cleavir-bir)
                     (#:bir-transformations #:cleavir-bir-transformations)
                     (#:cst-to-ast #:cleavir-cst-to-ast)
-                    (#:ctype #:cleavir-ctype)
+                    (#:c-ctype #:cleavir-ctype)
                     (#:env #:cleavir-env)
                     (#:policy #:cleavir-policy)
                     (#:primop #:cleavir-primop))

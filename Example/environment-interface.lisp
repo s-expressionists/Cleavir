@@ -31,7 +31,7 @@
             multiple-value-prog1 progn quote
             return-from setq symbol-macrolet tagbody the)
      t)
-    ((primop:funcall primop:multiple-value-call primop:ast)
+    ((primop:funcall primop:multiple-value-call primop:ast primop:truly-the)
      t)
     ;; Defined as macros in macros.lisp
     ((catch multiple-value-call progv throw unwind-protect)
@@ -91,3 +91,9 @@
                          (system example))
   (declare (ignore env))
   (eval (cst:raw cst)))
+
+;;; KLUDGE: CTYPE doesn't let us specify the type expander very well.
+(defmethod env:parse-compound-type-specifier (head rest env (sys example))
+  (ctype:specifier-ctype (cons head rest)))
+(defmethod env:parse-expanded-type-specifier (tspec env (sys example))
+  (ctype:specifier-ctype tspec))
