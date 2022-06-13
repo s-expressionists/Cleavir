@@ -21,7 +21,8 @@
            #:values-append/2 #:values-append)
   (:export #:wdisjoin/2 #:wdisjoin #:values-wdisjoin/2 #:values-wdisjoin)
   (:export #:class #:cons #:array #:string
-           #:consp #:arrayp #:array-element-type #:array-dimensions
+           #:consp #:cons-car #:cons-cdr
+           #:arrayp #:array-element-type #:array-dimensions
            #:character #:base-char #:standard-char
            #:complex #:range #:fixnum #:complexp #:complex-part-type
            #:rangep #:range-kind #:range-high #:range-low
