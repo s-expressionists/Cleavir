@@ -180,6 +180,17 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions CONSP, CONS-CAR, CONS-CDR.
+;;;
+;;; Determine if a ctype is a cons ctype and return its CAR and CDR ctypes, resp.
+;;; CONS-CAR and CONS-CDR must only be used on CONSP ctypes.
+
+(defgeneric consp (ctype system))
+(defgeneric cons-car (cons-ctype system))
+(defgeneric cons-cdr (cons-ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function ARRAY.
 ;;;
 ;;; Given an element type specifier, dimensions specifier, and simplicity mark,
@@ -190,6 +201,18 @@
 ;;; The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY.
 
 (defgeneric array (element dimensions simplicity system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions ARRAYP, ARRAY-ELEMENT-TYPE, ARRAY-DIMENSIONS.
+;;; Determine if a ctype is an array ctype and return its element type and
+;;; dimensions specification, respectively. The dimensions should be normalized
+;;; to be a list of dimensions or * (e.g. 4 would be (* * * *)).
+;;; The readers must only be used on ARRAYP ctypes.
+
+(defgeneric arrayp (ctype system))
+(defgeneric array-element-type (array-ctype system))
+(defgeneric array-dimensions (array-ctype system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -237,6 +260,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions COMPLEXP, COMPLEX-PART-TYPE.
+;;;
+;;; Determine if a ctype is a COMPLEX ctype and return its part type, resp.
+;;; COMPLEX-PART-TYPE must only be used on COMPLEXP ctypes.
+
+(defgeneric complexp (ctype system))
+(defgeneric complex-part-type (complex-ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function RANGE.
 ;;;
 ;;; Given a type name and interval designators, return a ctype.
@@ -244,6 +277,21 @@
 ;;; SHORT-FLOAT, SINGLE-FLOAT, DOUBLE-FLOAT, or LONG-FLOAT.
 
 (defgeneric range (type low high system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions RANGEP, RANGE-KIND, RANGE-LOW, RANGE-HIGH.
+;;; Determine if a ctype is a range ctype and return its kind (e.g. INTEGER) and
+;;; interval bounds, respectively.
+;;; RANGE-LOW and RANGE-HIGH return two values. The first value is the bound, or
+;;; NIL if there is no bound (i.e. * was supplied). The second value is whether
+;;; the bound is exclusive. Non-bounds are always non exclusive.
+;;; RANGE-KIND, RANGE-LOW, and RANGE-HIGH must only be used on RANGEP ctypes.
+
+(defgeneric rangep (ctype system))
+(defgeneric range-kind (range-ctype system))
+(defgeneric range-low (range-ctype system))
+(defgeneric range-high (range-ctype system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

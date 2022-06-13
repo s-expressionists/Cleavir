@@ -177,8 +177,12 @@
   (derive-iblock-input-types iblock system)
   (derive-iblock-input-attributes iblock)
   (bir:do-iblock-instructions (instruction iblock)
-    (unless (meta-evaluate-instruction instruction system)
-      (derive-types instruction system))))
+    ;; We derive types first. The type derivations should be correct regardless
+    ;; of whether a rewrite is on the way, and if we do things in this order we
+    ;; can derive types through any amount of straight line code during a single
+    ;; meta-evaluate pass, promoting flow.
+    (derive-types instruction system)
+    (meta-evaluate-instruction instruction system)))
 
 (defgeneric maybe-flush-instruction (instruction))
 
@@ -1013,54 +1017,68 @@
 
 (defmethod derive-types ((inst bir:call) system)
   (let ((identities (attributes:identities (bir:attributes inst))))
-    (cond ((null identities))
+    (flet ((intype (reader)
+             (ctype:values (loop for arg in (rest (bir:inputs inst))
+                                 for ct = (funcall reader arg)
+                                 collect (ctype:primary ct system))
+                           nil (ctype:bottom system) system))
+           (compute (identity intype)
+             (derive-return-type inst identity intype system)))
+      (cond ((null identities))
           ((= (length identities) 1)
            (derive-type-for-linear-datum
             (bir:output inst)
-            (derive-return-type inst (first identities)
-                                (ctype:values
-                                 (loop for arg in (rest (bir:inputs inst))
-                                       for ct = (bir:ctype arg)
-                                       collect (ctype:primary ct system))
-                                 nil (ctype:bottom system) system)
-                                system)
+            (compute (first identities) (intype #'bir:ctype))
+            system)
+           (assert-type-for-linear-datum
+            (bir:output inst)
+            (compute (first identities) (intype #'bir:asserted-type))
             system))
           (t
-           (let* ((argstype
-                    (ctype:values (loop for arg in (rest (bir:inputs inst))
-                                        for ct = (bir:ctype arg)
-                                        collect (ctype:primary ct system))
-                                  nil (ctype:bottom system) system))
-                  (types
-                    (loop for identity in identities
-                          collect (derive-return-type inst identity
-                                                      argstype system))))
+           (let ((dtypes
+                   (loop for identity in identities
+                         collect (compute identity (intype #'bir:ctype))))
+                 (atypes
+                   (loop for identity in identities
+                         collect (compute identity (intype #'bir:asserted-type)))))
              (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system types)
-                                           system))))))
+                                                  system dtypes)
+                                           system)
+             (assert-type-for-linear-datum (bir:output inst)
+                                           (apply #'ctype:values-conjoin
+                                                  system atypes)
+                                           system)))))))
 
 (defmethod derive-types ((inst bir:mv-call) system)
   (let ((identities (attributes:identities (bir:attributes inst))))
+    (flet ((intype (reader)
+             (append-input-types (mapcar reader (rest (bir:inputs inst))) system)))
     (cond ((null identities))
           ((= (length identities) 1)
            (derive-type-for-linear-datum
             (bir:output inst)
-            (derive-return-type inst (first identities)
-                                (append-input-types
-                                 (mapcar #'bir:ctype (rest (bir:inputs inst)))
-                                 system)
+            (derive-return-type inst (first identities) (intype #'bir:ctype) system)
+            system)
+           (assert-type-for-linear-datum
+            (bir:output inst)
+            (derive-return-type inst (first identities) (intype #'bir:asserted-type)
                                 system)
             system))
           (t
-           (let* ((argstype (append-input-types
-                             (mapcar #'bir:ctype (rest (bir:inputs inst)))
-                             system))
-                  (types
-                    (loop for identity in identities
-                          collect (derive-return-type inst identity
-                                                      argstype system))))
+           (let ((dtypes
+                   (loop with arg = (intype #'bir:ctype)
+                         for identity in identities
+                         collect (derive-return-type inst identity arg system)))
+                 (atypes
+                   (loop with arg = (intype #'bir:asserted-type)
+                         for identity in identities
+                         collect (derive-return-type inst identity arg system))))
              (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system types)
-                                           system))))))
+                                                  system dtypes)
+                                           system)
+             (derive-type-for-linear-datum (bir:output inst)
+                                           (apply #'ctype:values-conjoin
+                                                  system atypes)
+                                           system)))))))

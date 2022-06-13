@@ -20,6 +20,8 @@
   (set:nremovef (readers datum) use))
 (defmethod remove-use ((datum function) (use abstract-local-call))
   (set:nremovef (local-calls datum) use))
+(defmethod remove-use ((datum function) (use thei))
+  (set:nremovef (other-uses datum) use))
 
 (defgeneric add-use (datum use))
 (defmethod add-use ((datum linear-datum) use)
@@ -37,6 +39,8 @@
   (set:nadjoinf (readers datum) use))
 (defmethod add-use ((datum function) (use abstract-local-call))
   (set:nadjoinf (local-calls datum) use))
+(defmethod add-use ((datum function) (use thei))
+  (set:nadjoinf (other-uses datum) use))
 
 (defmethod (setf inputs) :before (new-inputs (inst instruction))
   (dolist (input (inputs inst))
@@ -80,6 +84,25 @@
         (remove-definition output inst)))
     (dolist (output outputs)
       (add-definition output inst))))
+
+(defmethod shared-initialize :before
+    ((inst thei) slot-names &rest initargs
+     &key (type-check-function nil tcfp))
+  (declare (cl:ignore slot-names initargs))
+  (when tcfp
+    (when (slot-boundp inst '%type-check-function)
+      (let ((old-tcf (type-check-function inst)))
+        (unless (symbolp old-tcf)
+          (remove-use old-tcf inst))))
+    (when (typep type-check-function 'function)
+      (add-use type-check-function inst))))
+
+(defmethod (setf type-check-function) :before (tcf (inst thei))
+  (let ((old-tcf (type-check-function inst)))
+    (unless (symbolp old-tcf)
+      (remove-use old-tcf inst)))
+  (when (typep tcf 'function)
+    (add-use tcf inst)))
 
 ;;; Control flow modification
 
@@ -190,9 +213,9 @@
       (clean-up-function code))))
 (defmethod clean-up-instruction progn ((inst unwind))
   (set:nremovef (entrances (destination inst)) (iblock inst))
-  (set:nremovef (unwinds (catch inst)) inst))
-(defmethod clean-up-instruction progn ((inst catch))
-  (set:nremovef (catches (function inst)) inst))
+  (set:nremovef (unwinds (come-from inst)) inst))
+(defmethod clean-up-instruction progn ((inst come-from))
+  (set:nremovef (come-froms (function inst)) inst))
 (defmethod clean-up-instruction progn ((inst terminator))
   (let ((ib (iblock inst)))
     (dolist (n (next inst)) (set:nremovef (predecessors n) ib))))
@@ -205,7 +228,7 @@
                    (set:empty-set-p (local-calls type-check-function)))
               ()
               "Type check function for THEI should not have local calls or enclose!")
-      (clean-up-function type-check-function))))
+      (remove-use type-check-function inst))))
 
 ;;; Remove a THEI by forwarding its input to its use.
 (defun delete-thei (thei)

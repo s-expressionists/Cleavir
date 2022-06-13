@@ -25,8 +25,8 @@
 
 (defun transform1 (bir phase)
   (ecase phase
-    ((:eliminate-catches)
-     (bir-transformations:module-eliminate-catches bir))
+    ((:eliminate-come-froms)
+     (bir-transformations:module-eliminate-come-froms bir))
     ((:local-calls)
      (bir-transformations:find-module-local-calls bir))
     ((:optimize-variables)
@@ -44,7 +44,7 @@
   bir)
 
 (defparameter *phases*
-  '(:eliminate-catches :local-calls :optimize-variables
+  '(:eliminate-come-froms :local-calls :optimize-variables
     :meta-evaluate :generate-type-checks :extents))
 
 (defun transform (bir &optional (phases *phases*))

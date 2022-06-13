@@ -9,7 +9,7 @@
 
 ;;; Internal: Check whether the given default ctype is a values ctype.
 (defun values-ctype-p (ctype)
-  (and (consp ctype) (eql (car ctype) 'cl:values)))
+  (and (cl:consp ctype) (eql (car ctype) 'cl:values)))
 
 (defmethod subtypep (ct1 ct2 sys)
   (declare (ignore sys))
@@ -75,13 +75,13 @@
 
 ;;; Internal
 (defun intersection-ctype-p (ctype)
-  (and (consp ctype) (eq (car ctype) 'and)))
+  (and (cl:consp ctype) (eq (car ctype) 'and)))
 (defun intersection-ctypes (ctype) (rest ctype))
 (defun union-ctype-p (ctype)
-  (and (consp ctype) (eq (car ctype) 'or)))
+  (and (cl:consp ctype) (eq (car ctype) 'or)))
 (defun union-ctypes (ctype) (rest ctype))
 (defun function-ctype-p (ctype)
-  (and (consp ctype) (eq (car ctype) 'cl:function)))
+  (and (cl:consp ctype) (eq (car ctype) 'cl:function)))
 (defun function-return (ctype) (third ctype))
 
 (defmethod values-conjoin/2 (vct1 vct2 sys)
@@ -375,9 +375,39 @@
         ((eql cdr 'nil) 'nil)
         (t `(cl:cons ,car ,cdr))))
 
+(defmethod consp (type sys)
+  (declare (ignore sys))
+  (and (cl:consp type) (eq (car type) 'cl:cons)
+       (cl:consp (cdr type))
+       (cl:consp (cddr type))
+       (cl:null (cdddr type))))
+(defmethod cons-car (type sys)
+  (declare (ignore sys))
+  (second type))
+(defmethod cons-cdr (type sys)
+  (declare (ignore sys))
+  (third type))
+
+(defun normalize-dimensions (dimensions)
+  (if (integerp dimensions)
+      (make-list dimensions :initial-element '*)
+      dimensions))
 (defmethod array (element dimensions simplicity sys)
   (declare (ignore sys))
   `(,simplicity ,element ,dimensions))
+(defmethod arrayp (type sys)
+  ;; FIXME: Doesn't work on string types.
+  (declare (ignore sys))
+  (and (cl:consp type) (cl:member (car type) '(cl:array cl:simple-array))
+       (cl:consp (cdr type))
+       (cl:consp (cddr type))
+       (cl:null (cdddr type))))
+(defmethod array-element-type (type sys)
+  (declare (ignore sys))
+  (second type))
+(defmethod array-dimensions (type sys)
+  (declare (ignore sys))
+  (third type))
 
 (defmethod string (dimension simplicity sys)
   (declare (ignore sys))
@@ -394,9 +424,37 @@
   (declare (ignore sys))
   `(cl:complex ,part))
 
+(defmethod complexp (type sys)
+  (declare (ignore sys))
+  (and (cl:consp type) (eq (car type) 'cl:complex)
+       (cl:consp (cdr type)) (cl:null (cddr type))))
+(defmethod complex-part-type (type sys)
+  (declare (ignore sys))
+  (second type))
+
 (defmethod range (type low high sys)
   (declare (ignore sys))
   `(,type ,low ,high))
+(defmethod rangep (type sys)
+  (declare (ignore sys))
+  (and (cl:consp type) (cl:member (car type) '(cl:integer cl:ratio cl:rational
+                                               cl:float cl:single-float cl:double-float
+                                               cl:short-float cl:long-float cl:real))
+       (cl:consp (cdr type))
+       (cl:consp (cddr type)) (cl:null (cdddr type))))
+(defun process-interval-designator (desig)
+  (cond ((eq desig '*) (cl:values nil nil))
+        ((listp desig) (cl:values (first desig) t))
+        (t (cl:values desig nil))))
+(defmethod range-kind (type sys)
+  (declare (ignore sys))
+  (first type))
+(defmethod range-low (type sys)
+  (declare (ignore sys))
+  (process-interval-designator (second type)))
+(defmethod range-high (type sys)
+  (declare (ignore sys))
+  (process-interval-designator (third type)))
 
 (defmethod fixnum (sys) (declare (ignore sys)) 'cl:fixnum)
 
@@ -406,7 +464,7 @@
 
 (defmethod member-p (sys ctype)
   (declare (ignore sys))
-  (and (consp ctype) (eq (first ctype) 'cl:member)))
+  (and (cl:consp ctype) (eq (first ctype) 'cl:member)))
 (defmethod member-members (sys ctype)
   (declare (ignore sys))
   (rest ctype))

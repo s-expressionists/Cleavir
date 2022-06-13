@@ -74,7 +74,7 @@
           instruction (successor instruction)))
   ;; iblock is correct
   (test (eq (iblock instruction) *verifying-iblock*)
-        "Instruction ~a's iblock ~a does not match its presence in ~a"
+        "has iblock ~a which does not match its presence in ~a"
         instruction (iblock instruction) *verifying-iblock*)
   (verify-inputs instruction)
   (let ((inputs (inputs instruction)))
@@ -296,13 +296,13 @@
   (test (> (length (inputs call)) 0)
         "is missing a callee" call))
 
-(defmethod verify progn ((c catch))
+(defmethod verify progn ((c come-from))
   ;; verify type decls
   (test (typep (unwinds c) 'set:set)
         "has non-set for unwinds: ~a" c (unwinds c))
   ;; check that it is recorded by its function
-  (test (set:presentp c (catches (function c)))
-        "not in its function ~a's catch set." c (function c))
+  (test (set:presentp c (come-froms (function c)))
+        "not in its function ~a's come-from set." c (function c))
   ;; check that all unwinds are unwinds
   (let ((non-unwinds
           (set:filter
@@ -320,15 +320,15 @@
 
 (defmethod verify progn ((u unwind))
   ;; verify type decls
-  (test (typep (catch u) 'catch)
-        "has \"catch\" ~a, which is not a catch" u (catch u))
+  (test (typep (come-from u) 'come-from)
+        "has \"come-from\" ~a, which is not a come-from" u (come-from u))
   (test (typep (destination u) 'iblock)
         "has destination ~a, which is not an iblock" u (destination u))
-  ;; Make sure the catch knows about us
+  ;; Make sure the come-from knows about us
   ;; (since if we're being verified, we must be reachable and live)
-  (test (set:presentp u (unwinds (catch u)))
-        "is not present in its catch's ~a unwinds ~a"
-        u (catch u) (unwinds (catch u)))
+  (test (set:presentp u (unwinds (come-from u)))
+        "is not present in its come-from's ~a unwinds ~a"
+        u (come-from u) (unwinds (come-from u)))
   ;; Make sure this unwind's block is an entrance of the destination block.
   (test (set:presentp (iblock u) (entrances (destination u)))
         "has iblock ~a, which is not in the entrances set of the destination ~a"
@@ -378,6 +378,13 @@
   (test (typep (type-check-function instruction)
                '(or (member :trusted nil) function))
         "has invalid type-check-function ~a"
+        instruction (type-check-function instruction))
+  ;; Make sure we're a use of our tcf
+  (test (let ((tcf (type-check-function instruction)))
+          (if (typep tcf 'function)
+              (set:presentp instruction (other-uses tcf))
+              t))
+        "is not a use of its type-check-function ~a"
         instruction (type-check-function instruction)))
 
 (defmethod verify progn ((iblock iblock))
@@ -536,12 +543,12 @@
         (test (set:set<= iblocks reachable)
               "records unreachable iblocks ~a"
               function (set:difference 'list iblocks reachable)))
-      ;; Check that the catch instructions of this function were in
+      ;; Check that the come-from instructions of this function were in
       ;; fact seen.
-      (set:doset (catch (catches function))
-        (test (set:presentp catch *seen-instructions*)
+      (set:doset (come-from (come-froms function))
+        (test (set:presentp come-from *seen-instructions*)
               "is recorded by the function ~a but is not reachable."
-              catch function))
+              come-from function))
       ;; The return instruction's iblock, if it exists, is reachable
       ;; and in the iblocks set.
       (when returni

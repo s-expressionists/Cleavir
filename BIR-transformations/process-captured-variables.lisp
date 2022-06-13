@@ -21,9 +21,9 @@
         (close-over function (bir:function reader) variable))
       (set:doset (writer (bir:writers variable))
         (close-over function (bir:function writer) variable)))
-    (set:doset (catch (bir:catches function))
-      (set:doset (unwind (bir:unwinds catch))
-        (close-over function (bir:function unwind) catch)))))
+    (set:doset (come-from (bir:come-froms function))
+      (set:doset (unwind (bir:unwinds come-from))
+        (close-over function (bir:function unwind) come-from)))))
 
 ;;; Determine the extent of closures. We mark closures created by
 ;;; ENCLOSE instructions as dynamic extent if all of its uses are

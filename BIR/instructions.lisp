@@ -86,7 +86,13 @@
 
 (defclass values-collect (dynamic-environment one-output terminator1) ())
 
-(defclass catch (no-input no-output lexical ssa dynamic-environment terminator)
+;;; The one input is the cleanup thunk.
+(defclass unwind-protect (dynamic-environment one-input no-output
+                          terminator1)
+  ())
+
+(defclass come-from (no-input no-output lexical ssa
+                     dynamic-environment terminator)
   ((%unwinds :initarg :unwinds :accessor unwinds
              :initform (set:empty-set)
              ;; A set of corresponding UNWINDs
@@ -100,11 +106,15 @@
 (defclass dynamic-leti (leti terminator1 dynamic-environment)
   ())
 
+;;; Dynamic binding. Inputs are the symbol and the new value.
+(defclass bind (dynamic-environment no-output terminator1)
+  ())
+
 ;;; Nonlocal control transfer.
 ;;; Inputs are passed to the destination.
 (defclass unwind (terminator0)
-  ((%catch :initarg :catch :reader catch
-           :type catch)
+  ((%come-from :initarg :come-from :reader come-from
+               :type come-from)
    (%destination :initarg :destination :reader destination
                  :type iblock)))
 

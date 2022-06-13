@@ -1,12 +1,12 @@
 This directory contains code to analyze and transform BIR, Cleavir's intermediate representation. (More information on BIR is available in the BIR directory.) The passes form a bit of a "grab bag" in that they are not closely linked to one another.
 
-# eliminate catches
+# eliminate come-froms
 
-Main entry points: `module-eliminate-catches`, `eliminate-catches` (per-function version)
+Main entry points: `module-eliminate-come-froms`, `eliminate-come-froms` (per-function version)
 
-This pass removes unneeded catch instructions. A catch is unneeded if nothing unwinds to it. These unneeded catches occur because AST-to-BIR does not know in advance whether each `cl:block` or `cl:tagbody` is unwound to, so it inserts a catch for every one. Catches are removed by replacing them with jumps, and if possible, merging the iblocks together.
+This pass removes unneeded catch instructions. A catch is unneeded if nothing unwinds to it. These unneeded come-froms occur because AST-to-BIR does not know in advance whether each `cl:block` or `cl:tagbody` is unwound to, so it inserts a catch for every one. Come-Froms are removed by replacing them with jumps, and if possible, merging the iblocks together.
 
-At this time, no other transformation adds catches, and even if they did, it's likely they could be selectively added only if unwinding is actually possible. Running this pass is therefore recommended. However, dead code elimination could eliminate unwinds, therefore making this pass potentially useful later as well.
+At this time, no other transformation adds come-froms, and even if they did, it's likely they could be selectively added only if unwinding is actually possible. Running this pass is therefore recommended. However, dead code elimination could eliminate unwinds, therefore making this pass potentially useful later as well.
 
 # process captured variables
 

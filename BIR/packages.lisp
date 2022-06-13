@@ -2,7 +2,8 @@
 
 (defpackage #:cleavir-bir
   (:use #:cl)
-  (:shadow #:function #:catch #:variable #:load-time-value #:case #:ignore)
+  (:shadow #:function #:unwind-protect #:variable
+           #:load-time-value #:case #:ignore)
   (:local-nicknames (#:primop-info #:cleavir-primop-info)
                     (#:set #:cleavir-set)
                     (#:attributes #:cleavir-attributes)
@@ -10,8 +11,8 @@
                     (#:ctype #:cleavir-ctype))
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-values #:load-time-value-in-module)
-  (:export #:function #:iblocks #:start #:end #:inputs #:variables #:catches
-           #:environment
+  (:export #:function #:iblocks #:start #:end #:inputs #:variables #:come-froms
+           #:environment #:other-uses
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
   (:export #:dynamic-environment #:scope #:parent)
   (:export #:iblock #:predecessors #:entrances #:iblock-started-p)
@@ -39,13 +40,14 @@
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
            #:case #:comparees
-           #:catch #:unwinds #:unwind #:destination
+           #:unwind-protect
+           #:come-from #:unwinds #:unwind #:destination
            #:values-save #:fixed-values-save #:nvalues
            #:values-restore #:values-collect
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes
-           #:leti #:dynamic-leti #:enclose #:code
+           #:leti #:dynamic-leti #:bind #:enclose #:code
            #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:info)
   (:export #:do-functions #:map-functions)

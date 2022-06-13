@@ -608,24 +608,50 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Methods specialized to operators for which we do not provide a
-;;; conversion method.
-
-;;; Implementations should probably convert this in terms of
-;;; CLEAVIR-PRIMOP:MULTIPLE-VALUE-CALL.
-(defmethod convert-special
-    ((symbol (eql 'multiple-value-call)) cst environment system)
-  (declare (ignore environment system))
-  (check-cst-proper-list cst 'form-must-be-proper-list)
-  (check-argument-count cst 1 nil)
-  (error 'no-default-method :operator symbol :cst cst))
+;;; Converting UNWIND-PROTECT.
 
 (defmethod convert-special
     ((symbol (eql 'unwind-protect)) cst environment system)
-  (declare (ignore environment system))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
-  (error 'no-default-method :operator symbol :cst cst))
+  (cst:db origin (protected . cleanup) (cst:rest cst)
+    (make-instance 'ast:unwind-protect-ast
+      :body-ast (convert protected environment system)
+      :cleanup-ast (convert
+                    (cst:quasiquote (cst:source cleanup)
+                                    (lambda ()
+                                      (progn ; to handle errant DECLARE
+                                        (cst:unquote-splicing cleanup))))
+                    environment system)
+      :origin cst)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Converting MULTIPLE-VALUE-CALL.
+;;; We essentially treat it as a macro that expands into a use of the primop.
+;;; An implementation may override this, make it an actual macro, etc.
+
+(defmethod convert-special
+    ((symbol (eql 'multiple-value-call)) cst environment system)
+  (check-cst-proper-list cst 'form-must-be-proper-list)
+  (check-argument-count cst 1 nil)
+  (cst:db origin (mvc fdesignator . args) cst
+    (declare (ignore mvc))
+    (let ((f (make-atom-cst (gensym "FDESIGNATOR") origin)))
+      (convert (cst:quasiquote
+                origin
+                (let (((cst:unquote f) (cst:unquote fdesignator)))
+                  (cleavir-primop:multiple-value-call
+                      (etypecase (cst:unquote f)
+                        (function (cst:unquote f))
+                        (symbol (fdefinition (cst:unquote f))))
+                    (cst:unquote-splicing args))))
+               environment system))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Methods specialized to operators for which we do not provide a
+;;; conversion method.
 
 (defmethod convert-special
     ((symbol (eql 'catch)) cst environment system)

@@ -5,10 +5,10 @@
                :cleavir-attributes :cleavir-ctype)
   :components
   ((:file "packages")
-   (:file "eliminate-catches" :depends-on ("packages"))
+   (:file "eliminate-come-froms" :depends-on ("packages"))
    (:file "process-captured-variables" :depends-on ("packages"))
    (:file "delete-temporary-variables" :depends-on ("packages"))
-   (:file "interpolate-function" :depends-on ("eliminate-catches"
+   (:file "interpolate-function" :depends-on ("eliminate-come-froms"
                                               "packages"))
    (:file "copy-function" :depends-on ("packages"))
    (:file "inline" :depends-on ("interpolate-function" "packages"))

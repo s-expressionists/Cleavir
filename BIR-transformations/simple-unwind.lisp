@@ -16,16 +16,16 @@
 
 ;;; We call such unwinds "simple".
 
-;;; If all unwinds to a given catch are simple, additional
-;;; optimizations are possible. The catch instruction does not need
+;;; If all unwinds to a given come-from are simple, additional
+;;; optimizations are possible. The come-from instruction does not need
 ;;; to augment the dynamic environment, as it's only unwound to by
 ;;; unwinds that don't use the dynamic environment anyway.
 ;;; (Though indicating its existence to debugging tools may be prudent.)
 
 ;;; This code determines whether an unwind can be seen to be
 ;;; called in the dynamic environment output by their destination.
-;;; It can also be used on catch instructions, in which case it checks whether
-;;; it's true of all the unwinds to it.
+;;; It can also be used on come-from instructions, in which case it checks
+;;; whether it's true of all the unwinds to it.
 
 ;;; This pass can and probably should be run after inlining.
 
@@ -39,7 +39,7 @@
 ;;; not here, since it's valid regardless.
 
 ;;; Cases where the call's dynamic environment has been augmented
-;;; from the catch may also be possible to handle, but this might
+;;; from the come-from may also be possible to handle, but this might
 ;;; require some changes in the BIR representation of nonlocal exits.
 
 ;;; ALSO, might want to cache this information?
@@ -84,7 +84,7 @@
   (and (eq (bir:callee user) datum)
        (simple-instruction-p user dest system)))
 
-(defun function-called-simply-p (function catch system)
+(defun function-called-simply-p (function come-from system)
   ;; If we've already analyzing this function, we must have hit a recursive
   ;; call. In that case, we return true so the prior analysis can continue.
   (when (set:presentp function *seen*)
@@ -98,11 +98,11 @@
       (let* ((eout (bir:output enclose))
              (user (bir:use eout)))
         (when (and user
-                   (not (simple-user-p user catch function system)))
+                   (not (simple-user-p user come-from function system)))
           (return-from function-called-simply-p nil)))))
   ;; Now check over the local calls. They must all be simple.
   (set:doset (call (bir:local-calls function) t)
-    (unless (simple-user-p call catch function system)
+    (unless (simple-user-p call come-from function system)
       (return nil))))
 
 (defun simple-instruction-p (inst dest system)
@@ -111,8 +111,8 @@
 (defgeneric simple-unwinding-p (instruction system))
 (defmethod simple-unwinding-p ((unwind bir:unwind) system)
   (let ((*seen* (set:empty-set)))
-    (simple-instruction-p unwind (bir:catch unwind) system)))
+    (simple-instruction-p unwind (bir:come-from unwind) system)))
 
-(defmethod simple-unwinding-p ((inst bir:catch) system)
+(defmethod simple-unwinding-p ((inst bir:come-from) system)
   (set:every (lambda (unw) (simple-unwinding-p unw system))
              (bir:unwinds inst)))

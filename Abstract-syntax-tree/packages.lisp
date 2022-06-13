@@ -18,6 +18,7 @@
    #:constant-ast #:make-constant-ast #:value
    #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
    #:lexical-ast #:make-lexical-ast
+   #:dynamic-bind-ast
    #:symbol-value-ast #:make-symbol-value-ast
    #:set-symbol-value-ast #:make-set-symbol-value-ast
    #:set-constant-symbol-value-ast #:make-set-constant-symbol-value-ast
@@ -48,6 +49,7 @@
    #:setq-ast #:make-setq-ast #:value-ast
    #:tagbody-ast #:make-tagbody-ast #:prefix-ast #:item-asts
    #:tag-ast #:make-tag-ast #:name
+   #:unwind-protect-ast #:cleanup-ast
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype
    #:type-check-function-ast

@@ -201,7 +201,7 @@
         (definitions (set:empty-set)))
     (set:doset (predecessor (predecessors ib))
       (let ((end (end predecessor)))
-        (unless (typep end 'catch)
+        (unless (typep end 'come-from)
           (set:nadjoinf definitions end))))
     (set:doset (entrance (entrances ib))
       (set:nadjoinf definitions (end entrance)))
@@ -225,7 +225,7 @@
     (assert (not (null pos)))
     (set:doset (predecessor (predecessors ib))
       (let ((end (end predecessor)))
-        (unless (typep end 'catch)
+        (unless (typep end 'come-from)
           (let ((in (nth pos (inputs end))))
             (assert (not (null in)))
             (set:nadjoinf inputs in)))))
@@ -358,10 +358,10 @@
    (%variables :initarg :variables :accessor variables
                :initform (set:empty-set)
                :type set:set)
-   ;; The set of catches in this function.
-   (%catches :initarg :catches :accessor catches
-             :initform (set:empty-set)
-             :type set:set)
+   ;; The set of come-froms in this function.
+   (%come-froms :initarg :come-froms :accessor come-froms
+                :initform (set:empty-set)
+                :type set:set)
    ;; The set of lexicals closed over by this function. Currently
    ;; filled in by process-captured-variables.
    (%environment :initform (set:empty-set) :accessor environment
@@ -373,6 +373,9 @@
    ;; The set of local calls of this function.
    (%local-calls :initform (set:empty-set) :accessor local-calls
                  :type set:set)
+   ;; Other uses of this function, e.g. THE or UNWIND-PROTECT.
+   (%other-uses :initform (set:empty-set) :accessor other-uses
+                :type set:set)
    ;; For debug/introspection
    (%origin :initarg :origin :initform nil :reader origin)
    (%policy :initarg :policy :initform nil :reader policy)
@@ -437,7 +440,7 @@
 ;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
   (let ((entrances (set:empty-set)))
-    (set:doset (catch (catches function))
-      (set:doset (unwind (unwinds catch))
+    (set:doset (come-from (come-froms function))
+      (set:doset (unwind (unwinds come-from))
         (set:nadjoinf entrances (destination unwind))))
     entrances))
