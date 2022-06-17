@@ -23,6 +23,9 @@
            #:mark #:flow-call #:interpret-module #:interpret-instruction
            #:info)
   (:export #:attribute)
+  (:export #:known-call-mixin #:forward-known-call #:backward-known-call
+           #:forward-values-known-call #:backward-values-known-call
+           #:flow-known-call)
   (:export #:type #:derived-type #:asserted-type
            #:derive-return-type)
   (:export #:reachability)

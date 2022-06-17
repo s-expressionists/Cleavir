@@ -1,6 +1,6 @@
 (in-package #:cleavir-abstract-interpreter)
 
-(defclass type (forward-values-data)
+(defclass type (forward-values-known-call)
   ((%system :initarg :system :reader system)))
 
 (defmethod sv-subinfop ((domain type) ty1 ty2)
@@ -27,42 +27,15 @@
 (defmethod meet/2 ((domain type) vty1 vty2)
   (ctype:values-conjoin (system domain) vty1 vty2))
 
-(defgeneric derive-return-type (instruction identity argstype system))
-(defmethod derive-return-type ((inst bir:abstract-call) identity
-                               argstype system)
+(defgeneric derive-return-type (identity argstype system)
+  (:argument-precedence-order system identity argstype))
+(defmethod derive-return-type (identity argstype system)
   (declare (ignore identity argstype))
   (ctype:values-top system))
 
-(defun attribute (product)
-  (product-domain-of-type 'attribute product))
-
-(defmethod interpret-instruction ((strategy strategy) (domain type)
-                                  (product product) (inst bir:call))
-  (let* ((callee (bir:callee inst))
-         (attr-domain (attribute product))
-         (attr (if attr-domain
-                   (info strategy attr-domain callee)
-                   (attributes:default-attributes)))
-         (identities (attributes:identities attr))
-         (system (system domain))
-         (output (bir:output inst)))
-    (flow-datum
-     strategy domain output
-     (if (null identities)
-         (ctype:values-top system)
-         (let ((argtype
-                 (ctype:values
-                  (loop for arg in (rest (bir:inputs inst))
-                        for ct = (info strategy domain arg)
-                        collect (ctype:primary ct system))
-                  nil (ctype:bottom system) system)))
-           (if (= (length identities) 1)
-               (derive-return-type inst (first identities) argtype system)
-               (apply #'ctype:values-conjoin
-                      system
-                      (loop for id in identities
-                            collect (derive-return-type
-                                     inst id argtype system)))))))))
+(defmethod flow-known-call ((strategy strategy) (domain type)
+                            (product product) identity argstype)
+  (derive-return-type identity argstype (system domain)))
 
 (defmethod interpret-instruction ((strategy strategy) (domain type)
                                   (product product)

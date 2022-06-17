@@ -16,8 +16,8 @@
                                              "packages"))
    (:file "values-data" :depends-on ("interpret" "domain" "values" "packages"))
    (:file "attribute" :depends-on ("values-data" "packages"))
-   (:file "type" :depends-on ("product" "attribute" "values-data" "interpret"
-                                        "packages"))
+   (:file "known-call" :depends-on ("attribute" "values-data" "packages"))
+   (:file "type" :depends-on ("known-call" "values-data" "interpret" "packages"))
    (:file "typed-reachability" :depends-on ("type" "reachability" "packages"))
    (:file "slots" :depends-on ("sequential" "attribute" "type" "interpret"
                                             "packages"))))
