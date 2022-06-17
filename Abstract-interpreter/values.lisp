@@ -23,11 +23,30 @@
 ;;; value infos from infos.
 ;;;
 
+;; REQUIRED, OPTIONAL are lists of sv-info. REST is an sv-info.
 (defgeneric values-info (domain required optional rest))
 
 (defgeneric values-required (domain info))
 (defgeneric values-optional (domain info))
 (defgeneric values-rest (domain info))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Default implementation, for domains that want to define the single-value
+;;; version and not bother thinking about multiple values.
+;;;
+
+(defclass values-info ()
+  ((%required :initarg :required :reader %required)
+   (%optional :initarg :optional :reader %optional)
+   (%rest :initarg :rest :reader %rest)))
+
+(defmethod values-info (domain required optional rest)
+  (make-instance 'values-info
+    :required required :optional optional :rest rest))
+(defmethod values-required (domain (info values-info)) (%required info))
+(defmethod values-optional (domain (info values-info)) (%optional info))
+(defmethod values-rest (domain (info values-info)) (%rest info))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

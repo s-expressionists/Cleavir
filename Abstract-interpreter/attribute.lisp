@@ -2,11 +2,6 @@
 
 (defclass attribute (forward-values-data) ())
 
-(defclass attribute-values ()
-  ((%required :initarg :required :reader required-attr)
-   (%optional :initarg :optional :reader optional-attr)
-   (%rest :initarg :rest :reader rest-attr)))
-
 ;;; Lattice operations are reversed because we start with the optimistic
 ;;; assumption and move up the lattice.
 (defmethod sv-subinfop ((domain attribute) attr1 attr2)
@@ -20,15 +15,6 @@
   (attributes:join-attributes attr1 attr2))
 (defmethod sv-infimum ((domain attribute)) t)
 (defmethod sv-supremum ((domain attribute)) nil)
-(defmethod values-info ((domain attribute) required optional rest)
-  (make-instance 'attribute-values
-    :required required :optional optional :rest rest))
-(defmethod values-required ((domain attribute) (vattr attribute-values))
-  (required-attr vattr))
-(defmethod values-optional ((domain attribute) (vattr attribute-values))
-  (optional-attr vattr))
-(defmethod values-rest ((domain attribute) (vattr attribute-values))
-  (rest-attr vattr))
 
 ;;; Treat NIL as meaning (&rest nil), and an attribute as meaning
 ;;; (attr &rest nil).
@@ -68,20 +54,20 @@
                    (sv-subinfop domain nil
                                 (or (pop required) (pop optional) rest))
                    (values nil certain)))))))
-(defmethod subinfop ((domain attribute) (attr1 null) (attr2 attribute-values))
+(defmethod subinfop ((domain attribute) (attr1 null) (attr2 values-info))
   (attr-subinfop1 domain attr1 attr2))
 (defmethod subinfop ((domain attribute) (attr1 attributes:attributes)
-                     (attr2 attribute-values))
+                     (attr2 values-info))
   (attr-subinfop1 domain attr1 attr2))
 
 (defun attr-subinfop2 (domain attr1 attr2)
   ;; TODO
   (declare (ignore domain attr1 attr2))
   (values nil nil))
-(defmethod subinfop ((domain attribute) (attr1 attribute-values)
+(defmethod subinfop ((domain attribute) (attr1 values-info)
                      (attr2 null))
   (attr-subinfop2 domain attr1 attr2))
-(defmethod subinfop ((domain attribute) (attr1 attribute-values)
+(defmethod subinfop ((domain attribute) (attr1 values-info)
                      (attr2 attributes:attributes))
   (attr-subinfop2 domain attr1 attr2))
 
