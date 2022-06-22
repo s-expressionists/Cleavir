@@ -1,5 +1,5 @@
 (in-package #:cleavir-example)
 
-(defmethod abstract-interpreter:derive-return-type (identity argstype (system example))
+(defun derive-return-type (identity argstype)
   (ctype.ext.tfun:derive-multiple-value-call (ctype.ext.tfun:find-tfun identity nil)
                                              argstype))

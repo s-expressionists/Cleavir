@@ -13,7 +13,7 @@
 (defgeneric sv-subinfop (domain info1 info2))
 (defgeneric sv-meet/2 (domain info1 info2))
 (defgeneric sv-join/2 (domain info1 info2))
-(defgeneric sv-wjoin/2 (domain info1 info2))
+(defgeneric sv-widen (domain old-info new-info))
 (defgeneric sv-infimum (domain))
 (defgeneric sv-supremum (domain))
 
@@ -76,6 +76,14 @@
 
 (defun ftm-info (domain required)
   (values-info domain required nil (sv-infimum domain)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Noetherian definition.
+
+(defmethod sv-widen ((domain noetherian-mixin) old-info new-info)
+  (declare (ignore old-info))
+  new-info)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -167,7 +175,7 @@
         return (values-info domain
                             (nreverse required) (nreverse optional) rest)))
 
-(defmethod wjoin/2 ((domain values-domain) info1 info2)
+(defmethod widen ((domain values-domain) info1 info2)
   ;; (the general case below is not minimal)
   ;; FIXME: We're also not actually Noetherian here, as we can keep adding
   ;; values on to the right.
@@ -184,36 +192,36 @@
                    (if (null required2)
                        (if (null optional2)
                            ;; rest v rest
-                           (setf rest (sv-wjoin/2 domain rest1 rest2)
+                           (setf rest (sv-widen domain rest1 rest2)
                                  donep t)
                            ;; rest v opt
-                           (push (sv-wjoin/2 domain rest1 (pop optional2))
+                           (push (sv-widen domain rest1 (pop optional2))
                                  optional))
                        ;; rest v req
-                       (push (sv-wjoin/2 domain rest1 (pop required2))
+                       (push (sv-widen domain rest1 (pop required2))
                              optional))
                    (if (null required2)
                        (if (null optional2)
                            ;; optional v rest
-                           (push (sv-wjoin/2 domain (pop optional1) rest2)
+                           (push (sv-widen domain (pop optional1) rest2)
                                  optional)
                            ;; optional v optional
-                           (push (sv-wjoin/2 domain
+                           (push (sv-widen domain
                                             (pop optional1) (pop optional2))
                                  optional))
                        ;; optional v req
-                       (push (sv-wjoin/2 domain (pop optional1) (pop required2))
+                       (push (sv-widen domain (pop optional1) (pop required2))
                              optional)))
                (if (null required2)
                    (if (null optional2)
                        ;; required v rest
-                       (push (sv-wjoin/2 domain (pop required1) rest2)
+                       (push (sv-widen domain (pop required1) rest2)
                              optional)
                        ;; required v optional
-                       (push (sv-wjoin/2 domain (pop required1) (pop optional2))
+                       (push (sv-widen domain (pop required1) (pop optional2))
                              optional))
                    ;; required v required
-                   (push (sv-wjoin/2 domain (pop required1) (pop required2))
+                   (push (sv-widen domain (pop required1) (pop required2))
                          required)))
         when donep
         return (values-info domain

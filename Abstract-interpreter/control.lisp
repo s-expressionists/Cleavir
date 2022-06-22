@@ -1,94 +1,110 @@
 (in-package #:cleavir-abstract-interpreter)
 
-(defgeneric flow-control (strategy domain instruction info))
+;;; Forward control infos are conceptually associated with a control edge.
+;;; We represent this by having each instruction's info be a list of infos, one for
+;;; each of its successors; we also define that if there's only one successor there's
+;;; no list, to save some consing.
+;;; There is only ever one input to FLOW-INSTRUCTION; this is the JOIN of the infos
+;;; from all predecessor edges.
 
-(defmethod flow-control ((strategy optimism) domain instruction info)
-  (let* ((old (info strategy domain instruction))
-         (new (join domain old info)))
+;;; We don't need to do anything during initialization, as instruction-input-info
+;;; will compute input control data from entry points itself.
+(defmethod initialize-entry-point ((strategy strategy) (domain forward-control)
+                                   (function bir:function)))
+
+(defmethod instruction-input-info ((strategy strategy) (domain forward-control)
+                                   (instruction bir:instruction))
+  (let ((pred (bir:predecessor instruction))
+        (ib (bir:iblock instruction))
+        (function (bir:function instruction)))
+    (cond (pred (info strategy domain pred)) ; we're in an iblock
+          ((not (eq ib (bir:start function)))
+           ;; We're the start of an iblock, and that iblock is not the start of its
+           ;; function, so just use the predecessors.
+           (let ((accum (infimum domain)))
+             (set:doset (pred (bir:predecessors ib))
+               (let* ((end (bir:end pred))
+                      (end-next (bir:next end))
+                      (infos (info strategy domain end))
+                      (info (if (= (length end-next) 1)
+                                infos
+                                (nth (position ib end-next) infos))))
+                 (setf accum (join domain accum info))))
+             (set:doset (pred (bir:entrances ib))
+               (let* ((end (bir:end pred))
+                      ;; UNWINDs only have the one successor.
+                      (info (info strategy domain end)))
+                 (setf accum (join domain accum info))))
+             accum))
+          ((or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
+           ;; We're at the start of a function and it can be called from anywhere.
+           (supremum domain))
+          (t ; We're at the start of a function and we understand where it's called.
+           (let ((accum (infimum domain)))
+             (set:doset (call (bir:local-calls function) accum)
+               ;; Recurse; this lets us account for calls at the head of blocks, etc.
+               (let ((info (instruction-input-info strategy domain call)))
+                 (setf accum (join domain accum info)))))))))
+
+(defgeneric maybe-mark-control (strategy domain instruction successor old-info new-info))
+
+(defmethod instruction-output-info ((strategy strategy) (domain forward-control)
+                                    (instruction bir:instruction) &rest new-infos)
+  (let ((old-info (info strategy domain instruction))
+        (succ (bir:successor instruction)))
+    (if succ
+        ;; We're in a block. Easy case.
+        (setf (info strategy domain instruction)
+              (maybe-mark-control strategy domain instruction succ
+                                  old-info (first new-infos)))
+        (let ((next (bir:next instruction)))
+          (if (= (length next) 1)
+              (setf (info strategy domain instruction)
+                    (maybe-mark-control strategy domain instruction (first next)
+                                        old-info (first new-infos)))
+              ;; Multiple successors: instruction's info is a list.
+              (map-into old-info
+                        (lambda (old-info new-info successor)
+                          (maybe-mark-control strategy domain instruction successor
+                                              old-info new-info))
+                        old-info new-infos next))))))
+
+(defmethod instruction-output-info ((strategy strategy) (domain forward-control)
+                                    (instruction bir:unwind) &rest new-infos)
+  (let ((old-info (info strategy domain instruction))
+        (new-info (first new-infos)))
+    (setf (info strategy domain instruction)
+          (maybe-mark-control strategy domain instruction (bir:destination instruction)
+                              old-info new-info))))
+
+(defmethod instruction-output-info ((strategy strategy) (domain forward-control)
+                                    (instruction bir:returni) &rest new-infos)
+  (let ((new-info (first new-infos)))
+    (set:doset (call (bir:local-calls (bir:function instruction)))
+      (let ((old-info (info strategy domain call)))
+        (setf (info strategy domain call)
+              (maybe-mark-control strategy domain call (bir:successor call)
+                                  old-info new-info))))))
+
+;;; dumb default that should be enough to ensure termination:
+;;; widen if we start a block (as there could be a loop)
+;;; slightly less dumb would be checking for multiple predecessors.
+(defmethod widening-point-p ((strategy strategy) (thing bir:instruction))
+  (null (bir:predecessor thing)))
+
+(defmethod maybe-mark-control ((strategy optimism) domain instruction successor old new)
+  (let ((new (join domain old new)))
     (multiple-value-bind (sub surety) (subinfop domain new old)
-      (when (and surety (not sub))
-        (setf (info strategy domain instruction) new)
-        (mark strategy instruction)))))
+      (cond ((and surety (not sub))
+             (mark strategy successor)
+             (if (widening-point-p strategy instruction)
+                 (widen domain old new)
+                 new))
+            (t new)))))
 
-;;; Compute and return the info from INSTRUCTION as it goes to NEXT.
-;;; This is useful for pessimistic analysis, as seen below.
-(defgeneric compute-control (domain instruction next))
-
-;;; By default, mark all successors with the supremum.
-(defmethod compute-control ((domain domain) (instruction bir:instruction)
-                            (next bir:instruction))
-  (supremum domain))
-
-(defmethod flow-control ((strategy pessimism) domain instruction info)
-  (let* ((ib (bir:iblock instruction))
-         (old (info strategy domain instruction))
-         (info
-           (if (and (eq instruction (bir:start ib))
-                    ;; See KLUDGE in flow-call, below.
-                    (not (eq ib (bir:start (bir:function ib)))))
-               ;; We're at the head of a block, so we have to merge (join) infos
-               ;; from all predecessor blocks. This means we actually ignore
-               ;; the passed-in info. This is analogous to the pessimistic
-               ;; FLOW-DATUM in data.lisp.
-               (let ((accum (infimum domain)))
-                 (set:doset (pred (bir:predecessors ib))
-                   (let* ((end (bir:end pred))
-                          (info (compute-control domain end instruction)))
-                     (setf accum (wjoin domain accum info))))
-                 (set:doset (pred (bir:entrances ib))
-                   (let* ((end (bir:end pred))
-                          (info (compute-control domain end instruction)))
-                     (setf accum (wjoin domain accum info))))
-                 accum)
-               info))
-         (new (meet domain old info)))
+(defmethod maybe-mark-control ((strategy pessimism) domain instruction successor old new)
+  (let ((new (meet domain old new)))
     (multiple-value-bind (sub surety) (subinfop domain old new)
       (when (and surety (not sub))
-        (setf (info strategy domain instruction) new)
-        (mark strategy instruction)))))
-
-(defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-control) (product product)
-                                  (instruction bir:instruction))
-  (let ((succ (bir:successor instruction)))
-    (if (null succ)
-        ;; terminator
-        (loop for ib in (bir:next instruction)
-              for ninst = (bir:start ib)
-              for info = (compute-control domain instruction ninst)
-              do (flow-control strategy domain ninst info))
-        ;; normal instruction
-        (flow-control strategy domain succ
-                      (compute-control domain instruction succ)))))
-
-(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
-                                  (product product) (instruction bir:unwind))
-  (let* ((dest (bir:destination instruction))
-         (ninst (bir:start dest))
-         (info (compute-control domain instruction ninst)))
-    (flow-control strategy domain ninst info)))
-
-(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
-                                  (product product) (instruction bir:local-call))
-  (let ((ninst (bir:start (bir:start (bir:callee instruction)))))
-    (flow-control strategy domain ninst
-                  (compute-control domain instruction ninst))))
-
-(defmethod interpret-instruction ((strategy strategy) (domain forward-control)
-                                  (product product) (instruction bir:thei))
-  (let ((tcf (bir:type-check-function instruction)))
-    (unless (symbolp tcf)
-      (flow-control strategy domain (bir:start (bir:start tcf))
-                    (supremum domain)))))
-
-(defmethod flow-call ((strategy strategy) (domain forward-control)
-                      (function bir:function) info)
-  (flow-control strategy domain (bir:start (bir:start function)) info))
-
-(defmethod flow-call ((strategy pessimism) (domain forward-control)
-                      (function bir:function) info)
-  (declare (ignore info))
-  ;; KLUDGE: I'm not sure how to merge/join information from multiple calls
-  ;; with a pessimistic strategy, so for now we just always pass in the sup.
-  (flow-control strategy domain (bir:start (bir:start function))
-                (supremum domain)))
+        (mark strategy successor)))
+    new))

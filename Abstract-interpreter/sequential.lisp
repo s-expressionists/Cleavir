@@ -17,23 +17,17 @@
 
 ;;;
 
-(defmethod interpret-module ((strategy sequential) (product product)
-                             (module bir:module))
-  (let ((table (mark-table strategy))
-        (domains (domains product)))
-    (bir:do-functions (function module)
-      ;; If a function is not enclosed and has no local calls, it is the entry
-      ;; point, and we must proceed as though it could be called externally.
-      ;; If a function is enclosed, we proceed as though it could be called
-      ;; externally. TODO: Mingle local call analysis so that we can be
-      ;; a little smarter about that.
-      (when (or (bir:enclose function)
-                (set:empty-set-p (bir:local-calls function)))
-        (loop for domain in domains
-              do (flow-call strategy domain function (supremum domain))))
-      ;; Unconditionally interpret every instruction (forward, arbitrarily)
-      (interpret-function-forward strategy product function (constantly t)))
-    ;; Now iterate through every instruction repeatedly until we hit a fixpoint.
+(defmethod interpret-module ((strategy sequential) (product product) (module bir:module))
+  ;; Initialize entry points. FIXME: BIR should indicate entry points better.
+  (bir:do-functions (function module)
+    (when (or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
+      (dolist (domain (domains product))
+        (initialize-entry-point strategy domain function))))
+  (bir:do-functions (function module)
+    ;; Unconditionally interpret every instruction (forward, arbitrarily)
+    (interpret-function-forward strategy product function (constantly t)))
+  ;; Now iterate through every instruction repeatedly until we hit a fixpoint.
+  (let ((table (mark-table strategy)))
     (flet ((markedp (instruction)
              (values (gethash instruction table))))
       (loop
@@ -56,6 +50,5 @@
 (defun maybe-interpret-instruction (strategy product instruction predicate)
   (when (funcall predicate instruction)
     (unmark strategy instruction)
-    (loop for domain in (domains product)
-          do (interpret-instruction strategy domain product instruction)))
+    (interpret-instruction strategy product instruction))
   (values))

@@ -7,95 +7,78 @@
 ;;;; In Cleavir, known calls are mediated through the attributes
 ;;;; system; a datum can be flagged with attributes that give it
 ;;;; an "identity", which can be used as a key for the analyzer.
-;;;; This file provides a mixin for interpretation domains to use
-;;;; this sort of information. The FLOW-KNOWN-CALL generic
-;;;; function can be specialized for different domains to impart
-;;;; known domain information to the abstract interpreter.
+;;;; This file provides a channel for interpretation domains to use
+;;;; this sort of information. A function provided on channel
+;;;; creation computes the known domain information.
 
-(defclass known-call-mixin (domain) ())
+(defclass known-call-channel (coop-channel)
+  ((%other :type attribute)
+   (%flower :initarg :flower :reader known-call-flower :type function)))
 
-(defclass forward-known-call (known-call-mixin forward-data) ())
-(defclass forward-values-known-call (forward-known-call forward-values-data) ())
-(defclass backward-known-call (known-call-mixin backward-data) ())
-(defclass backward-values-known-call (backward-known-call backward-values-data) ())
+(defgeneric known-call-outputs (domain inst info))
+(defgeneric known-call-inputs (domain inst &rest infos))
 
-;;; Given info for the input to a known function (its arguments in
-;;; forward domains, or its return values in backward domains),
-;;; return computed info for the result (return values if forward,
-;;; arguments if backward).
-(defgeneric flow-known-call (strategy domain product identity info))
+(defmethod known-call-outputs ((domain forward-data) (inst bir:abstract-call) info)
+  info)
+
+(defmethod known-call-outputs ((domain forward-control) (inst bir:abstract-call) info)
+  info)
+
+(defmethod known-call-outputs ((domain backward-data) (inst bir:mv-call) info)
+  ;; mv calls have two inputs, and we need to output an info for both.
+  (values (supremum domain) info))
+(defmethod known-call-outputs ((domain backward-values-data) (inst bir:call) info)
+  ;; Break it up by arguments. Also do the supremum for the callee.
+  (apply #'values (supremum domain)
+         (loop for arg in (rest (bir:inputs inst))
+               for i from 0
+               collect (single-value domain (info-values-nth domain i info)))))
+
+(defmethod known-call-inputs ((domain forward-data) (inst bir:mv-call) &rest infos)
+  (second infos))
+(defmethod known-call-inputs ((domain forward-values-data) (inst bir:call) &rest infos)
+  (ftm-info domain (mapcar (lambda (i) (primary domain i)) (rest infos))))
+
+(defmethod known-call-inputs ((domain forward-control) (inst bir:abstract-call)
+                              &rest infos)
+  (first infos))
+
+(defmethod known-call-inputs ((domain backward-data) (inst bir:abstract-call)
+                              &rest infos)
+  (first infos))
 
 ;;;
 
-(defun %flow-ids-call (strategy domain product ids info)
+(defun %flow-ids-call (flower domain ids info)
   (cond ((null ids) (supremum domain))
         ((= (length ids) 1)
-         (flow-known-call strategy domain product (first ids) info))
+         (funcall flower (first ids) info))
         (t
          (apply #'meet
                 domain
                 (loop for id in ids
-                      collect (flow-known-call strategy domain product
-                                               id info))))))
+                      collect (funcall flower id info))))))
 
-(defun %identities (strategy attr-domain abstract-call)
-  (if attr-domain
-      (let* ((callee (bir:callee abstract-call))
-             (attr (info strategy attr-domain callee)))
-        (attributes:identities attr))
-      nil))
+(defmethod flow-instruction ((channel known-call-channel) (inst bir:mv-call)
+                             &rest infos)
+  (let* ((nattr (length (bir:inputs inst))) ; number of infos that are attribute domain
+         (main-infos (nthcdr nattr infos)) ; infos for the non-attribute domain
+         (attr (first infos)) ; attributes for callee
+         (ids (attributes:identities attr)))
+    (known-call-outputs
+     (output channel) inst
+     (%flow-ids-call (known-call-flower channel) (output channel) ids
+                     (apply #'known-call-inputs (output channel) inst main-infos)))))
 
-(defun attribute (product)
-  (product-domain-of-type 'attribute product))
-
-(defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-known-call)
-                                  (product product) (inst bir:mv-call))
-  (let* ((identities (%identities strategy (attribute product) inst))
-         (output (bir:output inst))
-         (args (second (bir:inputs inst)))
-         (argsinfo (info strategy domain args)))
-    (flow-datum
-     strategy domain output
-     (%flow-ids-call strategy domain product identities argsinfo))))
-
-(defmethod interpret-instruction ((strategy strategy)
-                                  (domain forward-values-known-call)
-                                  (product product) (inst bir:call))
-  (let* ((identities (%identities strategy (attribute product) inst))
-         (output (bir:output inst))
-         (argsinfo
-           (values-info domain
-                        (loop for arg in (rest (bir:inputs inst))
-                              for ct = (info strategy domain arg)
-                              collect (primary domain ct))
-                        nil (sv-infimum domain))))
-    (flow-datum
-     strategy domain output
-     (%flow-ids-call strategy domain product identities argsinfo))))
-
-(defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-known-call)
-                                  (product product) (inst bir:mv-call))
-  (let* ((identities (%identities strategy (attribute product) inst))
-         (args (second (bir:inputs inst)))
-         (outinfo (info strategy domain (bir:output inst))))
-    (flow-datum
-     strategy domain args
-     (%flow-ids-call strategy domain product identities outinfo))))
-
-(defmethod interpret-instruction ((strategy strategy)
-                                  (domain backward-values-known-call)
-                                  (product product) (inst bir:call))
-  (loop with identities = (%identities strategy (attribute product) inst)
-        with outinfo = (info strategy domain (bir:output inst))
-        with ininfo = (%flow-ids-call strategy domain product identities outinfo)
-        with svsup = (sv-supremum domain)
-        for arg in (rest (bir:inputs inst))
-        for i from 0
-        for prim = (info-values-nth domain i ininfo)
-        ;; The other values are not used by this call, so we should be able to
-        ;; infer them as the inf., which is what any unused data should have.
-        ;; Not 100% sure of this though.
-        for arginfo = (single-value domain prim)
-        do (flow-datum strategy domain arg arginfo)))
+;;; identical to the above. We don't use abstract-call because we don't want to handle
+;;; local calls.
+(defmethod flow-instruction ((channel known-call-channel) (inst bir:call)
+                             &rest infos)
+  (let* ((nattr (length (bir:inputs inst))) ; number of infos that are attribute domain
+         (main-infos (nthcdr nattr infos)) ; infos for the non-attribute domain
+         (attr (first infos)) ; attributes for callee
+         (ids (attributes:identities attr)))
+    (known-call-outputs
+     (output channel) inst
+     (%flow-ids-call (known-call-flower channel) (output channel) ids
+                     (apply #'known-call-inputs (output channel) inst main-infos)))))

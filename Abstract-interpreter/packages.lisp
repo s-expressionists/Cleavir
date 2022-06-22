@@ -8,26 +8,23 @@
                     (#:attributes #:cleavir-attributes))
   (:shadow #:type)
   (:export #:domain
-           #:infimum #:supremum #:subinfop #:join/2 #:meet/2 #:wjoin/2
-           #:meet #:join #:wjoin)
+           #:infimum #:supremum #:subinfop #:join/2 #:meet/2
+           #:meet #:join #:widen)
   (:export #:data #:forward-data #:backward-data
            #:values-domain #:forward-values-data #:backward-values-data
            #:control #:forward-control)
   (:export #:sv-infimum #:sv-supremum #:sv-subinfop
-           #:sv-join/2 #:sv-meet/2 #:sv-wjoin/2
+           #:sv-join/2 #:sv-meet/2 #:sv-widen
            #:values-info #:values-required #:values-optional #:values-rest
            #:info-values-nth #:primary #:single-value)
-  (:export #:flow-datum #:flow-datum-through)
-  (:export #:product #:product-domain #:product-domain-of-type)
+  (:export #:product #:channel #:scalar-channel #:coop-channel)
   (:export #:strategy #:optimism #:pessimism
-           #:mark #:flow-call #:interpret-module #:interpret-instruction
+           #:mark #:interpret-module #:flow-instruction
            #:info)
   (:export #:attribute)
-  (:export #:known-call-mixin #:forward-known-call #:backward-known-call
-           #:forward-values-known-call #:backward-values-known-call
-           #:flow-known-call)
-  (:export #:type #:derived-type #:asserted-type
-           #:derive-return-type)
+  (:export #:known-call-channel #:flow-known-call)
+  (:export #:type #:derived-type #:asserted-type)
   (:export #:reachability)
+  (:export #:reachability->data #:type->reachability)
   (:export #:sequential)
   (:export #:slots #:sequential-slots))

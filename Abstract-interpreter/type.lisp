@@ -1,6 +1,6 @@
 (in-package #:cleavir-abstract-interpreter)
 
-(defclass type (forward-values-known-call)
+(defclass type (forward-values-data)
   ((%system :initarg :system :reader system)))
 
 (defmethod sv-subinfop ((domain type) ty1 ty2)
@@ -27,130 +27,64 @@
 (defmethod meet/2 ((domain type) vty1 vty2)
   (ctype:values-conjoin (system domain) vty1 vty2))
 
-(defgeneric derive-return-type (identity argstype system)
-  (:argument-precedence-order system identity argstype))
+(defgeneric derive-return-type (identity argstype system))
 (defmethod derive-return-type (identity argstype system)
   (declare (ignore identity argstype))
   (ctype:values-top system))
 
-(defmethod flow-known-call ((strategy strategy) (domain type)
-                            (product product) identity argstype)
-  (derive-return-type identity argstype (system domain)))
+(defmethod flow-known-call ((domain type) identity info)
+  (derive-return-type identity info (system domain)))
 
-(defmethod interpret-instruction ((strategy strategy) (domain type)
-                                  (product product)
-                                  (inst bir:constant-reference))
-  (flow-datum
-   strategy domain (bir:output inst)
-   (let ((sys (system domain)))
+(defmethod flow-instruction ((domain type) (inst bir:constant-reference) &rest in-infos)
+  (declare (ignore in-infos))
+  (let ((sys (system domain)))
      (ctype:single-value
       (ctype:member sys (bir:constant-value (bir:input inst)))
-      sys))))
+      sys)))
 
-(defmethod interpret-instruction ((strategy strategy) (domain type)
-                                  (product product) (inst bir:typeq-test))
-  (flow-datum
-   strategy domain (bir:output inst)
-   (let* ((sys (system domain))
-          (inp (bir:input inst))
-          (itype (info strategy domain inp))
-          (ivtype (ctype:primary itype sys))
-          (ttype (bir:test-ctype inst))
-          (nttype (ctype:negate ttype sys)))
-     (ctype:single-value
-      (if (ctype:disjointp ivtype ttype sys)
-          (if (ctype:disjointp ivtype nttype sys)
-              (ctype:bottom sys)
-              (ctype:member sys nil))
-          (if (ctype:disjointp ivtype nttype sys)
-              (ctype:negate (ctype:member sys nil) sys)
-              (ctype:top sys)))
-      sys))))
+(defmethod flow-instruction ((domain type) (inst bir:typeq-test) &rest in-infos)
+  (destructuring-bind (itype) in-infos
+    (let* ((sys (system domain))
+           (ivtype (ctype:primary itype sys))
+           (ttype (bir:test-ctype inst))
+           (nttype (ctype:negate ttype sys)))
+      (ctype:single-value
+       (if (ctype:disjointp ivtype ttype sys)
+           (if (ctype:disjointp ivtype nttype sys)
+               (ctype:bottom sys)
+               (ctype:member sys nil))
+           (if (ctype:disjointp ivtype nttype sys)
+               (ctype:negate (ctype:member sys nil) sys)
+               (ctype:top sys)))
+       sys))))
 
-(defmethod interpret-instruction ((strategy strategy) (domain type)
-                                  (product product) (inst bir:eq-test))
-  (flow-datum
-   strategy domain (bir:output inst)
-   (let* ((sys (system domain))
-          (inputs (bir:inputs inst))
-          (inp1 (first inputs)) (inp2 (second inputs))
-          (i1type (info strategy domain inp1))
-          (i2type (info strategy domain inp2))
-          (i1vtype (ctype:primary i1type sys))
-          (i2vtype (ctype:primary i2type sys)))
-     (ctype:single-value
-      (if (ctype:disjointp i1vtype i2vtype sys)
-          (ctype:member sys nil)
-          (ctype:top sys))
-      sys))))
-
-(defmethod flow-call ((strategy strategy) (domain type) (function bir:function)
-                      info)
-  (let* ((system (system domain))
-         (req (ctype:values-required info system))
-         (opt (ctype:values-optional info system))
-         (rest (ctype:values-rest info system))
-         (false (ctype:single-value (ctype:member system nil) system))
-         (true (ctype:single-value (ctype:negate false system) system))
-         (top (ctype:top system))
-         (svtop (ctype:single-value (ctype:top system) system)))
-    (flet ((next () (or (pop req) (pop opt) rest)))
-      (bir:map-lambda-list
-       (lambda (state item index)
-         (declare (ignore index))
-         (ecase state
-           ((:required)
-            (flow-datum strategy domain item
-                        (ctype:single-value (next) system)))
-           ((&optional)
-            (let ((certainly-provided-p (not (null req)))
-                  (n (next)))
-              (flow-datum strategy domain (first item) n)
-              (flow-datum strategy domain (second item)
-                          (cond (certainly-provided-p true)
-                                ((ctype:bottom-p n system) false)
-                                (t svtop)))))
-           ((&rest)
-            (flow-datum strategy domain item
-                        ;; LIST type
-                        (ctype:single-value
-                         (ctype:disjoin system false (ctype:cons top top system))
-                         system)))
-           ((&key)
-            ;; FIXME: This is a punt.
-            (flow-datum strategy domain (second item) svtop)
-            (flow-datum strategy domain (third item) svtop))))
-       (bir:lambda-list function)))))
+(defmethod flow-instruction ((domain type) (inst bir:eq-test) &rest in-infos)
+  (destructuring-bind (i1type i2type) in-infos
+    (let* ((sys (system domain))
+           (i1vtype (ctype:primary i1type sys))
+           (i2vtype (ctype:primary i2type sys)))
+      (ctype:single-value
+       (if (ctype:disjointp i1vtype i2vtype sys)
+           (ctype:member sys nil)
+           (ctype:top sys))
+       sys))))
 
 ;;;
 
 (defclass asserted-type (type) ())
 
-(defmethod interpret-instruction ((strategy strategy) (domain asserted-type)
-                                  (product product) (inst bir:thei))
-  (flow-datum strategy domain
-              (bir:output inst)
-              (ctype:values-conjoin (system domain)
-                                    (bir:asserted-type inst)
-                                    (info strategy domain (bir:input inst)))))
+(defmethod flow-instruction ((domain asserted-type) (inst bir:thei)
+                             &rest in-infos)
+  (destructuring-bind (inp-info) in-infos
+    (ctype:values-conjoin (system domain) (bir:asserted-type inst) inp-info)))
 
 ;;;
 
 (defclass derived-type (type)
   ((system :initarg :system :reader system)))
 
-(defun derived-type (product)
-  (product-domain-of-type 'derived-type product))
-
-(defmethod interpret-instruction ((strategy strategy) (domain derived-type)
-                                  (product product) (inst bir:thei))
-  (let* ((type-check-function (bir:type-check-function inst))
-         (input (bir:input inst))
-         (ctype (info strategy domain input)))
-    (flow-datum strategy domain
-                (bir:output inst)
-                (if (eq type-check-function nil)
-                    ctype
-                    (ctype:values-conjoin (system domain)
-                                          (bir:asserted-type inst)
-                                          ctype)))))
+(defmethod flow-instruction ((domain derived-type) (inst bir:thei) &rest in-infos)
+  (destructuring-bind (ctype) in-infos
+    (if (eq (bir:type-check-function inst) nil)
+        ctype
+        (ctype:values-conjoin (system domain) (bir:asserted-type inst) ctype))))

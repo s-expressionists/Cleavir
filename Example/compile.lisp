@@ -18,9 +18,19 @@
                   :system system))
          (attr (make-instance 'abstract-interpreter:attribute))
          (reach (make-instance 'abstract-interpreter:reachability))
-         (domains (list atype dtype attr reach))
+         (ra (make-instance 'abstract-interpreter:reachability->data
+               :input reach :output atype))
+         (rd (make-instance 'abstract-interpreter:reachability->data
+               :input reach :output dtype))
+         (rat (make-instance 'abstract-interpreter:reachability->data
+                :input reach :output attr))
+         (tr (make-instance 'abstract-interpreter:type->reachability
+               :input dtype :output attr))
+         (kc (make-instance 'abstract-interpreter:known-call-channel
+               :output dtype :other attr :flower #'derive-return-type))
          (product (make-instance 'abstract-interpreter:product
-                    :domains domains)))
+                    :domains (list atype dtype attr reach)
+                    :channels (list ra rd rat tr kc))))
     (abstract-interpreter:interpret-module strategy product module)))
 
 (defun transform1 (bir phase)

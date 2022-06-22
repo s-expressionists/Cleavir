@@ -18,19 +18,18 @@
 ;;;;   default when the abstract interpreter does not know how to handle some
 ;;;;   instruction.
 ;;;; * MEET/2: The lattice meet operation with two info operands.
-;;;; * WJOIN/2: Widening join. This is like JOIN/2, but works on a Noetherian
-;;;;   sublattice, i.e. some finite number of WJOIN operations will eventually
-;;;;   converge. This is necessary for abstract interpretation to terminate.
+;;;; * WIDEN: Widening operator. This operates on an info and the next iteration
+;;;;   of that info. In non-Noetherian domains it must ensure that iteration
+;;;;   will eventually halt.
 
 (defclass domain () ())
 
 (defgeneric infimum (domain))
+(defgeneric supremum (domain))
 (defgeneric subinfop (domain info1 info2))
 (defgeneric join/2 (domain info1 info2))
 (defgeneric meet/2 (domain info1 info2))
-
-(defgeneric supremum (domain))
-(defgeneric wjoin/2 (domain info1 info2))
+(defgeneric widen (domain old-info new-info))
 
 ;;;
 
@@ -58,17 +57,15 @@
          `(meet/2 ,domain ,(first infos) ,(second infos)))
         (t form)))
 
-(defun wjoin (domain &rest infos)
-  (cond ((null infos) (infimum domain))
-        ((null (rest infos)) (first infos))
-        (t (reduce (lambda (i1 i2) (wjoin/2 domain i1 i2)) infos))))
-(define-compiler-macro wjoin (&whole form domain &rest infos)
-  (cond ((null infos) `(infimum ,domain))
-        ((and (consp infos)
-              (consp (cdr infos))
-              (null (cddr infos)))
-         `(wjoin/2 ,domain ,(first infos) ,(second infos)))
-        (t form)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Domains that are Noetherian, i.e. meet an ascending chain condition, so it
+;;; is not possible to end up in an infinite loop of expanding infos.
+
+(defclass noetherian-mixin (domain) ())
+(defmethod widen ((domain noetherian-mixin) old new)
+  (declare (ignore old))
+  new)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

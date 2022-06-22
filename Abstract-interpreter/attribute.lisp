@@ -1,15 +1,12 @@
 (in-package #:cleavir-abstract-interpreter)
 
-(defclass attribute (forward-values-data) ())
+(defclass attribute (noetherian-mixin forward-values-data) ())
 
 ;;; Lattice operations are reversed because we start with the optimistic
 ;;; assumption and move up the lattice.
 (defmethod sv-subinfop ((domain attribute) attr1 attr2)
   (values (attributes:sub-attributes-p attr2 attr1) t))
 (defmethod sv-join/2 ((domain attribute) attr1 attr2)
-  (attributes:meet-attributes attr1 attr2))
-(defmethod sv-wjoin/2 ((domain attribute) attr1 attr2)
-  ;; The lattice is already Noetherian
   (attributes:meet-attributes attr1 attr2))
 (defmethod sv-meet/2 ((domain attribute) attr1 attr2)
   (attributes:join-attributes attr1 attr2))
@@ -94,15 +91,3 @@
 (defmethod join/2 ((domain attribute) (attr1 attributes:attributes)
                    (attr2 attributes:attributes))
   (sv-join/2 domain attr1 attr2))
-
-(defmethod wjoin/2 ((domain attribute) (attr1 null) (attr2 null))
-  (sv-wjoin/2 domain attr1 attr2))
-(defmethod wjoin/2 ((domain attribute) (attr1 null)
-                   (attr2 attributes:attributes))
-  (sv-wjoin/2 domain attr1 attr2))
-(defmethod wjoin/2 ((domain attribute) (attr1 attributes:attributes)
-                   (attr2 null))
-  (sv-wjoin/2 domain attr1 attr2))
-(defmethod wjoin/2 ((domain attribute) (attr1 attributes:attributes)
-                   (attr2 attributes:attributes))
-  (sv-wjoin/2 domain attr1 attr2))
