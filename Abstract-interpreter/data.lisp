@@ -49,6 +49,19 @@
         for inp in (bir:inputs inst)
         do (setf (info strategy domain inp) sup)))
 
+(defmethod initialize-instruction :after ((strategy pessimism) (domain forward-data)
+                                          (inst bir:constant-reference))
+  (setf (info strategy domain (bir:input inst)) (supremum domain)))
+(defmethod initialize-instruction :after ((strategy optimism) (domain forward-data)
+                                          (inst bir:constant-reference))
+  (setf (info strategy domain (bir:input inst)) (infimum domain)))
+(defmethod initialize-instruction :after ((strategy pessimism) (domain forward-data)
+                                          (inst bir:load-time-value-reference))
+  (setf (info strategy domain (bir:input inst)) (supremum domain)))
+(defmethod initialize-instruction :after ((strategy optimism) (domain forward-data)
+                                          (inst bir:load-time-value-reference))
+  (setf (info strategy domain (bir:input inst)) (infimum domain)))
+
 ;;; Given new info for a datum, maybe store it and mark if it's novel.
 (defgeneric maybe-mark-datum (strategy domain datum info))
 ;;; Mark the uses of a datum.

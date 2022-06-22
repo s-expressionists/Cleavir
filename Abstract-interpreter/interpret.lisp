@@ -7,6 +7,7 @@
                  (channels product)))
 
 (defun outputs-for-domain (strategy product domain instruction)
+  (declare (optimize debug))
   (let ((input-channels (input-channels product domain)))
     (if (null input-channels) ; quick case
         (multiple-value-call #'flow-instruction domain instruction

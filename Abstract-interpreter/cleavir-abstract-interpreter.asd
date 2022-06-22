@@ -1,7 +1,7 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-abstract-interpreter
-  :depends-on (:cleavir-bir :cleavir-set
+  :depends-on (:cleavir-bir :cleavir-set :cleavir-stealth-mixins
                :cleavir-attributes :cleavir-ctype)
   :components
   ((:file "packages")
