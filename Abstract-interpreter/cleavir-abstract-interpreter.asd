@@ -19,6 +19,7 @@
    (:file "attribute" :depends-on ("values-data" "packages"))
    (:file "known-call" :depends-on ("attribute" "product" "values-data" "packages"))
    (:file "type" :depends-on ("values-data" "interpret-gfs" "packages"))
+   (:file "use" :depends-on ("values-data" "interpret-gfs" "packages"))
    (:file "reachable-data" :depends-on ("product" "reachability" "data" "packages"))
    (:file "typed-reachability" :depends-on ("product" "type" "reachability" "packages"))
    (:file "slots" :depends-on ("sequential" "attribute" "type" "interpret-gfs"
