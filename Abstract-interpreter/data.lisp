@@ -21,11 +21,33 @@
                 (info strategy domain (third item)) sup))))
      (bir:lambda-list function))))
 
+(defmethod initialize-instruction ((strategy optimism) (domain forward-data)
+                                   (inst bir:instruction))
+  (loop with inf = (infimum domain)
+        for out in (bir:outputs inst)
+        do (setf (info strategy domain out) inf)))
+(defmethod initialize-instruction ((strategy pessimism) (domain forward-data)
+                                   (inst bir:instruction))
+  (loop with sup = (supremum domain)
+        for out in (bir:outputs inst)
+        do (setf (info strategy domain out) sup)))
+
 (defmethod initialize-entry-point ((strategy strategy) (domain backward-data)
                                    (function bir:function))
   (let ((ret (bir:returni function)))
     (when ret
       (setf (info strategy domain (bir:input ret)) (supremum domain)))))
+
+(defmethod initialize-instruction ((strategy optimism) (domain backward-data)
+                                   (inst bir:instruction))
+  (loop with inf = (infimum domain)
+        for inp in (bir:inputs inst)
+        do (setf (info strategy domain inp) inf)))
+(defmethod initialize-instruction ((strategy pessimism) (domain backward-data)
+                                   (inst bir:instruction))
+  (loop with sup = (supremum domain)
+        for inp in (bir:inputs inst)
+        do (setf (info strategy domain inp) sup)))
 
 ;;; Given new info for a datum, maybe store it and mark if it's novel.
 (defgeneric maybe-mark-datum (strategy domain datum info))

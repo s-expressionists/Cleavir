@@ -33,6 +33,10 @@ to reimplement basic aspects of function call semantics, etc.
 ;;; Perform abstract interpretation on a module.
 (defgeneric interpret-module (strategy product module))
 
+;;; Given an instruction, set its info to the initial state for a strategy and domain.
+;;; Called for effect. Internal.
+(defgeneric initialize-instruction (strategy domain instruction))
+
 ;;; Given an entry point (i.e. a function that could be called from anywhere),
 ;;; initialize some infos for that appropriately. Used during interpreting a module.
 ;;; Called for effect. Internal.

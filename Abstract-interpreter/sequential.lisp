@@ -18,11 +18,19 @@
 ;;;
 
 (defmethod interpret-module ((strategy sequential) (product product) (module bir:module))
-  ;; Initialize entry points. FIXME: BIR should indicate entry points better.
-  (bir:do-functions (function module)
-    (when (or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
-      (dolist (domain (domains product))
-        (initialize-entry-point strategy domain function))))
+  ;; Initialize all infos and entry points.
+  (let ((domains (domains product)))
+    (bir:do-functions (function module)
+      (bir:map-local-instructions
+       (lambda (inst)
+         (dolist (domain domains)
+           (initialize-instruction strategy domain inst)))
+       function))
+    ;; Entry points. FIXME: BIR should indicate entry points better.
+    (bir:do-functions (function module)
+      (when (or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
+        (dolist (domain domains)
+          (initialize-entry-point strategy domain function)))))
   (bir:do-functions (function module)
     ;; Unconditionally interpret every instruction (forward, arbitrarily)
     (interpret-function-forward strategy product function (constantly t)))

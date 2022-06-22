@@ -7,10 +7,24 @@
 ;;; There is only ever one input to FLOW-INSTRUCTION; this is the JOIN of the infos
 ;;; from all predecessor edges.
 
-;;; We don't need to do anything during initialization, as instruction-input-info
+;;; We don't need to do anything to initialize entries, as instruction-input-info
 ;;; will compute input control data from entry points itself.
 (defmethod initialize-entry-point ((strategy strategy) (domain forward-control)
                                    (function bir:function)))
+
+(defmethod initialize-instruction ((strategy optimism) (domain forward-control)
+                                   (inst bir:instruction))
+  (setf (info strategy domain inst)
+        (if (or (bir:successor inst) (= (length (bir:next inst)) 1))
+            (infimum domain)
+            (make-list (length (bir:next inst)) :initial-element (infimum domain)))))
+
+(defmethod initialize-instruction ((strategy pessimism) (domain forward-control)
+                                   (inst bir:instruction))
+  (setf (info strategy domain inst)
+        (if (or (bir:successor inst) (= (length (bir:next inst)) 1))
+            (supremum domain)
+            (make-list (length (bir:next inst)) :initial-element (supremum domain)))))
 
 (defmethod instruction-input-info ((strategy strategy) (domain forward-control)
                                    (instruction bir:instruction))
