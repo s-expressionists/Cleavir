@@ -532,6 +532,7 @@
                         (ctype:primary (bir:ctype input) system)
                         system))
                  (fout (make-instance 'bir:output
+                         :asserted-type type
                          :derived-type type))
                  (ftm (make-instance 'bir:fixed-to-multiple
                         :inputs (list input) :outputs (list fout)
@@ -924,6 +925,7 @@
                             for ct = (ctype:member system rv)
                             for vct = (ctype:single-value ct system)
                             collect (make-instance 'bir:output
+                                      :asserted-type vct
                                       :derived-type vct)))
                     (ftm
                       (make-instance 'bir:fixed-to-multiple
