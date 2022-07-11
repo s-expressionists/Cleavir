@@ -73,13 +73,20 @@
 (defun values-bottom-p (vct sys)
   (some (lambda (ct) (bottom-p ct sys)) (values-required vct sys)))
 
-;;; Internal
-(defun intersection-ctype-p (ctype)
+(defmethod conjunctionp (ctype sys)
+  (declare (ignore sys))
   (and (cl:consp ctype) (eq (car ctype) 'and)))
-(defun intersection-ctypes (ctype) (rest ctype))
-(defun union-ctype-p (ctype)
+(defmethod conjunction-ctypes (ctype sys)
+  (declare (ignore sys))
+  (rest ctype))
+(defmethod disjunctionp (ctype sys)
+  (declare (ignore sys))
   (and (cl:consp ctype) (eq (car ctype) 'or)))
-(defun union-ctypes (ctype) (rest ctype))
+(defmethod disjunction-ctypes (ctype sys)
+  (declare (ignore sys))
+  (rest ctype))
+
+;;; internal
 (defun function-ctype-p (ctype)
   (and (cl:consp ctype) (eq (car ctype) 'cl:function)))
 (defun function-return (ctype) (third ctype))
@@ -348,13 +355,13 @@
 (defun general-function-returns (fctype system)
   (cond ((function-ctype-p fctype)
          (function-returns fctype))
-        ((intersection-ctype-p fctype)
+        ((conjunctionp fctype system)
          (cl:apply #'conjoin system
-                   (loop for fc in (intersection-ctypes fctype)
+                   (loop for fc in (conjunction-ctypes fctype system)
                          collect (general-function-returns fc system))))
-        ((union-ctype-p fctype)
+        ((disjunctionp fctype)
          (cl:apply #'disjoin system
-                   (loop for fc in (intersection-ctypes fctype)
+                   (loop for fc in (disjunction-ctypes fctype system)
                          collect (general-function-returns fc system))))
         ;; give up
         (t `(cl:values &rest t))))

@@ -76,6 +76,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions CONJUNCTIONP, DISJUNCTIONP.
+;;;
+;;; Determine if non-values ctype is a conjunction or disjunction respectively.
+;;; Here a conjunction or disjunction ctype is an unsimplified representation of
+;;; an AND or OR type respectively. (or (integer 3 7) (integer 23)) may be
+;;; represented as a disjunction ctype because there is no simpler representation
+;;; for it in Common Lisp, whereas (or (integer 3 7) (integer 6)) may just be
+;;; reduced to (integer 3) and not be a disjunction ctype.
+
+(defgeneric conjunctionp (ctype system))
+(defgeneric disjunctionp (ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Generic functions CONJUNCTION-CTYPES, DISJUNCTION-CTYPES.
+;;;
+;;; Given conjunction or disjunction ctypes, return the ctypes they are composed
+;;; of. Note that not all uses of CONJOIN or DISJOIN may result in junction
+;;; ctypes, and you have to check that they are junctions before calling these.
+
+(defgeneric conjunction-ctypes (conjunction-ctype system))
+(defgeneric disjunction-ctypes (disjunction-ctype system))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function WDISJOIN/2.
 ;;;
 ;;; Widening disjunction: As DISJOIN/2, but the result lattice must be
