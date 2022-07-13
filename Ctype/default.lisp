@@ -42,10 +42,11 @@
            (cl:values nil nil))
           (t
            (labels ((aux (t1 t2)
-                      (if (null t2)
+                      (if (null t1)
                           (subtypep rest1 rest2 system)
                           (multiple-value-bind (answer certain)
-                              (subtypep (first t1) (first t2) system)
+                              (subtypep (first t1) (if t2 (first t2) rest2)
+                                        system)
                             (if answer
                                 (aux (rest t1) (rest t2))
                                 (cl:values nil certain))))))
