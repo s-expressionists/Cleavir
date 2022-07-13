@@ -39,7 +39,7 @@
                  ctypes))))
 
 (defun values-append (system &rest ctypes)
-  (cond ((null ctypes) (values-bottom system))
+  (cond ((null ctypes) (values nil nil (bottom system) system))
         ((null (cl:rest ctypes)) (first ctypes))
         (t
          (reduce (lambda (vct1 vct2) (values-append/2 vct1 vct2 system))
