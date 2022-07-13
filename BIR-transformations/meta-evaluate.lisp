@@ -875,12 +875,9 @@
                            (bir:asserted-type input))
      system)
     ;; Propagate the type of the input into function.
-    ;; FIXME: Extend this to values types. Also, this is pretty KLUDGEy.
     (unless (symbolp type-check-function)
-      (let ((var (first (bir:lambda-list type-check-function))))
-        (when (typep var 'bir:argument)
-          (derive-type-for-linear-datum
-           var ctype system))))))
+      (derive-local-call-parameter-types type-check-function
+                                         (list ctype) system))))
 
 ;; Clients can specialize this to perform specific transformations on
 ;; the IR for a call.
