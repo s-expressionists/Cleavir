@@ -669,6 +669,18 @@
 (defun append-input-types (types system)
   (apply #'ctype:values-append system types))
 
+(defmethod meta-evaluate-instruction ((instruction bir:values-collect) system)
+  ;; Remove any inputs that are exactly zero values.
+  (flet ((zvp (datum)
+           (let ((ct (bir:ctype datum)))
+             (and (null (ctype:values-required ct system))
+                  (null (ctype:values-optional ct system))
+                  (ctype:bottom-p (ctype:values-rest ct system) system)))))
+    (let ((inputs (bir:inputs instruction)))
+      (when (some #'zvp inputs)
+        (setf (bir:inputs instruction) (remove-if #'zvp inputs))
+        t))))
+
 (defmethod derive-types ((instruction bir:values-collect) system)
   (let ((inputs (bir:inputs instruction)))
     (assert-type-for-linear-datum
