@@ -35,63 +35,81 @@
         (attributes:join-attributes
          (bir:attributes linear-datum) new-attributes)))
 
+(defun derive-local-call-parameter-types (function argstypes system)
+  (let* ((bottom (ctype:bottom system)))
+    (bir:map-lambda-list
+     (lambda (state item index)
+       (case state
+         ((:required)
+          (let ((type bottom))
+            (dolist (argstype argstypes)
+              (setf type (ctype:disjoin/2 type
+                                          (ctype:nth-value index argstype system)
+                                          system)))
+            (setf (bir:derived-type item) (ctype:single-value type system))))
+         ((&optional)
+          (let ((type bottom)
+                (suppliedp nil))
+            (dolist (argstype argstypes)
+              (let ((nreq (length (ctype:values-required argstype system)))
+                    (atype (ctype:nth-value index argstype system)))
+                (setf type (ctype:disjoin/2 type atype system))
+                (cond ((< index nreq) (pushnew t suppliedp))
+                      ((ctype:bottom-p atype system) (pushnew nil suppliedp))
+                      (t (setf suppliedp '(nil t))))))
+            (setf (bir:derived-type (first item)) (ctype:single-value type system)
+                  (bir:derived-type (second item))
+                  (ctype:single-value (apply #'ctype:member system suppliedp)
+                                      system))))
+         ((&rest)
+          ;; Here INDEX will be the number of required parameters plus the
+          ;; number of optional parameters, which is useful.
+          (let ((subtypes nil) (top (ctype:top system)))
+            (dolist (argstype argstypes)
+              (let ((nreq (length (ctype:values-required argstype system)))
+                    (nopt (length (ctype:values-optional argstype system)))
+                    (rest (ctype:values-rest argstype system)))
+                (cond ((< index nreq) (pushnew 'cons subtypes))
+                      ((< index (+ nreq nopt))
+                       (setf subtypes '(null cons)))
+                      ((ctype:bottom-p rest system) (pushnew 'null subtypes))
+                      (t (setf subtypes '(null cons))))))
+            (setf (bir:derived-type item)
+                  (ctype:single-value
+                   (cond ((equal subtypes '(null cons))
+                          (ctype:disjoin/2 (ctype:member system nil)
+                                           (ctype:cons top top system)
+                                           system))
+                         ((equal subtypes '(null)) (ctype:member system nil))
+                         ((equal subtypes '(cons)) (ctype:cons top top system)))
+                   system))))
+         ;; anything else is too complicated.
+         ))
+     (bir:lambda-list function))))
+
+(defun derive-local-call-argument-types-aux (local-calls system)
+  (let ((bottom (ctype:bottom system)))
+    ;; One values type for each local call, describing the arguments
+    ;; to that call.
+    (set:mapset
+     'list
+     (lambda (local-call)
+       (etypecase local-call
+         (bir:local-call
+          (ctype:values (loop for arg in (rest (bir:inputs local-call))
+                              collect (ctype:primary (bir:ctype arg) system))
+                        nil bottom system))
+         (bir:mv-local-call
+          (append-input-types
+           (mapcar #'bir:ctype (rest (bir:inputs local-call)))
+           system))))
+     local-calls)))
+
 (defun derive-local-call-argument-types (function local-calls system)
-  (bir:map-lambda-list
-   (lambda (state item index)
-     (case state
-       ((:required &optional)
-        (let ((type (ctype:bottom system))
-              (suppliedp (ctype:bottom system)))
-          (set:doset (local-call local-calls)
-            (multiple-value-bind (vart suppliedpt)
-                (etypecase local-call
-                  (bir:local-call
-                   ;; Get the nth argument. If it's there, use that type,
-                   ;; otherwise it's unsupplied.
-                   (let ((arg (nth index (rest (bir:inputs local-call)))))
-                     (if arg
-                         (values (ctype:primary (bir:ctype arg) system)
-                                 (ctype:member system t))
-                         ;; The type of the argument is actually undefined.
-                         (values (ctype:bottom system)
-                                 (ctype:member system nil)))))
-                  ;; FIXME: This is slightly suboptimal: If a call can be
-                  ;; proven to be an error (e.g. not enough arguments) its
-                  ;; types could be totally excluded.
-                  (bir:mv-local-call
-                   ;; Parse the values type of the argument and use that info.
-                   (let* ((vty
-                            (append-input-types
-                             (mapcar #'bir:ctype (rest (bir:inputs local-call)))
-                             system))
-                          (req (ctype:values-required vty system))
-                          (lreq (length req))
-                          (opt (ctype:values-optional vty system))
-                          (rest (ctype:values-rest vty system)))
-                     (cond ((< index lreq)
-                            ;; value definitely supplied
-                            (values (nth index req) (ctype:member system t)))
-                           ((< index (+ lreq (length opt)))
-                            ;; value maybe supplied, in the &optional types
-                            (values (nth (- index lreq) opt)
-                                    (ctype:member system t nil)))
-                           (t ; use the &rest type
-                            (values rest (ctype:member system t nil)))))))
-              (setf type (ctype:disjoin/2 type vart system)
-                    suppliedp (ctype:disjoin/2 suppliedp suppliedpt system))))
-          (ecase state
-            (:required
-             (setf (bir:derived-type item)
-                   (ctype:single-value type system)))
-            (&optional
-             (setf (bir:derived-type (first item))
-                   (ctype:single-value type system))
-             (setf (bir:derived-type (second item))
-                   (ctype:single-value suppliedp system))))))
-       (&key
-        ;; too hairy for me to handle
-        )))
-   (bir:lambda-list function)))
+  (derive-local-call-parameter-types
+   function
+   (derive-local-call-argument-types-aux local-calls system)
+   system))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
