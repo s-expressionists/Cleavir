@@ -244,20 +244,19 @@
                (attributes:has-flag-p (bir:attributes instruction) :flushable))
       (bir:delete-instruction instruction))))
 
+(defun delete-terminator1 (inst)
+  (bir:replace-terminator
+   (make-instance 'bir:jump
+     :next (bir:next inst) :inputs () :outputs ()
+     :origin (bir:origin inst) :policy (bir:policy inst))
+   inst))
+
 (defmethod maybe-flush-instruction ((inst bir:values-save))
   (when (bir:unused-p (bir:output inst))
-    (bir:replace-terminator
-     (make-instance 'bir:jump
-       :next (bir:next inst) :inputs () :outputs ()
-       :origin (bir:origin inst) :policy (bir:policy inst))
-     inst)))
+    (delete-terminator1 inst)))
 (defmethod maybe-flush-instruction ((inst bir:values-collect))
   (when (bir:unused-p (bir:output inst))
-    (bir:replace-terminator
-     (make-instance 'bir:jump
-       :next (bir:next inst) :inputs () :outputs ()
-       :origin (bir:origin inst) :policy (bir:policy inst))
-     inst)))
+    (delete-terminator1 inst)))
 
 (defun flush-dead-code (iblock)
   (bir:map-iblock-instructions-backwards #'maybe-flush-instruction iblock)
@@ -1020,6 +1019,36 @@
         (loop for fold in folds
                 thereis (maybe-fold-call-1 fold args instruction system))))))
 
+;;; Reduce an mv-call to a normal call if all its inputs are single-valued.
+(defun mv-call->call (mv-call sys)
+  (let* ((args (second (bir:inputs mv-call)))
+         (argsdef (and (typep args 'bir:output)
+                       (bir:definition args))))
+    (when (typep argsdef 'bir:values-collect)
+      (let ((vcin (bir:inputs argsdef)))
+        (flet ((svp (datum) ; single-value-p
+                 (and (typep datum 'bir:output) ; can't rewrite w/o this
+                      (let ((ct (bir:ctype datum)))
+                        (and (= (length (ctype:values-required ct sys)) 1)
+                             (null (ctype:values-optional ct sys))
+                             (ctype:bottom-p (ctype:values-rest ct sys) sys))))))
+          (when (every #'svp vcin)
+            ;; OK, we can rewrite.
+            ;; First, delete the values-collect.
+            (delete-terminator1 argsdef)
+            ;; This allows us to delete the values-saves.
+            (let ((real-args
+                    (loop for i in vcin
+                          for d = (bir:definition i)
+                          when (typep d 'bir:values-save)
+                            collect (bir:input d)
+                            and do (delete-terminator1 d)
+                          else collect i)))
+              ;; and finally, change-class.
+              (change-class mv-call 'bir:call
+                            :inputs (list* (bir:callee mv-call) real-args))
+              t)))))))
+
 (defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
   (let ((identities (attributes:identities (bir:attributes instruction))))
     (or
@@ -1029,7 +1058,8 @@
                           system)
                          instruction system)
      (some (lambda (identity) (transform-call system identity instruction))
-           identities))))
+           identities)
+     (mv-call->call instruction system))))
 
 ;;; Given an instruction, its identity (e.g. function name), the VALUES type
 ;;; representing the incoming arguments, and the system, return the type of
