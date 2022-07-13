@@ -15,5 +15,6 @@
   (:export #:determine-variable-extents)
   (:export #:meta-evaluate-module
            #:generate-type-check-function
-           #:transform-call #:fold-call #:derive-return-type)
+           #:transform-call #:fold-call #:derive-return-type
+           #:flushable-call-p)
   (:export #:module-generate-type-checks))
