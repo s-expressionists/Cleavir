@@ -849,6 +849,21 @@
   (let ((input (bir:input instruction))
         (tcf (bir:type-check-function instruction)))
     (cond
+      ;; If the type assertion definitely fails, mark subsequent code
+      ;; as unreachable.
+      ((and (ctype:values-disjointp (bir:ctype input)
+                                    (bir:asserted-type instruction)
+                                    system)
+            ;; Avoid redundant work if we've already marked unreachable.
+            (not (typep (bir:successor instruction) 'bir:unreachable)))
+       (let ((before (bir:split-block-after instruction)))
+         (bir:replace-terminator (make-instance 'bir:unreachable)
+                                 (bir:end before))
+         ;; We don't delete the THEI. This is so that a warning can be
+         ;; issued after meta evaluate (and so, only once) by
+         ;; the code in generate-type-checks. Also so that at runtime
+         ;; a good error is issued if there is a type-check-function.
+         t))
       ;; Remove THEI when its input's type is a subtype of the
       ;; THEI's asserted type.
       ((ctype:values-subtypep (bir:ctype input)
@@ -1161,3 +1176,14 @@
                                            (apply #'ctype:values-conjoin
                                                   system atypes)
                                            system)))))))
+
+(defmethod meta-evaluate-instruction ((inst bir:abstract-local-call) system)
+  (declare (ignore system))
+  ;; If a local function doesn't return, mark subsequent code unreachable
+  ;; (unless we have already done so)
+  (when (and (null (bir:returni (bir:callee inst)))
+             (not (typep (bir:successor inst) 'bir:unreachable)))
+    (let ((before (bir:split-block-after inst)))
+      (bir:replace-terminator (make-instance 'bir:unreachable)
+                              (bir:end before))
+      t)))
