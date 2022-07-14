@@ -854,6 +854,8 @@
       ((and (ctype:values-disjointp (bir:ctype input)
                                     (bir:asserted-type instruction)
                                     system)
+            ;; Don't do this for untrusted assertions.
+            tcf
             ;; Avoid redundant work if we've already marked unreachable.
             (not (typep (bir:successor instruction) 'bir:unreachable)))
        (let ((before (bir:split-block-after instruction)))
