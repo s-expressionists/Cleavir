@@ -589,7 +589,7 @@
                (env:parse-values-type-specifier
                 (cst:raw value-type-cst)
                 environment system)
-               cst environment system)))
+               :the cst environment system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -48,6 +48,6 @@ To add additional special operators, the `convert-special` function should be sp
 
 # Handling of types
 
-The `type-wrap`, `type-wrap-argument`, and `type-wrap-return-values` generic functions determine how CST-to-AST handles type declarations via `cl:the` and declarations. By default, nothing is done, i.e. CST-to-AST accepts but ignores them. A client may specialize these methods in order to store type declarations in the AST.
+The `type-wrap` generic function determines how CST-to-AST handles type declarations via `cl:the` and declarations. By default, nothing is done, i.e. CST-to-AST accepts but ignores them. A client may specialize this function in order to store type declarations in the AST.
 
 CST-to-AST handles declarations very literally according to the language specification: a type declaration on a variable is treated just as if all uses of that variable had an appropriate `cl:the`.

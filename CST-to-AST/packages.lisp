@@ -22,7 +22,7 @@
            #:convert-let
            #:convert-let*
            #:cst-eval-for-effect
-           #:type-wrap #:type-wrap-argument #:type-wrap-return-values
+           #:type-wrap
            #:process-parameter-groups
            #:process-parameter-group
            #:process-parameters-in-group

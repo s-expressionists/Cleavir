@@ -70,34 +70,29 @@
 ;;; or puts in a type declaration (a the-ast), or it could just return
 ;;; the AST as-is, ignoring the information.
 ;;; There is a default method that returns the AST as-is.
+;;; ORIGIN is given explicitly because the AST may be a LEXICAL-AST,
 ;;;
-;;; KLUDGE: The origin of the given AST should probably be used,
-;;; rather than being explicitly passed as an argument, but this will
-;;; not be correct for lexical ASTs. Similarly for policies.
-
-(defgeneric type-wrap (ast ctype origin environment system)
-  (:method (ast ctype origin environment system)
-    (declare (ignore ctype origin environment system))
-    ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; which will not have specific source info.
+;;; CONTEXT is an indication of how this type information is arising.
+;;; Possible values are:
+;;;  * :the. This is a THE form.
+;;;  * :variable. This is a variable read. The AST will be exactly
+;;;    one value at runtime.
+;;;  * :setq. This is the value form in a primitive SETQ or a binding.
+;;;    Exactly one value of the AST will be used, but it may have any
+;;;    number of values.
+;;;  * :argument. This is an argument to a call, and the type
+;;;    declaration arises from the type of the function.
+;;;    Exactly one value of the AST will be used, but it may have any
+;;;    number of values.
+;;;  * :return. This is the return value of a call.
 ;;;
-;;; Generic function TYPE-WRAP-ARGUMENT, TYPE-WRAP-RETURN-VALUES.
-;;;
-;;; Given an AST and a ctype, returns a new AST that incorporates the
-;;; information that the AST's value will be of that ctype, in some
-;;; client-defined fashion. For example it could execute a type check,
-;;; or puts in a type declaration (a the-ast), or it could just return
-;;; the AST as-is, ignoring the information.  There is a default
-;;; method that returns the AST as-is. These are used for ftype
-;;; declarations.
+;;; This is provided so that clients do not need to worry about all
+;;; values of a form in common cases.
+;;; For a context of :VARIABLE, :SETQ, or :ARGUMENT, ctype is a
+;;; non-values ctype (the primary), otherwise a values ctype.
 
-(defgeneric type-wrap-argument (ast ctype origin environment system)
-  (:method (ast ctype origin environment system)
-    (declare (ignore ctype origin environment system))
-    ast))
-
-(defgeneric type-wrap-return-values (ast ctype origin environment system)
-  (:method (ast ctype origin environment system)
-    (declare (ignore ctype origin environment system))
+(defgeneric type-wrap (ast ctype context origin environment system)
+  (:method (ast ctype context origin environment system)
+    (declare (ignore ctype context origin environment system))
     ast))

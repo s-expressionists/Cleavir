@@ -107,39 +107,34 @@
           (rest (ctype:function-rest ftype system))
           (keysp (ctype:function-keysp ftype system))
           (values (ctype:function-values ftype system)))
-      (type-wrap-return-values
+      (type-wrap
        (ast:make-call-ast function-ast
                           (mapcar
                            (lambda (argument-ast)
-                             (type-wrap-argument
+                             (type-wrap
                               argument-ast
-                              (ctype:coerce-to-values
-                               (cond (required (pop required))
-                                     (optional (pop optional))
-                                     ;; FIXME: Actually treat &key properly!
-                                     (keysp (ctype:top system))
-                                     (t (if (ctype:bottom-p rest system)
-                                            (progn
-                                              ;; FIXME: Use a
-                                              ;; condition
-                                              ;; class here.
-                                              (warn "A call to ~a was passed a number of arguments incompatible with its declared type ~a."
-                                                    (cst:raw name-cst) ftype)
-                                              ;; Without this
-                                              ;; we'll get a
-                                              ;; borked call
-                                              ;; as a result.
-                                              (ctype:top system))
-                                            rest)))
-                               system)
-                              cst env system))
+                              (cond (required (pop required))
+                                    (optional (pop optional))
+                                    ;; FIXME: Actually treat &key properly!
+                                    (keysp (ctype:top system))
+                                    (t (if (ctype:bottom-p rest system)
+                                           (progn
+                                             ;; FIXME: Use a
+                                             ;; condition
+                                             ;; class here.
+                                             (warn "A call to ~a was passed a number of arguments incompatible with its declared type ~a."
+                                                   (cst:raw name-cst) ftype)
+                                             ;; Without this
+                                             ;; we'll get a
+                                             ;; borked call
+                                             ;; as a result.
+                                             (ctype:top system))
+                                           rest)))
+                              :argument cst env system))
                            argument-asts)
                           :origin cst
                           :inline (env:inline info))
-       values
-       cst
-       env
-       system))))
+       values :return cst env system))))
 
 ;;; Convert a form representing a call to a named global function.
 ;;; CST is the concrete syntax tree representing the entire
@@ -209,5 +204,4 @@
   (when (eq (env:ignore info) 'ignore)
     (warn 'ignored-variable-referenced :cst cst))
   (type-wrap (ast:make-lexical-ast (env:identity info) :origin cst)
-             (ctype:single-value (env:type info) system)
-             cst env system))
+             (env:type info) :variable cst env system))

@@ -12,10 +12,9 @@
 (defmethod convert-setq
     (var-cst form-cst (info env:lexical-variable-info) env system)
   (ast:make-setq-ast (env:identity info)
-                     (type-wrap (convert form-cst env system)
-                                (ctype:coerce-to-values (env:type info)
-                                                        system)
-                                var-cst env system)
+                     (type-wrap
+                      (convert form-cst env system)
+                      (env:type info) :setq var-cst env system)
                      :origin var-cst))
 
 (defmethod convert-setq
@@ -50,10 +49,9 @@
     (var-cst form-cst (info env:special-variable-info) env system)
   (let ((global-env (env:global-environment env)))
     (convert-setq-special-variable var-cst
-                                   (type-wrap (convert form-cst env system)
-                                              (ctype:coerce-to-values
-                                               (env:type info) system)
-                                              var-cst env system)
+                                   (type-wrap
+                                    (convert form-cst env system)
+                                    (env:type info) :setq var-cst env system)
 				   info
 				   global-env
 				   system)))
