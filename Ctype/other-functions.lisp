@@ -51,12 +51,8 @@
 ;;; FIXME: Normalizing values types harder should eliminate these degenerate
 ;;; bottom types.
 (defun values-disjointp (vct1 vct2 system)
-  (let* ((vcc (values-conjoin system vct1 vct2))
-         (required (values-required vcc system)))
-    (flet ((botp (ct) (bottom-p ct system)))
-      (or (some #'botp required)
-          (and (null required) (every #'botp (values-optional vcc system))
-               (botp (values-rest vcc system)))))))
+  (let ((vcc (values-conjoin system vct1 vct2)))
+    (some (lambda (ct) (bottom-p ct system)) (values-required vcc system))))
 
 ;;; This is the ctype of (function * *).
 (defun function-top (system)
