@@ -952,12 +952,18 @@
 ;;; A boolean that's true iff it is constant
 ;;; FIXME: Move to ctype?
 (defun constant-type-value (ct system)
-  (if (ctype:member-p system ct)
-      (let ((membs (ctype:member-members system ct)))
-        (if (= (length membs) 1)
-            (values (elt membs 0) t)
-            (values nil nil)))
-      (values nil nil)))
+  (cond ((ctype:member-p system ct)
+         (let ((membs (ctype:member-members system ct)))
+           (if (= (length membs) 1)
+               (values (elt membs 0) t)
+               (values nil nil))))
+        ((ctype:rangep ct system)
+         (multiple-value-bind (low lxp) (ctype:range-low ct system)
+           (multiple-value-bind (high hxp) (ctype:range-high ct system)
+             (if (or lxp hxp (not low) (not high) (not (eql low high)))
+                 (values nil nil)
+                 (values low t)))))
+        (t (values nil nil))))
 
 (defun constant-arguments (arguments system)
   (loop for arg in arguments

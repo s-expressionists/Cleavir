@@ -466,9 +466,25 @@
 
 (defmethod fixnum (sys) (declare (ignore sys)) 'cl:fixnum)
 
+(defun constant-real->range (real sys)
+  (range
+   (etypecase real
+     ((integer) 'integer)
+     ((rational) 'rational)
+     ((single-float) 'single-float)
+     ((double-float) 'double-float)
+     ((short-float) 'short-float)
+     ((long-float) 'long-float))
+   real real sys))
+
 (defmethod member (sys &rest elems)
-  (declare (ignore sys))
-  `(cl:member ,@elems))
+  ;; Try to represent reals as ranges instead.
+  (let ((reals (remove-if-not #'realp elems)))
+    (if reals
+        (cl:apply #'disjoin sys `(cl:member ,@(set-difference elems reals))
+                  (loop for real in reals
+                        collecting (constant-real->range real sys)))
+        `(cl:member ,@elems))))
 
 (defmethod member-p (sys ctype)
   (declare (ignore sys))
