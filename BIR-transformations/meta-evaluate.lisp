@@ -1121,6 +1121,11 @@
   (declare (ignore identity argstype))
   (ctype:values-top system))
 
+(defmethod derive-return-type ((inst bir:primop) identity
+                               argstype system)
+  (declare (ignore identity argstype))
+  (ctype:values-top system))
+
 (defmethod derive-types ((inst bir:call) system)
   (let ((identities (attributes:identities (bir:attributes inst))))
     (flet ((intype (reader)
@@ -1188,6 +1193,44 @@
                                            (apply #'ctype:values-conjoin
                                                   system atypes)
                                            system)))))))
+
+(defmethod derive-types ((inst bir:primop) system)
+  ;; Only do this when there's exactly one output.
+  ;; derive-return-type doesn't make much sense otherwise.
+  (when (= (length (bir:outputs inst)) 1)
+    (let ((identities (attributes:identities (bir:attributes inst))))
+      (flet ((intype (reader)
+               (ctype:values (loop for arg in (rest (bir:inputs inst))
+                                   for ct = (funcall reader arg)
+                                   collect (ctype:primary ct system))
+                             nil (ctype:bottom system) system))
+             (compute (identity intype)
+               (derive-return-type inst identity intype system)))
+        (cond ((null identities))
+              ((= (length identities) 1)
+               (derive-type-for-linear-datum
+                (bir:output inst)
+                (compute (first identities) (intype #'bir:ctype))
+                system)
+               (assert-type-for-linear-datum
+                (bir:output inst)
+                (compute (first identities) (intype #'bir:asserted-type))
+                system))
+              (t
+               (let ((dtypes
+                       (loop for identity in identities
+                             collect (compute identity (intype #'bir:ctype))))
+                     (atypes
+                       (loop for identity in identities
+                             collect (compute identity (intype #'bir:asserted-type)))))
+                 (derive-type-for-linear-datum (bir:output inst)
+                                               (apply #'ctype:values-conjoin
+                                                      system dtypes)
+                                               system)
+                 (assert-type-for-linear-datum (bir:output inst)
+                                               (apply #'ctype:values-conjoin
+                                                      system atypes)
+                                               system))))))))
 
 (defmethod meta-evaluate-instruction ((inst bir:abstract-local-call) system)
   (declare (ignore system))
