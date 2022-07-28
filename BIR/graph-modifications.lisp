@@ -224,11 +224,13 @@
 (defmethod clean-up-instruction progn ((inst thei))
   (let ((type-check-function (type-check-function inst)))
     (unless (symbolp type-check-function)
+      (remove-use type-check-function inst)
       (assert (and (null (enclose type-check-function))
-                   (set:empty-set-p (local-calls type-check-function)))
+                   (set:empty-set-p (local-calls type-check-function))
+                   (set:empty-set-p (other-uses type-check-function)))
               ()
-              "Type check function for THEI should not have local calls or enclose!")
-      (remove-use type-check-function inst))))
+              "Type check function for THEI should not have local calls or enclose or other uses!")
+      (clean-up-function type-check-function))))
 
 ;;; Remove a THEI by forwarding its input to its use.
 (defun delete-thei (thei)
