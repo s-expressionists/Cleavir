@@ -193,7 +193,8 @@
 (defmethod convert-cst
     (cst (info env:special-variable-info) env system)
   (let ((global-env (env:global-environment env)))
-    (convert-special-variable cst info global-env system)))
+    (type-wrap (convert-special-variable cst info global-env system)
+               (env:type info) :variable cst env system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
