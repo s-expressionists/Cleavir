@@ -460,7 +460,16 @@
 ;;; TODO
 ;;; CONSTANT-SYMBOL-VALUE-AST
 ;;; SET-CONSTANT-SYMBOL-VALUE-AST
-;;; CONSTANT-FDEFINITION-AST
+
+(defmethod compile-ast ((ast ast:constant-fdefinition-ast)
+                        inserter system)
+  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+        (fdef-out (make-instance 'bir:output
+                    :name (ast:name ast)
+                    :attributes (ast:attributes ast))))
+    (insert inserter 'bir:constant-fdefinition
+            :inputs (list const) :outputs (list fdef-out))
+    (list fdef-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

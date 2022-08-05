@@ -2,10 +2,9 @@
 
 (defmethod convert-global-function-reference (cst info global-env system)
   (declare (ignore global-env system))
-  (ast:make-fdefinition-ast
-   (ast:make-constant-ast (env:name info) :origin cst)
-   :attributes (env:attributes info)
-   :origin cst))
+  (ast:make-constant-fdefinition-ast
+   (env:name info)
+   :attributes (env:attributes info) :origin cst))
 
 (defmethod convert-function-reference
     (cst (info env:global-function-info) env system)

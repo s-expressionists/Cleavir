@@ -25,6 +25,8 @@
 
 (defclass constant-reference (one-input one-output instruction) ())
 
+(defclass constant-fdefinition (one-input one-output instruction) ())
+
 (defclass load-time-value-reference (one-input one-output instruction) ())
 
 ;;; Like a call, but the compiler is expected to deal with it.

@@ -182,6 +182,19 @@
           "is not a reader of its constant input ~a"
           instruction constant)))
 
+(defmethod verify-inputs ((instruction constant-fdefinition))
+  (let* ((inputs (inputs instruction))
+         (constant (first inputs)))
+    (test (typep constant 'constant)
+          "has non-constant input ~a"
+          instruction constant)
+    (test (set:presentp constant (constants *verifying-module*))
+          "references constant ~a which does not belong to its module"
+          instruction constant)
+    (test (set:presentp instruction (readers constant))
+          "is not a reader of its constant input ~a"
+          instruction constant)))
+
 (defmethod verify-inputs ((instruction load-time-value-reference))
   (let* ((inputs (inputs instruction))
          (ltv (first inputs)))
@@ -344,7 +357,7 @@
     (unless (unwindp j)
       (test (eq de (dynamic-environment (first (next j))))
             "is not marked as an unwind, but does unwind" j))))
-
+#+(or) ;; may not apply in final stages
 (defmethod verify progn ((instruction conditional-test))
   ;; Verify that the destination is an IFI.
   (test (typep (use (output instruction)) '(or null ifi))

@@ -349,15 +349,21 @@
 (defclass constant-fdefinition-ast
     (one-value-ast-mixin side-effect-free-ast-mixin ast)
   (;; This slot contains the name of the function
-   (%name :initarg :name :reader name)))
+   (%name :initarg :name :reader name)
+   (%attributes :initarg :attributes :reader attributes
+                :initform (cleavir-attributes:default-attributes))))
 
-(defun make-constant-fdefinition-ast (name &key origin (policy *policy*))
+(defun make-constant-fdefinition-ast (name
+                                      &key origin (policy *policy*)
+                                        (attributes
+                                         (cleavir-attributes:default-attributes)))
   (make-instance 'constant-fdefinition-ast
     :origin origin :policy policy
-    :name name))
+    :name name :attributes attributes))
 
 (cleavir-io:define-save-info constant-fdefinition-ast
-  (:name name))
+  (:name name)
+  (:attributes attributes))
 
 (define-children constant-fdefinition-ast ())
 
