@@ -53,8 +53,7 @@
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype
    #:type-check-function-ast
-   #:bind-ast #:make-bind-ast
-   #:eq-ast #:make-eq-ast #:neq-ast #:make-neq-ast
+   #:eq-ast #:make-eq-ast
    #:case-ast #:make-case-ast #:comparees
    #:car-ast #:make-car-ast #:cons-ast
    #:cdr-ast #:make-cdr-ast

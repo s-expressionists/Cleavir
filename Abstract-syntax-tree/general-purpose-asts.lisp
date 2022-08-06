@@ -1000,34 +1000,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class BIND-AST.
-;;;
-;;; This AST is used to create a dynamic binding for a symbol for the
-;;; duration of the execution of the body.  It is generated as a
-;;; result of a binding of a special variable in a LET, LET*, or a
-;;; lambda list of a function.
-
-(defclass bind-ast (ast)
-  ((%symbol :initarg :symbol :reader symbol)
-   (%value-ast :initarg :value-ast :reader value-ast)
-   (%body-ast :initarg :body-ast :reader body-ast)))
-
-(defun make-bind-ast (symbol value-ast body-ast &key origin (policy *policy*))
-  (make-instance 'bind-ast
-    :origin origin :policy policy
-    :symbol symbol
-    :value-ast value-ast
-    :body-ast body-ast))
-
-(cleavir-io:define-save-info bind-ast
-  (:symbol symbol)
-  (:value-ast value-ast)
-  (:body-ast body-ast))
-
-(define-children bind-ast (value-ast body-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class EQ-AST.
 ;;;
 ;;; This AST can be used to to test whether two objects are identical.
@@ -1049,31 +1021,6 @@
   (:arg2-ast arg2-ast))
 
 (define-children eq-ast (arg1-ast arg2-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Class NEQ-AST.
-;;;
-;;; This AST can be used to to test whether two objects are distinct.
-;;; It has two children.  This AST can only appear in the TEST
-;;; position of an IF-AST. It is useful for using an AST that
-;;; returns a value as a boolean ast.
-
-(defclass neq-ast (boolean-ast-mixin ast)
-  ((%arg1-ast :initarg :arg1-ast :reader arg1-ast)
-   (%arg2-ast :initarg :arg2-ast :reader arg2-ast)))
-
-(defun make-neq-ast (arg1-ast arg2-ast &key origin (policy *policy*))
-  (make-instance 'neq-ast
-    :origin origin :policy policy
-    :arg1-ast arg1-ast
-    :arg2-ast arg2-ast))
-
-(cleavir-io:define-save-info neq-ast
-  (:arg1-ast arg1-ast)
-  (:arg2-ast arg2-ast))
-
-(define-children neq-ast (arg1-ast arg2-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

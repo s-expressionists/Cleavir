@@ -4,8 +4,6 @@
   (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
     (let* ((info (ast:info ast))
            (out (cleavir-primop-info:out-kind info)))
-      (when (integerp out)
-        (error "BUG: Test primop in invalid context: ~a" ast))
       (let ((outputs (ecase out
                        ((:value) (list (make-instance 'bir:output)))
                        ((:effect) nil))))
@@ -15,10 +13,8 @@
 
 (defmethod compile-test-ast ((ast ast:primop-ast) inserter system)
   (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
-    (let* ((info (ast:info ast))
-           (out (cleavir-primop-info:out-kind info)))
-      (check-type out (eql 2))
-      (let* ((ibs (loop repeat out collect (make-iblock inserter)))
+    (let* ((info (ast:info ast)))
+      (let* ((ibs (loop repeat 2 collect (make-iblock inserter)))
              (p-out (make-instance 'bir:output))
              (p (make-instance 'bir:primop
                   :info info :inputs args :outputs (list p-out))))

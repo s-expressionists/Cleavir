@@ -563,24 +563,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; NEQ-AST
-
-(defmethod compile-test-ast ((ast ast:neq-ast) inserter system)
-  (with-compiled-asts (args ((ast:arg1-ast ast) (ast:arg2-ast ast))
-                            inserter system)
-    (let ((tblock (make-iblock inserter :name '#:neq-then))
-          (eblock (make-iblock inserter :name '#:neq-else)))
-      (let* ((eq-out (make-instance 'bir:output
-                       :name '#:neq-result))
-             (eq-test (make-instance 'bir:eq-test
-                        :inputs args :outputs (list eq-out))))
-        (insert inserter eq-test)
-        (terminate inserter 'bir:ifi
-                   :inputs (list eq-test) :next (list eblock tblock)))
-      (list tblock eblock))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; CASE-AST
 
 (defmethod compile-test-ast ((ast ast:case-ast) inserter system)
