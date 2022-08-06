@@ -492,6 +492,20 @@
 ;;;
 ;;; TYPEQ-AST
 
+(defmethod compile-ast ((ast ast:typeq-ast) inserter system)
+  (with-compiled-ast (obj (ast:form-ast ast) inserter system)
+    (let* ((tspec (ast:test-ctype ast))
+           ;; FIXME: Will get weird with custom ctypes.
+           (tspec-str (write-to-string tspec))
+           (tq-out (make-instance 'bir:output
+                     :name (symbolicate
+                            '#:typeq- tspec-str '#:-result)))
+           (tq (make-instance 'bir:typeq-test
+                 :inputs obj :outputs (list tq-out)
+                 :test-ctype tspec)))
+      (insert inserter tq)
+      (list tq-out))))
+
 (defmethod compile-test-ast ((ast ast:typeq-ast) inserter system)
   (with-compiled-ast (obj (ast:form-ast ast) inserter system)
     (let* ((tspec (ast:test-ctype ast))
