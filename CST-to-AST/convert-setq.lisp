@@ -37,9 +37,8 @@
   (let ((temp (ast:make-lexical-variable (gensym) :origin var-cst)))
     (process-progn
      (list (ast:make-lexical-bind-ast temp form-ast :origin var-cst)
-	   (ast:make-set-symbol-value-ast
-	    (ast:make-constant-ast (env:name info)
-              :origin var-cst)
+           (ast:make-set-constant-symbol-value-ast
+            (env:name info)
 	    (ast:make-lexical-ast temp :origin var-cst)
 	    :origin var-cst)
            (ast:make-lexical-ast temp :origin var-cst))

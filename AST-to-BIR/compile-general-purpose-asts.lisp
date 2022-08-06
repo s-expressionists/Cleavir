@@ -457,9 +457,26 @@
   (compile-ast (ast:form-ast ast) inserter system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TODO
+;;;
 ;;; CONSTANT-SYMBOL-VALUE-AST
 ;;; SET-CONSTANT-SYMBOL-VALUE-AST
+;;; CONSTANT-FDEFINITION-AST
+
+(defmethod compile-ast ((ast ast:constant-symbol-value-ast)
+                        inserter system)
+  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+        (sv-out (make-instance 'bir:output :name (ast:name ast))))
+    (insert inserter 'bir:constant-symbol-value
+            :inputs (list const) :outputs (list sv-out))
+    (list sv-out)))
+
+(defmethod compile-ast ((ast ast:set-constant-symbol-value-ast)
+                        inserter system)
+  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+    (let ((const (bir:constant-in-module (ast:name ast) *current-module*)))
+      (insert inserter 'bir:set-constant-symbol-value
+              :inputs (list* const rv))
+      :no-value)))
 
 (defmethod compile-ast ((ast ast:constant-fdefinition-ast)
                         inserter system)

@@ -565,6 +565,12 @@
    (ctype:single-value (ctype:function-top system) system)
    system))
 
+(defmethod derive-types ((instruction bir:constant-symbol-value) system)
+  (derive-type-for-linear-datum
+   (bir:output instruction)
+   (ctype:single-value (ctype:top system) system)
+   system))
+
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
 (defun substitute-single-read-variable-if-possible (variable system)
