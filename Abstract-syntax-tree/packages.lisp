@@ -34,6 +34,7 @@
    #:bound-declarations #:docstring #:original-lambda-list
    #:top-level-function-ast #:make-top-level-function-ast #:forms
    #:required-only-p #:required #:argparse-ast #:body-ast
+   #:inline-ast
    #:go-ast #:make-go-ast #:tag-ast
    #:if-ast #:make-if-ast #:test-ast #:then-ast #:else-ast
    #:branch-ast #:make-branch-ast #:branch-asts #:default-ast

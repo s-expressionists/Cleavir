@@ -520,6 +520,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Class INLINE-AST.
+;;;
+;;; An AST inserted around an inline function's AST, used to separate
+;;; the inlined function from the rest of the code for AST-to-BIR.
+
+(defclass inline-ast (ast)
+  ((%body :initarg :body-ast :reader body-ast)))
+
+(cleavir-io:define-save-info inline-ast
+    (:body-ast body-ast))
+
+(define-children inline-ast (body-ast))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Class PRIMOP-AST.
 ;;;
 ;;; A PRIMOP-AST represents the invocation of a primitive operator.

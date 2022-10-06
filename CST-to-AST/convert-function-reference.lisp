@@ -42,7 +42,9 @@
   (when (not (eq (env:inline info) 'cl:notinline))
     (let ((ast (env:ast info)))
       (when ast
-        (return-from convert-called-function-reference ast))))
+        (return-from convert-called-function-reference
+          (make-instance 'ast:inline-ast
+            :origin cst :body-ast ast)))))
   (convert-global-function-reference
    cst info (env:global-environment env) system))
 

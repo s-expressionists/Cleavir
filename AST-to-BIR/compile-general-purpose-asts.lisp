@@ -335,6 +335,19 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; INLINE-AST
+
+(defmethod compile-ast ((ast ast:inline-ast) inserter system)
+  ;; We sometimes see the same inlined function AST at multiple locations in
+  ;; the code. To ensure things work we rebind these; it's ok since inline ASTs
+  ;; are never going to refer to anything from the surrounding context.
+  (let ((*variables* (make-hash-table :test #'eq))
+        (*block-info* (make-hash-table :test #'eq))
+        (*go-info* (make-hash-table :test #'eq)))
+    (compile-ast (ast:body-ast ast) inserter system)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; FUNCTION-AST
 
 (defmethod compile-ast ((ast ast:function-ast) inserter system)
