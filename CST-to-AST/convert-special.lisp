@@ -429,8 +429,9 @@
       ;; FIXME: We probably want to create and use
       ;; env:constantp in case the environments don't match
       ;; up.
-      (if (and (eq *compiler* 'cl:compile-file)
-               (not (constantp form env)))
+      (if (or (not read-only-p)
+              (and (eq *compiler* 'cl:compile-file)
+                   (not (constantp form env))))
           (ast:make-load-time-value-ast form read-only-p :origin cst)
           (ast:make-constant-ast
            (cst-eval form-cst (env:compile-time env) system)
