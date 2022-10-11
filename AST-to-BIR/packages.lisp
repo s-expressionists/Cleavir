@@ -10,6 +10,7 @@
   (:export #:compile-toplevel #:compile-into-module #:compile-function
            #:compile-ast #:compile-test-ast #:compile-arguments
            #:compile-sequence-for-effect)
+  (:export #:inline-origin)
   (:export #:with-compiled-ast #:with-compiled-asts #:with-compiled-arguments)
   (:export #:defprimop)
   (:export #:inserter #:make-iblock #:begin #:proceed #:insert #:terminate
