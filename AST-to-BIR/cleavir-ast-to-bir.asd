@@ -9,6 +9,4 @@
     :depends-on ("infrastructure" "packages"))
    (:file "compile-multiple-value-related-asts"
     :depends-on ("infrastructure" "packages"))
-   (:file "compile-primops" :depends-on ("infrastructure" "packages"))
-   (:file "compile-fixnum-related-asts"
-    :depends-on ("compile-primops" "infrastructure" "packages"))))
+   (:file "compile-primops" :depends-on ("infrastructure" "packages"))))

@@ -112,10 +112,3 @@
                                           :next (list after))
                                (begin inserter after)
                                (return (list mvcout))))))))))
-
-(defmethod compile-ast ((ast ast:values-ast) inserter system)
-  (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
-    (let ((out (make-instance 'bir:output)))
-      (insert inserter 'bir:fixed-to-multiple
-              :inputs args :outputs (list out))
-      (list out))))

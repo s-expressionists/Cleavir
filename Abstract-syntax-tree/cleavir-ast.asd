@@ -8,11 +8,5 @@
   :components
   ((:file "packages")
    (:file "general-purpose-asts")
-   (:file "fixnum-related-asts")
-   (:file "simple-float-related-asts")
-   (:file "cons-related-asts")
-   (:file "standard-object-related-asts")
-   (:file "array-related-asts")
-   (:file "scope-related-asts")
    (:file "graphviz-drawing")
    (:file "map-ast")))

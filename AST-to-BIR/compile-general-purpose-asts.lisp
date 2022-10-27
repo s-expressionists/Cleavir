@@ -464,14 +464,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; DYNAMIC-ALLOCATION-AST
-
-(defmethod compile-ast ((ast ast:dynamic-allocation-ast)
-                        inserter system)
-  (compile-ast (ast:form-ast ast) inserter system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; CONSTANT-SYMBOL-VALUE-AST
 ;;; SET-CONSTANT-SYMBOL-VALUE-AST
 ;;; CONSTANT-FDEFINITION-AST

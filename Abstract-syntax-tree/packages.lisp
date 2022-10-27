@@ -14,7 +14,6 @@
    #:one-value-ast-mixin
    #:side-effect-free-ast-mixin
    #:side-effect-free-p
-   #:immediate-ast #:make-immediate-ast #:value
    #:constant-ast #:make-constant-ast #:value
    #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
    #:lexical-ast #:make-lexical-ast
@@ -33,14 +32,13 @@
    #:function-ast #:make-function-ast #:lambda-list
    #:bound-declarations #:docstring #:original-lambda-list
    #:top-level-function-ast #:make-top-level-function-ast #:forms
-   #:required-only-p #:required #:argparse-ast #:body-ast
+   #:body-ast
    #:inline-ast
    #:go-ast #:make-go-ast #:tag-ast
    #:if-ast #:make-if-ast #:test-ast #:then-ast #:else-ast
    #:branch-ast #:make-branch-ast #:branch-asts #:default-ast
    #:multiple-value-call-ast #:make-multiple-value-call-ast
    #:function-form-ast
-   #:values-ast #:make-values-ast
    #:multiple-value-prog1-ast #:make-multiple-value-prog1-ast
    #:first-form-ast
    #:load-time-value-ast #:make-load-time-value-ast #:read-only-p
@@ -54,47 +52,11 @@
    #:the-ast #:make-the-ast #:ctype
    #:typeq-ast #:make-typeq-ast #:test-ctype
    #:type-check-function-ast
-   #:eq-ast #:make-eq-ast
-   #:case-ast #:make-case-ast #:comparees
-   #:car-ast #:make-car-ast #:cons-ast
-   #:cdr-ast #:make-cdr-ast
-   #:rplaca-ast #:make-rplaca-ast #:object-ast
-   #:rplacd-ast #:make-rplacd-ast
-   #:coerce-ast #:from-type #:to-type #:arg-ast
+   #:eq-ast #:make-eq-ast #:arg1-ast #:arg2-ast
+   #:case-ast #:make-case-ast #:arg-ast #:comparees
    #:lexical-variable #:make-lexical-variable
-   #:variable-ast #:operation-ast #:normal-ast #:overflow-ast
-   #:fixnum-add-ast #:make-fixnum-add-ast
-   #:fixnum-sub-ast #:make-fixnum-sub-ast
-   #:arg1-ast #:arg2-ast #:variable-ast
-   #:fixnum-less-ast #:make-fixnum-less-ast
-   #:fixnum-not-greater-ast #:make-fixnum-not-greater-ast
-   #:fixnum-greater-ast #:make-fixnum-greater-ast
-   #:fixnum-not-less-ast #:make-fixnum-not-less-ast
-   #:fixnum-equal-ast #:make-fixnum-equal-ast
-   #:float-add-ast
-   #:float-sub-ast
-   #:float-mul-ast
-   #:float-div-ast
-   #:float-less-ast
-   #:float-not-greater-ast
-   #:float-greater-ast
-   #:float-not-less-ast
-   #:float-equal-ast
-   #:float-sin-ast
-   #:float-cos-ast
-   #:float-sqrt-ast
-   #:subtype
-   #:slot-read-ast #:make-slot-read-ast #:slot-number-ast #:object-ast
-   #:slot-write-ast #:make-slot-write-ast
-   #:funcallable-slot-read-ast #:make-funcallable-slot-read-ast
-   #:funcallable-slot-write-ast #:make-funcallable-slot-write-ast
-   #:aref-ast #:aset-ast
-   #:element-ast #:array-ast #:index-ast
-   #:element-type #:simple-p #:boxed-p
-   #:dynamic-allocation-ast #:make-dynamic-allocation-ast
    #:unreachable-ast #:make-unreachable-ast
    #:child-ast
-   #:scope-ast #:make-scope-ast
    #:map-ast-depth-first-preorder
    ))
 

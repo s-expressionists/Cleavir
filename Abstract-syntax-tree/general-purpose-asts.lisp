@@ -150,30 +150,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class IMMEDIATE-AST.
-;;;
-;;; This class represents constants that have a representation that
-;;; allows them to be immediate values in the resulting machine code.
-;;; Obviously, whether that is possible depends on the implementation.
-;;;
-;;; The value of the constant is represented as a possibly-negative
-;;; integer that is the machine-code representation of the constant.
-
-(defclass immediate-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
-  ((%value :initarg :value :reader value)))
-
-(defun make-immediate-ast (value &key origin (policy *policy*))
-  (make-instance 'immediate-ast
-    :origin origin :policy policy
-    :value value))
-
-(cleavir-io:define-save-info immediate-ast
-  (:value value))
-
-(define-children immediate-ast ())
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class CONSTANT-AST.
 ;;;
 ;;; This class represents Lisp constants in source code.
@@ -933,27 +909,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class VALUES-AST.
-;;;
-;;; This corresponds directly to CLEAVIR-PRIMOP:VALUES,
-;;; and CL:VALUES through it.
-
-(defclass values-ast (ast)
-  ((%argument-asts :initarg :argument-asts :reader argument-asts)))
-
-(defun make-values-ast
-    (argument-asts &key origin (policy *policy*))
-  (make-instance 'values-ast
-    :origin origin :policy policy
-    :argument-asts argument-asts))
-
-(cleavir-io:define-save-info values-ast
-  (:argument-asts argument-asts))
-
-(define-children values-ast argument-asts)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class MULTIPLE-VALUE-PROG1-AST.
 
 (defclass multiple-value-prog1-ast (ast)
@@ -972,31 +927,6 @@
   (:form-asts form-asts))
 
 (define-children multiple-value-prog1-ast (first-form-ast . form-asts))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Class DYNAMIC-ALLOCATION-AST
-;;;
-;;; This AST is used to translate DYNAMIC-EXTENT declarations.
-;;; Any allocation done by its form-ast may be done dynamically,
-;;; i.e. with stack discipline. This means that the consequences
-;;; are undefined if any value allocated by the form-ast escapes
-;;; the local function.
-;;; Note that this loses information from DYNAMIC-EXTENT, which
-;;; does not allow escape from the form with the declaration.
-
-(defclass dynamic-allocation-ast (one-value-ast-mixin ast)
-  ((%form-ast :initarg :form-ast :reader form-ast)))
-
-(defun make-dynamic-allocation-ast (form-ast &key origin (policy *policy*))
-  (make-instance 'dynamic-allocation-ast
-    :origin origin :policy policy
-    :form-ast form-ast))
-
-(cleavir-io:define-save-info dynamic-allocation-ast
-  (:form-ast form-ast))
-
-(define-children dynamic-allocation-ast (form-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
