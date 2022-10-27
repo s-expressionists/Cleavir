@@ -471,14 +471,54 @@
   (compile-ast (ast:form-ast ast) inserter system))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TODO
+;;;
 ;;; CONSTANT-SYMBOL-VALUE-AST
 ;;; SET-CONSTANT-SYMBOL-VALUE-AST
 ;;; CONSTANT-FDEFINITION-AST
 
+(defmethod compile-ast ((ast ast:constant-symbol-value-ast)
+                        inserter system)
+  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+        (sv-out (make-instance 'bir:output :name (ast:name ast))))
+    (insert inserter 'bir:constant-symbol-value
+            :inputs (list const) :outputs (list sv-out))
+    (list sv-out)))
+
+(defmethod compile-ast ((ast ast:set-constant-symbol-value-ast)
+                        inserter system)
+  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+    (let ((const (bir:constant-in-module (ast:name ast) *current-module*)))
+      (insert inserter 'bir:set-constant-symbol-value
+              :inputs (list* const rv))
+      :no-value)))
+
+(defmethod compile-ast ((ast ast:constant-fdefinition-ast)
+                        inserter system)
+  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+        (fdef-out (make-instance 'bir:output
+                    :name (ast:name ast)
+                    :attributes (ast:attributes ast))))
+    (insert inserter 'bir:constant-fdefinition
+            :inputs (list const) :outputs (list fdef-out))
+    (list fdef-out)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; TYPEQ-AST
+
+(defmethod compile-ast ((ast ast:typeq-ast) inserter system)
+  (with-compiled-ast (obj (ast:form-ast ast) inserter system)
+    (let* ((tspec (ast:test-ctype ast))
+           ;; FIXME: Will get weird with custom ctypes.
+           (tspec-str (write-to-string tspec))
+           (tq-out (make-instance 'bir:output
+                     :name (symbolicate
+                            '#:typeq- tspec-str '#:-result)))
+           (tq (make-instance 'bir:typeq-test
+                 :inputs obj :outputs (list tq-out)
+                 :test-ctype tspec)))
+      (insert inserter tq)
+      (list tq-out))))
 
 (defmethod compile-test-ast ((ast ast:typeq-ast) inserter system)
   (with-compiled-ast (obj (ast:form-ast ast) inserter system)
@@ -547,24 +587,6 @@
         (terminate inserter 'bir:ifi
                    :inputs (list eq-out)
                    :next (list tblock eblock)))
-      (list tblock eblock))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; NEQ-AST
-
-(defmethod compile-test-ast ((ast ast:neq-ast) inserter system)
-  (with-compiled-asts (args ((ast:arg1-ast ast) (ast:arg2-ast ast))
-                            inserter system)
-    (let ((tblock (make-iblock inserter :name '#:neq-then))
-          (eblock (make-iblock inserter :name '#:neq-else)))
-      (let* ((eq-out (make-instance 'bir:output
-                       :name '#:neq-result))
-             (eq-test (make-instance 'bir:eq-test
-                        :inputs args :outputs (list eq-out))))
-        (insert inserter eq-test)
-        (terminate inserter 'bir:ifi
-                   :inputs (list eq-test) :next (list eblock tblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

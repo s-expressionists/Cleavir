@@ -185,10 +185,7 @@
 
 (defmethod convert-special-variable (cst info global-env system)
   (declare (ignore global-env system))
-  (let ((symbol (env:name info)))
-    (ast:make-symbol-value-ast
-     (ast:make-constant-ast symbol :origin cst)
-     :origin cst)))
+  (ast:make-constant-symbol-value-ast (env:name info) :origin cst))
 
 (defmethod convert-cst
     (cst (info env:special-variable-info) env system)

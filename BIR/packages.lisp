@@ -35,6 +35,8 @@
   (:export #:fixed-to-multiple
            #:accessvar #:writevar #:readvar
            #:constant-reference #:make-constant-reference
+           #:constant-fdefinition
+           #:constant-symbol-value #:set-constant-symbol-value
            #:load-time-value-reference #:make-load-time-value-reference
            #:returni #:unreachable #:jump #:unwindp
            #:eq-test #:typeq-test #:test-ctype

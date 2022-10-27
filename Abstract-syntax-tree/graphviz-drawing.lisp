@@ -114,22 +114,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Drawing a BIND-AST.
-
-(defmethod stream-draw-ast ((ast bind-ast) stream)
-  (format stream "   ~a [shape = box, label = \"~a\"];~%"
-          (id ast) (label ast))
-  (let ((symbol-id (gensym)))
-    (format stream "   ~a [shape = ellipse, label = \"~a\"];~%"
-            symbol-id (symbol ast))
-    (format stream "   ~a -> ~a [label = \"0\"];~%"
-            (id ast) symbol-id)))
-
-(defmethod label ((ast bind-ast))
-  "bind")
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drawing a THE-AST.
 
 (defmethod stream-draw-ast ((ast the-ast) stream)

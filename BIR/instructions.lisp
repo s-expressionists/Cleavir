@@ -25,7 +25,15 @@
 
 (defclass constant-reference (one-input one-output instruction) ())
 
+;;; Retrieve the function bound to a constant.
+(defclass constant-fdefinition (one-input one-output instruction) ())
+
 (defclass load-time-value-reference (one-input one-output instruction) ())
+
+;;; Retrieve the value bound to a known symbol.
+(defclass constant-symbol-value (one-input one-output instruction) ())
+;;; Set the value of a known symbol.
+(defclass set-constant-symbol-value (no-output instruction) ())
 
 ;;; Like a call, but the compiler is expected to deal with it.
 ;;; May or may not have outputs

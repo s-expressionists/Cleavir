@@ -216,6 +216,11 @@
   (declare (ignore system))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
+(defmethod maybe-flush-instruction
+    ((instruction bir:constant-fdefinition) system)
+  (declare (ignore system))
+  (when (bir:unused-p (bir:output instruction))
+    (bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction ((instruction bir:enclose) system)
   (declare (ignore system))
   (when (bir:unused-p (bir:output instruction))
@@ -551,6 +556,19 @@
    (ctype:single-value
     (ctype:member system (bir:constant-value (bir:input instruction)))
     system)
+   system))
+
+(defmethod derive-types ((instruction bir:constant-fdefinition) system)
+  ;; Derive that it's a FUNCTION.
+  (derive-type-for-linear-datum
+   (bir:output instruction)
+   (ctype:single-value (ctype:function-top system) system)
+   system))
+
+(defmethod derive-types ((instruction bir:constant-symbol-value) system)
+  (derive-type-for-linear-datum
+   (bir:output instruction)
+   (ctype:single-value (ctype:top system) system)
    system))
 
 ;;; Local variable with one reader and one writer can be substituted
