@@ -18,6 +18,8 @@
               :type (or (member :value :effect) (integer 2)))
    ;; Number of inputs accepted
    (%ninputs :initarg :ninputs :reader ninputs :type (integer 0))
+   ;; Primop-specific arguments
+   (%arguments :initarg :arguments :reader arguments :initform nil)
    ;; Miscellaneous attributes
    (%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes))))
@@ -34,6 +36,17 @@
 
 (defun info (name)
   (or (gethash name *primops*)
+      (when (consp name) ; name and arguments
+        (let ((proto (gethash (car name) *primops*)))
+          (if proto
+              (setf (gethash name *primops*)
+                    (make-instance 'info
+                      :name (car name)
+                      :attributes (attributes proto)
+                      :out-kind (out-kind proto)
+                      :ninputs (ninputs proto)
+                      :arguments (rest name)))
+              nil)))
       (error "BUG: No primop: ~a" name)))
 
 (defmacro defprimop (name ninputs out &rest flags)

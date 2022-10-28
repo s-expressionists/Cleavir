@@ -46,4 +46,4 @@
 (defpackage #:cleavir-primop-info
   (:use #:cl)
   (:export #:info #:defprimop
-           #:name #:ninputs #:out-kind #:attributes))
+           #:name #:ninputs #:out-kind #:attributes #:arguments))
