@@ -470,6 +470,7 @@
 
 (defmethod compile-ast ((ast ast:constant-symbol-value-ast)
                         inserter system)
+  (declare (ignore system))
   (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
         (sv-out (make-instance 'bir:output :name (ast:name ast))))
     (insert inserter 'bir:constant-symbol-value
@@ -486,6 +487,7 @@
 
 (defmethod compile-ast ((ast ast:constant-fdefinition-ast)
                         inserter system)
+  (declare (ignore system))
   (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
         (fdef-out (make-instance 'bir:output
                     :name (ast:name ast)
