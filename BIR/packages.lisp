@@ -66,7 +66,8 @@
            #:clean-up-iblock #:merge-successor-if-possible #:delete-iblock-if-empty)
   (:export #:map-lambda-list)
   (:export #:verify)
-  (:export #:unused-variable #:type-conflict))
+  (:export #:unused-variable #:type-conflict)
+  (:documentation "Cleavir's Block-based Intermediate Representation for compiled Lisp code."))
 
 (defpackage #:cleavir-bir-disassembler
   (:use #:cl)
@@ -75,4 +76,5 @@
   (:export #:display-module-disassembly #:display-function-disassembly
            #:display-iblock-disassembly #:display-instruction-disassembly)
   (:export #:with-disassembly)
-  (:export #:*show-dynenv* #:*show-ctype*))
+  (:export #:*show-dynenv* #:*show-ctype*)
+  (:documentation "A disassembler for displaying BIR in a human-readable format. This is primarily text-based and aims for brevity and simplicity. For a more visual way to understand BIR, try the BIR visualizer in Visualizer/."))

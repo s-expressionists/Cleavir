@@ -3,7 +3,9 @@
 (defgeneric verify (bir)
   ;; most-specific-last so that we get the core assertions out of the way;
   ;; failures there may cause hard to understand failures more specifically
-  (:method-combination progn :most-specific-last))
+  (:method-combination progn :most-specific-last)
+  (:documentation "Verify the syntactic correctness of the given BIR object (generally a module).
+If there are problems, a VERIFICATION-FAILED is signaled. If the verification process ran into an unexpected error, VERIFICATION-ERROR is signaled. If there are no problems, returns normally."))
 
 (defgeneric verify-inputs (instruction))
 (defgeneric verify-outputs (instruction))
