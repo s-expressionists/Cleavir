@@ -4,7 +4,6 @@
   :depends-on (:concrete-syntax-tree
                :concrete-syntax-tree-destructuring
                :cleavir-ast
-	       :cleavir-ast-transformations
 	       :cleavir-primop
 	       :cleavir-environment
 	       :cleavir-compilation-policy

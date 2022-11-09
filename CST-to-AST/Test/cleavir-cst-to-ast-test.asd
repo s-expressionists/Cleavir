@@ -2,6 +2,7 @@
 
 (defsystem #:cleavir-cst-to-ast-test
   :depends-on (#:cleavir-cst-to-ast
+               #:cleavir-ast-transformations
                #:cleavir-io)
   :serial t
   :components
