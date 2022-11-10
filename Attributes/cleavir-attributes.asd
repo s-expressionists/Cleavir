@@ -4,7 +4,7 @@
   :description "Information about values not encompassed by the type system."
   :author ("Bike <aeshtaer@gmail.com>")
   :maintainer "Bike <aeshtaer@gmail.com>"
-  :homepage "https://s-expressionists.github.io/Cleavir/"
+  :homepage "https://s-expressionists.github.io/Cleavir/cleavir-attributes/"
   :version "1.0.0"
   :license "BSD"
   :bug-tracker "https://github.com/s-expressionists/Cleavir/issues"
