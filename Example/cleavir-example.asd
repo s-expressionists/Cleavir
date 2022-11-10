@@ -1,6 +1,14 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-example
+  :description "Example frontend for the Cleavir toolkit."
+  :author "Bike <aeshtaer@gmail.com>"
+  :maintainer "Bike <aeshtaer@gmail.com>"
+  :homepage "https://s-expressionists.github.io/Cleavir/"
+  :version "1.0.0"
+  :license "BSD"
+  :bug-tracker "https://github.com/s-expressionists/Cleavir/issues"
+  :source-control (:git "https://github.com/s-expressionists/Cleavir.git")
   :depends-on (:cleavir-ctype :cleavir-environment :cleavir-compilation-policy
                               :cleavir-primop
                :cleavir-cst-to-ast :cleavir-ast-to-bir

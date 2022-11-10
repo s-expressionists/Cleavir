@@ -1,6 +1,16 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-cst-to-ast
+  :description "Compiler of source concrete syntax trees into abstract syntax trees."
+  :author ("Robert Strandh <robert.strandh@gmail.com>"
+           "Bike <aeshtaer@gmail.com>"
+           "Charles Zhang")
+  :maintainer ("Bike <aeshtaer@gmail.com>")
+  :homepage "https://s-expressionists.github.io/Cleavir/"
+  :version "1.0.0"
+  :license "BSD"
+  :bug-tracker "https://github.com/s-expressionists/Cleavir/issues"
+  :source-control (:git "https://github.com/s-expressionists/Cleavir.git")
   :depends-on (:concrete-syntax-tree
                :concrete-syntax-tree-destructuring
                :cleavir-ast
