@@ -1,5 +1,8 @@
 (in-package #:cleavir-documentation-generation)
 
+(defmethod staple:packages ((sys (eql (asdf:find-system :cleavir-ast))))
+  (mapcar #'find-package '("CLEAVIR-AST" "CLEAVIR-AST-GRAPHVIZ")))
+
 (defmethod staple:page-type ((sys (eql (asdf:find-system :cleavir-ast))))
   'cleavir-page)
 
