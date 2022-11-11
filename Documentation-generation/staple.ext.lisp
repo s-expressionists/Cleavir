@@ -27,6 +27,11 @@
    ;; but not its subprojects.
    (%pages :initarg :pages :accessor staple:pages)))
 
+(defmethod print-object ((o tree-project) s)
+  (print-unreadable-object (o s :type t)
+    (ignore-errors (write (asdf:component-name (staple:system o)) :stream s)))
+  o)
+
 (defmethod staple:generate ((project tree-project) &rest args)
   (let ((generated-pages ()) (generated-subprojects ()))
     ;; Generate pages.
@@ -61,7 +66,9 @@
              :parent parent :system system
              :output output-directory)))
     (setf (staple:pages project)
-          (loop for doc in (or documents (staple:documents system))
+          ;; This dummy (nil) ensures that we get a blank index page
+          ;; even if there is no README. (A README should probably be added though.)
+          (loop for doc in (or documents (staple:documents system) '(nil))
                 collect (make-instance page-type
                           :project project
                           :input template
