@@ -6,4 +6,5 @@
 
 (defclass example () ())
 
-(defvar *system* (make-instance 'example))
+(defvar *system* (make-instance 'example)
+  "An object representing the example system, for use specializing Cleavir generic functions.")
