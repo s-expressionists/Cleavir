@@ -5,99 +5,105 @@
 ;;; Generic functions SUBTYPEP, UPGRADED-ARRAY-ELEMENT-TYPE,
 ;;; and UPGRADED-COMPLEX-PART-TYPE.
 ;;;
-;;; As in CL, but with ctypes, no environment, and a client
-;;; parameter. SUBTYPEP may only be called with two non-values ctypes
-;;; or two values ctypes. U-A-E-T and U-C-P-T may not be called with
-;;; values ctypes.
 
-(defgeneric subtypep (ctype1 ctype2 system))
+(defgeneric subtypep (ctype1 ctype2 system)
+  (:documentation "As CL:SUBTYPEP, but with non-values ctypes instead of type specifiers, no tnevironment, and a client parameter.
 
-(defgeneric upgraded-array-element-type (ctype system))
-(defgeneric upgraded-complex-part-type (ctype system))
+See VALUES-SUBTYPEP"))
+
+(defgeneric upgraded-array-element-type (ctype system)
+  (:documentation "As CL:UPGRADED-ARRAY-ELEMENT-TYPE, but with a non-values ctype instead of a type specifier, and a client parameter instead of an environment."))
+(defgeneric upgraded-complex-part-type (ctype system)
+  (:documentation "As CL:UPGRADED-COMPLEX-PART-TYPE, but with a non-values ctype instead of a type specifier, and a client parameter instead of an environment."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function SUBTYPEP.
 ;;;
-;;; This version of SUBTYPEP works with values ctypes as well.
-(defgeneric values-subtypep (ctype1 ctype2 system))
+(defgeneric values-subtypep (ctype1 ctype2 system)
+  (:documentation "SUBTYPEP for values ctypes. Non-values ctypes are not permitted as arguments.
+
+See SUBTYPEP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions TOP, BOTTOM.
 ;;;
-;;; Return top or bottom ctypes (i.e. ctypes of T and NIL respectively).
-;;; Required to do even very basic type operations.
 
-(defgeneric top (system))
-(defgeneric bottom (system))
+(defgeneric top (system)
+  (:documentation "Return the top ctype, i.e. the ctype for CL:T.
+
+See VALUES-TOP"))
+(defgeneric bottom (system)
+  (:documentation "Return the bottom ctype, i.e. the ctype for CL:NIL.
+
+See VALUES-BOTTOM"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions VALUES-TOP, VALUES-BOTTOM.
 ;;;
-;;; Return top or bottom values ctypes. The top values ctype is equivalent to
-;;; (values &rest t), representing any number of values, each of which may be
-;;; of any type. The bottom values ctype is equivalent to (values nil &rest nil)
-;;; and represents no number of values - which is, importantly, a distinct type
-;;; from (values &rest nil), meaning exactly zero values. That is to say, there
-;;; is no list of values that is of the bottom values ctype.
-;;; This long comment is because this is genuinely confusing.
 
-(defgeneric values-top (system))
-(defgeneric values-bottom (system))
+(defgeneric values-top (system)
+  (:documentation "Return the top values ctype. The top values ctype is equivalent to (values &rest t), representing any number of values, each of which may be of any type.
+
+See TOP"))
+(defgeneric values-bottom (system)
+  (:documentation "Return the bottom values ctype. The bottom values ctype is equivalent to (values nil &rest nil) and represents no number of values - which is, importantly, a distinct type from (values &rest nil), which means exactly zero values. That is to say, there is no list of values that is of the bottom values ctype.
+
+See BOTTOM"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions TOP-P, BOTTOM-P.
 ;;;
-;;; Return whether the given ctype is the top or bottom ctype respectively.
-;;; These functions are intended to be quick rather than necessarily correct
-;;; (which is uncomputable in the presence of SATISFIES anyway). If they return
-;;; true, that must be accurate, but they are permitted to return false even if
-;;; the ctype actually is top or bottom respectively.
-;;;
-;;; Neither function may be passed a values ctype.
 
-(defgeneric top-p (ctype system))
-(defgeneric bottom-p (ctype system))
+(defgeneric top-p (ctype system)
+  (:documentation "Return true if the given non-values ctype is the top ctype (i.e. CL:T). As this function is approximate, false may be returned even on a ctype equivalent to top. (For example, it may not be possible to determine this equivalence in the presence of SATISFIES types.)"))
+(defgeneric bottom-p (ctype system)
+  (:documentation "Return true if the given non-values ctype is the bottom ctype (i.e. CL:NIL). As this function is approximate, false may be returned even on a ctype equivalent to bottom. (For example, it may not be possible to determine this equivalence in the presence of SATISFIES types.)"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions CONJOIN/2, DISJOIN/2.
 ;;;
-;;; Given two non-values ctypes, compute their conjunction or disjunction, as
-;;; for the AND and OR type specifiers respectively.
-;;;
-;;; Called by the n-ary CONJOIN and DISJOIN.
 
-(defgeneric conjoin/2 (ctype1 ctype2 system))
-(defgeneric disjoin/2 (ctype1 ctype2 system))
+(defgeneric conjoin/2 (ctype1 ctype2 system)
+  (:documentation "Return the conjunction (i.e. CL:AND) of two non-values ctypes.
+This function may be specialized, but should not be called directly: use CONJOIN.
+
+See CONJOIN"))
+(defgeneric disjoin/2 (ctype1 ctype2 system)
+  (:documentation "Return the disjunction (i.e. CL:OR) of two non-values ctypes.
+This function may be specialized, but should not be called directly: use DISJOIN.
+
+See DISJOIN"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions CONJUNCTIONP, DISJUNCTIONP.
 ;;;
-;;; Determine if non-values ctype is a conjunction or disjunction respectively.
-;;; Here a conjunction or disjunction ctype is an unsimplified representation of
-;;; an AND or OR type respectively. (or (integer 3 7) (integer 23)) may be
-;;; represented as a disjunction ctype because there is no simpler representation
-;;; for it in Common Lisp, whereas (or (integer 3 7) (integer 6)) may just be
-;;; reduced to (integer 3) and not be a disjunction ctype.
 
-(defgeneric conjunctionp (ctype system))
-(defgeneric disjunctionp (ctype system))
+(defgeneric conjunctionp (ctype system)
+  (:documentation "Return true iff the given non-values ctype is a conjunction ctype.
+Note that whether a given type specifier ends up as a conjunction ctype may be client-dependent. For example, (and (integer 1 7) (integer 2 4)) may end up as a conjunction on some clients, but reduced to an integer type by others."))
+(defgeneric disjunctionp (ctype system)
+  (:documentation "Return true iff the given non-values ctype is a disjunction ctype.
+Note that whether a given type specifier ends up as a disjunction ctype may be client dependent. For example, (or (integer 1 7) (integer 4 9)) may end up as a disjunction on some clients, but reduced to (integer 1 9) on others."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions CONJUNCTION-CTYPES, DISJUNCTION-CTYPES.
 ;;;
-;;; Given conjunction or disjunction ctypes, return the ctypes they are composed
-;;; of. Note that not all uses of CONJOIN or DISJOIN may result in junction
-;;; ctypes, and you have to check that they are junctions before calling these.
 
-(defgeneric conjunction-ctypes (conjunction-ctype system))
-(defgeneric disjunction-ctypes (disjunction-ctype system))
+(defgeneric conjunction-ctypes (conjunction-ctype system)
+  (:documentation "Given a conjunction ctype, return a list of the ctypes it is composed of, in some arbitrary order. This function must only be called on ctypes that CONJUNCTIONP is true of.
+
+See CONJUNCTIONP"))
+(defgeneric disjunction-ctypes (disjunction-ctype system)
+  (:documentation "Given a disjunction ctype, return a list of the ctypes it is composed of, in some arbitrary order. This function must only be called on ctypes that DISJUNCTIONP is true of.
+
+See DISJUNCTIONP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -115,12 +121,17 @@
 ;;;
 ;;; Generic functions VALUES-CONJOIN/2, VALUES-DISJOIN/2.
 ;;;
-;;; Given two values ctypes, compute their conjunction or disjunction.
-;;;
-;;; Called by the n-ary VALUES-CONJOIN, VALUES-DISJOIN.
 
-(defgeneric values-conjoin/2 (ctype1 ctype2 system))
-(defgeneric values-disjoin/2 (ctype1 ctype2 system))
+(defgeneric values-conjoin/2 (ctype1 ctype2 system)
+  (:documentation "Given two values ctypes, return their conjunction.
+This function may be specialized, but should not be called directly: Use VALUES-CONJOIN.
+
+See VALUES-CONJOIN"))
+(defgeneric values-disjoin/2 (ctype1 ctype2 system)
+  (:documentation "Given two values ctypes, return their disjunction.
+This function may be specialized, but should not be called directly: Use VALUES-DISJOIN.
+
+See VALUES-DISJOIN"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -137,309 +148,315 @@
 ;;;
 ;;; Generic function VALUES-APPEND/2.
 ;;;
-;;; Given two values ctypes, append them.
-;;; In more detail, if forms A and B have types Avt and Bvt,
-;;; (values-append Avt Bvt) is the type of (multiple-value-call #'values A B).
-;;; This operation is useful when dealing with multiple-value-call.
 ;;; FIXME: This cannot always be exactly expressed as a values type, e.g.
 ;;; (values-append '(values &optional a) '(values b)) is not
 ;;; (values &optional a b) which would allow no values. Further thinking may
 ;;; be required.
 
-(defgeneric values-append/2 (ctype1 ctype2 system))
+(defgeneric values-append/2 (ctype1 ctype2 system)
+  (:documentation "Given two values ctypes, append them.
+In more detail, if forms A and B have types Avt and Bvt, (values-append Avt Bvt) is the type of (multiple-value-call #'values A B). This operation is useful when dealing with multiple-value-call.
+This function may be specialized, but should not be called directly: Use VALUES-APPEND.
+
+See VALUES-APPEND"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function NEGATE.
 ;;;
-;;; Compute the negation of the given ctype, as if using the NOT type specifier.
-;;; May not be called with a values ctype.
 
-(defgeneric negate (ctype system))
+(defgeneric negate (ctype system)
+  (:documentation "Compute the negation of the given non-values ctype, as if using the NOT type specifier."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function SUBTRACT.
 ;;;
-;;; Compute the difference of the two ctypes.
-;;; (subtract c1 c2 s) = (conjoin/2 c1 (negate c2 s) s), but this can sometimes
-;;; be done more efficiently. May not be called with values ctypes.
 
-(defgeneric subtract (ctype1 ctype2 system))
+(defgeneric subtract (ctype1 ctype2 system)
+  (:documentation "Compute the difference of the two non-values ctypes.
+;;; (subtract c1 c2 s) = (conjoin/2 c1 (negate c2 s) s), but this can sometimes
+;;; be done more efficiently. May not be called with values ctypes."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function APPLY.
 ;;;
-;;; Given a ctype of a function, and the ctype of a list of arguments,
-;;; return a ctype for the return values from CL:APPLYing the function to those
-;;; arguments.
 
-(defgeneric apply (fctype actype system))
+(defgeneric apply (fctype actype system)
+  (:documentation "Given a non-values ctype of a function, and the non-values ctype of a list of arguments, return a ctype for the return values from CL:APPLYing the function to those arguments."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function FUNCALL.
 ;;;
-;;; Given a ctype of a function, and a list of argument ctypes,
-;;; return a ctype for the return values from CL:APPLYing the function to those
-;;; arguments.
 
-(defgeneric funcall (system fctype &rest actypes))
+(defgeneric funcall (system fctype &rest actypes)
+  (:documentation "Given a non-values ctype of a function, and a list of argument non-values ctypes, return a ctype for the return values from CL:APPLYing the function to those arguments."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function CLASS.
 ;;;
-;;; Given a class, return the ctype for that class.
 
-(defgeneric class (class system))
+(defgeneric class (class system)
+  (:documentation "Given a class, return the ctype for that class."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function CONS.
 ;;;
-;;; Given two non-values ctypes, return the ctype of a cons type using them.
 
-(defgeneric cons (car cdr system))
+(defgeneric cons (car cdr system)
+  (:documentation "Given two non-values ctypes, return the ctype of a cons type using them."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions CONSP, CONS-CAR, CONS-CDR.
 ;;;
-;;; Determine if a ctype is a cons ctype and return its CAR and CDR ctypes, resp.
-;;; CONS-CAR and CONS-CDR must only be used on CONSP ctypes.
 
-(defgeneric consp (ctype system))
-(defgeneric cons-car (cons-ctype system))
-(defgeneric cons-cdr (cons-ctype system))
+(defgeneric consp (ctype system)
+  (:documentation "Return true iff the ctype is a cons ctype."))
+(defgeneric cons-car (cons-ctype system)
+  (:documentation "Given a cons ctype, return its car ctype.
+
+See CONSP"))
+(defgeneric cons-cdr (cons-ctype system)
+  (:documentation "Given a cons ctype, return its cdr ctype.
+
+See CONSP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function ARRAY.
 ;;;
-;;; Given an element type specifier, dimensions specifier, and simplicity mark,
-;;; return a ctype representing the array type.
-;;; The element type specifier is either an upgraded non-values ctype,
-;;; or the symbol *.
-;;; The dimensions specifier is as in the CL type specifier ARRAY.
-;;; The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY.
 
-(defgeneric array (element dimensions simplicity system))
+(defgeneric array (element dimensions simplicity system)
+  (:documentation "Given an element type specifier, dimensions specifier, and simplicity mark, return a ctype representing the array type.
+The element type specifier is either an upgraded non-values ctype, or the symbol *.
+The dimensions specifier is as in the CL type specifier ARRAY, but must be normalized to a list of dimensions (i.e. 4 is not valid, and must be replaced by (* * * *)).
+The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions ARRAYP, ARRAY-ELEMENT-TYPE, ARRAY-DIMENSIONS.
-;;; Determine if a ctype is an array ctype and return its element type and
-;;; dimensions specification, respectively. The dimensions should be normalized
-;;; to be a list of dimensions or * (e.g. 4 would be (* * * *)).
-;;; The readers must only be used on ARRAYP ctypes.
+;;;
 
-(defgeneric arrayp (ctype system))
-(defgeneric array-element-type (array-ctype system))
-(defgeneric array-dimensions (array-ctype system))
+(defgeneric arrayp (ctype system)
+  (:documentation "Return true iff the ctype is an array ctype."))
+(defgeneric array-element-type (array-ctype system)
+  (:documentation "Return the element type of an array ctype.
+
+See ARRAYP"))
+(defgeneric array-dimensions (array-ctype system)
+  (:documentation "Return the dimensions specifier of an array ctype.
+
+See ARRAYP."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function STRING.
 ;;;
-;;; Given a dimension specifier, and simplicity mark, return a ctype
-;;; representing the string type.
-;;; The dimension specifier is either a nonnegative integer or the symbol *.
-;;; The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY.
 
-(defgeneric string (dimension simplicity system))
+(defgeneric string (dimension simplicity system)
+  (:documentation "Given a dimension specifier, and simplicity mark, return a ctype representing the string type.
+The dimension specifier is either a nonnegative integer or the symbol *.
+The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function CHARACTER.
 ;;;
-;;; Return the ctype representing CL:CHARACTER.
 
-(defgeneric character (system))
+(defgeneric character (system)
+  (:documentation "Return the ctype representing CL:CHARACTER."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function BASE-CHAR.
 ;;;
-;;; Return the ctype representing CL:BASE-CHAR.
 
-(defgeneric base-char (system))
+(defgeneric base-char (system)
+  (:documentation "Return the ctype representing CL:BASE-CHAR."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function STANDARD-CHAR.
 ;;;
-;;; Return the ctype representing CL:STANDARD-CHAR.
 
-(defgeneric standard-char (system))
+(defgeneric standard-char (system)
+  (:documentation "Return the ctype representing CL:STANDARD-CHAR."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function COMPLEX.
 ;;;
-;;; Given a part type specifier, return a ctype for the complex type.
-;;; The specifier may be either an upgraded non-values ctype or the symbol *.
 
-(defgeneric complex (part system))
+(defgeneric complex (part system)
+  (:documentation "Given a part type specifier, return a ctype for the complex type.
+The specifier may be either an upgraded non-values ctype or the symbol *."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions COMPLEXP, COMPLEX-PART-TYPE.
 ;;;
-;;; Determine if a ctype is a COMPLEX ctype and return its part type, resp.
-;;; COMPLEX-PART-TYPE must only be used on COMPLEXP ctypes.
 
-(defgeneric complexp (ctype system))
-(defgeneric complex-part-type (complex-ctype system))
+(defgeneric complexp (ctype system)
+  (:documentation "Return true if the ctype is a cl:complex ctype."))
+(defgeneric complex-part-type (complex-ctype system)
+  (:documentation "Return the part type of a cl:complex ctype.
+
+See COMPLEXP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function RANGE.
 ;;;
-;;; Given a type name and interval designators, return a ctype.
-;;; The type name is one of the symbols INTEGER, RATIONAL, REAL, FLOAT,
-;;; SHORT-FLOAT, SINGLE-FLOAT, DOUBLE-FLOAT, or LONG-FLOAT.
 
-(defgeneric range (type low high system))
+(defgeneric range (kind low high system)
+  (:documentation "Given a kind, and interval designators, return a ctype.
+This function is used to construct ctypes for ranges of real numbers.
+The kind is one of the symbols INTEGER, RATIONAL, REAL, FLOAT, SHORT-FLOAT, SINGLE-FLOAT, DOUBLE-FLOAT, or LONG-FLOAT."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions RANGEP, RANGE-KIND, RANGE-LOW, RANGE-HIGH.
-;;; Determine if a ctype is a range ctype and return its kind (e.g. INTEGER) and
-;;; interval bounds, respectively.
-;;; RANGE-LOW and RANGE-HIGH return two values. The first value is the bound, or
-;;; NIL if there is no bound (i.e. * was supplied). The second value is whether
-;;; the bound is exclusive. Non-bounds are always non exclusive.
-;;; RANGE-KIND, RANGE-LOW, and RANGE-HIGH must only be used on RANGEP ctypes.
+;;;
 
-(defgeneric rangep (ctype system))
-(defgeneric range-kind (range-ctype system))
-(defgeneric range-low (range-ctype system))
-(defgeneric range-high (range-ctype system))
+(defgeneric rangep (ctype system)
+  (:documentation "Return true iff the ctype is a range ctype."))
+(defgeneric range-kind (range-ctype system)
+  (:documentation "Return the kind (e.g. INTEGER) of a range ctype.
+
+See RANGEP"))
+(defgeneric range-low (range-ctype system)
+  (:documentation "Given a range ctype, return two values: The lower bound, and a boolean indicating whether the bound is exclusive. Non-bounds (i.e. *) are always non-exclusive.
+
+See RANGEP"))
+(defgeneric range-high (range-ctype system)
+  (:documentation "Given a range ctype, return two values: The upper bound, and a boolean indicating whether the bound is exclusive. Non-bounds (i.e. *) are always non-exclusive.
+
+See RANGEP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function FIXNUM.
 ;;;
-;;; Return the ctype for CL:FIXNUM.
 
-(defgeneric fixnum (system))
+(defgeneric fixnum (system)
+  (:documentation "Return the ctype for CL:FIXNUM."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function MEMBER.
 
-(defgeneric member (system &rest elements))
+(defgeneric member (system &rest elements)
+  (:documentation "Return the ctype corresponding to (cl:member ...elements...)"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions MEMBER-P, MEMBER-MEMBERS.
 ;;;
-;;; Return information about a non-values ctype.
-;;; It is undefined behavior if MEMBER-MEMBERS is called on a ctype which
-;;; MEMBER-P is not true of.
 
-(defgeneric member-p (system non-values-ctype))
-(defgeneric member-members (system member-ctype))
+(defgeneric member-p (system non-values-ctype)
+  (:documentation "Return true iff the ctype is a MEMBER ctype.
+Note that EQL types are treated as shorthand for MEMBER types."))
+(defgeneric member-members (system member-ctype)
+  (:documentation "Return a list of the members of the given member ctype, in arbitrary order.
+
+See MEMBER-P"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function SATISFIES.
+;;;
 
-(defgeneric satisfies (fname system))
+(defgeneric satisfies (fname system)
+  (:documentation "Return the ctype for (SATISFIES fname)"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function KEYWORD.
 ;;;
-;;; Returns the ctype representing CL:KEYWORD.
-;;; While KEYWORD = (SATISFIES KEYWORD), this function exists in case a client
-;;; has a more specialized representation, for example to make clear that it is
-;;; a subtype of SYMBOL.
 
-(defgeneric keyword (system))
+(defgeneric keyword (system)
+  (:documentation "Return the ctype representing CL:KEYWORD.
+While KEYWORD = (SATISFIES KEYWORD), this function exists in case a client has a more specialized representation, for example to make clear that it is a subtype of SYMBOL."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function FUNCTION.
 ;;;
-;;; Return a ctype for a function type specifier.
-;;;
-;;; The first seven parameters represent the parsed lambda list.
-;;; REQUIRED and OPTIONAL are lists of non-values ctypes, and REST is a
-;;; non-values ctype. KEYP and ALLOW-OTHER-KEYS-P indicate the presences of
-;;; &key and &allow-other-keys respectively. KEYS is a list of
-;;; (keyword non-values-ctype) elements.
-;;; RETURNS is the values ctype of the return values specified.
-;;;
-;;; Note that REST must always be provided. If the function does not actually
-;;; accept &rest arguments, this should be indicated by REST being the bottom
-;;; ctype.
 
 (defgeneric function
-    (required optional rest keyp keys allow-other-keys-p returns system))
+    (required optional rest keyp keys allow-other-keys-p returns system)
+  (:documentation "Return a ctype for a function type specifier.
+
+The first seven parameters represent the parsed lambda list.
+REQUIRED and OPTIONAL are lists of non-values ctypes, and REST is anon-values ctype. KEYP and ALLOW-OTHER-KEYS-P indicate the presences of &key and &allow-other-keys respectively. KEYS is a list of (keyword non-values-ctype) elements.
+RETURNS is the values ctype of the return values specified.
+
+Note that REST must always be provided. If the function does not actually accept more arguments, this should be indicated by REST being the bottom ctype."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function COMPILED-FUNCTION.
 ;;;
-;;; Returns the ctype for CL:COMPILED-FUNCTION.
-;;; While COMPILED-FUNCTION = (SATISFIES COMPILED-FUNCTION-P), this function
-;;; exists in case a client has a more specialized representation, for example
-;;; to make clear that it is a subtype of FUNCTION.
 
-(defgeneric compiled-function (system))
+(defgeneric compiled-function (system)
+  (:documentation "Return the ctype for CL:COMPILED-FUNCTION.
+While COMPILED-FUNCTION = (SATISFIES COMPILED-FUNCTION-P), this function exists in case a client has a more specialized representation, for example to make clear that it is a subtype of FUNCTION."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic function VALUES.
 ;;;
-;;; Return a ctype for a values type specifier.
-;;;
-;;; The first four parameters represent the parsed lambda list.
-;;; REQUIRED and OPTIONAL are lists of ctypes. REST is a ctype.
-;;;
-;;; The semantics of values types in the standard are self contradictory.
-;;; This function uses the strict semantics described for the VALUES type
-;;; specifier. A client expecting fuzziness, as it needs to to implement
-;;; CL:THE, should apply that before using this function. See the parsing in
-;;; the cleavir-environment system for an example of this.
-;;;
-;;; Strictness means that, for example, (values integer &rest nil) is disjoint
-;;; from (values integer integer &rest nil), which is very different from how
-;;; CL:THE works. Strict types are useful for when the compiler can derive
-;;; exacting types; e.g. (values-list '(nil)) is of type (values null &rest nil)
-;;; and cannot be zero values.
-;;;
-;;; Values ctypes are only used in certain contexts, as described for the
-;;; operators above.
 
-(defgeneric values (required optional rest system))
+(defgeneric values (required optional rest system)
+  (:documentation "Return a ctype for a values type specifier.
+
+The first four parameters represent the parsed lambda list. REQUIRED and OPTIONAL are lists of ctypes. REST is a ctype.
+
+The semantics of values types in the standard are self contradictory.
+This function uses the strict semantics described for the VALUES type specifier. A client expecting fuzziness, as it needs to to implement CL:THE, should apply that before using this function. See the parsing in the cleavir-environment system for an example of this.
+
+Strictness means that, for example, (values integer &rest nil) is disjoint from (values integer integer &rest nil), which is very different from how CL:THE works. Strict types are useful for when the compiler can derive exacting types; e.g. (values-list '(nil)) is of type (values null &rest nil) and cannot be zero values.
+
+Values ctypes are only used in certain contexts. See the documentation for other operators for more information."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions VALUES-REQUIRED, VALUES-OPTIONAL, VALUES-REST.
-;;; Read components of a values ctype.
+;;;
 
-(defgeneric values-required (ctype system))
-(defgeneric values-optional (ctype system))
-(defgeneric values-rest (ctype system))
+(defgeneric values-required (ctype system)
+  (:documentation "Return the required component of a values ctype."))
+(defgeneric values-optional (ctype system)
+  (:documentation "Return the optional component of a values ctype."))
+(defgeneric values-rest (ctype system)
+  (:documentation "Return the rest component of a values ctype."))
 
 (defgeneric nth-value (n ctype system)
-  (:argument-precedence-order ctype system n))
+  (:argument-precedence-order ctype system n)
+  (:documentation "Return the ctype for the Nth value of the given values ctype."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Generic functions FUNCTION-REQUIRED, FUNCTION-OPTIONAL, FUNCTION-REST, FUNCTION-KEYSP, FUNCTION-KEYS, FUNCTION-ALLOW-OTHER-KEYS-P,
 ;;; and FUNCTION-VALUES.
 ;;;
-;;; Read components of a function ctype.
 
-(defgeneric function-required (ctype system))
-(defgeneric function-optional (ctype system))
-(defgeneric function-rest (ctype system))
-(defgeneric function-keysp (ctype system))
-(defgeneric function-keys (ctype system))
-(defgeneric function-allow-other-keys-p (ctype system))
-(defgeneric function-values (ctype system))
+(defgeneric function-required (ctype system)
+  (:documentation "Return the required parameter ctypes of a function ctype."))
+(defgeneric function-optional (ctype system)
+  (:documentation "Return the optional parameter ctypes of a function ctype."))
+(defgeneric function-rest (ctype system)
+  (:documentation "Return the rest parameter ctype of a function ctype."))
+(defgeneric function-keysp (ctype system)
+  (:documentation "Return true iff the function ctype indicates a function that accepts keyword arguments."))
+(defgeneric function-keys (ctype system)
+  (:documentation "Return the key parameter ctypes for a function ctype. This will be in the form of a list ((keyword ctype) ...)"))
+(defgeneric function-allow-other-keys-p (ctype system)
+  (:documentation "Return true iff the function ctype indicates a function that accepts unknown keyword arguments."))
+(defgeneric function-values (ctype system)
+  (:documentation "Return the return values ctype of a function ctype."))
