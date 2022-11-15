@@ -12,15 +12,7 @@ For an example of usage, check the cleavir-example system.
 
 # Environment interface
 
-In order to convert CSTs, CST-to-AST must sometimes get information from the environment. It does this by using the Environment system. Briefly, here are the generic functions that must be specialized:
-
-* `variable-info`: Returns information about variables.
-* `function-info`: Retrieves information about operators (functions, macros, special operators).
-* `optimize-info`: Retrives information about current optimization settings, as well as current policy (see the cleavir-compilation-policy system).
-* `declaration`: Retrieves the list of valid nonstandard declarations.
-* `type-expand`: Analogously to `cl:macroexpand`, expands macro (`deftype`-defined) type specifiers. This is required for CST-to-AST to do any type specifier parsing, which it may need to do even if the program contains no type declarations. Type specifier parsing can be further customized via the other generic functions in cleavir-environment, as well as the cleavir-ctype system, but this is not necessary.
-* `eval`: Evaluates a form. This is used in conversion of `cl:macrolet` to produce the local macroexpander.
-* `cst-eval`: Evaluates a CST of a form. This is used to execute compile-time side effects.
+In order to convert CSTs, CST-to-AST must sometimes get information from the environment. It does this by using the `cleavir-environment` system. Clients need to specialize some generic functions in that system in order for CST-to-AST to understand the environment code is compiled in. See that system for more information.
 
 # Conditions
 
