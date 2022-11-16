@@ -62,6 +62,9 @@ See CTYPE"))
       *top-ctype*
       (ctype:values-top nil)))
 
+(defgeneric attributes (object)
+  (:documentation "Retrieve flow information for OBJECT beyond its type."))
+
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
          :type (or null instruction))
@@ -399,6 +402,7 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
     (write (name o) :stream s)))
 
 (defun iblock-started-p (iblock)
+  "Return true iff the IBLOCK has begun being generated, i.e. has any instructions in it."
   (slot-boundp iblock '%start))
 
 (defun successors (iblock)

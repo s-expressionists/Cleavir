@@ -1,11 +1,15 @@
-Block-based Intermediate Representation (BIR) is Cleavir's primary intermediate representation. BIR is designed to represent both high-level, implementation-independent representation of Lisp programs, as well as lower-level implementation-defined machine-dependent representation, and to allow the compiler to make the transition from high to low level smoothly and efficiently. Pervasive use of CLOS facilitates extension and customization by clients.
+Block-based Intermediate Representation (BIR) is Cleavir's primary intermediate representation. BIR is designed to represent both high-level, implementation-independent properties of Lisp programs, as well as lower-level implementation-defined machine-dependent properties, and to allow the compiler to make the transition from high to low level smoothly and efficiently. Pervasive use of CLOS facilitates extension and customization by clients.
 
 # Table of Contents
 
 1. [Structure of the IR](#structure_of_the_ir)
-    1. [Multiple values](#multiple_values)
+    1. [Data](#data)
+        1. [Linearity](#linearity)
+        2. [Multiple values](#multiple_values)
     2. [Primops](#primops)
     3. [Local calls](#local_calls)
+    4. [Dynamic environments](#dynamic_environments)
+        1. [Nonlocal exits](#nonlocal_exits)
 2. [Analyses and transformations](#analyses_and_transformations)
 3. [Verifier](#verifier)
 4. [Disassembler](#disassembler)
@@ -30,14 +34,34 @@ The next level down is the `function`. A function is the IR representation of a 
 
 `instruction`s represent actions the machine can carry out. Each kind of action has its own subclass of `instruction`. Most instruction classes are defined in instructions.lisp, and clients may define their own instructions as well.
 
-Instructions input and output data, of the `datum` class. A datum represents zero or more values that can exist at runtime. In some cases, these data may not correspond directly to Lisp objects. There are several subclasses of `datum` based on properties and role. Most data have strong restrictions on their use in order to facilitate analysis and optimization. `ssa` (single static assignment) data are assigned in at most one place, and `linear-datum` are used in at most one place, for example.
+## Data
 
-A `dynamic-environment` represents a Lisp dynamic environment, including information about exit points, values with only dynamic extent, and unwind-protect cleanups. Any `function` is a `dynamic-environment`, and in this capacity represents the dynamic environment the function was called in. Certain instructions are dynamic environments. Every dynamic environment except a function has a parent dynamic environment, and this chain of parents will eventually reach the function. Dynamic environments are never shared between functions. Each iblock has a dynamic environment, and all instructions in that iblock conceptually share that dynamic environment. The localization of dynamic environments to iblocks means that a straight-line sequence of iblocks cannot be in general collapsed into a single basic block, because different instructions need different dynamic environments. A client may or may not represent dynamic environments as concrete objects at runtime. This representation is intended to allow a variety of runtime realizations while maintaining static invariants, such as dynamic environments never being shared between functions.
+Instructions input and output "data", of the `datum` class. A datum represents zero or more values that can exist at runtime. In some cases, these data may not correspond directly to Lisp objects. There are several subclasses of `datum` based on properties and role. Most data have strong restrictions on their use in order to facilitate analysis and optimization. `ssa` (single static assignment) data are assigned in at most one place, and `linear-datum` are used in at most one place, for example.
 
-## Multiple Values
+### Linearity
 
-Although a `datum` can represent any number of values, BIR's semantics are such that only the primary value is retained after the values are produced, unless the `datum` is immediately input into the few instructions that accept all values
-The AST-to-BIR system that is the usual BIR producer is set up so that only one datum of unknown values is really live at any given time. If multiple unknown values data need to be alive due to the semantics of the source program, e.g. from `cl:multiple-value-prog1`, one set of values will be explicitly saved and restored in the BIR. This is intended to facilitate a BIR code generator being able to map BIR data simply to registers or memory locations.
+One of the most important properties of data is _linearity_, in the sense of [linear logic](https://en.wikipedia.org/wiki/Linear_logic). A `linear-datum` is one that is only used in one place in the program. This is closely dual to the `ssa`, a datum that is defined in only one place. Most BIR data are linear, and this is critical for performant analysis.
+
+To see why, consider the code
+
+```lisp
+(loop for x = ...
+      do (if (typep x 'single-float)
+             (print (- (* x 3.9) 7.2))
+             (return x)))
+```
+
+Here, in `(* x 3.9)`, `x` is clearly a single float, and so this multiplication may be safely transformed into a fast machine operation. But just as clearly, in `(return x)` `x` is _not_ a single float, and in `(typep x 'single-float)` it could be anything. Therefore, for a variable `datum` like `x` that can be used in any number of places, the compiler needs to associate type information (as well as any other forward-flow information) with a `datum` _and_ a control point, not just a `datum`.
+
+For a `linear-datum`, however, forward-flow information can be associated directly with the `datum`. The implicit meaning of this is that the information is associated to the datum and to the control point at which it is used. In this example, the compiler will construct a `linear-datum` (an `output`, specifically) for the result of the `(* x 3.9)` call. This `output` is only used in one place, the call to `-`. So Cleavir can tag that `output` as having type `single-float` without having to worry about control flow.
+
+Linearity is pervasive: almost all BIR instructions only accept linear data. In this example, the BIR would include a special `readvar` instruction that takes the (non-linear) `variable` datum for `x` as input, and outputs a linear datum (an `output`) with its value. This `output` would then serve as the input to the `*` call.
+
+Note that linear data can be used multiple times in any execution of the program - e.g. here, the result datum for the `*` call will be read once for each execution of the loop that reaches this point. The important thing is that the datum is used only once in the program text.
+
+### Multiple Values
+
+Although a `datum` can represent any number of values, BIR's semantics are such that only the primary value is retained after the values are produced, unless the `datum` is immediately input into the few instructions that use all values, such as `mv-call`. This reflects a usual implementation of multiple values, in which only one set of them is really live at any given time in most circumstances. If multiple multiple values are live simultaneously in the source program, e.g. in `cl:multiple-value-prog1`, one set of values will be explicitly saved and restored in the BIR by special instructions. This facilitates code generators being able to straightforwardly map BIR data to registers or memory locations.
 
 ## Primops
 
@@ -47,13 +71,35 @@ Primops will for the most part be produced from calls by transformations, rather
 
 ## Local calls
 
-BIR has a concept of "local" calls. A call is local if it is to another function in the same compilation module. Local calls are more useful to the compiler because it means the caller can "know" about the callee, and vice versa. For example, it is safe to modify a local callee so that it can only be called on whatever arguments are actually provided by local calls; in contrast, a function that is called non-locally must be prepared to accept any arguments. Marking as many calls as possible as local is important to ensure they can be analyzed effectively.
+BIR has a concept of "local" calls. A call is local if it is to another function in the same compilation module. Local calls are more useful to the compiler because it means the caller can "know" about the callee, and vice versa. Marking as many calls as possible as local is important to ensure they can be analyzed effectively.
+
+For example, if a function is called non-locally, it must be prepared to accept any input; but if it's only called locally, it can be compiled to only accept whatever inputs are actually provided to those local calls. If we have `(flet ((f (x) (... (car x) ...))) (f (cons ...)))`, `f` may safely use inline `car` operations without type checking.
+
+## Dynamic environments
+
+A `dynamic-environment` represents a Lisp dynamic environment, including information about exit points, values with only dynamic extent, and unwind-protect cleanups. Any `function` is a `dynamic-environment`, and in this capacity represents the dynamic environment the function was called in. Certain instructions are also dynamic environments.
+
+Every dynamic environment except a function has a parent dynamic environment, and this chain of parents will eventually reach the function. Each iblock has a dynamic environment, and all instructions in that iblock conceptually share that dynamic environment. The localization of dynamic environments to iblocks means that a straight-line sequence of iblocks cannot be in general collapsed into a single basic block, because different instructions need different dynamic environments.
+
+One consequence of this is that any jump between iblocks may involve complex operations, as dynamic environments are unbound. This can include unbinding dynamic variables, invalidating exit points, and evaluating `cl:unwind-protect` cleanup code. Code generators must be careful to ensure all such "unwinding" operations will be carried out.
+
+A client may or may not represent dynamic environments as concrete objects at runtime. BIR dynamic environments are intended to allow a variety of runtime realizations while maintaining static invariants, such as dynamic environments never being shared between functions.
+
+### Nonlocal exits
+
+Dynamic environments are used to represent nonlocal exit points, i.e. `cl:block`s and `cl:tagbody`s that are jumped to from an inner function. (Local exits are simple jumps.) A point that can be nonlocally exited to is marked by a `come-from` instruction.
+
+The `come-from` appears in the BIR at the point at which the `cl:block` or `cl:tagbody` is entered, and represents its dynamic environment. The `come-from` has as successors both the "normal" successor, i.e. the body of the `cl:block` or the prefix of the `cl:tagbody`, and any iblocks that can be exited to, i.e. the result of the `cl:block` or the end of the `cl:tagbody`.
+
+`come-from` instructions are also, fairly uniquely, values. In this capacity they represent the [continuation](https://en.wikipedia.org/wiki/Continuation). The continuation does in general need to exist at runtime and be closed over, so that at runtime it is clear what continuation/stack frame is being returned to.
+
+One of the transformation passes, `eliminate-come-froms`, will automatically detect and delete any `come-from` instructions not used for nonlocal exits. This is important because in practice, most exits are within one function, and do not require any runtime dynamic environment.
+
+The representation of nonlocal exits has gone through several iterations, and may go through more. Common Lisp seems fairly unique among programming languages in having continuations that are only used from fixed points in the program, and this ground is not well-trodden. The idea is to simply indicate the information known statically, such as where exits take place and where they end up, as well as provide enough information to generate code that takes any necessary dynamic actions, such as recording a stack pointer as an exit mark.
 
 # Analyses and transformations
 
 BIR has several properties intended to allow analyses and optimizations to be expressed simply and efficiently. Analysis passes may look through the IR and store information elsewhere, or in the IR itself. Optimization passes may transform the IR to new more efficient forms. Cleavir's own optimization passes mostly live in Cleavir/BIR-transformations/.
-
-Most data have only one definition and one use: function `argument`s, and instruction `output`s meet this condition. Data with this property are called `transfer`s. More generally, data with only one use - instances of `linear-datum`, which include arguments, outputs, as well as `phi` nodes used in conditionals and other control merges - necessarily have that use tied to a specific control point, that use, so forward-propagated information can be associated with them directly. The two main kinds of forward-propagated data at the moment are type information and _attributes_; the former are types in the Lisp sense (sets of objects), while the latter are described in Cleavir/Attributes.
 
 BIR can be mapped over efficiently with the functions and macros in map.lisp. These operators generally work without consing and in forward flow order, using internally maintained sequential lists.
 

@@ -118,6 +118,7 @@
   (values))
 
 (defun insert-instruction-after (new existing)
+  "Insert a NEW instruction immediatley after an EXISTING instruction, which must not be a terminator."
   (check-type existing (and instruction (not terminator)))
   (let ((succ (successor existing)))
     (setf (predecessor succ) new (successor existing) new
@@ -142,13 +143,15 @@
     (dolist (in (inputs instruction))
       (remove-use in instruction))))
 
+;;; FIXME: Should this be exported?
 (defgeneric clean-up-iblock (iblock)
   (:method-combination progn)
   (:method progn ((ib iblock))
     (set:nremovef (scope (dynamic-environment ib)) ib)
     ;; NOTE: clean-up on the terminator disconnects predecessors
     (when (slot-boundp ib '%start)
-      (map-iblock-instructions #'clean-up-instruction ib))))
+      (map-iblock-instructions #'clean-up-instruction ib)))
+  (:documentation "Clean up links to IBLOCK without removing it from control flow."))
 
 (defgeneric clean-up-function (function)
   (:method-combination progn)
@@ -253,8 +256,8 @@
               "Type check function for THEI should not have local calls or enclose or other uses!")
       (clean-up-function type-check-function))))
 
-;;; Remove a THEI by forwarding its input to its use.
 (defun delete-thei (thei)
+  "Remove a THEI by forwarding its input to its use."
   (replace-uses (input thei) (output thei))
   (delete-instruction thei))
 
@@ -262,6 +265,7 @@
 (defun list-sans-index (list index)
   (loop for elem in list for p from 0 unless (= index p) collect elem))
 
+;;; FIXME: Maybe this shouldn't be exported - there's no check if the phi is actually unused
 (defun delete-phi (phi)
   (let ((iblock (iblock phi)))
     (setf (inputs iblock)
@@ -286,8 +290,8 @@
            (setf (successor pred) succ))))
   (values))
 
-;;; Delete an instruction. Must not be a terminator.
 (defun delete-instruction (instruction)
+  "Delete an instruction. It must not be a terminator."
   (check-type instruction (and instruction (not terminator)))
   (clean-up-instruction instruction)
   (unlink-instruction instruction)
@@ -336,6 +340,9 @@
        (set:empty-set-p (entrances iblock))))
 
 (defun delete-iblock (iblock)
+  "Delete an iblock from the program. The iblock must not be reachable.
+
+See MAYBE-DELETE-IBLOCK"
   ;; FIXME: Should note reasons to the user if nontrivial code is being
   ;; deleted. Or perhaps that should be handled at a higher level?
   (assert (orphan-iblock-p iblock))
@@ -349,6 +356,7 @@
   (remove-iblock-from-flow-order iblock))
 
 (defun maybe-delete-iblock (iblock)
+  "If IBLOCK is unreachable, delete it."
   (when (orphan-iblock-p iblock)
     (delete-iblock iblock)))
 
@@ -401,9 +409,9 @@
         (setf (%prev next) new)
         (setf (tail (function after)) new))))
 
-;;; Merge IBLOCK to its unique successor if possible, returning false
-;;; if not.
 (defun merge-successor-if-possible (iblock)
+  "Merge IBLOCK to its unique successor if possible.
+If it is possible, return true, otherwise false."
   (when (successor-mergable-p iblock)
     (merge-successor iblock)))
 
@@ -469,9 +477,8 @@
          (not (eq iblock (first (next start))))
          (set:empty-set-p (entrances iblock)))))
 
-;;; Forward the predecessors of iblock to the successor of iblock if
-;;; it is empty.
 (defun delete-iblock-if-empty (iblock)
+  "If IBLOCK is empty (i.e. consists entirely of a JUMP instruction and is not nonlocally exited to), forward its predecessors to its successors."
   (when (empty-iblock-p iblock)
     (let ((successor (first (successors iblock)))
           (predecessors (predecessors iblock)))
@@ -522,9 +529,8 @@
             (set:nadjoinf (predecessors n) new))))
     (values ib new)))
 
-;;; Compute the forward flow order for the iblocks of FUNCTION and
-;;; clean up any existing unreachable iblocks.
 (defun compute-iblock-flow-order (function)
+  "Compute the forward flow order for the iblocks of FUNCTION, and clean up any existing unreachable iblocks."
   (let ((last nil)
         (existing '()))
     ;; FIXME: Is there a consless way of doing this?

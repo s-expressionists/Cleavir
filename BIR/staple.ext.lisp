@@ -10,6 +10,10 @@
 (defmethod staple:subsystems ((sys (eql (asdf:find-system :cleavir-bir))))
   (list (asdf:find-system :cleavir-bir-visualizer)))
 
+(defmethod staple:images ((sys (eql (asdf:find-system :cleavir-bir))))
+  ;; Make sure none of the images from the visualizer are duplicated here.
+  ())
+
 (defmethod staple:packages ((sys (eql (asdf:find-system :cleavir-bir))))
   (mapcar #'find-package '("CLEAVIR-BIR" "CLEAVIR-BIR-DISASSEMBLER")))
 
