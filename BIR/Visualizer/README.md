@@ -10,7 +10,7 @@ Usage:
 (cleavir.bir.visualizer:run)
 ```
 
-[[file:documentation/screenshot.png]]
+![Screenshot of the BIR visualizer in use](screenshot.png)
 
 Then edit the form and/or change the optimization settings and watch the intermediate representations change.
 

@@ -26,7 +26,7 @@ The CSS file used for the documentation is generated from the [LASS](https://git
 
 # Copyright
 
-`top.ctml` and `top.lass` are modifications of Staple's `default/default.ctml` and `default/default.lass` respectively. The original files were authored by Nicolas Hafner (a.k.a. [Shinmera](https://github.com/Shinmera)), and the modified files are used here under the zlib license. Here is the original notice:
+`top.ctml`, `main.ctml`, and `top.lass` are modifications of Staple's `default/default.ctml` and `default/default.lass`. The original files were authored by Nicolas Hafner (a.k.a. [Shinmera](https://github.com/Shinmera)), and the modified files are used here under the zlib license. Here is the original notice:
 
 ```
 Copyright (c) 2014 Nicolas Hafner

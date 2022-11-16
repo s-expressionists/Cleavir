@@ -25,7 +25,7 @@
    (%output :initarg :output :reader staple:output)
    ;; This is the list of "local" pages, i.e. pages for this project
    ;; but not its subprojects.
-   (%pages :initarg :pages :accessor staple:pages)))
+   (%pages :initarg :pages :initform nil :accessor staple:pages)))
 
 (defmethod print-object ((o tree-project) s)
   (print-unreadable-object (o s :type t)
@@ -65,19 +65,25 @@
            (make-instance 'tree-project
              :parent parent :system system
              :output output-directory)))
-    (setf (staple:pages project)
-          ;; This dummy (nil) ensures that we get a blank index page
-          ;; even if there is no README. (A README should probably be added though.)
-          (loop for doc in (or documents (staple:documents system) '(nil))
-                collect (make-instance page-type
-                          :project project
-                          :input template
-                          :output output-directory
-                          :system system
-                          :document doc
-                          :images images
-                          :packages packages))
-          (%subprojects project)
+    ;; This dummy (nil) ensures that we get a blank index page
+    ;; even if there is no README. (A README should probably be added though.)
+    (loop for doc in (or documents (staple:documents system) '(nil))
+          for page = (make-instance page-type
+                       :project project
+                       :input template
+                       :output output-directory
+                       :system system
+                       :document doc
+                       :images images
+                       :packages packages)
+          do (push page (staple:pages project)))
+    (loop for image in images
+          for page = (make-instance 'staple:static-page
+                       :project project
+                       :input image
+                       :output (pathname-utils:file-in output-directory image))
+          do (push page (staple:pages project)))
+    (setf (%subprojects project)
           (loop for subspec in (or subsystems (staple:subsystems system))
                 collect (destructuring-bind (subsys . args)
                             (if (listp subspec) subspec (list subspec))
@@ -95,6 +101,10 @@
           (enough-namestring (staple:output object)
                              (staple:output (parent object)))))
 
+(defmethod clip:clip ((object tree-project) (field (eql :title)))
+  ;; KLUDGE
+  (staple::titleize (asdf:component-name (staple:system object))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; SYSTEM-INDEX-PAGE
@@ -105,7 +115,7 @@
   ())
 
 (defmethod staple:template-data append ((page system-index-page))
-  (list :description "Compiler toolkit for Lisp."
+  (list :description "Compiler toolkit for Lisp." ; KLUDGE
         :subprojects (subprojects (staple:project page))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,7 +123,8 @@
 ;;; Particularities for Cleavir
 ;;;
 
-;;; This is just a SIMPLE-PAGE, but set up to fix source links correctly.
+;;; This is just a SIMPLE-PAGE, but set up to fix source links correctly
+;;; and display subprojects.
 (defclass cleavir-page (staple:simple-page) ())
 
 (defparameter *cleavir-root* (pathname-utils:parent
@@ -132,6 +143,9 @@
               ;; Line numbers seem to be totally broken. Not sure why yet.
               nil #+(or)(getf source :row))
       (call-next-method)))
+
+(defmethod staple:template-data append ((page cleavir-page))
+  (list :subprojects (subprojects (staple:project page))))
 
 (defmethod staple:subsystems ((system (eql (asdf:find-system :cleavir-documentation-generation))))
   (mapcar #'asdf:find-system
