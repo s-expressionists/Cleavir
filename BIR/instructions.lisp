@@ -178,7 +178,7 @@ See WRITEVAR"))
 See LETI"))
 
 ;;; Dynamic binding. Inputs are the symbol and the new value.
-(defclass bind (dynamic-environment no-output terminator1)
+(defclass constant-bind (dynamic-environment no-output terminator1)
   ()
   (:documentation "Terminator and dynamic environment representing the binding of a dynamic variable. Within this dynamic environment, the symbol has this value (unless there is a more recent binding, of course). The first input is the symbol being bound, and the second input its new value. No outputs."))
 

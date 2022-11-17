@@ -459,22 +459,22 @@ This points directly to the corresponding BLOCK-AST rather than recording the na
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class DYNAMIC-BIND-AST ; TODO: Constant version
+;;; Class CONSTANT-DYNAMIC-BIND-AST
 ;;;
 
-(defclass dynamic-bind-ast (ast)
-  ((%name :initarg :name-ast :reader name-ast)
+(defclass constant-dynamic-bind-ast (ast)
+  ((%name :initarg :name :reader name)
    (%value :initarg :value-ast :reader value-ast)
    (%body :initarg :body-ast :reader body-ast))
   (:documentation "This AST represents the binding of a special variable."))
 
-(cleavir-io:define-save-info dynamic-bind-ast
-    (:name-ast name-ast)
+(cleavir-io:define-save-info constant-dynamic-bind-ast
+    (:name name)
   (:value-ast value-ast)
   (:body-ast body-ast))
 
-(define-children dynamic-bind-ast
-    (name-ast value-ast body-ast))
+(define-children constant-dynamic-bind-ast
+    (value-ast body-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

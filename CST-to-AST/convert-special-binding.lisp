@@ -2,8 +2,8 @@
 
 (defmethod convert-special-binding
     (variable-cst value-ast next-ast env system)
-  (make-instance 'ast:dynamic-bind-ast
-    :name-ast (convert-constant variable-cst env system)
+  (make-instance 'ast:constant-dynamic-bind-ast
+    :name (cst:raw variable-cst)
     :value-ast value-ast
     :body-ast next-ast
     :origin variable-cst))
