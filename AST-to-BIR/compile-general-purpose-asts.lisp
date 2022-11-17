@@ -392,14 +392,15 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; DYNAMIC-BIND-AST
+;;; CONSTANT-DYNAMIC-BIND-AST
 
-(defmethod compile-ast ((ast ast:dynamic-bind-ast) inserter system)
-  (with-compiled-asts (args ((ast:name-ast ast) (ast:value-ast ast))
-                            inserter system)
+(defmethod compile-ast ((ast ast:constant-dynamic-bind-ast) inserter system)
+  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
     (let* ((during (make-iblock inserter))
            (ode (dynamic-environment inserter))
-           (bind (make-instance 'bir:bind :inputs args :next (list during))))
+           (const (bir:constant-in-module (ast:name ast) *current-module*))
+           (bind (make-instance 'bir:constant-bind
+                   :inputs (list* const rv) :next (list during))))
       (setf (bir:dynamic-environment during) bind)
       (terminate inserter bind)
       (begin inserter during)

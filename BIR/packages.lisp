@@ -49,7 +49,7 @@
            #:abstract-call #:callee #:call #:local-call
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes
-           #:leti #:dynamic-leti #:bind #:enclose #:code
+           #:leti #:dynamic-leti #:constant-bind #:enclose #:code
            #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:info)
   (:export #:do-functions #:map-functions)

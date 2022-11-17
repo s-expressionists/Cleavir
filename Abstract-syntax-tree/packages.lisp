@@ -12,7 +12,7 @@
    #:constant-ast #:make-constant-ast #:value
    #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
    #:lexical-ast #:make-lexical-ast
-   #:dynamic-bind-ast
+   #:constant-dynamic-bind-ast
    #:set-constant-symbol-value-ast #:make-set-constant-symbol-value-ast
    #:symbol #:symbol-ast
    #:info #:name-ast
