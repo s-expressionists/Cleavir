@@ -1,6 +1,10 @@
 (cl:in-package #:asdf-user)
 
 (defsystem :cleavir-abstract-interpreter
+  :description "Abstract interpreter for BIR."
+  :author "Bike <aeshtaer@gmail.com>"
+  :version "0.0.1"
+  :license "BSD"
   :depends-on (:cleavir-bir :cleavir-set :cleavir-stealth-mixins
                :cleavir-attributes :cleavir-ctype)
   :components

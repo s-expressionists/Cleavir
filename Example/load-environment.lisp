@@ -1,8 +1,8 @@
 (in-package #:cleavir-example)
 
-;;;; Load an example environment full of stuff from the host.
-
 (defun load-environment (&optional (env *environment*))
+  "Fill the given example environment full of much of the CL package, taken from the host.
+Note that most macros are not taken, since they may not expand into portable code."
   (do-external-symbols (s "CL")
     (cond ((constantp s)
            (%defconstant s (cl:eval s) env))

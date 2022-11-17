@@ -1,25 +1,34 @@
 (in-package #:cleavir-bir)
 
-;;; Abstract. Something that can serve as a dynamic environment.
 (defclass dynamic-environment ()
-  (;; The set of iblocks that have this as their dynamic environment.
-   (%scope :initarg :scope :accessor scope :initform (set:empty-set)
-           :type set:set)))
+  ((%scope :initarg :scope :accessor scope :initform (set:empty-set)
+           :type set:set
+           :documentation "The set of iblocks that have this as their dynamic environment."))
+           (:documentation "Abstract. Something that can serve as a dynamic environment.
+This is a dynamic environment in the sense of CLHS 3.1.1.2. An equivalent characterization is that it is a property of the continuation.
+Dynamic environments include dynamic variable bindings and exit points, for example."))
+
 (defun parent (dynamic-environment)
+  "Return the parent dynamic environment of this dynamic environment. If this dynamic environment is a function, its parent is conceptually variable, and NIL is returned."
   (if (typep dynamic-environment 'function)
       nil
       (dynamic-environment (iblock dynamic-environment))))
 
-(defgeneric origin (bir))
+(defgeneric origin (bir)
+  (:documentation "Return the source position of a BIR object. The nature of this source position is up to the producer of the BIR."))
 
 (defclass datum ()
-  (;; A name, for debugging/display/etc. NIL means no name.
-   (%name :initarg :name :initform nil :reader name
+  ((%name :initarg :name :initform nil :reader name
           :type (or symbol (cons symbol (cons symbol null)) ; e.g. (LABELS REC)
-                    null))))
+                    null)
+          :documentation "A name for debugging and display."))
+  (:documentation "Abstract. A representation of zero or more runtime values. In some cases, data may represent non-Lisp objects, such as \"unboxed\" objects, or low-level objects like pointers."))
 
-;;; A lexical is a datum that can be bound in an environment.
-(defclass lexical (datum) ())
+(defclass lexical (datum) ()
+  (:documentation "Abstract. A datum that can be bound in a lexical environment.
+
+See VARIABLE
+See COME-FROM"))
 
 (defmethod print-object ((o datum) stream)
   (print-unreadable-object (o stream :type t :identity t)
@@ -28,18 +37,23 @@
       (let ((name (name o)))
         (when name (write name :stream stream))))))
 
-(defgeneric unused-p (datum))
-(defgeneric ssa-p (datum))
+(defgeneric unused-p (datum)
+  (:documentation "Return true iff the datum is unused."))
+(defgeneric ssa-p (datum)
+  (:documentation "Return true iff the datum has exactly one definition (e.g., is a variable that is bound and then not set again). Note that a datum that has only one definition in a program's source is SSA even if that definition can be reached repeatedly while executing the program."))
 
 ;;; A datum with only one definition (static single assignment).
-(defclass ssa (datum) ())
+(defclass ssa (datum) ()
+  (:documentation "Abstract. A datum with only one definition. SSA stands for \"static single assignment\"."))
 (defmethod ssa-p ((ssa datum)) t)
+(defgeneric ctype (linear-datum)
+  (:documentation "The type of the datum that we can assume when making inferences.
 
-;;; This type represents the type of the datum that we can assume when
-;;; making inferences.
-(defgeneric ctype (linear-datum))
-;;; This type represents the type of the datum the code declares.
-(defgeneric asserted-type (linear-datum))
+See ASSERTED-TYPE"))
+(defgeneric asserted-type (linear-datum)
+  (:documentation "The type of the datum that the code declares. While it would be unsafe to use this for inference, it can be used for example to report statically detectable type errors.
+
+See CTYPE"))
 
 ;;; Default for ctypes.
 (defvar *top-ctype*)
@@ -48,37 +62,51 @@
       *top-ctype*
       (ctype:values-top nil)))
 
-;;; A datum with only one use.
+(defgeneric attributes (object)
+  (:documentation "Retrieve flow information for OBJECT beyond its type."))
+
 (defclass linear-datum (datum)
   ((%use :initarg :use :initform nil :reader use :accessor %use
          :type (or null instruction))
-   ;; A type that the code declares holds for this linear-datum.
    (%asserted-type :initform (current-top-ctype)
                    :initarg :asserted-type
-                   :accessor asserted-type)
-   ;; A type the compiler has proven holds for this linear-datum.
+                   :accessor asserted-type
+                   :documentation "A type that the code declares holds for this linear-datum.")
    (%derived-type :initform (current-top-ctype)
                   :initarg :derived-type
                   :writer (setf derived-type)
                   ;; For a generic linear datum, the type we use to
                   ;; make inferences is just the type the compiler has
                   ;; proven about this datum.
-                  :reader ctype)
-   ;; Additional flow attributes
+                  :reader ctype
+                  :documentation "A type the compiler has proven holds for this linear-datum.")
    (%attributes :initarg :attributes :accessor attributes
-                :initform (attributes:default-attributes))))
+                :initform (attributes:default-attributes)
+                :documentation "Additional flow attributes"))
+  (:documentation "Abstract. A datum with only one use (statically). Note that a datum with only one use in a program's source is linear, even if that use can be reached multiple times during execution of the program."))
 (defmethod unused-p ((datum linear-datum))
   (null (use datum)))
 
-;;; A datum with one definition and one use.
-(defclass transfer (ssa linear-datum) ())
+(defclass transfer (ssa linear-datum)
+  ()
+  (:documentation "Abstract. A datum with exactly one definition and exactly one use.
 
-;;; An SSA datum with only one definition - itself.
-(defclass value (ssa) ())
+See SSA
+See LINEAR-DATUM"))
+
+(defclass value (ssa)
+  ()
+  (:documentation "Abstract. An SSA datum with only one definition - itself. Used for e.g. constants.
+
+See SSA"))
 
 (defclass constant (value)
   ((%value :initarg :value :reader constant-value)
-   (%readers :initform (set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:documentation "A datum representing a constant.
+For linearity purposes, constants cannot be used directly as inputs to most instructions, and must instead go through CONSTANT-REFERENCE or the like first.
+
+See CONSTANT-REFERENCE"))
 
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -87,7 +115,11 @@
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
-   (%readers :initform (set:empty-set) :accessor readers)))
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:documentation "A datum representing a cl:load-time-value form.
+For linearity purposes, LOAD-TIME-VALUE data cannot be used directly as inputs to instructions except for LOAD-TIME-VALUE-REFERENCE.
+
+See LOAD-TIME-VALUE-REFERENCE"))
 
 ;;; These variables are used for defaulting the origin and policy.
 ;;; If they are not bound it should still be possible to make instructions,
@@ -97,35 +129,55 @@
 (defun current-policy () (if (boundp '*policy*) *policy* nil))
 (defun current-origin () (if (boundp '*origin*) *origin* nil))
 
-;;; An instruction is something to be done.
-;;; All instructions have sequences of inputs and outputs.
-;;; Every input and output is a LINEAR-DATUM, except that READVAR has a VARIABLE
-;;; input and WRITEVAR has one as an output.
-(defgeneric inputs (instruction))
-(defgeneric (setf inputs) (new-inputs instruction))
-(defgeneric outputs (instruction))
-(defgeneric (setf outputs) (new-outputs instruction))
+(defgeneric inputs (instruction)
+  (:documentation "Return an instruction's input data as a sequence. Direct modification of the sequence is not permitted. Go through (SETF INPUTS) instead, or higher level operators.
+
+See DATUM
+See REPLACE-USES"))
+(defgeneric (setf inputs) (new-inputs instruction)
+  (:documentation "Set an instruction's input data."))
+(defgeneric outputs (instruction)
+  (:documentation "Return an instruction's output data as a sequence. Direct modification of the sequence is not permitted. In almost all cases, the list will have zero or one outputs."))
+(defgeneric (setf outputs) (new-outputs instruction)
+  (:documentation "set an instruction's output data."))
 
 (defclass instruction ()
   ((%predecessor :initarg :predecessor :accessor predecessor
                  :initform nil
-                 ;; NIL indicates this is the first in a iblock.
-                 :type (or instruction null))
+                 :type (or instruction null)
+                 :documentation "The previous instruction in its IBLOCK. If NIL, this is the head instruction of the IBLOCK.")
    (%successor :initarg :successor :accessor successor
-               ;; NIL indicates this is a terminator.
                ;; FIXME: This type declaration causes crashes-to-LDB in SBCL
                ;; under unclear circumstances.
                :type #-sbcl (or instruction null)
-                     #+sbcl (or standard-object null))
+                     #+sbcl (or standard-object null)
+               :documentation "The next instruction. If NIL, this instruction terminates an iblock.")
    (%inputs :initform nil :initarg :inputs :accessor inputs
             ;; Sequence of DATA.
-            :type sequence);; Sequence of data.
+            :type sequence)
    (%outputs :initform '() :initarg :outputs :accessor outputs
              :type sequence)
-   ;; The iblock this instruction belongs to.
-   (%iblock :initarg :iblock :accessor iblock :type iblock)
+   (%iblock :initarg :iblock :accessor iblock :type iblock
+            :documentation "The IBLOCK this instruction belongs to.")
    (%policy :initform (current-policy) :initarg :policy :reader policy)
-   (%origin :initform (current-origin) :initarg :origin :reader origin)))
+   (%origin :initform (current-origin) :initarg :origin :reader origin))
+  (:documentation "Abstract. Cleavir's representation of a computation to be done.
+All instructions have a sequence of input data and a sequence of output data. With a few exceptions, documented in individual instruction classes, all inputs and outputs are linear.
+
+See INPUTS
+See OUTPUTS
+See SUCCESSOR
+See IBLOCK
+See LINEAR-DATUM"))
+
+(defgeneric function (ir)
+  (:documentation "Return the FUNCTION this BIR object belongs to.
+
+See FUNCTION"))
+(defgeneric dynamic-environment (ir)
+  (:documentation "Return the DYNAMIC-ENVIRONMENT this BIR object belongs to.
+
+See DYNAMIC-ENVIRONMENT"))
 
 ;;; Shortcuts to get an instruction's owner
 (defmethod function ((instruction instruction))
@@ -134,13 +186,13 @@
 (defmethod dynamic-environment ((instruction instruction))
   (dynamic-environment (iblock instruction)))
 
-(defgeneric definitions (datum))
+(defgeneric definitions (datum)
+  (:documentation "Return the set of definitions of a DATUM."))
 
-;;; Data output by an instruction.
-;;; (If a terminator, PHIs are output instead.)
 (defclass output (transfer)
   ((%definition :initform nil :initarg :definition
-                :reader definition :accessor %definition)))
+                :reader definition :accessor %definition))
+  (:documentation "A DATUM output by an instruction. All instructions output only OUTPUTs, except for terminators which output PHIs, and WRITEVAR which outputs a VARIBLE."))
 
 (defmethod definitions ((datum output))
   (set:make-set (definition datum)))
@@ -150,37 +202,46 @@
 
 ;;; some useful mixins
 (defclass no-input (instruction)
-  ((%inputs :initform nil :type null)))
+  ((%inputs :initform nil :type null))
+  (:documentation "Mixin. An instruction with no inputs."))
 (defclass one-input (instruction)
   ((%inputs :initform nil
-            :type (or null (cons datum null)))))
+            :type (or null (cons datum null))))
+  (:documentation "Mixin. An instruction with exactly one input."))
 (defclass no-output (instruction)
-  ((%outputs :initform '() :type null)))
+  ((%outputs :initform '() :type null))
+  (:documentation "Mixin. An instruction with no outputs."))
 (defclass one-output (instruction)
   ((%outputs :initform nil
-             :type (or null (cons datum null)))))
+             :type (or null (cons datum null))))
+  (:documentation "Mixin. An instruction with exactly one output."))
 
-(defmethod input ((inst one-input)) (first (inputs inst)))
-(defmethod output ((inst one-output)) (first (outputs inst)))
+(defgeneric input (instruction)
+  (:method ((inst one-input)) (first (inputs inst)))
+  (:documentation "Shortcut to get the sole input of an instruction."))
+(defgeneric output (instruction)
+  (:method ((inst one-output)) (first (outputs inst)))
+  (:documentation "Shortcut to get the sole output of an instruction."))
 
-;;; An instruction that can end a iblock (abstract)
 (defclass terminator (instruction)
   ((%successor :initform nil :type null)
    (%next :initarg :next :accessor next
           ;; A list of iblocks.
-          :type list)))
+          :type list
+          :documentation "The list of IBLOCKs this terminator can branch to."))
+  (:documentation "Abstract. An instruction that terminates (is at the end of) an IBLOCK."))
 
-;;; A terminator with no next iblocks (abstract)
 (defclass terminator0 (terminator)
-  ((%next :initform nil :type null)))
+  ((%next :initform nil :type null))
+  (:documentation "Abstract. A TERMINATOR with no NEXT IBLOCKs. This means that is an end to execution in this function."))
 
-;;; A terminator with exactly one next iblock (abstract)
 (defclass terminator1 (terminator)
-  ((%next :type (or null (cons iblock null))))) ; can be null after metaevaluate
+  ((%next :type (or null (cons iblock null)))) ; can be null after metaevaluate
+  (:documentation "Abstract. A TERMINATOR with exactly one NEXT IBLOCK. After this instruction, control unconditionally transfers to that IBLOCK."))
 
-;;; An argument to a function.
 (defclass argument (value transfer)
-  ((%function :initarg :function :reader function :type function)))
+  ((%function :initarg :function :reader function :type function))
+  (:documentation "A DATUM representing an argument to a FUNCTION."))
 
 ;;; An ARGUMENT is unused if either it itself has no use or it's use
 ;;; is a LETI with no readers.
@@ -189,10 +250,10 @@
       (let ((use (use datum)))
         (and (typep use 'leti) (unused-p (output use))))))
 
-;;; An argument to an iblock.
 (defclass phi (linear-datum)
   ((%iblock :initarg :iblock :reader iblock
-            :type iblock)))
+            :type iblock))
+  (:documentation "A DATUM representing an argument to an IBLOCK. Alternatively, it may be characterized as a data merger point, as in conventional SSA form."))
 
 (defmethod definitions ((phi phi))
   (let ((ib (iblock phi))
@@ -205,8 +266,10 @@
       (set:nadjoinf definitions (end entrance)))
     definitions))
 
-;;; The ``transitive'' use of a linear datum walks through jump/phi usages.
 (defun transitive-use (linear-datum)
+  "The eventual use of a datum after considering its transfer through JUMP instructions.
+
+See JUMP"
   (loop
     (let ((use (use linear-datum)))
       (unless (typep use 'jump)
@@ -215,8 +278,8 @@
             (nth (position linear-datum (inputs use))
                  (outputs use))))))
 
-;;; Get the set of data that feed into the phi.
 (defun phi-inputs (phi)
+  "Return the set of DATA that can provide values for this PHI."
   (let* ((ib (iblock phi))
          (pos (position phi (inputs ib)))
          (inputs (set:empty-set)))
@@ -234,26 +297,24 @@
         (set:nadjoinf inputs in)))
     inputs))
 
-;;; A mutable lexical variable which must be read from and written to
-;;; via READVAR and WRITEVAR instructions.
 (defclass variable (lexical)
-  (;; Indicates the extent of a lexical variable. Filled in by
-   ;; variable extent analysis. Note that the dynamic extent of
-   ;; variables themselves are induced by the extent of the closures
-   ;; closing over it and independent of dynamic extent
-   ;; declarations. A dynamic extent declaration on a variable is
-   ;; instead supposed to mark the extent of the value it is bound
-   ;; to. Therefore we carry that kind of dynamic extent on the binder
-   ;; of the variable and propagate that back to implement the
-   ;; semantics of dynamic extent declarations.
-   (%extent :initarg :extent :accessor extent
+  ((%extent :initarg :extent :accessor extent
             :initform :unanalyzed
             :type (member :unanalyzed
                           :local
                           :dynamic
-                          :indefinite))
-   ;; The LETI that binds this variable.
-   (%binder :initarg :binder :accessor binder :type leti)
+                          :indefinite)
+            :documentation "Indicates the extent of a lexical variable. Filled in by
+   variable extent analysis. Note that the dynamic extent of
+   variables themselves are induced by the extent of the closures
+   closing over it and independent of dynamic extent
+   declarations. A dynamic extent declaration on a variable is
+   instead supposed to mark the extent of the value it is bound
+   to. Therefore we carry that kind of dynamic extent on the binder
+   of the variable and propagate that back to implement the
+   semantics of dynamic extent declarations.")
+   (%binder :initarg :binder :accessor binder :type leti
+            :documentation "The LETI that binds this variable.")
    (%writers :accessor writers
              :initform (set:empty-set)
              ;; All WRITEVAR instructions.
@@ -262,11 +323,14 @@
              :initform (set:empty-set)
              ;; All READVAR instructions.
              :type set:set)
-   ;; Has this variable ever been used?
    (%use-status :initarg :use-status :initform nil :reader use-status
-                :type (member nil set read))
-   ;; What kind of ignore declaration is on this variable?
-   (%ignore :initarg :ignore :reader ignore)))
+                :type (member nil set read)
+                :documentation "Indication of how this variable has been used, for the purpose of cl:ignore-related warnings.")
+   (%ignore :initarg :ignore :reader ignore
+            ;; TODO: Clarify type
+            :documentation "The cl:ignore declaration on this variable."))
+  (:documentation "A DATUM representing a mutable lexical variable.
+It can be read from and written to any number of times, and across FUNCTIONs, but these writes and reads must be mediated by WRITEVAR and READVAR instructions."))
 
 (defmethod origin ((datum variable)) (origin (binder datum)))
 
@@ -274,10 +338,12 @@
   (set:empty-set-p (readers datum)))
 
 (defun record-variable-set (variable)
+  "Mark that the program writes the given variable."
   (with-slots (%use-status) variable
     (or %use-status (setf %use-status 'set))))
 
 (defun record-variable-ref (variable)
+  "Mark that the program reads from the given variable."
   (with-slots (%use-status) variable
     (setf %use-status 'read)))
 
@@ -285,9 +351,11 @@
   (function (binder v)))
 
 (defun immutablep (variable)
+  "Return true iff this variable has only one definition statically."
   (= (set:size (writers variable)) 1))
 
 (defun closed-over-p (variable)
+  "Return true iff this variable is shared across multiple FUNCTIONs."
   (let ((owner (function variable)))
     (set:doset (reader (readers variable))
       (unless (eq owner (function reader))
@@ -296,7 +364,6 @@
       (unless (eq owner (function writer))
         (return-from closed-over-p t)))))
 
-;;; A sequence of instructions with no branching.
 (defclass iblock ()
   ((%start :initarg :start :accessor start
            :type instruction)
@@ -310,11 +377,10 @@
             :initform nil
             ;; A sequence of PHIs
             :type sequence)
-   ;; A set of IBLOCKs that enter this function nonlocally
-   ;; (i.e. with an UNWIND operation).
    (%entrances :initarg :entrances :accessor entrances
                :initform (set:empty-set)
-               :type set:set)
+               :type set:set
+               :documentation "The set of IBLOCKs that can transfer control to this iblock nonlocally, i.e. with an UNWIND operation.")
    ;; The links for the doubly linked list of iblocks maintained in
    ;; forward flow order.
    (%next :initform nil :accessor %next :type (or null iblock))
@@ -327,13 +393,16 @@
    ;; The function this belongs to.
    (%function :initarg :function :accessor function :type (or null function)) ; null is for deleted blocks
    ;; For debug/introspection
-   (%name :initarg :name :reader name :initform nil)))
+   (%name :initarg :name :reader name :initform nil))
+  (:documentation "A sequence of instructions with no branching.
+In other words this is a conventional \"basic block\", except that Cleavir will sometimes keep distinct iblock segments around for various purposes, such as to indicate differnet dynamic environments."))
 
 (defmethod print-object ((o iblock) s)
   (print-unreadable-object (o s :type t)
     (write (name o) :stream s)))
 
 (defun iblock-started-p (iblock)
+  "Return true iff the IBLOCK has begun being generated, i.e. has any instructions in it."
   (slot-boundp iblock '%start))
 
 (defun successors (iblock)
@@ -383,16 +452,13 @@
    (%attributes :initarg :attributes :accessor attributes
                 :initform (attributes:default-attributes))
    ;; The module containing this function.
-   (%module :initarg :module :reader module :type module)))
+   (%module :initarg :module :reader module :type module))
+  (:documentation "Cleavir's representation of the code for a Lisp function."))
 
 (defmethod print-object ((o function) s)
   (print-unreadable-object (o s :type t)
     (write (name o) :stream s)))
 
-;;; A set of functions which are compiled together (as opposed to
-;;; "separate compilation") and can participate in interprocedural
-;;; optimizations such as inlining. For example, lexically nested
-;;; functions are always compiled together.
 (defclass module ()
   ((%functions :initarg :functions :accessor functions
                :initform (set:empty-set)
@@ -406,7 +472,9 @@
                       :type set:set)
    ;; This table ensures that only one constant object per similar
    ;; object is created.
-   (%constant-table :accessor constant-table)))
+   (%constant-table :accessor constant-table))
+  (:documentation "A set of functions which are compiled together (as opposed to \"separate compilation\") and which can participate in interprocedural optimizations such as inlining.
+ For example, lexically nested functions are always compiled together."))
 
 (defmethod initialize-instance :after ((module module) &key)
   ;; FIXME: In code with file compilation semantics, we are allowed to
@@ -414,9 +482,10 @@
   ;; into the table initialization logic here.
   (setf (constant-table module) (make-hash-table :test #'eq)))
 
-;;; Find the constant object for CONSTANT-VALUE in MODULE, allocating
-;;; a new one in the module if necessary.
 (defun constant-in-module (constant-value module)
+  "Find the CONSTANT for the given value in MODULE, allocating a new one in the module if necessary.
+
+See CONSTANT"
   (let ((constant-table (constant-table module)))
     (or (gethash constant-value constant-table)
         (let ((constant (make-instance 'constant :value constant-value)))
@@ -424,19 +493,18 @@
           (setf (gethash constant-value constant-table) constant)
           constant))))
 
-;;; Find the L-T-V object for the given load-time-value form, allocating
-;;; a new one in the module if necessary.
 (defun load-time-value-in-module (form read-only-p module)
+  "Find the L-T-V object for the given cl:load-time-value form, allocating a new one in the module if necessary."
   ;; Actually we always make a new one. The standard mentions the possibility
   ;; of coalescing if the forms are identical, but that's pretty marginal.
-  ;; We can look into it later if we need to.
+  ;; We can look into coalescence later if we need to.
   (let ((ltv (make-instance 'load-time-value
                :form form :read-only-p read-only-p)))
     (set:nadjoinf (load-time-values module) ltv)
     ltv))
 
-;;; The set of blocks in a function that have nonlocal entrances.
 (defmethod entrances ((function function))
+  "The set of blocks in a function that have nonlocal entrances."
   (let ((entrances (set:empty-set)))
     (set:doset (come-from (come-froms function))
       (set:doset (unwind (unwinds come-from))

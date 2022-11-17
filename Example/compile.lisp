@@ -62,4 +62,5 @@
   bir)
 
 (defun frontend (cst)
+  "Given a CST, compile it in the example system and return the resulting post-optimization BIR."
   (transform (bir:module (cst->bir cst))))

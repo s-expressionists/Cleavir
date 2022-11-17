@@ -1,38 +1,20 @@
 (in-package #:cleavir-bir)
 
-;;;; This file defines a disassembler for displaying BIR in a human-readable
-;;;; format. This is primarily text-based and aims at brevity and simplicity.
-;;;; For a more visual way to understand BIR, try Visualizer/.
-
-;;;; In more detail, there are two stages of disassembly available. The first
-;;;; converts BIR objects into s-expressions.
-;;;; BIR data are represented by symbols, which may be arbitrarily named by the
-;;;; disassembler if they are nameless. Iblocks and functions are also named by
-;;;; symbols. These s-expressions are produced by the function DISASSEMBLE,
-;;;; which accepts modules, functions, iblocks, or individual instructions.
-
-;;;; The s-expressions can then be printed to standard output with
-;;;; DISPLAY-MODULE-DISASSEMBLY, etc. The printed format has the same
-;;;; information as the s-expressions, but formatted for easy readability.
-
-;;;; For convenience, you can use DISPLAY, which performs both steps at once on
-;;;; a module, function, iblock, or instruction.
-
 (defvar *ids*)
 (defvar *name-ids*)
 
 ;;; Control parameters
 
-(defvar cleavir-bir-disassembler:*show-dynenv* t)
-(defvar cleavir-bir-disassembler:*show-ctype* nil)
+(defvar cleavir-bir-disassembler:*show-dynenv* t
+  "When true, the disassembler will display the dynamic environments of iblocks.")
+(defvar cleavir-bir-disassembler:*show-ctype* nil
+  "When true, the disassembler will display the inferred ctypes of data.")
 
-;;; More advanced usage: You can use the WITH-DISASSEMBLY macro around multiple
-;;; disassembly operations. All disassemble operations in the dynamic extent of
-;;; a WITH-DISASSEMBLY will share names, etc. You can use this to display only
-;;; particular regions of interest.
+;;; More advanced usage
 
 (defvar *in-disassembly* nil)
 (defmacro cleavir-bir-disassembler:with-disassembly ((&key override) &body body)
+  "All disassemble operations in the dynamic extent of a WITH-DISASSEMBLY form will share names, etc. You can use this to display only particular regions of interest."
   (let ((bodyf (gensym "BODY")))
     `(flet ((,bodyf () ,@body))
        (if (or ,override (not *in-disassembly*))
@@ -58,7 +40,8 @@
            (setf (gethash name *name-ids*) 0)
            (make-symbol (write-to-string name :escape nil))))))
 
-(defgeneric cleavir-bir-disassembler:disassemble (bir))
+(defgeneric cleavir-bir-disassembler:disassemble (bir)
+  (:documentation "Return an s-expression representation of a BIR object."))
 
 (defgeneric disassemble-datum (datum))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
@@ -180,6 +163,7 @@
 
 (defun cleavir-bir-disassembler:display-instruction-disassembly
     (inst-disasm &key (show-ctype cleavir-bir-disassembler:*show-ctype*))
+  "Given the s-expression representation of a BIR instruction (obtained via DISASSEMBLE), print a textual representation to standard output."
   (destructuring-bind (assign outs . rest) inst-disasm
     (declare (cl:ignore assign))
     (format t "~&     ")
@@ -202,6 +186,7 @@
                      (show-dynenv cleavir-bir-disassembler:*show-dynenv*)
                      ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
                       cleavir-bir-disassembler:*show-ctype*))
+  "Given the s-expression representation of a BIR iblock (obtained via DISASSEMBLE), print a textual representation to standard output."
   (destructuring-bind ((label . args) dynenv entrances &rest insts)
       iblock-disasm
     (format t "~&  iblock ~a ~:a:" label args)
@@ -218,6 +203,7 @@
                       cleavir-bir-disassembler:*show-dynenv*)
                      ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
                       cleavir-bir-disassembler:*show-ctype*))
+  "Given the s-expression representation of a BIR function (obtained via DISASSEMBLE), print a textual representation to standard output."
   (destructuring-bind ((name start args env) . iblocks)
       function-disasm
     (format t "~&function ~a ~:a ~&     with environment ~(~:a~) ~&     with start iblock ~a"
@@ -231,13 +217,16 @@
                cleavir-bir-disassembler:*show-dynenv*)
               ((:show-ctype cleavir-bir-disassembler:*show-ctype*)
                cleavir-bir-disassembler:*show-ctype*))
+  "Given the s-expression representation of a BIR module (obtained via DISASSEMBLE), print a textual representation to standard output."
   (format t "~&-------module-------")
   (destructuring-bind (constants . funs) disasm
     (format t "~&constants: ~:s" constants)
     (mapc #'cleavir-bir-disassembler:display-function-disassembly funs))
   (values))
 
-(defgeneric cleavir-bir-disassembler:display (bir &key))
+(defgeneric cleavir-bir-disassembler:display (bir &key)
+  (:documentation "Print a textual representation of the BIR object to standard output.
+This is the main entry point to the disassembler."))
 (defmethod cleavir-bir-disassembler:display
     ((module module)
      &key ((:show-dynenv cleavir-bir-disassembler:*show-dynenv*)

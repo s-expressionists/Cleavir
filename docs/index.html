@@ -1,0 +1,54 @@
+<!DOCTYPE html> <html lang="EN"> <head> <meta charset="utf-8"> <title>Cleavir</title> <style>html body{margin:0 auto 0 auto;padding:20px;max-width:1024px;font-family:sans-serif;font-size:14pt;overflow-y:scroll;}html body a{text-decoration:none;}html body a[href]{color:#0055AA;}html body a[href]:hover{color:#0088EE;}html body pre{background:#FAFAFA;border:1px solid #DDDDDD;padding:0.75em;overflow-x:auto;}html body pre >code a[href]{color:#223388;}article.project h1{font-size:1.7em;}article.project h1,article.project h2,article.project h3,article.project h4,article.project h5,article.project h6{margin:0.2em 0 0.1em 0;text-indent:1em;}article.project >header{text-align:center;}article.project >header img.logo{display:block;margin:auto;max-height:170px;}article.project >header h1{display:inline-block;text-indent:0;font-size:2.5em;}article.project >header .version{vertical-align:bottom;}article.project >header .languages{margin-top:-0.5em;text-transform:capitalize;}article.project >header .description{margin:0;}article.project >header .pages{margin-top:0.5em;font-size:1.2em;text-transform:capitalize;}article.project >header .pages a{display:inline-block;padding:0 0.2em;}article.project >section{margin:1em 0 1em 0;}article.project #subsystems >ul{list-style:none;margin:0;padding:0;}article.project .row label{display:inline-block;min-width:8em;}article.project #system .row{display:flex;}article.project #system #dependencies{display:inline;margin:0;padding:0;}article.project #system #dependencies li{display:inline;padding:0 0.2em;}article.project #system #author label{vertical-align:top;}article.project #system #author ul{display:inline-block;margin:0;padding:0;list-style:none;}article.subsystem{margin:1em 0 0 0;}article.subsystem >header h1,article.subsystem >header h2,article.subsystem >header h3,article.subsystem >header h4,article.subsystem >header h5,article.subsystem >header h6{text-indent:0;display:inline-block;}article.subsystem >header ul{display:inline-block;list-style:none;margin:0;padding:0;}article.subsystem >header ul li{display:inline-block;padding:0 0.2em 0 0;}article.subsystem >header .visibility{display:none;}article.subsystem >header .visibility,article.subsystem >header .type{text-transform:lowercase;}article.subsystem >header .source-link{visibility:hidden;float:right;}.subsystem li>mark{background:none;border-left:0.3em solid #0088EE;padding-left:0.3em;display:block;}</style> </head> <body> <article class="project"> <header>   <h1>Cleavir</h1>   <span class="version">1.0.0</span>    <p class="description">Compiler toolkit for Lisp.</p>  </header> <section id="documentation"><h1 id="cleavir">Cleavir</h1> <p>Cleavir is an implementation-independent framework for creating Common Lisp compilers. It is modular and extensible, so that CL implementations with different aims and backends can share the same code.</p> <h2 id="getting_started">Getting started</h2> <p>The <code>Example/</code> directory contains a worked example of a simplified Cleavir client, showing how Cleavir can be used to translate Common Lisp code into an intermediate representation, and how optimizations can be applied to this IR. The README there explains how to load and use that system.</p> <h2 id="basic_structure">Basic structure</h2> <p>Cleavir is not a single system. It is instead a collection of systems that can be incorporated together as subsystems of a compiler.</p> <p>The CST-to-AST system parses Common Lisp source code, in the form of <a href="https://github.com/s-expressionists/Concrete-Syntax-Tree">CSTs</a>, into objects called Abstract Syntax Trees (ASTs). ASTs closely represent the original source as <code><a href="http://l1sp.org/cl/standard-object" class="xref">standard-object</a></code>s. They are suitable for further compilation processing, but also for other purposes like code walking and some analysis.</p> <p>The AST-to-BIR system generates a Block-based Intermediate Representation (BIR) from ASTs. The BIR makes program control and data flow explicit while remaining independent of the target machine. More information on BIR is available in the <code>BIR/</code> directory.</p> <p>The BIR-transformations system analyzes and applies various optimizations to BIR. More information on the transformations Cleavir defines are available in the <code>BIR-transformations/</code> directory.</p> <p>Clients may customize surface syntax by defining subclasses and methods at the AST level, and lower level operations by doing the same at the IR level. Individual modules can be used independently of one another, e.g. a code-walking application need not use anything below the AST level.</p> </section>   <section id="system"> <h2>System Information</h2>  <div class="row"> <label for="version">Version:</label> <a id="version">1.0.0</a> </div>    <div class="row" id="author"> <label for="author">Authors:</label> <ul> <li><a href="mailto:robert.strandh@gmail.com">Robert Strandh</a> </li>  <li><a href="mailto:aeshtaer@gmail.com">Bike</a> </li>  <li><a>Charles Zhang</a> </li>  <li><a href="mailto:jmoringe@techfak.uni-bielefeld.de">Jan Moringen</a> </li>  <li><a href="mailto:marco.heisig@fau.de">Marco Heisig</a> </li> </ul> </div>   <div class="row"> <label for="license">License:</label> <a id="license" href="https://tldrlegal.com/search?q=BSD">BSD</a> </div>   <div class="row"> <label for="homepage">Homepage:</label> <a id="homepage" href="https://s-expressionists.github.io/Cleavir/">https://s-expressionists.github.io/Cleavir/</a> </div>   </section>    <section id="subsystems"> <h2>Subsystems</h2> <ul> <li> <article class="subsystem"> <header> <h3> <a href="cleavir-example/index.html">cleavir-example</a> </h3> </header> <p class="description">Example frontend for the Cleavir toolkit.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-cst-to-ast/index.html">cleavir-cst-to-ast</a> </h3> </header> <p class="description">Compiler of source concrete syntax trees into abstract syntax trees.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-environment/index.html">cleavir-environment</a> </h3> </header> <p class="description">Interface for managing lexical environments.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-ast/index.html">cleavir-ast</a> </h3> </header> <p class="description">Abstract Syntax Tree representation for Common Lisp code.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-ast-to-bir/index.html">cleavir-ast-to-bir</a> </h3> </header> <p class="description">Compiler of abstract syntax trees into BIR.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-bir/index.html">cleavir-bir</a> </h3> </header> <p class="description">Block-based Intermediate Representation for compiled Lisp code.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-set/index.html">cleavir-set</a> </h3> </header> <p class="description">A set data structure.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-attributes/index.html">cleavir-attributes</a> </h3> </header> <p class="description">Information about values not encompassed by the type system.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-ctype/index.html">cleavir-ctype</a> </h3> </header> <p class="description">Interface to client type systems.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-primop/index.html">cleavir-primop</a> </h3> </header> <p class="description">Abstract Syntax Tree representation for Common Lisp code.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-compilation-policy/index.html">cleavir-compilation-policy</a> </h3> </header> <p class="description">System for representing and interrogating compiler policies.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-conditions/index.html">cleavir-conditions</a> </h3> </header> <p class="description">Utilities for conditions signaled by compilers.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-io/index.html">cleavir-io</a> </h3> </header> <p class="description">Utilities for textual I/O of Lisp objects.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-meter/index.html">cleavir-meter</a> </h3> </header> <p class="description">Utilities for measuring performance of compiler tools.</p> </article> </li>  <li> <article class="subsystem"> <header> <h3> <a href="cleavir-stealth-mixins/index.html">cleavir-stealth-mixins</a> </h3> </header> <p class="description">Utilities for adding mixins to classes after they are defined.</p> </article> </li> </ul> </section>  </article> <script>window.addEventListener("DOMContentLoaded", function(){
+    var unmarkElement = function(el){
+        if(el.tagName === "mark" || el.tagName === "MARK"){
+            [].forEach.call(el.childNodes, function(child){
+                el.parentNode.insertBefore(child, el);
+            });
+            el.parentNode.removeChild(el);
+        }else if(el.parentNode.tagName === "mark"){
+            return unmarkElement(el.parentNode);
+        }
+        return null;
+    }
+
+    var unmarkAll = function(root){
+        root = root || document;
+        [].forEach.call(root.querySelectorAll("mark"), unmarkElement);
+    }
+    
+    var markElement = function(el){
+        if(el.parentNode.tagName === "mark" || el.parentNode.tagName === "MARK"){
+            return el.parentNode;
+        } else {
+            unmarkAll();
+            var marked = document.createElement("mark");
+            el.parentNode.insertBefore(marked, el);
+            marked.appendChild(el);
+            return marked;
+        }
+    }
+
+    var markFragmented = function(){
+        if(window.location.hash){
+            var el = document.getElementById(decodeURIComponent(window.location.hash.substr(1)));
+            if(el) markElement(el);
+        }
+    }
+
+    var registerXrefLink = function(link){
+        var el = document.getElementById(decodeURIComponent(link.getAttribute("href").substr(1)));
+        if(el){
+            link.addEventListener("click", function(){
+                markElement(el);
+            });
+        }
+    }
+
+    var registerXrefLinks = function(root){
+        root = root || document;
+        [].forEach.call(root.querySelectorAll("a.xref"), registerXrefLink);
+    }
+
+    markFragmented();
+    registerXrefLinks();
+}); </script> </body> </html> 
