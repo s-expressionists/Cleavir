@@ -61,45 +61,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Mixin classes.
-;;; FIXME: These may be obsolete, as we move away from representing client-dependent
-;;; information in the AST.
-
-(defclass boolean-ast-mixin () ()
-  (:documentation "This class is used as a superclass for ASTs that produce Boolean results, so are mainly used as the TEST-AST of an IF-AST."))
-
-(defclass multiway-ast-mixin () ()
-  (:documentation "This class is used as a superclass for ASTs that produce results for BRANCH-AST."))
-
-(defclass no-value-ast-mixin () ()
-  (:documentation "This class is used as a superclass for ASTs that produce no value and that must be compiled in a context where no value is required."))
-
-(defclass one-value-ast-mixin () ()
-  (:documentation "This class is used as a superclass for ASTs that produce a single value that is not typically not just a Boolean value."))
-
-(defclass side-effect-free-ast-mixin () ()
-  (:documentation "This class is used as a superclass for ASTs that have no side effect."))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; SIDE-EFFECT-FREE-P ; FIXME: obsolete?
-;;;
-
-(defgeneric side-effect-free-p (ast)
-  (:documentation "Predicate to test whether an AST is side-effect free.
-
-For instances of SIDE-EFFECT-FREE-AST-MIXIN, this predicate always returns true.  For others, it has a default method that returns false.  Implementations may add a method on some ASTs such as CALL-AST that return true only if a particular call is side-effect free."))
-
-(defmethod side-effect-free-p (ast)
-  (declare (cl:ignore ast))
-  nil)
-
-(defmethod side-effect-free-p ((ast side-effect-free-ast-mixin))
-  (declare (ignorable ast))
-  t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; AST classes for standard common lisp features.
 ;;;
 
@@ -108,7 +69,7 @@ For instances of SIDE-EFFECT-FREE-AST-MIXIN, this predicate always returns true.
 ;;; Class CONSTANT-AST.
 ;;;
 
-(defclass constant-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
+(defclass constant-ast (ast)
   ((%value :initarg :value :reader value))
   (:documentation "This class represents Lisp constants in source code.
 
@@ -150,7 +111,7 @@ If the constant that was found was a constant variable, then the value here repr
 ;;; Class LEXICAL-AST.
 ;;;
 
-(defclass lexical-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
+(defclass lexical-ast (ast)
   ((%lexical-variable :initarg :lexical-variable :reader lexical-variable))
   (:documentation "A reference to a lexical variable."))
 
@@ -166,28 +127,9 @@ If the constant that was found was a constant variable, then the value here repr
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class SYMBOL-VALUE-AST. ; FIXME: obsolete?
-;;;
-;;; This AST is generated from a reference to a special variable.
-
-(defclass symbol-value-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
-  ((%symbol-ast :initarg :symbol-ast :reader symbol-ast)))
-
-(defun make-symbol-value-ast (symbol-ast &key origin (policy *policy*))
-  (make-instance 'symbol-value-ast
-    :origin origin :policy policy
-    :symbol-ast symbol-ast))
-
-(cleavir-io:define-save-info symbol-value-ast
-  (:symbol-ast symbol-ast))
-
-(define-children symbol-value-ast (symbol-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class CONSTANT-SYMBOL-VALUE-AST.
 
-(defclass constant-symbol-value-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
+(defclass constant-symbol-value-ast (ast)
   ((%name :initarg :name :reader name)))
 
 (defun make-constant-symbol-value-ast (name &key origin (policy *policy*))
@@ -202,31 +144,9 @@ If the constant that was found was a constant variable, then the value here repr
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class SET-SYMBOL-VALUE-AST. ; FIXME: obsolete?
-;;;
-;;; This AST is generated from an assignment to a special variable.
-
-(defclass set-symbol-value-ast (no-value-ast-mixin ast)
-  ((%symbol-ast :initarg :symbol-ast :reader symbol-ast)
-   (%value-ast :initarg :value-ast :reader value-ast)))
-
-(defun make-set-symbol-value-ast (symbol-ast value-ast &key origin (policy *policy*))
-  (make-instance 'set-symbol-value-ast
-    :origin origin :policy policy
-    :symbol-ast symbol-ast
-    :value-ast value-ast))
-
-(cleavir-io:define-save-info set-symbol-value-ast
-  (:symbol-ast symbol-ast)
-  (:value-ast value-ast))
-
-(define-children set-symbol-value-ast (symbol-ast value-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class SET-CONSTANT-SYMBOL-VALUE-AST.
 
-(defclass set-constant-symbol-value-ast (no-value-ast-mixin ast)
+(defclass set-constant-symbol-value-ast (ast)
   ((%name :initarg :name :reader name)
    (%value-ast :initarg :value-ast :reader value-ast)))
 
@@ -244,37 +164,10 @@ If the constant that was found was a constant variable, then the value here repr
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Class FDEFINITION-AST. ; FIXME: obsolete?
-;;;
-;;; This AST is generated from a reference to a global function.
-
-(defclass fdefinition-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
-  (;; This slot contains an AST that produces the function name.
-   (%name-ast :initarg :name-ast :reader name-ast)
-   (%attributes :initarg :attributes :reader attributes
-                :initform (cleavir-attributes:default-attributes))))
-
-(defun make-fdefinition-ast (name-ast
-                             &key origin (policy *policy*)
-                               (attributes
-                                (cleavir-attributes:default-attributes)))
-  (make-instance 'fdefinition-ast
-    :origin origin :policy policy :attributes attributes
-    :name-ast name-ast))
-
-(cleavir-io:define-save-info fdefinition-ast
-  (:name-ast name-ast)
-  (:attributes attributes))
-
-(define-children fdefinition-ast (name-ast))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Class CONSTANT-FDEFINITION-AST.
 ;;;
 
-(defclass constant-fdefinition-ast
-    (one-value-ast-mixin side-effect-free-ast-mixin ast)
+(defclass constant-fdefinition-ast (ast)
   (;; This slot contains the name of the function
    (%name :initarg :name :reader name)
    (%attributes :initarg :attributes :reader attributes
@@ -325,7 +218,7 @@ If the constant that was found was a constant variable, then the value here repr
 ;;; Class FUNCTION-AST.
 ;;;
 
-(defclass function-ast (one-value-ast-mixin side-effect-free-ast-mixin ast)
+(defclass function-ast (ast)
   ((%lambda-list :initarg :lambda-list :reader lambda-list)
    (%body-ast :initarg :body-ast :reader body-ast)
    ;; An alist from lexical VARIABLEs to lists of pertinent declaration specifiers.
@@ -606,7 +499,7 @@ This points directly to the corresponding BLOCK-AST rather than recording the na
 ;;;
 ;;; Class TAGBODY-AST.
 
-(defclass tagbody-ast (no-value-ast-mixin ast)
+(defclass tagbody-ast (ast)
   ((%prefix-ast :initarg :prefix-ast :reader prefix-ast)
    ;; A proper list of TAG-ASTs.
    (%item-asts :initarg :item-asts :reader item-asts))
@@ -705,7 +598,7 @@ The cleanup is represented by a FUNCTION-AST with no arguments."))
 ;;; Class TYPEQ-AST.
 ;;;
 
-(defclass typeq-ast (boolean-ast-mixin ast)
+(defclass typeq-ast (ast)
   ((%test-ctype :initarg :test-ctype :reader test-ctype)
    (%form-ast :initarg :form-ast :reader form-ast))
   (:documentation "This AST can be thought of as a translation to an AST of a special form (TYPEQ <form> <type-specifier>) which is like the function TYPEP, except that the type specifier is not evaluated."))
@@ -727,7 +620,7 @@ The cleanup is represented by a FUNCTION-AST with no arguments."))
 ;;; Class LOAD-TIME-VALUE-AST.
 ;;;
 
-(defclass load-time-value-ast (one-value-ast-mixin ast)
+(defclass load-time-value-ast (ast)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p))
   (:documentation "This AST corresponds directly to the LOAD-TIME-VALUE special operator. It has no child and it produces a single value.
@@ -862,7 +755,7 @@ This impossibility is used by the analyzer without checking."))
 ;;; Class EQ-AST.
 ;;;
 
-(defclass eq-ast (boolean-ast-mixin ast)
+(defclass eq-ast (ast)
   ((%arg1-ast :initarg :arg1-ast :reader arg1-ast)
    (%arg2-ast :initarg :arg2-ast :reader arg2-ast))
   (:documentation "This AST can be used to to test whether two objects are identical.
@@ -885,7 +778,7 @@ It has two children.  This AST can only appear in the TEST position of an IF-AST
 ;;; Class CASE-AST.
 ;;;
 
-(defclass case-ast (multiway-ast-mixin ast)
+(defclass case-ast (ast)
   ((%arg-ast :initarg :arg-ast :reader arg-ast)
    (%comparees :initarg :comparees :reader comparees))
   (:documentation "This AST can be used to select an execution path by comparing a given object against a fixed set of immediates. COMPAREES is a sequence of sequences of objects. If the primary value returned by the ARG-AST is EQ to one of the objects in the nth sequence, the nth branch is taken; if the value doesn't match any immediate the default branch is taken instead.

@@ -51,18 +51,3 @@
               (insert inserter 'bir:primop
                       :info ',info :inputs args :outputs outs)
               (copy-list outs))))))))
-
-(defprimop symbol-value ast:symbol-value-ast
-  ast:symbol-ast)
-(defprimop (setf symbol-value) ast:set-symbol-value-ast
-  ast:symbol-ast ast:value-ast)
-
-;;; Make sure the output of an fdefinition gets the attributes.
-(defmethod compile-ast ((ast ast:fdefinition-ast) inserter system)
-  (with-compiled-asts (rv ((ast:name-ast ast)) inserter system)
-    (let ((out (make-instance 'bir:output
-                 :attributes (ast:attributes ast))))
-      (insert inserter 'bir:primop
-              :info (cleavir-primop-info:info 'fdefinition)
-              :inputs rv :outputs (list out))
-      (list out))))

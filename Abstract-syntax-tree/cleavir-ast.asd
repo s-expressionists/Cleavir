@@ -12,8 +12,7 @@
   :bug-tracker "https://github.com/s-expressionists/Cleavir/issues"
   :source-control (:git "https://github.com/s-expressionists/Cleavir.git")
   :depends-on (:cleavir-io
-               :cleavir-attributes
-	       :cleavir-meter)
+               :cleavir-attributes)
   :serial t
   :components
   ((:file "packages")

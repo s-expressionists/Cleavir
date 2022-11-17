@@ -9,20 +9,13 @@
    #:source-info
    #:origin
    #:*policy* #:policy
-   #:boolean-ast-mixin
-   #:no-value-ast-mixin
-   #:one-value-ast-mixin
-   #:side-effect-free-ast-mixin
-   #:side-effect-free-p
    #:constant-ast #:make-constant-ast #:value
    #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
    #:lexical-ast #:make-lexical-ast
    #:dynamic-bind-ast
-   #:symbol-value-ast #:make-symbol-value-ast
-   #:set-symbol-value-ast #:make-set-symbol-value-ast
    #:set-constant-symbol-value-ast #:make-set-constant-symbol-value-ast
    #:symbol #:symbol-ast
-   #:fdefinition-ast #:make-fdefinition-ast #:info #:name-ast
+   #:info #:name-ast
    #:constant-fdefinition-ast #:make-constant-fdefinition-ast #:info
    #:constant-symbol-value-ast #:make-constant-symbol-value-ast #:info
    #:call-ast #:make-call-ast #:callee-ast #:argument-asts
