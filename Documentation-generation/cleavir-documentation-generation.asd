@@ -10,5 +10,6 @@
            "Marco Heisig <marco.heisig@fau.de>")
   :maintainer "Bike <aeshtaer@gmail.com>"
   :homepage "https://s-expressionists.github.io/Cleavir/"
-  :version "1.0.0"
+  ;; similar to above hack, this is used as the overall version of Cleavir.
+  :version (:read-file-form "../version.sexp")
   :license "BSD")
