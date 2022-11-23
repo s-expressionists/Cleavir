@@ -1,0 +1,53 @@
+# Generate the website with staple, and deploy it.
+name: Generate and deploy docs to Pages
+
+on:
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment - on new push, stop building old docs
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy-docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SBCL
+        run: |
+          sudo apt-get update
+          sudo apt install -y sbcl
+      - name: Install Quicklisp
+        run: |
+          curl -kLO https://beta.quicklisp.org/quicklisp.lisp
+          sbcl --non-interactive --load quicklisp.lisp --eval "(quicklisp-quickstart:install)" --eval "(ql-util:without-prompting (ql:add-to-init-file))"
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure ASDF to find Cleavir
+        run: |
+          mkdir -p $HOME/.config/common-lisp/source-registry.conf.d
+          echo "(:TREE #P\"${{ github.workspace }}/\")" > $HOME/.config/common-lisp/source-registry.conf.d/cleavir.conf
+      - name: Generate site with Staple
+        run: |
+          sbcl --non-interactive --eval "(ql:quickload :staple-markdown)" --eval "(staple:generate :cleavir-documentation-generation :output-directory #p\"_site/\")"
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          # Upload entire repository
+          path: '_site/'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
