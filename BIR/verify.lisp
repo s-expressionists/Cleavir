@@ -496,7 +496,10 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   (test (function iblock)
         "has no function; it may have been deleted." iblock)
   ;; Function is the right function
-  (test (eq (function iblock) *verifying-function*)
+  (test (or
+         ;; if the previous test failed, don't give a confusing report here
+         (not (function iblock))
+         (eq (function iblock) *verifying-function*))
         "is in the wrong function." iblock)
   ;; Check entrances actually end in unwind.
   (set:doset (entrance (entrances iblock))
