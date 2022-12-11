@@ -98,8 +98,8 @@
 
 (defmethod clip:clip ((object tree-project) (field (eql :root-html)))
   (format nil "~aindex.html"
-          (enough-namestring (staple:output object)
-                             (staple:output (parent object)))))
+          (pathname-utils:relative-pathname
+           (staple:output (parent object)) (staple:output object))))
 
 (defmethod clip:clip ((object tree-project) (field (eql :title)))
   ;; KLUDGE
