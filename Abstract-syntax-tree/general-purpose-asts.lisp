@@ -230,7 +230,7 @@ If the constant that was found was a constant variable, then the value here repr
    (%name :initarg :name :initform nil :accessor name)
    (%docstring :initarg :docstring :initform nil :reader docstring)
    (%original-lambda-list :initarg :original-lambda-list :initform nil
-                          :reader original-lambda-list)
+                          :accessor original-lambda-list)
    (%attributes :initarg :attributes :reader attributes
                 :initform (cleavir-attributes:default-attributes)))
   (:documentation "A function AST represents an explicit lambda expression, but also implicit lambda expressions such as the ones found in FLET and LABELS.
