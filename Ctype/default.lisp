@@ -360,7 +360,7 @@
          (cl:apply #'conjoin system
                    (loop for fc in (conjunction-ctypes fctype system)
                          collect (general-function-returns fc system))))
-        ((disjunctionp fctype)
+        ((disjunctionp fctype system)
          (cl:apply #'disjoin system
                    (loop for fc in (disjunction-ctypes fctype system)
                          collect (general-function-returns fc system))))
