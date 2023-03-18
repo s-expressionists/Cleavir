@@ -9,7 +9,7 @@
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct expanded-form cst system
+         (expanded-cst (cst:reconstruct system expanded-form cst
                                         :default-source cst)))
     (with-preserved-toplevel-ness
       (convert expanded-cst env system))))
@@ -47,7 +47,7 @@
     (cst (info env:local-macro-info) env system)
   (let* ((expander (env:expander info))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct expanded-form cst system
+         (expanded-cst (cst:reconstruct system expanded-form cst
                                         :default-source cst)))
     (with-preserved-toplevel-ness
       (convert expanded-cst env system))))
@@ -68,7 +68,7 @@
           ;; so we just apply the macro expander, and then convert
           ;; the resulting form.
           (let* ((expanded-form (expand-macro expander cst env))
-                 (expanded-cst (cst:reconstruct expanded-form cst system
+                 (expanded-cst (cst:reconstruct system expanded-form cst
                                                 :default-source cst)))
             (convert expanded-cst env system))
           ;; There is a compiler macro, so we must see whether it will
@@ -81,14 +81,14 @@
                 ;; when there was no compiler macro present.
                 (let* ((expanded-form
                          (expand-macro expander cst env))
-                       (expanded-cst (cst:reconstruct expanded-form cst system
+                       (expanded-cst (cst:reconstruct system expanded-form cst
                                                       :default-source cst)))
                   (convert expanded-cst env system))
                 ;; If the two are not EQ, this means that the compiler
                 ;; macro replaced the original form with a new form.
                 ;; This new form must then again be converted without
                 ;; taking into account the real macro expander.
-                (let ((expanded-cst (cst:reconstruct expanded-form cst system
+                (let ((expanded-cst (cst:reconstruct system expanded-form cst
                                                      :default-source cst)))
                   (convert expanded-cst env system))))))))
 
@@ -164,7 +164,7 @@
               ;; If the two are not EQ, this means that the compiler
               ;; macro replaced the original form with a new form.
               ;; This new form must then be converted.
-              (let ((expanded-cst (cst:reconstruct expanded-form cst system
+              (let ((expanded-cst (cst:reconstruct system expanded-form cst
                                                    :default-source cst)))
                 (convert expanded-cst env system)))))))
 

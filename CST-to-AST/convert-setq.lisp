@@ -22,7 +22,7 @@
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-variable (expand-macro expander var-cst env))
-         (expanded-cst (cst:reconstruct expanded-variable var-cst system
+         (expanded-cst (cst:reconstruct system expanded-variable var-cst
                                         :default-source var-cst))
          (origin (cst:source var-cst)))
     (convert (cst:quasiquote origin
