@@ -152,16 +152,13 @@
   environment)
 
 ;;; Augment the environment with an OPTIMIZE specifier.
-(defun augment-environment-with-optimize (optimize environment)
+(defun augment-environment-with-optimize (client optimize environment)
   ;; Make sure every environment has a complete optimize & policy.
   (let* ((previous (env:optimize (env:optimize-info environment)))
          (total (cleavir-policy:normalize-optimize
-                 (append optimize previous)
-                 environment))
+                 client (append optimize previous)))
          ;; Compute also normalizes, so this is slightly wasteful.
-         (policy (cleavir-policy:compute-policy
-                  total
-                  (env:global-environment environment))))
+         (policy (cleavir-policy:compute-policy client total)))
     (env:add-optimize environment total policy)))
 
 ;;; Extract any OPTIMIZE information from a set of canonicalized
@@ -179,7 +176,7 @@
           ;; handle OPTIMIZE specially.
           (let ((optimize (extract-optimize canonical-dspecs)))
             (if optimize
-                (augment-environment-with-optimize optimize environment)
+                (augment-environment-with-optimize client optimize environment)
                 environment))))
     (loop for spec in canonical-dspecs
           for declaration-identifier-cst = (cst:first spec)

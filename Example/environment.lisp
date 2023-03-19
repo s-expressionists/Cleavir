@@ -52,7 +52,6 @@
 
 (defun proclaim-optimize (optimize env)
   (setf (optimize* env)
-        (policy:normalize-optimize (append optimize (optimize* env))
-                                   env)
+        (policy:normalize-optimize nil (append optimize (optimize* env)))
         (policy env)
-        (policy:compute-policy (optimize* env) env)))
+        (policy:compute-policy nil (optimize* env))))

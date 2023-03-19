@@ -249,17 +249,13 @@
                      (space ,space)
                      (debug ,debug)
                      (speed ,speed)))
-         (policy (cleavir-policy:compute-policy optimize env)))
+         (policy (cleavir-policy:compute-policy nil optimize)))
     (make-instance 'cleavir-env:optimize-info
                    :optimize optimize
                    :policy policy)))
 
 (defmethod cleavir-env:type-expand ((env sb-kernel:lexenv) ts)
   (sb-ext:typexpand ts env))
-
-(defmethod cleavir-env:optimize-qualities ((env sb-kernel:lexenv))
-  (loop for (opt) in (sb-cltl2:declaration-information 'optimize env)
-        collect `(,opt (integer 0 3) 3)))
 
 (defmethod cleavir-env:declarations ((env sb-kernel:lexenv))
   ;; CLTL2 only has accessors for information on a given decl, not
@@ -270,16 +266,18 @@
            '(:and)
            '(:or))
 (defmethod cleavir-policy:compute-policy-quality
-    ((name (eql 'cleavir-kildall-type-inference:insert-type-checks))
-     optimize
-     (environment sb-kernel:lexenv))
+    (client
+     (name (eql 'cleavir-kildall-type-inference:insert-type-checks))
+     optimize)
+  (declare (ignore client))
   (> (cleavir-policy:optimize-value optimize 'safety) 0))
 
 #+#.(cl:if (cl:find-package "CLEAVIR-ESCAPE")
            '(:and)
            '(:or))
 (defmethod cleavir-policy:compute-policy-quality
-    ((name (eql 'cleavir-escape:trust-dynamic-extent))
-     optimize
-     (environment sb-kernel:lexenv))
+    (client
+     (name (eql 'cleavir-escape:trust-dynamic-extent))
+     optimize)
+  (declare (ignore client optimize))
   t)
