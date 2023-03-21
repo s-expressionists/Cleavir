@@ -267,11 +267,13 @@
 ;;; Interface
 
 (defun run (&key new-process
-              ((:environment *global-environment*) (sb-c::make-null-lexenv))
-              ((:system *system*) :visualizer))
+              (environment (sb-c::make-null-lexenv))
+              (system :visualizer))
   (let ((frame (clim:make-application-frame 'ir-inspector)))
     (flet ((do-it ()
-             (clim:run-frame-top-level frame)))
+             (let ((*global-environment* environment)
+                   (*system* system))
+               (clim:run-frame-top-level frame))))
       (if new-process
           (bt:make-thread #'do-it)
           (do-it)))
