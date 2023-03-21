@@ -10,9 +10,9 @@
   ;; Only mark the ELSE branch as reachable if NIL is a member of the input's type,
   ;; and similar with THEN.
   (let* ((reach (output channel)) (inf (infimum reach)) (sup (supremum reach))
-         (type (input channel)) (sys (system type))
-         (itype (ctype:primary (first infos) sys))
-         (false (ctype:member sys nil))
-         (true (ctype:negate false sys)))
-    (values (if (ctype:disjointp itype false sys) inf sup)
-            (if (ctype:disjointp itype true sys) inf sup))))
+         (type (input channel)) (client (client type))
+         (itype (ctype:primary client (first infos)))
+         (false (ctype:member client nil))
+         (true (ctype:negate client false)))
+    (values (if (ctype:disjointp client itype false) inf sup)
+            (if (ctype:disjointp client itype true) inf sup))))

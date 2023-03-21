@@ -18,14 +18,14 @@
                :ctype :ctype-tfun)
   :components
   ((:file "packages")
-   (:file "system" :depends-on ("packages"))
-   (:file "environment" :depends-on ("system" "packages"))
-   (:file "environment-interface" :depends-on ("environment" "system"
+   (:file "client" :depends-on ("packages"))
+   (:file "environment" :depends-on ("client" "packages"))
+   (:file "environment-interface" :depends-on ("environment" "client"
                                                              "packages"))
-   (:file "fold" :depends-on ("environment-interface" "system" "packages"))
-   (:file "type" :depends-on ("system" "packages"))
-   (:file "derive-type" :depends-on ("system" "packages"))
+   (:file "fold" :depends-on ("environment-interface" "client" "packages"))
+   (:file "type" :depends-on ("client" "packages"))
+   (:file "derive-type" :depends-on ("client" "packages"))
    (:file "macros" :depends-on ("packages"))
    (:file "load-environment" :depends-on ("macros" "environment"
                                                    "packages"))
-   (:file "compile" :depends-on ("system" "environment" "packages"))))
+   (:file "compile" :depends-on ("client" "environment" "packages"))))

@@ -8,7 +8,7 @@
 ;;;; These generic functions are just an interface so that Cleavir can
 ;;;; understand an arbitrary environment representation.
 
-(defmethod env:variable-info ((system example) (env environment) sym)
+(defmethod env:variable-info ((client example) (env environment) sym)
   (let ((info (gethash sym (variables env))))
     (if (null info)
         nil
@@ -40,7 +40,7 @@
 
 (defvar *folds* (make-hash-table :test #'equal)) ; filled in fold.lisp
 
-(defmethod env:function-info ((system example) (env environment) name)
+(defmethod env:function-info ((client example) (env environment) name)
   (let ((info (gethash name (functions env))))
     (if (null info)
         (if (treat-as-special-operator-p name)
@@ -55,8 +55,7 @@
              (let ((fold (gethash name *folds*)))
                (make-instance 'env:global-function-info
                  :name name
-                 :type (env:parse-type-specifier 'function
-                                                 env system)
+                 :type (env:parse-type-specifier client 'function env)
                  :attributes (if fold
                                  (make-instance 'attributes:attributes
                                    :identities (list name))
@@ -75,7 +74,7 @@
         (values (env:type-expand env (funcall expander typespec env)) t)
         (values typespec nil))))
 
-(defmethod env:find-class (name (env environment) (system example)
+(defmethod env:find-class ((client example) name (env environment)
                            &optional errorp)
   (cond ((gethash name (classes env)))
         (errorp (error "No class named ~s" name))
@@ -87,13 +86,13 @@
   ;; is out of scope for this example.
   (eval form))
 
-(defmethod env:cst-eval (cst env (dispatch-env environment)
-                         (system example))
+(defmethod env:cst-eval ((client example) cst env
+                         (dispatch-env environment))
   (declare (ignore env))
   (eval (cst:raw cst)))
 
 ;;; KLUDGE: CTYPE doesn't let us specify the type expander very well.
-(defmethod env:parse-compound-type-specifier (head rest env (sys example))
+(defmethod env:parse-compound-type-specifier ((client example) head rest env)
   (ctype:specifier-ctype (cons head rest)))
-(defmethod env:parse-expanded-type-specifier (tspec env (sys example))
+(defmethod env:parse-expanded-type-specifier ((client example) tspec env)
   (ctype:specifier-ctype tspec))

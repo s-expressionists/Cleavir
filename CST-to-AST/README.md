@@ -2,7 +2,7 @@ The CST-to-AST system converts CSTs to one of Cleavir's intermediate representat
 
 # Basic use
 
-The main entry point is the `cst-to-ast` function. This function takes three parameters: the CST, and the environmentand system to compile it with respect to. It converts the CST to an AST and returns it.
+The main entry point is the `cst-to-ast` function. This function takes three parameters: the client, the CST and the environment. It converts the CST to an AST and returns it.
 
 The `cst-to-ast:*compiler*` variable should be bound to indicate to CST-to-AST how it should deal with top level forms and `load-time-value`. The value can be any of the symbols `cl:eval`, `cl:compile`, or `cl:compile-file`.
 
@@ -36,7 +36,7 @@ CST-to-AST signals errors in situations where most clients may not wish to propa
 
 # Customization
 
-To add additional special operators, the `convert-special` function should be specialized. This function takes four arguments: The name of the operator (a symbol), the CST of the special form, the environment and the system. Methods should parse the special form CST by whatever means peculiar to the operator's syntax, and return some AST representing the form. Subforms should be converted into CSTs using `convert`. Note that merely defining a `convert-special` method is not sufficient for CST-to-AST to understand a symbol to be a special operator: you will also need `cleavir-env:function-info` to report that it is a special operator.
+To add additional special operators, the `convert-special` function should be specialized. This function takes four arguments: The client, the name of the operator (a symbol), the CST of the special form, and the environment. Methods should parse the special form CST by whatever means peculiar to the operator's syntax, and return some AST representing the form. Subforms should be converted into CSTs using `convert`. Note that merely defining a `convert-special` method is not sufficient for CST-to-AST to understand a symbol to be a special operator: you will also need `cleavir-env:function-info` to report that it is a special operator.
 
 # Handling of types
 

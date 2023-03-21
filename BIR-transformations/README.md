@@ -120,7 +120,7 @@ The "identities" drive much more information. The identities slot is designed to
 
 There is a hook present allowing clients to specify details of the types of certain function calls that cannot be expressed in the standard type system. For example, a client could indicate to Cleavir that `(float (the integer x))` returns a single float.
 
-The hooking works as follows. First, the function in question must have an identity attached to it; this can be done in the BIR production stages (especially environment queries). Then, the client must specialize the `derive-return-type` generic function. Meta evaluation will pass this function four arguments: a call instruction, the identity from the attributes, the values ctype describing the arguments to the function, and a specializable system parameter. This function is expected to return the ctype derived for that function.
+The hooking works as follows. First, the function in question must have an identity attached to it; this can be done in the BIR production stages (especially environment queries). Then, the client must specialize the `derive-return-type` generic function. Meta evaluation will pass this function four arguments: a specializable client parameter, a call instruction, the identity from the attributes, and the values ctype describing the arguments to the function. This function is expected to return the ctype derived for that function.
 
 Note that the returned type is in general (always, at the moment) treated as proven by meta evaluation, i.e. will not be checked. As such this mechanism should only be used for standard functions or functions that cannot be redefined such that the type information is incorrect, or else the compiled code may behave badly.
 
@@ -146,7 +146,7 @@ Variables with only one definition (binding) and read are removed, as in transfo
 
 Meta evaluation will propagate constants through basic instructions such as single definition/use variables or `fixed-to-multiple`.
 
-A mechanism is also provided for clients to tell Cleavir to constant-fold certain function calls. First, the function must be equipped with an identity attribute, as described above. Then, the client must specialize the `fold-call` generic function. When it finds a function call with constant arguments, meta evaluation will call `fold-call` with four arguments: the system, the identity, the call instruction, and the list of arguments (i.e. the actual values). `fold-call` may return a primary value of false, in which case no folding is performed, or it may return a primary value of true. If the primary value is true, subsequent values returned by `fold-call` are those that should be substituted for the function call.
+A mechanism is also provided for clients to tell Cleavir to constant-fold certain function calls. First, the function must be equipped with an identity attribute, as described above. Then, the client must specialize the `fold-call` generic function. When it finds a function call with constant arguments, meta evaluation will call `fold-call` with four arguments: the client, the identity, the call instruction, and the list of arguments (i.e. the actual values). `fold-call` may return a primary value of false, in which case no folding is performed, or it may return a primary value of true. If the primary value is true, subsequent values returned by `fold-call` are those that should be substituted for the function call.
 
 By default, `fold-call` returns false, so no function call is folded.
 
@@ -156,7 +156,7 @@ As with type derivers, clients should use the arguments provided to `fold-call` 
 
 ## client transforms
 
-Finally, meta evaluate can call out to the client to perform arbitrary specified transformations of calls. If meta evaluation reaches a call with an identity attribute, it will call the `transform-call` generic function. If the client has specialized a method to do so, `transform-call` can perform some arbitrary transformation on the BIR, then return true to indicate that it has done so (or false, if it chooses to do nothing). `transform-call` receives as arguments the system, the identity, and the call instruction.
+Finally, meta evaluate can call out to the client to perform arbitrary specified transformations of calls. If meta evaluation reaches a call with an identity attribute, it will call the `transform-call` generic function. If the client has specialized a method to do so, `transform-call` can perform some arbitrary transformation on the BIR, then return true to indicate that it has done so (or false, if it chooses to do nothing). `transform-call` receives as arguments the client, the identity, and the call instruction.
 
 This mechanism is intended to facilitate arbitrary transformations peculiar to particular functions. Very many transformations are possible, but a few examples might include: using specialized versions of functions based on type information, "constant folding" functions based on type information (e.g. `(plusp (the (integer 0) x))`), using machine integer arithmetic when only low bits are needed.
 

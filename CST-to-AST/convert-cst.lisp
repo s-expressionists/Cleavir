@@ -5,32 +5,32 @@
 ;;; Converting a symbol that has a definition as a symbol macro.
 
 (defmethod convert-cst
-    (cst (info env:symbol-macro-info) env system)
+    (client cst (info env:symbol-macro-info) env)
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct system expanded-form cst
+         (expanded-cst (cst:reconstruct client expanded-form cst
                                         :default-source cst)))
     (with-preserved-toplevel-ness
-      (convert expanded-cst env system))))
+      (convert client expanded-cst env))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting a symbol that has a definition as a constant variable.
 
 (defmethod convert-cst
-    (cst (info env:constant-variable-info) env system)
+    (client cst (info env:constant-variable-info) env)
   (let ((cst (cst:cst-from-expression (env:value info)
                                       :source (cst:source cst))))
-    (convert-constant cst env system)))
+    (convert-constant client cst env)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting a special form represented as a CST.
 
 (defmethod convert-cst
-    (cst (info env:special-operator-info) env system)
-  (convert-special (car (cst:raw cst)) cst env system))
+    (client cst (info env:special-operator-info) env)
+  (convert-special client (car (cst:raw cst)) cst env))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -44,13 +44,13 @@
 ;;; being passed the same kind of environment.
 
 (defmethod convert-cst
-    (cst (info env:local-macro-info) env system)
+    (client cst (info env:local-macro-info) env)
   (let* ((expander (env:expander info))
          (expanded-form (expand-macro expander cst env))
-         (expanded-cst (cst:reconstruct system expanded-form cst
+         (expanded-cst (cst:reconstruct client expanded-form cst
                                         :default-source cst)))
     (with-preserved-toplevel-ness
-      (convert expanded-cst env system))))
+      (convert client expanded-cst env))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -58,7 +58,7 @@
 ;;; A global macro can have a compiler macro associated with it.
 
 (defmethod convert-cst
-    (cst (info env:global-macro-info) env system)
+    (client cst (info env:global-macro-info) env)
   (let ((compiler-macro (env:compiler-macro info))
         (notinline (eq 'notinline (env:inline info)))
         (expander (env:expander info)))
@@ -68,9 +68,9 @@
           ;; so we just apply the macro expander, and then convert
           ;; the resulting form.
           (let* ((expanded-form (expand-macro expander cst env))
-                 (expanded-cst (cst:reconstruct system expanded-form cst
+                 (expanded-cst (cst:reconstruct client expanded-form cst
                                                 :default-source cst)))
-            (convert expanded-cst env system))
+            (convert client expanded-cst env))
           ;; There is a compiler macro, so we must see whether it will
           ;; accept or decline.
           (let ((expanded-form (expand-compiler-macro compiler-macro cst env)))
@@ -81,43 +81,45 @@
                 ;; when there was no compiler macro present.
                 (let* ((expanded-form
                          (expand-macro expander cst env))
-                       (expanded-cst (cst:reconstruct system expanded-form cst
+                       (expanded-cst (cst:reconstruct client expanded-form cst
                                                       :default-source cst)))
-                  (convert expanded-cst env system))
+                  (convert client expanded-cst env))
                 ;; If the two are not EQ, this means that the compiler
                 ;; macro replaced the original form with a new form.
                 ;; This new form must then again be converted without
                 ;; taking into account the real macro expander.
-                (let ((expanded-cst (cst:reconstruct system expanded-form cst
+                (let ((expanded-cst (cst:reconstruct client expanded-form cst
                                                      :default-source cst)))
-                  (convert expanded-cst env system))))))))
+                  (convert client expanded-cst env))))))))
 
 ;;; Construct a CALL-AST representing a function-call form.  CST is
 ;;; the concrete syntax tree representing the entire function-call
 ;;; form.  ARGUMENTS-CST is a CST representing the sequence of
 ;;; arguments to the call.
-(defun make-call (cst info env arguments-cst system)
+(defun make-call (client cst info env arguments-cst)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (let* ((name-cst (cst:first cst))
-         (function-ast (convert-called-function-reference name-cst info env system))
-         (argument-asts (convert-sequence arguments-cst env system))
+         (function-ast (convert-called-function-reference client name-cst info env))
+         (argument-asts (convert-sequence client arguments-cst env))
          (ftype (env:type info)))
-    (let ((required (ctype:function-required ftype system))
-          (optional (ctype:function-optional ftype system))
-          (rest (ctype:function-rest ftype system))
-          (keysp (ctype:function-keysp ftype system))
-          (values (ctype:function-values ftype system)))
+    (let ((required (ctype:function-required client ftype))
+          (optional (ctype:function-optional client ftype))
+          (rest (ctype:function-rest client ftype))
+          (keysp (ctype:function-keysp client ftype))
+          (values (ctype:function-values client ftype)))
       (type-wrap
+       client
        (ast:make-call-ast function-ast
                           (mapcar
                            (lambda (argument-ast)
                              (type-wrap
+                              client
                               argument-ast
                               (cond (required (pop required))
                                     (optional (pop optional))
                                     ;; FIXME: Actually treat &key properly!
-                                    (keysp (ctype:top system))
-                                    (t (if (ctype:bottom-p rest system)
+                                    (keysp (ctype:top client))
+                                    (t (if (ctype:bottom-p client rest)
                                            (progn
                                              ;; FIXME: Use a
                                              ;; condition
@@ -128,30 +130,30 @@
                                              ;; we'll get a
                                              ;; borked call
                                              ;; as a result.
-                                             (ctype:top system))
+                                             (ctype:top client))
                                            rest)))
-                              :argument cst env system))
+                              :argument cst env))
                            argument-asts)
                           :origin cst
                           :inline (env:inline info))
-       values :return cst env system))))
+       values :return cst env))))
 
 ;;; Convert a form representing a call to a named global function.
 ;;; CST is the concrete syntax tree representing the entire
 ;;; function-call form.  INFO is the info instance returned form a
 ;;; query of the environment with the name of the function.
 (defmethod convert-cst
-    (cst (info env:global-function-info) env system)
+    (client cst (info env:global-function-info) env)
   ;; When we compile a call to a global function, it is possible that
   ;; we are in COMPILE-TIME-TOO mode.  In that case, we must first
   ;; evaluate the form.
   (when (and *current-form-is-top-level-p* *compile-time-too*)
-    (cst-eval-for-effect cst env system))
+    (cst-eval-for-effect client cst env))
   (let ((compiler-macro (env:compiler-macro info))
         (notinline (eq 'notinline (env:inline info))))
     (if (or notinline (null compiler-macro))
         ;; There is no compiler macro.  Create the call.
-        (make-call cst info env (cst:rest cst) system)
+        (make-call client cst info env (cst:rest cst))
         ;; There is a compiler macro.  We must see whether it will
         ;; accept or decline.
         (let ((expanded-form (expand-compiler-macro compiler-macro cst env)))
@@ -160,13 +162,13 @@
               ;; declined.  We are left with function-call form.
               ;; Create the call, just as if there were no compiler
               ;; macro present.
-              (make-call cst info env (cst:rest cst) system)
+              (make-call client cst info env (cst:rest cst))
               ;; If the two are not EQ, this means that the compiler
               ;; macro replaced the original form with a new form.
               ;; This new form must then be converted.
-              (let ((expanded-cst (cst:reconstruct system expanded-form cst
+              (let ((expanded-cst (cst:reconstruct client expanded-form cst
                                                    :default-source cst)))
-                (convert expanded-cst env system)))))))
+                (convert client expanded-cst env)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -175,31 +177,33 @@
 ;;; associated with it.
 
 (defmethod convert-cst
-    (cst (info env:local-function-info) env system)
-  (make-call cst info env (cst:rest cst) system))
+    (client cst (info env:local-function-info) env)
+  (make-call client cst info env (cst:rest cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting a symbol that has a definition as a special variable.
 ;;; We do this by generating a call to SYMBOL-VALUE.
 
-(defmethod convert-special-variable (cst info global-env system)
-  (declare (ignore global-env system))
+(defmethod convert-special-variable (client cst info global-env)
+  (declare (ignore client global-env))
   (ast:make-constant-symbol-value-ast (env:name info) :origin cst))
 
 (defmethod convert-cst
-    (cst (info env:special-variable-info) env system)
+    (client cst (info env:special-variable-info) env)
   (let ((global-env (env:global-environment env)))
-    (type-wrap (convert-special-variable cst info global-env system)
-               (env:type info) :variable cst env system)))
+    (type-wrap client
+               (convert-special-variable client cst info global-env)
+               (env:type info) :variable cst env)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Converting a symbol that has a definition as a lexical variable.
 
 (defmethod convert-cst
-    (cst (info env:lexical-variable-info) env system)
+    (client cst (info env:lexical-variable-info) env)
   (when (eq (env:ignore info) 'ignore)
     (warn 'ignored-variable-referenced :cst cst))
-  (type-wrap (ast:make-lexical-ast (env:identity info) :origin cst)
-             (env:type info) :variable cst env system))
+  (type-wrap client
+             (ast:make-lexical-ast (env:identity info) :origin cst)
+             (env:type info) :variable cst env))

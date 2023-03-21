@@ -3,32 +3,32 @@
 ;;; Augment the environment with a single canonicalized declaration
 ;;; specifier.
 (defgeneric augment-environment-with-declaration
-    (declaration-identifier
+    (client
+     declaration-identifier
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system))
+     environment))
 
 (defmethod augment-environment-with-declaration
-    (declaration-identifier
+    (client
+     declaration-identifier
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore declaration-identifier-cst
-                   declaration-data-cst
-                   system))
+     environment)
+  (declare (ignore client
+                   declaration-identifier-cst
+                   declaration-data-cst))
   (warn "Unable to handle declarations specifier: ~s"
         declaration-identifier)
   environment)
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'dynamic-extent))
+    (client
+     (declaration-identifier (eql 'dynamic-extent))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore declaration-identifier-cst system))
+     environment)
+  (declare (ignore client declaration-identifier-cst))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst))))
     (if (consp var-or-function)
         ;; (dynamic-extent (function foo))
@@ -39,25 +39,26 @@
          environment var-or-function))))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'ftype))
+    (client
+     (declaration-identifier (eql 'ftype))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
+     environment)
   (declare (ignore declaration-identifier-cst))
   (env:add-function-type
    environment (cst:raw (cst:second declaration-data-cst))
    (env:parse-type-specifier
+    client
     (cst:raw (cst:first declaration-data-cst))
-    environment system)))
+    environment)))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'ignore))
+    (client
+     (declaration-identifier (eql 'ignore))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore system))
+     environment)
+  (declare (ignore client))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
@@ -67,12 +68,12 @@
          environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'ignorable))
+    (client
+     (declaration-identifier (eql 'ignorable))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore system))
+     environment)
+  (declare (ignore client))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
@@ -82,39 +83,39 @@
          environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'inline))
+    (client
+     (declaration-identifier (eql 'inline))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore system))
+     environment)
+  (declare (ignore client))
   (env:add-inline
    environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'notinline))
+    (client
+     (declaration-identifier (eql 'notinline))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore system))
+     environment)
+  (declare (ignore client))
   (env:add-inline
    environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'special))
+    (client
+     (declaration-identifier (eql 'special))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
+     environment)
   (declare (ignore declaration-identifier-cst))
   ;; This case is a bit tricky, because if the
   ;; variable is globally special, nothing should
   ;; be added to the environment.
   (let ((info (env:variable-info
-               system environment (cst:raw (cst:first declaration-data-cst)))))
+               client environment (cst:raw (cst:first declaration-data-cst)))))
     (cond ((typep info 'env:symbol-macro-info)
            (error 'special-symbol-macro
                   :cst (cst:first declaration-data-cst)))
@@ -125,26 +126,26 @@
               environment (cst:raw (cst:first declaration-data-cst)))))))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'type))
+    (client
+     (declaration-identifier (eql 'type))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
+     environment)
   (declare (ignore declaration-identifier-cst))
   (cst:db source (type-cst variable-cst) declaration-data-cst
     (env:add-variable-type
      environment (cst:raw variable-cst)
-     (env:parse-type-specifier (cst:raw type-cst)
-                                       environment system))))
+     (env:parse-type-specifier client (cst:raw type-cst) environment))))
 
 (defmethod augment-environment-with-declaration
-    ((declaration-identifier (eql 'optimize))
+    (client
+     (declaration-identifier (eql 'optimize))
      declaration-identifier-cst
      declaration-data-cst
-     environment
-     system)
-  (declare (ignore declaration-identifier-cst declaration-data-cst
-                   system))
+     environment)
+  (declare (ignore client
+                   declaration-identifier-cst
+                   declaration-data-cst))
   ;; OPTIMIZE is handled specially, so we do nothing here.
   ;; This method is just for ensuring that the default method,
   ;; which signals a warning, isn't called.
@@ -172,7 +173,7 @@
 
 ;;; Augment the environment with a list of canonical declartion
 ;;; specifiers.
-(defun augment-environment-with-declarations (environment system
+(defun augment-environment-with-declarations (client environment
                                               canonical-dspecs)
   (let ((new-env
           ;; handle OPTIMIZE specially.
@@ -189,11 +190,11 @@
           for declaration-data-cst = (cst:rest spec)
           do (setf new-env
                    (augment-environment-with-declaration
+                    client
                     declaration-identifier
                     declaration-identifier-cst
                     declaration-data-cst
-                    new-env
-                    system)))
+                    new-env)))
     new-env))
 
 ;;; Given a single variable bound by some binding form, a list of
@@ -242,11 +243,11 @@
 ;;; which the entire LET form was converted.  For a LET* form, it is
 ;;; the same as ENV.
 (defun augment-environment-with-variable
-    (variable-cst declarations system env orig-env)
+    (client variable-cst declarations env orig-env)
   (let* ((new-env env)
          (raw-variable (cst:raw variable-cst))
          (raw-declarations (mapcar #'cst:raw declarations))
-         (info (env:variable-info system orig-env raw-variable)))
+         (info (env:variable-info client orig-env raw-variable)))
     (when (typep info 'env:constant-variable-info)
       (warn 'bind-constant-variable :cst variable-cst))
     (multiple-value-bind (special-p globally-p)
@@ -260,9 +261,8 @@
                   (env:add-lexical-variable
                    new-env raw-variable lexical-variable)))))
     (let* ((type (declared-type declarations))
-           ;; FIXME system arguments
-           (ptype (env:parse-type-specifier type env system)))
-      (unless (ctype:top-p ptype system)
+           (ptype (env:parse-type-specifier client type env)))
+      (unless (ctype:top-p client ptype)
         (setf new-env
               (env:add-variable-type new-env raw-variable ptype))))
     (when (member 'ignore raw-declarations :test #'eq :key #'car)
@@ -282,15 +282,15 @@
 ;;; that it also tests whether the supplied-p parameter is NIL,
 ;;; indicating that no supplied-p parameter was given.  This function
 ;;; returns the augmented environment.
-(defun augment-environment-with-parameter (var-cst supplied-p-cst dspecs env system)
+(defun augment-environment-with-parameter (client var-cst supplied-p-cst dspecs env)
   ;; The dspecs contain declarations for both variables (and only these variables),
   ;; so we have to perform a final separation.
   (let ((new-env (augment-environment-with-variable
-                  var-cst (first dspecs) system env env)))
+                  client var-cst (first dspecs) env env)))
       (if (null supplied-p-cst)
           new-env
           (augment-environment-with-variable
-           supplied-p-cst (second dspecs) system new-env new-env))))
+           client supplied-p-cst (second dspecs) new-env new-env))))
 
 (defun augment-environment-with-local-function-name (name-cst environment)
   (let* ((name (cst:raw name-cst))

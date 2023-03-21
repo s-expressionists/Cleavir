@@ -31,7 +31,7 @@
                                                            function))))
                       (t (bind-lexical-as-argument item function)))))
 
-(defmethod compile-function ((ast ast:function-ast) system)
+(defmethod compile-function (client (ast ast:function-ast))
   (let* ((module *current-module*)
          (function (make-instance 'bir:function
                      :name (ast:name ast)
@@ -52,7 +52,7 @@
       (setf (bir:lambda-list function) lambda-list))
     (setf (bir:start function) start)
     (begin inserter start)
-    (let ((rv (compile-ast (ast:body-ast ast) inserter system)))
+    (let ((rv (compile-ast client (ast:body-ast ast) inserter)))
       (cond
         ((eq rv :no-return)
          (setf (bir:returni function) nil))
@@ -68,8 +68,8 @@
 ;;;
 ;;; IF-AST
 
-(defun compile-branch (inserter system test-ast branch-asts)
-  (let ((iblocks (compile-test-ast test-ast inserter system)))
+(defun compile-branch (client test-ast branch-asts inserter)
+  (let ((iblocks (compile-test-ast client test-ast inserter)))
     (when (eq iblocks :no-return) (return-from compile-branch iblocks))
     (assert (= (length iblocks) (length branch-asts)))
     (let ((map (loop with r = nil
@@ -77,7 +77,7 @@
                      for ast in branch-asts
                      for ins = (make-instance 'inserter)
                      do (proceed ins iblock)
-                        (let ((rv (compile-ast ast ins system)))
+                        (let ((rv (compile-ast client ast ins)))
                           (unless (eq rv :no-return)
                             (push (list ins (iblock ins) rv) r)))
                      finally (return (nreverse r)))))
@@ -103,12 +103,13 @@
              (begin inserter mergeb)
              (list phi))))))))
 
-(defmethod compile-ast ((ast ast:if-ast) inserter system)
-  (compile-branch inserter system (ast:test-ast ast)
-                  (list (ast:then-ast ast) (ast:else-ast ast))))
+(defmethod compile-ast (client (ast ast:if-ast) inserter)
+  (compile-branch client (ast:test-ast ast)
+                  (list (ast:then-ast ast) (ast:else-ast ast))
+                  inserter))
 
-(defmethod compile-test-ast (ast inserter system)
-  (with-compiled-asts (test (ast) inserter system)
+(defmethod compile-test-ast (client ast inserter)
+  (with-compiled-asts (test client (ast) inserter)
     (let ((tblock (make-iblock inserter :name '#:if-then))
           (eblock (make-iblock inserter :name '#:if-else)))
       (terminate inserter 'bir:ifi
@@ -119,22 +120,23 @@
 ;;;
 ;;; BRANCH-AST
 
-(defmethod compile-ast ((ast ast:branch-ast) inserter system)
-  (compile-branch inserter system (ast:test-ast ast)
+(defmethod compile-ast (client (ast ast:branch-ast) inserter)
+  (compile-branch client (ast:test-ast ast)
                   (append (ast:branch-asts ast)
-                          (list (ast:default-ast ast)))))
+                          (list (ast:default-ast ast)))
+                  inserter))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; PROGN-AST
 
-(defmethod compile-ast ((ast ast:progn-ast) inserter system)
+(defmethod compile-ast (client (ast ast:progn-ast) inserter)
   (let ((form-asts (ast:form-asts ast)))
     (assert (not (null form-asts)))
     (let ((last (first (last form-asts)))
           (bl (butlast form-asts)))
-      (if (compile-sequence-for-effect bl inserter system)
-          (compile-ast last inserter system)
+      (if (compile-sequence-for-effect client bl inserter)
+          (compile-ast client last inserter)
           :no-return))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -154,7 +156,7 @@
     (set:nadjoinf (bir:entrances dest) (iblock inserter)))
   (values))
 
-(defmethod compile-ast ((ast ast:block-ast) inserter system)
+(defmethod compile-ast (client (ast ast:block-ast) inserter)
   (let* ((function (function inserter))
          (de (dynamic-environment inserter))
          (during (make-iblock inserter
@@ -177,7 +179,7 @@
     (terminate inserter come-from)
     (begin inserter during)
     (setf (block-info ast) (list function come-from mergeb))
-    (let ((normal-rv (compile-ast (ast:body-ast ast) inserter system)))
+    (let ((normal-rv (compile-ast client (ast:body-ast ast) inserter)))
       (unless (eq normal-rv :no-return)
         (terminate inserter 'bir:jump
                    :inputs normal-rv
@@ -190,8 +192,8 @@
 ;;;
 ;;; RETURN-FROM-AST
 
-(defmethod compile-ast ((ast ast:return-from-ast) inserter system)
-  (let ((rv (compile-ast (ast:form-ast ast) inserter system)))
+(defmethod compile-ast (client (ast ast:return-from-ast) inserter)
+  (let ((rv (compile-ast client (ast:form-ast ast) inserter)))
     (unless (eq rv :no-return)
       (destructuring-bind (function come-from mergeb)
           (block-info (ast:block-ast ast))
@@ -216,14 +218,14 @@
 (defun (setf go-info) (new-info tag-ast)
   (setf (gethash tag-ast *go-info*) new-info))
 
-(defmethod compile-ast ((ast ast:tagbody-ast) inserter system)
+(defmethod compile-ast (client (ast ast:tagbody-ast) inserter)
   (let ((prefix-ast (ast:prefix-ast ast))
         (item-asts (ast:item-asts ast)))
     ;; Special case: there are no tags; treat this as a progn except
     ;; that it does not return values.
     (when (null item-asts)
       (return-from compile-ast
-        (if (eq (compile-ast prefix-ast inserter system) :no-return)
+        (if (eq (compile-ast client prefix-ast inserter) :no-return)
             :no-return
             ())))
     ;; General case
@@ -248,7 +250,7 @@
                      (go-info tag-ast) (list come-from tag-iblock function)))
       (terminate inserter come-from)
       (begin inserter prefix-iblock)
-      (unless (eq (compile-ast prefix-ast inserter system) :no-return)
+      (unless (eq (compile-ast client prefix-ast inserter) :no-return)
         (terminate inserter 'bir:jump
                    :inputs () :outputs ()
                    :next (list (first tag-iblocks))))
@@ -256,7 +258,7 @@
             for body-ast = (ast:body-ast tag-ast)
             for (ib . rest) on tag-iblocks
             do (begin inserter ib)
-            if (eq (compile-ast body-ast inserter system) :no-return)
+            if (eq (compile-ast client body-ast inserter) :no-return)
               ;; Code doesn't return. If this is the last tag, that means the
               ;; tagbody doesn't either.
               do (unless rest (return-from compile-ast :no-return))
@@ -281,8 +283,8 @@
 ;;;
 ;;; GO-AST
 
-(defmethod compile-ast ((ast ast:go-ast) inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:go-ast) inserter)
+  (declare (ignore client))
   (destructuring-bind (come-from iblock cfunction) (go-info (ast:tag-ast ast))
     (let ((function (function inserter)))
       (cond
@@ -301,15 +303,15 @@
 ;;;
 ;;; UNWIND-PROTECT-AST
 
-(defmethod compile-ast ((ast ast:unwind-protect-ast) inserter system)
-  (with-compiled-ast (fu (ast:cleanup-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:unwind-protect-ast) inserter)
+  (with-compiled-ast (fu client (ast:cleanup-ast ast) inserter)
     (let* ((uw (make-instance 'bir:unwind-protect :inputs fu))
            (ode (dynamic-environment inserter))
            (during (make-iblock inserter :dynamic-environment uw)))
       (setf (bir:next uw) (list during))
       (terminate inserter uw)
       (begin inserter during)
-      (with-compiled-ast (rv (ast:body-ast ast) inserter system)
+      (with-compiled-ast (rv client (ast:body-ast ast) inserter)
         ;; Pass the return values through a phi so that they're easy for
         ;; the client to get at. KLUDGEy.
         (let* ((next (make-iblock inserter :dynamic-environment ode))
@@ -324,9 +326,9 @@
 ;;;
 ;;; CALL-AST
 
-(defmethod compile-ast ((ast ast:call-ast) inserter system)
-  (with-compiled-ast (callee (ast:callee-ast ast) inserter system)
-    (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
+(defmethod compile-ast (client (ast ast:call-ast) inserter)
+  (with-compiled-ast (callee client (ast:callee-ast ast) inserter)
+    (with-compiled-arguments (args client (ast:argument-asts ast) inserter)
       (let ((call-out (make-instance 'bir:output)))
         (insert inserter 'bir:call
                 :inputs (list* (first callee) args)
@@ -337,22 +339,22 @@
 ;;;
 ;;; INLINE-AST
 
-(defmethod compile-ast ((ast ast:inline-ast) inserter system)
+(defmethod compile-ast (client (ast ast:inline-ast) inserter)
   ;; We sometimes see the same inlined function AST at multiple locations in
   ;; the code. To ensure things work we rebind these; it's ok since inline ASTs
   ;; are never going to refer to anything from the surrounding context.
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*inlined-at* (inline-origin (ast:origin ast) *inlined-at* system)))
-    (compile-ast (ast:body-ast ast) inserter system)))
+        (*inlined-at* (inline-origin client (ast:origin ast) *inlined-at*)))
+    (compile-ast client (ast:body-ast ast) inserter)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; FUNCTION-AST
 
-(defmethod compile-ast ((ast ast:function-ast) inserter system)
-  (let* ((f (compile-function ast system))
+(defmethod compile-ast (client (ast ast:function-ast) inserter)
+  (let* ((f (compile-function client ast))
          (enclose-out (make-instance 'bir:output :name (bir:name f)))
          (enclose (make-instance 'bir:enclose
                     :code f :outputs (list enclose-out))))
@@ -364,8 +366,8 @@
 ;;;
 ;;; LEXICAL-BIND-AST
 
-(defmethod compile-ast ((ast ast:lexical-bind-ast) inserter system)
-  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:lexical-bind-ast) inserter)
+  (with-compiled-ast (rv client (ast:value-ast ast) inserter)
     (let* ((var (bind-variable (ast:lexical-variable ast) (ast:ignore ast)))
            (leti (make-instance 'bir:leti
                    :inputs rv :outputs (list var))))
@@ -379,10 +381,10 @@
 ;;;
 ;;; SETQ-AST
 
-(defmethod compile-ast ((ast ast:setq-ast) inserter system)
+(defmethod compile-ast (client (ast ast:setq-ast) inserter)
   (let ((var (find-variable (ast:lexical-variable ast))))
     (bir:record-variable-set var)
-    (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+    (with-compiled-ast (rv client (ast:value-ast ast) inserter)
       (insert inserter 'bir:writevar
               :inputs rv :outputs (list var))
       (let ((readvar-out (make-instance 'bir:output :name (bir:name var))))
@@ -394,8 +396,8 @@
 ;;;
 ;;; CONSTANT-DYNAMIC-BIND-AST
 
-(defmethod compile-ast ((ast ast:constant-dynamic-bind-ast) inserter system)
-  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:constant-dynamic-bind-ast) inserter)
+  (with-compiled-ast (rv client (ast:value-ast ast) inserter)
     (let* ((during (make-iblock inserter))
            (ode (dynamic-environment inserter))
            (const (bir:constant-in-module (ast:name ast) *current-module*))
@@ -404,7 +406,7 @@
       (setf (bir:dynamic-environment during) bind)
       (terminate inserter bind)
       (begin inserter during)
-      (with-compiled-ast (rv (cleavir-ast:body-ast ast) inserter system)
+      (with-compiled-ast (rv client (cleavir-ast:body-ast ast) inserter)
         (let ((next (make-iblock inserter :dynamic-environment ode)))
           (terminate inserter 'bir:jump
                      :inputs () :outputs () :next (list next))
@@ -421,9 +423,9 @@
 ;;; wrapping THEI when the derived type of LINEAR-DATUM is a subtype
 ;;; of the asserted type, since we can prove from the get-go that the
 ;;; type assertion is never needed.
-(defun wrap-thei (inserter linear-datum asserted-type
-                  type-check-function system)
-  (if (ctype:values-subtypep (bir:ctype linear-datum) asserted-type system)
+(defun wrap-thei (client inserter linear-datum
+                  asserted-type type-check-function)
+  (if (ctype:values-subtypep client (bir:ctype linear-datum) asserted-type)
       linear-datum
       (let ((thei-out (make-instance 'bir:output
                         :name (bir:name linear-datum))))
@@ -434,16 +436,16 @@
                 :type-check-function type-check-function)
         thei-out)))
 
-(defmethod compile-ast ((ast ast:the-ast) inserter system)
+(defmethod compile-ast (client (ast ast:the-ast) inserter)
   (let* ((inner (ast:form-ast ast))
          (ctype (ast:ctype ast))
          (type-check-function-ast (ast:type-check-function-ast ast))
-         (required (ctype:values-required ctype system))
-         (rv (compile-ast inner inserter system))
+         (required (ctype:values-required client ctype))
+         (rv (compile-ast client inner inserter))
          (type-check-function
            (if (symbolp type-check-function-ast)
                type-check-function-ast
-               (compile-function type-check-function-ast system))))
+               (compile-function client type-check-function-ast))))
     (cond ((or (eq rv :no-return))
            :no-return)
           ((not (symbolp type-check-function))
@@ -456,12 +458,12 @@
                      :asserted-type ctype
                      :type-check-function type-check-function)
              (list out)))
-          ((some (lambda (ctype) (ctype:bottom-p ctype system)) required)
+          ((some (lambda (ctype) (ctype:bottom-p client ctype)) required)
            (terminate inserter 'bir:unreachable)
            :no-return)
           (t ; arbitrary values
-           (list (wrap-thei inserter (first rv)
-                            ctype type-check-function system))))))
+           (list (wrap-thei client inserter (first rv)
+                            ctype type-check-function))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -469,26 +471,26 @@
 ;;; SET-CONSTANT-SYMBOL-VALUE-AST
 ;;; CONSTANT-FDEFINITION-AST
 
-(defmethod compile-ast ((ast ast:constant-symbol-value-ast)
-                        inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:constant-symbol-value-ast)
+                        inserter)
+  (declare (ignore client))
   (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
         (sv-out (make-instance 'bir:output :name (ast:name ast))))
     (insert inserter 'bir:constant-symbol-value
             :inputs (list const) :outputs (list sv-out))
     (list sv-out)))
 
-(defmethod compile-ast ((ast ast:set-constant-symbol-value-ast)
-                        inserter system)
-  (with-compiled-ast (rv (ast:value-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:set-constant-symbol-value-ast)
+                        inserter)
+  (with-compiled-ast (rv client (ast:value-ast ast) inserter)
     (let ((const (bir:constant-in-module (ast:name ast) *current-module*)))
       (insert inserter 'bir:set-constant-symbol-value
               :inputs (list* const rv))
       :no-value)))
 
-(defmethod compile-ast ((ast ast:constant-fdefinition-ast)
-                        inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:constant-fdefinition-ast)
+                        inserter)
+  (declare (ignore client))
   (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
         (fdef-out (make-instance 'bir:output
                     :name (ast:name ast)
@@ -501,8 +503,8 @@
 ;;;
 ;;; TYPEQ-AST
 
-(defmethod compile-ast ((ast ast:typeq-ast) inserter system)
-  (with-compiled-ast (obj (ast:form-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:typeq-ast) inserter)
+  (with-compiled-ast (obj client (ast:form-ast ast) inserter)
     (let* ((tspec (ast:test-ctype ast))
            ;; FIXME: Will get weird with custom ctypes.
            (tspec-str (write-to-string tspec))
@@ -515,8 +517,8 @@
       (insert inserter tq)
       (list tq-out))))
 
-(defmethod compile-test-ast ((ast ast:typeq-ast) inserter system)
-  (with-compiled-ast (obj (ast:form-ast ast) inserter system)
+(defmethod compile-test-ast (client (ast ast:typeq-ast) inserter)
+  (with-compiled-ast (obj client (ast:form-ast ast) inserter)
     (let* ((tspec (ast:test-ctype ast))
            ;; FIXME: Will get weird with custom ctypes.
            (tspec-str (write-to-string tspec))
@@ -542,8 +544,8 @@
 ;;;
 ;;; UNREACHABLE-AST
 
-(defmethod compile-ast ((ast ast:unreachable-ast) inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:unreachable-ast) inserter)
+  (declare (ignore client))
   (terminate inserter 'bir:unreachable)
   :no-return)
 
@@ -551,8 +553,8 @@
 ;;;
 ;;; LEXICAL-AST
 
-(defmethod compile-ast ((ast ast:lexical-ast) inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:lexical-ast) inserter)
+  (declare (ignore client))
   (let ((var (find-variable (ast:lexical-variable ast))))
     ;; FIXME: We probably want to make a new AST class to distinguish between
     ;; these two cases more cleanly.
@@ -569,9 +571,9 @@
 ;;;
 ;;; EQ-AST
 
-(defmethod compile-test-ast ((ast ast:eq-ast) inserter system)
-  (with-compiled-asts (args ((ast:arg1-ast ast) (ast:arg2-ast ast))
-                            inserter system)
+(defmethod compile-test-ast (client (ast ast:eq-ast) inserter)
+  (with-compiled-asts (args client ((ast:arg1-ast ast) (ast:arg2-ast ast))
+                            inserter)
     (let ((tblock (make-iblock inserter :name '#:eq-then))
           (eblock (make-iblock inserter :name '#:eq-else)))
       (let* ((eq-out (make-instance 'bir:output
@@ -588,8 +590,8 @@
 ;;;
 ;;; CASE-AST
 
-(defmethod compile-test-ast ((ast ast:case-ast) inserter system)
-  (with-compiled-ast (obj (ast:arg-ast ast) inserter system)
+(defmethod compile-test-ast (client (ast ast:case-ast) inserter)
+  (with-compiled-ast (obj client (ast:arg-ast ast) inserter)
     (let* ((comparees (ast:comparees ast))
            (iblocks (loop repeat (1+ (length comparees))
                           collect (make-iblock inserter))))
@@ -602,8 +604,8 @@
 ;;;
 ;;; CONSTANT-AST
 
-(defmethod compile-ast ((ast ast:constant-ast) inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:constant-ast) inserter)
+  (declare (ignore client))
   (let ((const (bir:constant-in-module (ast:value ast) *current-module*))
         (constref-out (make-instance 'bir:output)))
     (insert inserter 'bir:constant-reference
@@ -614,8 +616,8 @@
 ;;;
 ;;; LOAD-TIME-VALUE-AST
 
-(defmethod compile-ast ((ast ast:load-time-value-ast) inserter system)
-  (declare (ignore system))
+(defmethod compile-ast (client (ast ast:load-time-value-ast) inserter)
+  (declare (ignore client))
   (let ((ltv (bir:load-time-value-in-module
               (ast:form ast) (ast:read-only-p ast)
               *current-module*))

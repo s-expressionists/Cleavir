@@ -1,7 +1,7 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defmethod compile-ast ((ast ast:multiple-value-prog1-ast) inserter system)
-  (with-compiled-ast (rv (ast:first-form-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:multiple-value-prog1-ast) inserter)
+  (with-compiled-ast (rv client (ast:first-form-ast ast) inserter)
     ;; Note that there are further situations we don't need to save.
     ;; If the user of the m-v-p1 only needs fixed values, those could just be
     ;; extracted early and no saving done. We don't have that information at this
@@ -17,7 +17,7 @@
       (setf (bir:dynamic-environment during) save)
       (terminate inserter save)
       (begin inserter during)
-      (cond ((compile-sequence-for-effect (ast:form-asts ast) inserter system)
+      (cond ((compile-sequence-for-effect client (ast:form-asts ast) inserter)
              (let* ((read-out (make-instance 'bir:output
                                 :name '#:restored-values))
                     (read (make-instance 'bir:values-restore
@@ -36,8 +36,8 @@
              ;; and change that stuff. But meta-evaluate should delete it.
              :no-return)))))
 
-(defmethod compile-ast ((ast ast:multiple-value-call-ast) inserter system)
-  (with-compiled-ast (callee (ast:function-form-ast ast) inserter system)
+(defmethod compile-ast (client (ast ast:multiple-value-call-ast) inserter)
+  (with-compiled-ast (callee client (ast:function-form-ast ast) inserter)
     (let ((form-asts (ast:form-asts ast)))
       (cond ((null form-asts)
              (let ((call-out (make-instance 'bir:output)))
@@ -46,7 +46,7 @@
                        :outputs (list call-out))
                (list call-out)))
             ((null (rest form-asts))
-             (with-compiled-ast (mvarg (first form-asts) inserter system)
+             (with-compiled-ast (mvarg client (first form-asts) inserter)
                (let* ((mv-call-out (make-instance 'bir:output))
                       (collect-out (make-instance 'bir:output
                                      :name '#:collected-values))
@@ -70,7 +70,7 @@
              (loop with orig-de = (dynamic-environment inserter)
                    for form-ast in (butlast form-asts)
                    for next = (make-iblock inserter :name '#:mv-call-temp)
-                   for rv = (compile-ast form-ast inserter system)
+                   for rv = (compile-ast client form-ast inserter)
                    for mv = (if (eq rv :no-return)
                                 (return-from compile-ast :no-return)
                                 rv)
@@ -84,7 +84,7 @@
                    do (setf (bir:dynamic-environment next) save)
                       (begin inserter next)
                    finally (let* ((last-ast (first (last form-asts)))
-                                  (rv (compile-ast last-ast inserter system)))
+                                  (rv (compile-ast client last-ast inserter)))
                              (when (eq rv :no-return)
                                (return-from compile-ast :no-return))
                              (let* ((mv rv)

@@ -1,73 +1,73 @@
 (in-package #:cleavir-abstract-interpreter)
 
 (defclass type (forward-values-data)
-  ((%system :initarg :system :reader system)))
+  ((%client :initarg :client :reader client)))
 
 (defmethod sv-subinfop ((domain type) ty1 ty2)
-  (ctype:subtypep ty1 ty2 (system domain)))
+  (ctype:subtypep (client domain) ty1 ty2))
 (defmethod sv-join/2 ((domain type) ty1 ty2)
-  (ctype:disjoin (system domain) ty1 ty2))
+  (ctype:disjoin (client domain) ty1 ty2))
 (defmethod sv-wjoin/2 ((domain type) ty1 ty2)
-  (ctype:wdisjoin (system domain) ty1 ty2))
+  (ctype:wdisjoin (client domain) ty1 ty2))
 (defmethod sv-meet/2 ((domain type) ty1 ty2)
-  (ctype:conjoin (system domain) ty1 ty2))
-(defmethod sv-infimum ((domain type)) (ctype:bottom (system domain)))
-(defmethod sv-supremum ((domain type)) (ctype:top (system domain)))
+  (ctype:conjoin (client domain) ty1 ty2))
+(defmethod sv-infimum ((domain type)) (ctype:bottom (client domain)))
+(defmethod sv-supremum ((domain type)) (ctype:top (client domain)))
 (defmethod values-info ((domain type) required optional rest)
-  (ctype:values required optional rest (system domain)))
+  (ctype:values (client domain) required optional rest))
 (defmethod values-required ((domain type) vtype)
-  (ctype:values-required vtype (system domain)))
+  (ctype:values-required (client domain) vtype))
 (defmethod values-optional ((domain type) vtype)
-  (ctype:values-optional vtype (system domain)))
+  (ctype:values-optional (client domain) vtype))
 (defmethod values-rest ((domain type) vtype)
-  (ctype:values-rest vtype (system domain)))
+  (ctype:values-rest (client domain) vtype))
 
 ;;; Use ctype values-conjoin to get strictness, i.e. that any required type
 ;;; being bottom means the type as a whole is bottom.
 (defmethod meet/2 ((domain type) vty1 vty2)
-  (ctype:values-conjoin (system domain) vty1 vty2))
+  (ctype:values-conjoin (client domain) vty1 vty2))
 
-(defgeneric derive-return-type (identity argstype system))
-(defmethod derive-return-type (identity argstype system)
+(defgeneric derive-return-type (client identity argstype))
+(defmethod derive-return-type (client identity argstype)
   (declare (ignore identity argstype))
-  (ctype:values-top system))
+  (ctype:values-top client))
 
 (defmethod flow-known-call ((domain type) identity info)
-  (derive-return-type identity info (system domain)))
+  (derive-return-type (client domain) identity info))
 
 (defmethod flow-instruction ((domain type) (inst bir:constant-reference) &rest in-infos)
   (declare (ignore in-infos))
-  (let ((sys (system domain)))
+  (let ((client (client domain)))
      (ctype:single-value
-      (ctype:member sys (bir:constant-value (bir:input inst)))
-      sys)))
+      client
+      (ctype:member client (bir:constant-value (bir:input inst))))))
 
 (defmethod flow-instruction ((domain type) (inst bir:typeq-test) &rest in-infos)
   (destructuring-bind (itype) in-infos
-    (let* ((sys (system domain))
-           (ivtype (ctype:primary itype sys))
+    (let* ((client (client domain))
+           (ivtype (ctype:primary client itype))
            (ttype (bir:test-ctype inst))
-           (nttype (ctype:negate ttype sys)))
+           (nttype (ctype:negate client ttype)))
       (ctype:single-value
-       (if (ctype:disjointp ivtype ttype sys)
-           (if (ctype:disjointp ivtype nttype sys)
-               (ctype:bottom sys)
-               (ctype:member sys nil))
-           (if (ctype:disjointp ivtype nttype sys)
-               (ctype:negate (ctype:member sys nil) sys)
-               (ctype:top sys)))
-       sys))))
+       client
+       (if (ctype:disjointp client ivtype ttype)
+           (if (ctype:disjointp client ivtype nttype)
+               (ctype:bottom client)
+               (ctype:member client nil))
+           (if (ctype:disjointp client ivtype nttype)
+               (ctype:negate client (ctype:member client nil))
+               (ctype:top client)))))))
 
 (defmethod flow-instruction ((domain type) (inst bir:eq-test) &rest in-infos)
   (destructuring-bind (i1type i2type) in-infos
-    (let* ((sys (system domain))
-           (i1vtype (ctype:primary i1type sys))
-           (i2vtype (ctype:primary i2type sys)))
+    (let* ((client (client domain))
+           (i1vtype (ctype:primary client i1type))
+           (i2vtype (ctype:primary client i2type)))
       (ctype:single-value
-       (if (ctype:disjointp i1vtype i2vtype sys)
-           (ctype:member sys nil)
-           (ctype:top sys))
-       sys))))
+       client
+       (if (ctype:disjointp client i1vtype i2vtype)
+           (ctype:member client nil)
+           (ctype:top client))))))
 
 ;;;
 
@@ -76,15 +76,15 @@
 (defmethod flow-instruction ((domain asserted-type) (inst bir:thei)
                              &rest in-infos)
   (destructuring-bind (inp-info) in-infos
-    (ctype:values-conjoin (system domain) (bir:asserted-type inst) inp-info)))
+    (ctype:values-conjoin (client domain) (bir:asserted-type inst) inp-info)))
 
 ;;;
 
 (defclass derived-type (type)
-  ((system :initarg :system :reader system)))
+  ((%client :initarg :client :reader client)))
 
 (defmethod flow-instruction ((domain derived-type) (inst bir:thei) &rest in-infos)
   (destructuring-bind (ctype) in-infos
     (if (eq (bir:type-check-function inst) nil)
         ctype
-        (ctype:values-conjoin (system domain) (bir:asserted-type inst) ctype))))
+        (ctype:values-conjoin (client domain) (bir:asserted-type inst) ctype))))

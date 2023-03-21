@@ -10,6 +10,6 @@
                     (#:env #:cleavir-env)
                     (#:policy #:cleavir-policy)
                     (#:primop #:cleavir-primop))
-  (:export #:*environment* #:*system*)
+  (:export #:*client* #:*environment*)
   (:export #:load-environment)
   (:export #:frontend))

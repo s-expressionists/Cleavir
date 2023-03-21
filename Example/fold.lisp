@@ -5,7 +5,7 @@
 (defparameter *constant-fold* t)
 (defparameter *folds* (make-hash-table :test #'equal))
 
-(defmethod bir-transformations:fold-call ((system example) fold call args)
+(defmethod bir-transformations:fold-call ((client example) fold call args)
   (declare (ignore call))
   ;; *FOLDS* is defined in environment.lisp.
   (let ((folder (gethash fold *folds*)))

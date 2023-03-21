@@ -53,38 +53,42 @@
 ;;; environment, and determine if the thing is simple with respect to that
 ;;; destination.
 
-(defgeneric simple-dynenv-p (dynenv dest system)
-  (:method ((dynenv bir:dynamic-environment) (dest bir:dynamic-environment)
-            system)
-    (declare (ignore system))
+(defgeneric simple-dynenv-p (client dynenv dest)
+  (:method (client
+            (dynenv bir:dynamic-environment)
+            (dest bir:dynamic-environment))
+    (declare (ignore client))
     (eq dynenv dest)))
 
-(defmethod simple-dynenv-p ((dynenv bir:function)
-                            (dest bir:dynamic-environment)
-                            system)
-  (function-called-simply-p dynenv dest system))
+(defmethod simple-dynenv-p (client
+                            (dynenv bir:function)
+                            (dest bir:dynamic-environment))
+  (function-called-simply-p client dynenv dest))
 
-(defgeneric simple-user-p (user dest datum system)
-  (:method ((user bir:instruction) (dest bir:dynamic-environment)
-            datum system)
-    (declare (ignore datum system))
+(defgeneric simple-user-p (client user dest datum)
+  (:method (client
+            (user bir:instruction)
+            (dest bir:dynamic-environment)
+            datum)
+    (declare (ignore client datum))
     nil))
 
-(defmethod simple-user-p ((user bir:abstract-call)
+(defmethod simple-user-p (client
+                          (user bir:abstract-call)
                           (dest bir:dynamic-environment)
-                          datum system)
+                          datum)
   (and (or (eq (bir:callee user) datum)
            (attributes:has-flag-p (bir:attributes user) :dyn-call))
-       (simple-instruction-p user dest system)))
+       (simple-instruction-p client user dest)))
 
-(defmethod simple-user-p ((user bir:abstract-local-call)
+(defmethod simple-user-p (client
+                          (user bir:abstract-local-call)
                           (dest bir:dynamic-environment)
-                          (datum bir:function)
-                          system)
+                          (datum bir:function))
   (and (eq (bir:callee user) datum)
-       (simple-instruction-p user dest system)))
+       (simple-instruction-p client user dest)))
 
-(defun function-called-simply-p (function come-from system)
+(defun function-called-simply-p (client function come-from)
   ;; If we've already analyzing this function, we must have hit a recursive
   ;; call. In that case, we return true so the prior analysis can continue.
   (when (set:presentp function *seen*)
@@ -98,21 +102,21 @@
       (let* ((eout (bir:output enclose))
              (user (bir:use eout)))
         (when (and user
-                   (not (simple-user-p user come-from function system)))
+                   (not (simple-user-p client user come-from function)))
           (return-from function-called-simply-p nil)))))
   ;; Now check over the local calls. They must all be simple.
   (set:doset (call (bir:local-calls function) t)
-    (unless (simple-user-p call come-from function system)
+    (unless (simple-user-p client call come-from function)
       (return nil))))
 
-(defun simple-instruction-p (inst dest system)
-  (simple-dynenv-p (bir:dynamic-environment inst) dest system))
+(defun simple-instruction-p (client inst dest)
+  (simple-dynenv-p client (bir:dynamic-environment inst) dest))
 
-(defgeneric simple-unwinding-p (instruction system))
-(defmethod simple-unwinding-p ((unwind bir:unwind) system)
+(defgeneric simple-unwinding-p (client instruction))
+(defmethod simple-unwinding-p (client (unwind bir:unwind))
   (let ((*seen* (set:empty-set)))
-    (simple-instruction-p unwind (bir:come-from unwind) system)))
+    (simple-instruction-p client unwind (bir:come-from unwind))))
 
-(defmethod simple-unwinding-p ((inst bir:come-from) system)
-  (set:every (lambda (unw) (simple-unwinding-p unw system))
+(defmethod simple-unwinding-p (client (inst bir:come-from))
+  (set:every (lambda (unw) (simple-unwinding-p client unw))
              (bir:unwinds inst)))

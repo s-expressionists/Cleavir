@@ -5,55 +5,58 @@
 ;;; Converting SETQ.
 
 (defmethod convert-setq
-    (var-cst form-cst (info env:constant-variable-info) env system)
-  (declare (ignore var-cst env system))
+    (client var-cst form-cst (info env:constant-variable-info) env)
+  (declare (ignore client var-cst env))
   (error 'setq-constant-variable :cst form-cst))
 
 (defmethod convert-setq
-    (var-cst form-cst (info env:lexical-variable-info) env system)
+    (client var-cst form-cst (info env:lexical-variable-info) env)
   (ast:make-setq-ast (env:identity info)
                      (type-wrap
-                      (convert form-cst env system)
-                      (env:type info) :setq var-cst env system)
+                      client
+                      (convert client form-cst env)
+                      (env:type info) :setq var-cst env)
                      :origin var-cst))
 
 (defmethod convert-setq
-    (var-cst form-cst (info env:symbol-macro-info) env system)
+    (client var-cst form-cst (info env:symbol-macro-info) env)
   (let* ((expansion (env:expansion info))
          (expander (symbol-macro-expander expansion))
          (expanded-variable (expand-macro expander var-cst env))
-         (expanded-cst (cst:reconstruct system expanded-variable var-cst
+         (expanded-cst (cst:reconstruct client expanded-variable var-cst
                                         :default-source var-cst))
          (origin (cst:source var-cst)))
-    (convert (cst:quasiquote origin
+    (convert client
+             (cst:quasiquote origin
                              (setf (cst:unquote expanded-cst)
                                    ;; FIXME: wrap declared type
                                    (cst:unquote form-cst)))
-             env system)))
+             env)))
 
 (defmethod convert-setq-special-variable
-    (var-cst form-ast info global-env system)
-  (declare (ignore global-env system))
+    (client var-cst form-ast info global-env)
+  (declare (ignore client global-env))
   (let ((temp (ast:make-lexical-variable (gensym) :origin var-cst)))
     (process-progn
      (list (ast:make-lexical-bind-ast temp form-ast :origin var-cst)
            (ast:make-set-constant-symbol-value-ast
             (env:name info)
-	    (ast:make-lexical-ast temp :origin var-cst)
-	    :origin var-cst)
+            (ast:make-lexical-ast temp :origin var-cst)
+            :origin var-cst)
            (ast:make-lexical-ast temp :origin var-cst))
      var-cst)))
 
 (defmethod convert-setq
-    (var-cst form-cst (info env:special-variable-info) env system)
+    (client var-cst form-cst (info env:special-variable-info) env)
   (let ((global-env (env:global-environment env)))
-    (convert-setq-special-variable var-cst
+    (convert-setq-special-variable client
+                                   var-cst
                                    (type-wrap
-                                    (convert form-cst env system)
-                                    (env:type info) :setq var-cst env system)
-				   info
-				   global-env
-				   system)))
+                                    client
+                                    (convert client form-cst env)
+                                    (env:type info) :setq var-cst env)
+                                   info
+                                   global-env)))
 
-(defun convert-elementary-setq (var-cst form-cst env system)
-  (convert-setq var-cst form-cst (variable-info system env var-cst) env system))
+(defun convert-elementary-setq (client var-cst form-cst env)
+  (convert-setq client var-cst form-cst (variable-info client env var-cst) env))

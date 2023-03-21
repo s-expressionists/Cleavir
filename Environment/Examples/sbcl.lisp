@@ -63,14 +63,14 @@
   (sb-int:eval-in-lexenv form (cleavir->host environment1)))
 
 (defmethod cleavir-env:variable-info
-    (system (env sb-kernel:lexenv) symbol)
+    (client (env sb-kernel:lexenv) symbol)
   (multiple-value-bind (binding local-p decls)
       (sb-cltl2:variable-information symbol env)
     (let ((dynamic-extent (cdr (assoc 'dynamic-extent decls)))
           (ignore (cdr (assoc 'ignore decls)))
           (type (cleavir-env:parse-type-specifier
-                 (or (cdr (assoc 'type decls)) 't)
-                 env system)))
+                 client (or (cdr (assoc 'type decls)) 't)
+                 env)))
       (ecase binding
         ((nil) nil) ; unbound
         ((:constant)
@@ -95,7 +95,7 @@
                         :type type
                         :name symbol))))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) symbol)
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) symbol)
   (multiple-value-bind (binding local-p decls)
       (sb-cltl2:function-information symbol env)
     (let* ((dynamic-extent (cdr (assoc 'dynamic-extent decls)))
@@ -113,8 +113,8 @@
                             (sb-kernel:coerce-to-lexenv nil)
                             nil)))))
            (ftype (cleavir-env:parse-type-specifier
-                   (or (cdr (assoc 'ftype decls)) 'function)
-                   env system))
+                   client (or (cdr (assoc 'ftype decls)) 'function)
+                   env))
            ;; sbcl doesn't seem to actually give you this one rn
            (ignore (cdr (assoc 'ignore decls))))
       ;; SBCL defines a few special operators that also have macro definitions,
@@ -156,10 +156,10 @@
 
 (do-external-symbols (op :cleavir-primop)
   (unless (eql op 'cleavir-primop:call-with-variable-bound)
-    (defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql op)))
+    (defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql op)))
       (make-instance 'cleavir-env:special-operator-info :name sym))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql 'cl:unwind-protect)))
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql 'cl:unwind-protect)))
   (make-instance 'cleavir-env:global-macro-info
     :compiler-macro nil
     :name 'cl:unwind-protect
@@ -169,7 +169,7 @@
                     (rest form)
                   `(%unwind-protect (lambda () ,protected) (lambda () ,@cleanup))))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql 'cl:catch)))
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql 'cl:catch)))
   (make-instance 'cleavir-env:global-macro-info
     :compiler-macro nil
     :name 'cl:catch
@@ -179,7 +179,7 @@
                     (rest form)
                   `(%catch ,tag (lambda () ,@body))))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql 'cl:throw)))
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql 'cl:throw)))
   (make-instance 'cleavir-env:global-macro-info
     :compiler-macro nil
     :name 'cl:throw
@@ -189,7 +189,7 @@
                     (rest form)
                   `(multiple-value-call #'%throw ,tag ,result)))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql 'cl:progv)))
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql 'cl:progv)))
   (make-instance 'cleavir-env:global-macro-info
     :compiler-macro nil
     :name 'cl:progv
@@ -199,7 +199,7 @@
                     (rest form)
                   `(%progv ,vars ,vals (lambda () ,@body))))))
 
-(defmethod cleavir-env:function-info (system (env sb-kernel:lexenv) (sym (eql 'cl:multiple-value-call)))
+(defmethod cleavir-env:function-info (client (env sb-kernel:lexenv) (sym (eql 'cl:multiple-value-call)))
   (make-instance 'cleavir-env:global-macro-info
     :compiler-macro nil
     :name 'cl:multiple-value-call
@@ -231,7 +231,7 @@
   (progv (list variable) (list value)
     (funcall thunk)))
 
-(defmethod cleavir-env:function-info (system
+(defmethod cleavir-env:function-info (client
                                       (env sb-kernel:lexenv)
                                       (sym (eql 'sb-ext:truly-the)))
   (make-instance 'cleavir-env:special-operator-info :name 'the))

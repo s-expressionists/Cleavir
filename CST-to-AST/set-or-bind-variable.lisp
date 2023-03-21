@@ -10,20 +10,20 @@
 ;;; creates a PROGN-AST with two ASTs in it.  The first one is a
 ;;; LEXICAL-BIND-AST that assigns the value to the variable, and the second
 ;;; one is the NEXT-AST.
-(defun set-or-bind-variable (variable-cst value-ast next-ast env system)
-  (let* ((info (env:variable-info system env (cst:raw variable-cst)))
+(defun set-or-bind-variable (client variable-cst value-ast next-ast env)
+  (let* ((info (env:variable-info client env (cst:raw variable-cst)))
          (_ (assert (not (null info))))
          ;; Type wrap the value. Per CLHS 3.3.4 "Declaration Scope"
          ;; bound declarations do apply to the initial value of the binding.
          ;; (The page on the TYPE declaration also specifically says it
          ;;  applies to the initial values of bindings.)
          (value-ast
-           (type-wrap value-ast (env:type info)
-                      :setq (ast:origin value-ast) env system)))
+           (type-wrap client value-ast (env:type info)
+                      :setq (ast:origin value-ast) env)))
     (declare (ignore _))
     (if (typep info 'env:special-variable-info)
         (convert-special-binding
-         variable-cst value-ast next-ast env system)
+         client variable-cst value-ast next-ast env)
 	(ast:make-progn-ast
 	 (list (ast:make-lexical-bind-ast
 		(env:identity info)

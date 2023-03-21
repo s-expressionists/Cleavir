@@ -9,11 +9,11 @@
                  :reader   optimize*)))
 
 (defmethod cleavir-env:variable-info
-    (sys (env visualizer-environment) symbol)
-  (cleavir-env:variable-info sys (environment env) symbol))
+    (client (env visualizer-environment) symbol)
+  (cleavir-env:variable-info client (environment env) symbol))
 
-(defmethod cleavir-env:function-info (sys (env visualizer-environment) (sym t))
-  (cleavir-env:function-info sys (environment env) sym))
+(defmethod cleavir-env:function-info (client (env visualizer-environment) (sym t))
+  (cleavir-env:function-info client (environment env) sym))
 
 (defmethod cleavir-env:declarations ((env visualizer-environment))
   (cleavir-env:declarations (environment env)))
@@ -38,10 +38,10 @@
 
 ;;;
 
-(defun bir-transformations (system module transforms)
+(defun bir-transformations (client module transforms)
   (reduce (lambda (module transform)
             (if (consp transform)       ; KLUDGE
-                (funcall (first transform) module system)
+                (funcall (first transform) client module)
                 (funcall transform module)) ; not all transforms return the module
             module)
           transforms :initial-value module))
@@ -52,10 +52,10 @@
   (eclector.concrete-syntax-tree:read-from-string string))
 
 (defvar *global-environment*)
-(defvar *system*)
+(defvar *client*)
 
 (defun module<-cst (cst policy transforms)
-  (let* ((system *system*)
+  (let* ((client *client*)
          (output (make-string-output-stream))
          (bir    (let ((*standard-output* output)
                        (*error-output*    output)
@@ -64,10 +64,10 @@
                                          :environment *global-environment*
                                          :optimize policy))
                           (ast         (cleavir-cst-to-ast:cst-to-ast
-                                        cst environment system)))
-                     (cleavir-ast-to-bir:compile-toplevel ast system))))
+                                        client cst environment)))
+                     (cleavir-ast-to-bir:compile-toplevel client ast))))
          (module (bir:module bir))
-         (module (bir-transformations system module transforms)))
+         (module (bir-transformations client module transforms)))
     (values module
             (let ((string (get-output-stream-string output)))
               (if (a:emptyp string) nil string))

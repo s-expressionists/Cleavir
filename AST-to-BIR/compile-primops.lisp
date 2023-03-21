@@ -1,7 +1,7 @@
 (in-package #:cleavir-ast-to-bir)
 
-(defmethod compile-ast ((ast ast:primop-ast) inserter system)
-  (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
+(defmethod compile-ast (client (ast ast:primop-ast) inserter)
+  (with-compiled-arguments (args client (ast:argument-asts ast) inserter)
     (let* ((info (ast:info ast))
            (out (cleavir-primop-info:out-kind info)))
       (let ((outputs (ecase out
@@ -11,8 +11,8 @@
                 :info info :inputs args :outputs outputs)
         (copy-list outputs)))))
 
-(defmethod compile-test-ast ((ast ast:primop-ast) inserter system)
-  (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
+(defmethod compile-test-ast (client (ast ast:primop-ast) inserter)
+  (with-compiled-arguments (args client (ast:argument-asts ast) inserter)
     (let* ((info (ast:info ast)))
       (let* ((ibs (loop repeat 2 collect (make-iblock inserter)))
              (p-out (make-instance 'bir:output))
@@ -29,8 +29,8 @@
          (ca `(,@(loop for reader in readers collect `(,reader ast)))))
     (ecase out
       ((2)
-       `(defmethod compile-test-ast ((ast ,ast) inserter system)
-          (with-compiled-asts (args ,ca inserter system)
+       `(defmethod compile-test-ast (client (ast ,ast) inserter)
+          (with-compiled-asts (args client ,ca inserter)
             (let* ((ibs
                      (list ,@(loop repeat out
                                    collect `(make-iblock inserter))))
@@ -42,8 +42,8 @@
                          :inputs (list p-out) :next ibs)
               (copy-list ibs)))))
       ((:value :effect)
-       `(defmethod compile-ast ((ast ,ast) inserter system)
-          (with-compiled-asts (args ,ca inserter system)
+       `(defmethod compile-ast (client (ast ,ast) inserter)
+          (with-compiled-asts (args client ,ca inserter)
             (let ((outs ,(ecase out
                            ((:value)
                             '(list (make-instance 'bir:output)))

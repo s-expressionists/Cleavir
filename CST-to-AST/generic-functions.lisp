@@ -1,19 +1,19 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defgeneric convert (cst environment system))
+(defgeneric convert (client cst environment))
 
-(defgeneric convert-cst (cst info environment system))
+(defgeneric convert-cst (client cst info environment))
 
-(defgeneric convert-special (head cst environment system))
+(defgeneric convert-special (client head cst environment))
 
 (defgeneric convert-special-binding
-    (variable value-ast next-ast env system))
+    (client variable value-ast next-ast env))
 
-(defgeneric convert-lambda-call (cst env system))
+(defgeneric convert-lambda-call (client cst env))
 
-(defgeneric convert-code (lambda-list body-cst env system &key block-name-cst origin))
+(defgeneric convert-code (client lambda-list body-cst env &key block-name-cst origin))
 
-(defgeneric convert-variable (cst environment system))
+(defgeneric convert-variable (client cst environment))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -27,26 +27,26 @@
 ;;; INFO instance is not a GLOBAL-FUNCTION-INFO or a
 ;;; LOCAL-FUNCTION-INFO.  Client code can override the default
 ;;; behavior by adding methods to this function, specialized to the
-;;; particular system defined by that client code.
+;;; particular client defined by that client code.
 
-(defgeneric convert-function-reference (cst info env system))
+(defgeneric convert-function-reference (client cst info env))
 
-(defgeneric convert-called-function-reference (cst info env system))
+(defgeneric convert-called-function-reference (client cst info env))
 
 (defgeneric items-from-parameter-group (parameter-group))
 
-(defgeneric convert-global-function-reference (cst info global-env system))
+(defgeneric convert-global-function-reference (client cst info global-env))
 
-(defgeneric convert-special-variable (cst info global-env system))
+(defgeneric convert-special-variable (client cst info global-env))
 
-(defgeneric convert-setq (var-cst form-cst info env system))
+(defgeneric convert-setq (client var-cst form-cst info env))
 
 (defgeneric convert-setq-special-variable
-    (var-cst form-ast info global-env system))
+    (client var-cst form-ast info global-env))
 
-(defgeneric convert-let (cst environment system))
+(defgeneric convert-let (client cst environment))
 
-(defgeneric convert-let* (cst environment system))
+(defgeneric convert-let* (client cst environment))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -58,7 +58,7 @@
 ;;; A client could, for example, specialize this function to produce
 ;;; a "CFASL" file recording only compile time side effects.
 
-(defgeneric cst-eval-for-effect (cst environment system))
+(defgeneric cst-eval-for-effect (client cst environment))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -92,7 +92,7 @@
 ;;; For a context of :VARIABLE, :SETQ, or :ARGUMENT, ctype is a
 ;;; non-values ctype (the primary), otherwise a values ctype.
 
-(defgeneric type-wrap (ast ctype context origin environment system)
-  (:method (ast ctype context origin environment system)
-    (declare (ignore ctype context origin environment system))
+(defgeneric type-wrap (client ast ctype context origin environment)
+  (:method (client ast ctype context origin environment)
+    (declare (ignore client ctype context origin environment))
     ast))
