@@ -106,6 +106,7 @@
               (loop for datum in (rest (bir:inputs call))
                     collect (make-instance 'bir:output
                               :name (bir:name datum)
+                              :asserted-type (bir:asserted-type datum)
                               :derived-type (bir:ctype datum))))
             (inputs '()))
         ;; Remove the local call.
@@ -131,6 +132,8 @@
                     (arg
                      (let* ((const (bir:constant-in-module t module))
                             (suppliedp-out (make-instance 'bir:output
+                                             :asserted-type (bir:asserted-type
+                                                             (second item))
                                              :derived-type (bir:ctype
                                                             (second item))))
                             (suppliedp (make-instance 'bir:constant-reference
@@ -144,13 +147,18 @@
                      (let* ((nil-constant
                               (bir:constant-in-module nil module))
                             (value-out (make-instance 'bir:output
-                                         :derived-type (bir:ctype (first item))))
+                                         :asserted-type (bir:asserted-type
+                                                         (first item))
+                                         :derived-type (bir:ctype
+                                                        (first item))))
                             (value (make-instance
                                        'bir:constant-reference
                                      :inputs (list nil-constant)
                                      :outputs (list value-out)
                                      :origin origin :policy policy))
                             (suppliedp-out (make-instance 'bir:output
+                                             :asserted-type (bir:asserted-type
+                                                             (second item))
                                              :derived-type (bir:ctype
                                                             (second item))))
                             (suppliedp (make-instance 'bir:constant-reference
@@ -199,15 +207,19 @@
          (:required
           (let ((supplied (make-instance 'bir:phi
                             :iblock start
+                            :asserted-type (bir:asserted-type item)
                             :derived-type (bir:ctype item))))
             (push supplied phis)
             (bir:replace-uses supplied item)))
          (&optional
           (let ((supplied (make-instance 'bir:phi
                             :iblock start
+                            :asserted-type (bir:asserted-type (first item))
                             :derived-type (bir:ctype (first item))))
                 (supplied-p (make-instance 'bir:phi
                               :iblock start
+                              :asserted-type (bir:asserted-type
+                                              (second item))
                               :derived-type (bir:ctype
                                              (second item)))))
             (push supplied phis)
@@ -280,6 +292,7 @@
                 (unless (bir:unused-p ucall-out)
                   (let ((phi (make-instance 'bir:phi
                                :iblock dummy-block
+                               :asserted-type (bir:asserted-type ucall-out)
                                :derived-type (bir:ctype ucall-out))))
                     (setf (bir:inputs dummy-block) (list phi))
                     ;; Replace the call-as-datum with the return-values.
