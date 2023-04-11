@@ -5,20 +5,21 @@
 ;;; CONVERT is responsible for converting a concrete syntax tree to an
 ;;; abstract syntax tree.
 
-(defmethod convert (cst environment system)
+(defmethod convert (client cst environment)
   (let ((form (cst:raw cst)))
     (cond ((and (not (consp form)) (not (symbolp form)))
-           (convert-constant cst environment system))
+           (convert-constant client cst environment))
           ((symbolp form)
-           (convert-variable cst environment system))
+           (convert-variable client cst environment))
           ((symbolp (car form))
            ;; Even if we are in COMPILE-TIME-TOO mode, at this point, we
            ;; do not know whether to evaluate the form at compile time,
            ;; simply because it might be a special form that is handled
            ;; specially.  So we must wait until we have more
            ;; information.
-           (let ((info (function-info system environment (cst:first cst))))
-             (convert-cst cst info environment system)))
+           (let ((description (describe-function client environment
+                                                 (cst:first cst))))
+             (convert-cst client cst description environment)))
           (t
            ;; The form must be a compound form where the CAR is a lambda
            ;; expression.  Evaluating such a form might have some
@@ -26,10 +27,10 @@
            ;; in COMPILE-TIME-TOO mode, in which case we must evaluate
            ;; the form as well.
            (when (and *current-form-is-top-level-p* *compile-time-too*)
-             (cst-eval-for-effect cst environment system))
-           (convert-lambda-call cst environment system)))))
+             (cst-eval-for-effect-encapsulated client cst environment))
+           (convert-lambda-call client cst environment)))))
 
-(defmethod convert :around (cst environment system)
+(defmethod convert :around (client cst environment)
   (restart-case
       ;; We bind these only here so that if a restart is invoked,
       ;; the new CONVERT call will get the right values
@@ -37,16 +38,20 @@
       (let ((*current-form-is-top-level-p* *subforms-are-top-level-p*)
             (*subforms-are-top-level-p* nil)
             ;; gives all generated ASTs the appropriate policy.
-            (ast:*policy* (env:environment-policy environment)))
+            (ast:*policy* (policy
+                           client
+                           (trucler:describe-optimize client environment)
+                           environment)))
         (call-next-method))
     (continue ()
       :report "Replace with call to ERROR."
-      (convert (cst:cst-from-expression
+      (convert client
+               (cst:cst-from-expression
                 `(error 'run-time-program-error
                         :expr ',(cst:raw cst)
                         :origin ',(cst:source cst))
                 :source (cst:source cst))
-               environment system))
+               environment))
     (substitute-cst (cst)
       :report "Compile the given CST in place of the problematic one."
-      (convert cst environment system))))
+      (convert client cst environment))))

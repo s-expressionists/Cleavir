@@ -174,7 +174,7 @@
     (when show-ctype
       (let* ((type-specs (mapcar #'cdr outs))
              (types (mapcar #'first type-specs)))
-        (unless (or (every (lambda (ctype) (cleavir-ctype:top-p ctype nil))
+        (unless (or (every (lambda (ctype) (cleavir-ctype:top-p nil ctype))
                            types)
                     (every (lambda (type-spec) (eq type-spec nil)) type-specs))
           (format t "~45T; ")

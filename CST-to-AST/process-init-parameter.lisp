@@ -12,10 +12,11 @@
 ;;; This function returns an AST that represents processing of this
 ;;; parameter and the next computation.
 (defun process-init-parameter
-    (var-cst var supplied-p-cst supplied-p init-ast env next-ast system)
+    (client var-cst var supplied-p-cst supplied-p init-ast env next-ast)
   (let* ((origin (cst:source var-cst))
          (next-ast
            (set-or-bind-variable
+            client
             var-cst
             (ast:make-if-ast
              (ast:make-eq-ast
@@ -24,19 +25,19 @@
               ;; supplied-p linear for the sake of making the BIR much
               ;; simpler, as arguments in BIR are linear data.
               (if supplied-p-cst
-                  (convert-variable supplied-p-cst env system)
+                  (convert-variable client supplied-p-cst env)
                   (ast:make-lexical-ast supplied-p :origin var-cst))
-              (convert-constant (make-atom-cst nil origin) env system)
+              (convert-constant client (make-atom-cst nil origin) env)
               :origin var-cst)
              init-ast
              (ast:make-lexical-ast var :origin var-cst)
              :origin var-cst)
             next-ast
-            env system)))
+            env)))
     (if (null supplied-p-cst)
         next-ast
-        (set-or-bind-variable supplied-p-cst
+        (set-or-bind-variable client
+                              supplied-p-cst
                               (ast:make-lexical-ast supplied-p :origin var-cst)
                               next-ast
-                              env
-                              system))))
+                              env))))

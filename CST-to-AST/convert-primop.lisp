@@ -4,7 +4,7 @@
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst argument-count argument-count))
 
-(defun convert-primop (symbol cst env system)
+(defun convert-primop (client symbol cst env)
   (let* ((info (cleavir-primop-info:info symbol))
          (ninputs (cleavir-primop-info:ninputs info)))
     (check-simple-primop-syntax cst ninputs)
@@ -12,14 +12,14 @@
       (declare (ignore op-cst))
       (make-instance 'ast:primop-ast
         :info info
-        :argument-asts (convert-sequence args-cst env system)
+        :argument-asts (convert-sequence client args-cst env)
         :attributes (cleavir-primop-info:attributes info)
         :origin cst))))
 
 (defmacro defprimop (symbol)
   `(defmethod convert-special
-       ((symbol (eql ',symbol)) cst env system)
-     (convert-primop symbol cst env system)))
+       (client (symbol (eql ',symbol)) cst env)
+     (convert-primop client symbol cst env)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -29,8 +29,8 @@
 ;;; code which is then converted again.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:ast)) cst env system)
-  (declare (ignore env system))
+    (client (symbol (eql 'cleavir-primop:ast)) cst env)
+  (declare (ignore client env))
   (check-simple-primop-syntax cst 1)
   (cst:db origin (primop-cst ast-cst) cst
     (declare (ignore primop-cst))
@@ -41,13 +41,13 @@
 ;;; Converting CLEAVIR-PRIMOP:EQ.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:eq)) cst env system)
+    (client (symbol (eql 'cleavir-primop:eq)) cst env)
   (check-simple-primop-syntax cst 2)
   (cst:db origin (eq-cst arg1-cst arg2-cst) cst
     (declare (ignore eq-cst))
     (ast:make-eq-ast
-     (convert arg1-cst env system)
-     (convert arg2-cst env system)
+     (convert client arg1-cst env)
+     (convert client arg2-cst env)
      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,16 +63,15 @@
 ;;; it is unaffected by client logic in type-wrap etc.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:the)) cst env system)
+    (client (symbol (eql 'cleavir-primop:the)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
-                   (cst:raw value-type-cst)
-                   env system)))
+    (let ((vctype (parse-values-type-specifier
+                   client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
-       (convert form-cst env system)
+       (convert client form-cst env)
        vctype
        nil
        :origin cst))))
@@ -86,16 +85,15 @@
 ;;; checking. Use of this may be dangerous.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:truly-the)) cst env system)
+    (client (symbol (eql 'cleavir-primop:truly-the)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
-                   (cst:raw value-type-cst)
-                   env system)))
+    (let ((vctype (parse-values-type-specifier
+                   client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
-       (convert form-cst env system)
+       (convert client form-cst env)
        vctype
        :trusted
        :origin cst))))
@@ -108,21 +106,20 @@
 ;;; The checking function must be provided.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:ensure-the)) cst env system)
+    (client (symbol (eql 'cleavir-primop:ensure-the)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 3 3)
   (cst:db origin (the-cst value-type-cst
                           type-check-function-cst form-cst)
       cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
-                   (cst:raw value-type-cst)
-                   env system)))
+    (let ((vctype (parse-values-type-specifier
+                   client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
-       (convert form-cst env system)
+       (convert client form-cst env)
        vctype
        ;; FIXME: Check that it's a lambda expression
-       (convert type-check-function-cst env system)
+       (convert client type-check-function-cst env)
        :origin cst))))
 
 
@@ -131,13 +128,13 @@
 ;;; Converting CLEAVIR-PRIMOP:TYPEQ.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:typeq)) cst env system)
+    (client (symbol (eql 'cleavir-primop:typeq)) cst env)
   (check-simple-primop-syntax cst 2)
   (cst:db origin (typeq-cst arg1-cst arg2-cst) cst
     (declare (ignore typeq-cst))
     (ast:make-typeq-ast
-     (convert arg1-cst env system)
-     (env:parse-type-specifier (cst:raw arg2-cst) env system)
+     (convert client arg1-cst env)
+     (parse-type-specifier client (cst:raw arg2-cst) env)
      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -154,7 +151,7 @@
 ;;; to compare against (immediates, most likely) are used.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:case)) cst env system)
+    (client (symbol (eql 'cleavir-primop:case)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 2 nil) ; keyform and default case
   (cst:db origin (case-cst keyform-cst . case-csts) cst
@@ -175,15 +172,15 @@
             finally (return
                       (ast:make-branch-ast
                        (ast:make-case-ast
-                        (convert keyform-cst env system)
+                        (convert client keyform-cst env)
                         comparees
                         :origin cst)
                        (loop for body in dests
                              collect (process-progn
-                                      (convert-sequence body env system)
+                                      (convert-sequence client body env)
                                       cst))
                        (process-progn
-                        (convert-sequence (cst:rest default) env system)
+                        (convert-sequence client (cst:rest default) env)
                         cst)
                        :origin cst))))))
 
@@ -201,16 +198,16 @@
 ;;; a function and then calls this primop.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:funcall)) cst env system)
+    (client (symbol (eql 'cleavir-primop:funcall)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (funcall-cst function-cst . arguments-cst) cst
     (declare (ignore funcall-cst))
     (ast:make-call-ast
-     (convert function-cst env system)
+     (convert client function-cst env)
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
-           collect (convert (cst:first remaining) env system))
+           collect (convert client (cst:first remaining) env))
      :origin cst
      ;; FIXME: propagate inline here somehow.
      )))
@@ -229,16 +226,16 @@
 ;;; already a function and then calls this primop.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:multiple-value-call)) cst env system)
+    (client (symbol (eql 'cleavir-primop:multiple-value-call)) cst env)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (multiple-value-call-cst function-cst . arguments-cst) cst
     (declare (ignore multiple-value-call-cst))
     (ast:make-multiple-value-call-ast
-     (convert function-cst env system)
+     (convert client function-cst env)
      (loop for remaining = arguments-cst then (cst:rest remaining)
            until (cst:null remaining)
-           collect (convert (cst:first remaining) env system))
+           collect (convert client (cst:first remaining) env))
      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -249,7 +246,7 @@
 ;;; should be impossible.
 
 (defmethod convert-special
-    ((symbol (eql 'cleavir-primop:unreachable)) cst env system)
-  (declare (ignore env system))
+    (client (symbol (eql 'cleavir-primop:unreachable)) cst env)
+  (declare (ignore client env))
   (check-simple-primop-syntax cst 0)
   (make-instance 'ast:unreachable-ast :origin cst))

@@ -5,7 +5,7 @@
 ;;; point is called.
 (defvar *compiler*)
 
-(defun cst-to-ast (cst environment system)
+(defun cst-to-ast (client cst environment)
   (let ((*subforms-are-top-level-p* t)
 	(*compile-time-too* nil))
-    (convert cst environment system)))
+    (convert client cst environment)))

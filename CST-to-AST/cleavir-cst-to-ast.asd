@@ -14,17 +14,18 @@
   :depends-on (:concrete-syntax-tree
                :concrete-syntax-tree-destructuring
                :cleavir-ast
-	       :cleavir-primop
-	       :cleavir-environment
-	       :cleavir-compilation-policy
+               :cleavir-primop
+               :cleavir-compilation-policy
                :cleavir-ctype
                :cleavir-conditions
-               :acclimation)
+               :acclimation
+               :trucler-base)
   :serial t
   :components
   ((:file "packages")
    (:file "conditions")
    (:file "condition-reporters-english")
+   (:file "type-information")
    (:file "environment-augmentation")
    (:file "environment-query")
    (:file "variables")

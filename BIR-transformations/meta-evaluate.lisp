@@ -6,7 +6,7 @@
 
 (in-package #:cleavir-bir-transformations)
 
-(defun meta-evaluate-module (module system)
+(defun meta-evaluate-module (client module)
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
@@ -16,17 +16,17 @@
       ;; This check is necessary because meta-evaluation might have deleted
       ;; the function during our iteration. KLUDGE?
       (when (set:presentp function (bir:functions module))
-        (meta-evaluate-function function system)
+        (meta-evaluate-function client function)
         (bir:compute-iblock-flow-order function)))))
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
-(defun derive-type-for-linear-datum (linear-datum derived-type system)
+(defun derive-type-for-linear-datum (client linear-datum derived-type)
   (setf (bir:derived-type linear-datum)
-        (ctype:values-conjoin system (bir:ctype linear-datum) derived-type)))
+        (ctype:values-conjoin client (bir:ctype linear-datum) derived-type)))
 ;;; Pass along an assertion that LINEAR-DATUM is of type ASSERTED-TYPE.
-(defun assert-type-for-linear-datum (linear-datum asserted-type system)
+(defun assert-type-for-linear-datum (client linear-datum asserted-type)
   (setf (bir:asserted-type linear-datum)
-        (ctype:values-conjoin system (bir:asserted-type linear-datum)
+        (ctype:values-conjoin client (bir:asserted-type linear-datum)
                               asserted-type)))
 
 (defun derive-attributes (linear-datum new-attributes)
@@ -35,60 +35,58 @@
         (attributes:join-attributes
          (bir:attributes linear-datum) new-attributes)))
 
-(defun derive-local-call-parameter-types (function argstypes system)
-  (let* ((bottom (ctype:bottom system)))
+(defun derive-local-call-parameter-types (client function argstypes)
+  (let* ((bottom (ctype:bottom client)))
     (bir:map-lambda-list
      (lambda (state item index)
        (case state
          ((:required)
           (let ((type bottom))
             (dolist (argstype argstypes)
-              (setf type (ctype:disjoin/2 type
-                                          (ctype:nth-value index argstype system)
-                                          system)))
-            (setf (bir:derived-type item) (ctype:single-value type system))))
+              (setf type (ctype:disjoin/2 client type
+                                          (ctype:nth-value client index argstype))))
+            (setf (bir:derived-type item) (ctype:single-value client type))))
          ((&optional)
           (let ((type bottom)
                 (suppliedp nil))
             (dolist (argstype argstypes)
-              (let ((nreq (length (ctype:values-required argstype system)))
-                    (atype (ctype:nth-value index argstype system)))
-                (setf type (ctype:disjoin/2 type atype system))
+              (let ((nreq (length (ctype:values-required client argstype)))
+                    (atype (ctype:nth-value client index argstype)))
+                (setf type (ctype:disjoin/2 client type atype))
                 (cond ((< index nreq) (pushnew t suppliedp))
-                      ((ctype:bottom-p atype system) (pushnew nil suppliedp))
+                      ((ctype:bottom-p client atype) (pushnew nil suppliedp))
                       (t (setf suppliedp '(nil t))))))
-            (setf (bir:derived-type (first item)) (ctype:single-value type system)
+            (setf (bir:derived-type (first item)) (ctype:single-value client type)
                   (bir:derived-type (second item))
-                  (ctype:single-value (apply #'ctype:member system suppliedp)
-                                      system))))
+                  (ctype:single-value client
+                                      (apply #'ctype:member client suppliedp)))))
          ((&rest)
           ;; Here INDEX will be the number of required parameters plus the
           ;; number of optional parameters, which is useful.
-          (let ((subtypes nil) (top (ctype:top system)))
+          (let ((subtypes nil) (top (ctype:top client)))
             (dolist (argstype argstypes)
-              (let ((nreq (length (ctype:values-required argstype system)))
-                    (nopt (length (ctype:values-optional argstype system)))
-                    (rest (ctype:values-rest argstype system)))
+              (let ((nreq (length (ctype:values-required client argstype)))
+                    (nopt (length (ctype:values-optional client argstype)))
+                    (rest (ctype:values-rest client argstype)))
                 (cond ((< index nreq) (pushnew 'cons subtypes))
                       ((< index (+ nreq nopt))
                        (setf subtypes '(null cons)))
-                      ((ctype:bottom-p rest system) (pushnew 'null subtypes))
+                      ((ctype:bottom-p client rest) (pushnew 'null subtypes))
                       (t (setf subtypes '(null cons))))))
             (setf (bir:derived-type item)
                   (ctype:single-value
+                   client
                    (cond ((equal subtypes '(null cons))
-                          (ctype:disjoin/2 (ctype:member system nil)
-                                           (ctype:cons top top system)
-                                           system))
-                         ((equal subtypes '(null)) (ctype:member system nil))
-                         ((equal subtypes '(cons)) (ctype:cons top top system)))
-                   system))))
+                          (ctype:disjoin/2 client (ctype:member client nil)
+                                           (ctype:cons client top top)))
+                         ((equal subtypes '(null)) (ctype:member client nil))
+                         ((equal subtypes '(cons)) (ctype:cons client top top)))))))
          ;; anything else is too complicated.
          ))
      (bir:lambda-list function))))
 
-(defun derive-local-call-argument-types-aux (local-calls system)
-  (let ((bottom (ctype:bottom system)))
+(defun derive-local-call-argument-types-aux (client local-calls)
+  (let ((bottom (ctype:bottom client)))
     ;; One values type for each local call, describing the arguments
     ;; to that call.
     (set:mapset
@@ -96,24 +94,24 @@
      (lambda (local-call)
        (etypecase local-call
          (bir:local-call
-          (ctype:values (loop for arg in (rest (bir:inputs local-call))
-                              collect (ctype:primary (bir:ctype arg) system))
-                        nil bottom system))
+          (ctype:values client
+                        (loop for arg in (rest (bir:inputs local-call))
+                              collect (ctype:primary client (bir:ctype arg)))
+                        nil bottom))
          (bir:mv-local-call
           (append-input-types
-           (mapcar #'bir:ctype (rest (bir:inputs local-call)))
-           system))))
+           client
+           (mapcar #'bir:ctype (rest (bir:inputs local-call)))))))
      local-calls)))
 
-(defun derive-local-call-argument-types (function local-calls system)
+(defun derive-local-call-argument-types (client function local-calls)
   (derive-local-call-parameter-types
-   function
-   (derive-local-call-argument-types-aux local-calls system)
-   system))
+   client function
+   (derive-local-call-argument-types-aux client local-calls)))
 
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
-(defun derive-function-argument-types (function system)
+(defun derive-function-argument-types (client function)
   (let ((local-calls (bir:local-calls function)))
     (if (or (bir:enclose function) (set:empty-set-p local-calls))
         ;; If there is an enclose, we can be called from pretty much anywhere,
@@ -122,35 +120,32 @@
         ;; values at least.
         ;; If there is no enclose and no local calls, we treat this as a top
         ;; level function which could again be called from anywhere.
-        (let* ((top (ctype:top system))
-               (svtop (ctype:single-value top system)))
+        (let* ((top (ctype:top client))
+               (svtop (ctype:single-value client top)))
           (bir:map-lambda-list
            (lambda (state item index)
              (declare (ignore index))
              (case state
-               ((:required) (derive-type-for-linear-datum item svtop system))
+               ((:required) (derive-type-for-linear-datum client item svtop))
                ((&optional)
-                (derive-type-for-linear-datum (first item) svtop system)
-                (derive-type-for-linear-datum (second item) svtop system))
+                (derive-type-for-linear-datum client (first item) svtop)
+                (derive-type-for-linear-datum client (second item) svtop))
                ((&rest)
                 (derive-type-for-linear-datum
-                 item
+                 client item
                  ;; LIST is of course (or null cons)
                  (ctype:single-value
-                  (ctype:disjoin/2
-                   (ctype:member system nil)
-                   (ctype:cons top top system)
-                   system)
-                  system)
-                 system))
+                  client
+                  (ctype:disjoin/2 client (ctype:member client nil)
+                                   (ctype:cons client top top)))))
                ((&key)
-                (derive-type-for-linear-datum (second item) svtop system)
-                (derive-type-for-linear-datum (third item) svtop system))))
+                (derive-type-for-linear-datum client (second item) svtop)
+                (derive-type-for-linear-datum client (third item) svtop))))
            (bir:lambda-list function)))
-        (derive-local-call-argument-types function local-calls system))))
+        (derive-local-call-argument-types client function local-calls))))
 
-(defun meta-evaluate-function (function system)
-  (derive-function-argument-types function system)
+(defun meta-evaluate-function (client function)
+  (derive-function-argument-types client function)
   ;; The decision for what goes in the forward vs backward flow passes
   ;; has to do with whether the effects of the optimization are on
   ;; things that happen before vs after in the flow graph, and if that
@@ -160,9 +155,9 @@
     ;; Make sure to merge the successors as much as possible so we can
     ;; trigger more optimizations.
     (loop while (bir:merge-successor-if-possible iblock))
-    (meta-evaluate-iblock iblock system))
+    (meta-evaluate-iblock client iblock))
   (bir:do-iblocks (iblock function :backward)
-    (flush-dead-code iblock system)
+    (flush-dead-code client iblock)
     ;; These transformations apply on empty iblocks, so we try them only
     ;; after the dead code flush.
     (let ((end (bir:end iblock)))
@@ -173,14 +168,14 @@
 ;;; Derive the types of any iblock inputs. We have to do this from
 ;;; scratch optimistically because we are disjoining the types of the
 ;;; definitions, instead of narrowing the types conservatively.
-(defun compute-phi-type (phi system)
-  (let ((type (ctype:values-bottom system)))
+(defun compute-phi-type (client phi)
+  (let ((type (ctype:values-bottom client)))
     (set:doset (inp (bir:phi-inputs phi) type)
-      (setq type (ctype:values-disjoin system type (bir:ctype inp))))))
+      (setq type (ctype:values-disjoin client type (bir:ctype inp))))))
 
-(defun derive-iblock-input-types (iblock system)
+(defun derive-iblock-input-types (client iblock)
   (dolist (phi (bir:inputs iblock))
-    (setf (bir:derived-type phi) (compute-phi-type phi system))))
+    (setf (bir:derived-type phi) (compute-phi-type client phi))))
 
 (defun compute-phi-attributes (phi)
   (let ((attr t))
@@ -191,75 +186,75 @@
   (dolist (phi (bir:inputs iblock))
     (setf (bir:attributes phi) (compute-phi-attributes phi))))
 
-(defun meta-evaluate-iblock (iblock system)
-  (derive-iblock-input-types iblock system)
+(defun meta-evaluate-iblock (client iblock)
+  (derive-iblock-input-types client iblock)
   (derive-iblock-input-attributes iblock)
   (bir:do-iblock-instructions (instruction iblock)
     ;; We derive types first. The type derivations should be correct regardless
     ;; of whether a rewrite is on the way, and if we do things in this order we
     ;; can derive types through any amount of straight line code during a single
     ;; meta-evaluate pass, promoting flow.
-    (derive-types instruction system)
-    (meta-evaluate-instruction instruction system)))
+    (derive-types client instruction)
+    (meta-evaluate-instruction client instruction)))
 
-(defgeneric maybe-flush-instruction (instruction system))
+(defgeneric maybe-flush-instruction (client instruction))
 
-(defmethod maybe-flush-instruction ((instruction bir:instruction) system)
-  (declare (ignore system)))
+(defmethod maybe-flush-instruction (client (instruction bir:instruction))
+  (declare (ignore client)))
 
-(defmethod maybe-flush-instruction ((instruction bir:readvar) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:readvar))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction
-    ((instruction bir:constant-reference) system)
-  (declare (ignore system))
+    (client (instruction bir:constant-reference))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
 (defmethod maybe-flush-instruction
-    ((instruction bir:constant-fdefinition) system)
-  (declare (ignore system))
+    (client (instruction bir:constant-fdefinition))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
-(defmethod maybe-flush-instruction ((instruction bir:enclose) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:enclose))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
-(defmethod maybe-flush-instruction ((instruction bir:conditional-test) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:conditional-test))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
-(defmethod maybe-flush-instruction ((instruction bir:fixed-to-multiple) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:fixed-to-multiple))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
-(defmethod maybe-flush-instruction ((instruction bir:values-restore) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:values-restore))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output instruction))
     (bir:delete-instruction instruction)))
 
-(defmethod maybe-flush-instruction ((instruction bir:thei) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:thei))
+  (declare (ignore client))
   (when (and (bir:unused-p (bir:output instruction))
              ;; If this doesn't represent a check, it can be deleted.
              (symbolp (bir:type-check-function instruction)))
     (bir:delete-instruction instruction)))
 
-(defgeneric flushable-call-p (call identity system)
-  (:method ((call bir:abstract-call) identity system)
-    (declare (ignore identity system))
+(defgeneric flushable-call-p (client call identity)
+  (:method (client (call bir:abstract-call) identity)
+    (declare (ignore client identity))
     nil))
 
-(defmethod maybe-flush-instruction ((instruction bir:abstract-call) system)
+(defmethod maybe-flush-instruction (client (instruction bir:abstract-call))
   (when (and (bir:unused-p (bir:output instruction))
              (let ((ids (attributes:identities (bir:attributes instruction))))
                (and (not (null ids))
-                    (every (lambda (id) (flushable-call-p instruction id system))
+                    (every (lambda (id) (flushable-call-p client instruction id))
                            ids))))
     (bir:delete-instruction instruction)))
 
-(defmethod maybe-flush-instruction ((instruction bir:primop) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (instruction bir:primop))
+  (declare (ignore client))
   (let ((outs (bir:outputs instruction)))
     (when (and (not (null outs))
                (bir:unused-p (first outs))
@@ -273,47 +268,47 @@
      :origin (bir:origin inst) :policy (bir:policy inst))
    inst))
 
-(defmethod maybe-flush-instruction ((inst bir:values-save) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (inst bir:values-save))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output inst))
     (delete-terminator1 inst)))
-(defmethod maybe-flush-instruction ((inst bir:values-collect) system)
-  (declare (ignore system))
+(defmethod maybe-flush-instruction (client (inst bir:values-collect))
+  (declare (ignore client))
   (when (bir:unused-p (bir:output inst))
     (delete-terminator1 inst)))
 
-(defun flush-dead-code (iblock system)
+(defun flush-dead-code (client iblock)
   (bir:do-iblock-instructions (instruction iblock :backward)
-    (maybe-flush-instruction instruction system))
+    (maybe-flush-instruction client instruction))
   (dolist (phi (bir:inputs iblock))
     (when (null (bir:use phi))
       (bir:delete-phi phi))))
 
-(defgeneric meta-evaluate-instruction (instruction system))
+(defgeneric meta-evaluate-instruction (client instruction))
 
-(defgeneric derive-types (instruction system))
+(defgeneric derive-types (client instruction))
 
-(defmethod meta-evaluate-instruction (instruction system)
+(defmethod meta-evaluate-instruction (client instruction)
   ;; Without particular knowledge, we have nothing to do.
-  (declare (ignore instruction system)))
+  (declare (ignore client instruction)))
 
-(defmethod derive-types (instruction system)
-  (declare (ignore instruction system)))
+(defmethod derive-types (client instruction)
+  (declare (ignore client instruction)))
 
 ;;; Fold the IFI if we can determine whether or not the test will
 ;;; evaluate to NIL.
-(defun fold-ifi (instruction system)
+(defun fold-ifi (client instruction)
   (let* ((in (bir:input instruction))
-         (inct (ctype:primary (bir:ctype in) system))
+         (inct (ctype:primary client (bir:ctype in)))
          (next (bir:next instruction))
          (then (first next))
          (else (second next)))
     (multiple-value-bind (next dead)
-        (cond ((ctype:disjointp inct (ctype:member system nil) system)
+        (cond ((ctype:disjointp client inct (ctype:member client nil))
                #+(or)
                (format t "folding ifi based on type ~a" (bir:ctype in))
                (values then else))
-              ((ctype:subtypep inct (ctype:member system nil) system)
+              ((ctype:subtypep client inct (ctype:member client nil))
                #+(or)
                (print "folding ifi based on type NULL")
                (values else then)))
@@ -391,8 +386,8 @@
       (change-class ifi 'bir:jump :outputs () :inputs ()
         :next (list succ)))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:ifi) system)
-  (fold-ifi instruction system))
+(defmethod meta-evaluate-instruction (client (instruction bir:ifi))
+  (fold-ifi client instruction))
 
 ;; Replace COMPUTATION with a constant reference to value.
 (defun replace-computation-by-constant-value (instruction value)
@@ -423,61 +418,56 @@
 
 ;;; If there is only one input and it has type (values something &rest nil),
 ;;; there is no need for this instruction.
-(defmethod meta-evaluate-instruction ((inst bir:fixed-to-multiple)
-                                      system)
+(defmethod meta-evaluate-instruction (client (inst bir:fixed-to-multiple))
   (let ((inputs (bir:inputs inst)))
     (when (= (length inputs) 1)
       (let* ((input (first inputs))
              (inty (bir:ctype input)))
-        (when (and (ctype:bottom-p (ctype:values-rest inty system) system)
-                   (null (ctype:values-optional inty system))
-                   (= (length (ctype:values-required inty system)) 1))
+        (when (and (ctype:bottom-p client (ctype:values-rest client inty))
+                   (null (ctype:values-optional client inty))
+                   (= (length (ctype:values-required client inty)) 1))
           (setf (bir:inputs inst) nil)
           (let ((out (bir:output inst)))
             (bir:replace-uses input out)
             (bir:delete-instruction inst)
             t))))))
 
-(defmethod derive-types ((instruction bir:fixed-to-multiple) system)
+(defmethod derive-types (client (instruction bir:fixed-to-multiple))
   (let ((inputs (bir:inputs instruction)))
     ;; FIXME/KLUDGE: For now we only pass attributes for the primary value.
     (when (= (length inputs) 1)
       (derive-attributes (bir:output instruction)
                          (bir:attributes (first inputs))))
     (assert-type-for-linear-datum
-     (bir:output instruction)
+     client (bir:output instruction)
      (ctype:values
+      client
       (loop for inp in inputs
-            collect (ctype:primary (bir:asserted-type inp) system))
-      nil
-      (ctype:bottom system)
-      system)
-     system)
+            collect (ctype:primary client (bir:asserted-type inp)))
+      nil (ctype:bottom client)))
     (derive-type-for-linear-datum
-     (bir:output instruction)
+     client (bir:output instruction)
      (ctype:values
+      client
       (loop for inp in inputs
-            collect (ctype:primary (bir:ctype inp) system))
-      nil
-      (ctype:bottom system)
-      system)
-     system)))
+            collect (ctype:primary client (bir:ctype inp)))
+      nil (ctype:bottom client)))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:eq-test) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:eq-test))
   (let ((inputs (bir:inputs instruction)))
     (cond ((constant-fold-instruction instruction inputs #'eq))
           ;; Objects of different types are never EQ.
           ((ctype:disjointp
-            (ctype:primary (bir:ctype (first inputs)) system)
-            (ctype:primary (bir:ctype (second inputs)) system)
-            system)
+            client
+            (ctype:primary client (bir:ctype (first inputs)))
+            (ctype:primary client (bir:ctype (second inputs))))
            (replace-computation-by-constant-value instruction nil)
            t)
           ;; (ifi (eq-test nil x) a b) => (if x b a)
           ((ctype:subtypep
-            (ctype:primary (bir:ctype (first inputs)) system)
-            (ctype:member system nil)
-            system)
+            client
+            (ctype:primary client (bir:ctype (first inputs)))
+            (ctype:member client nil))
            (let* ((in (second inputs))
                   (out (bir:output instruction))
                   (ifi (bir:use out)))
@@ -488,9 +478,9 @@
                t)))
           ;; (ifi (eq-test x nil) a b) => (if x b a)
           ((ctype:subtypep
-            (ctype:primary (bir:ctype (second inputs)) system)
-            (ctype:member system nil)
-            system)
+            client
+            (ctype:primary client (bir:ctype (second inputs)))
+            (ctype:member client nil))
            (let* ((in (first inputs))
                   (out (bir:output instruction))
                   (ifi (bir:use out)))
@@ -500,80 +490,80 @@
                (bir:delete-instruction instruction)
                t))))))
 
-(defgeneric generate-type-check-function (module origin ctype system)
+(defgeneric generate-type-check-function (client module origin ctype)
   ;; If the client does not specialize this function, do not reduce
   ;; typeq in the declared-but-not-verified case.
-  (:method ((module bir:module) origin ctype system)
-    (declare (ignore origin ctype system))
+  (:method (client (module bir:module) origin ctype)
+    (declare (ignore client origin ctype))
     nil))
 
-(defun insert-type-check-before (ctype input inst system)
-  (let ((tcf (generate-type-check-function (bir:module (bir:function inst))
-                                           (bir:origin inst) ctype system)))
+(defun insert-type-check-before (client ctype input inst)
+  (let ((tcf (generate-type-check-function client
+                                           (bir:module (bir:function inst))
+                                           (bir:origin inst)
+                                           ctype)))
     (if tcf
         (let* ((actype (bir:asserted-type input))
-               (cctype (ctype:conjoin system ctype
-                                      (ctype:primary (bir:ctype input) system)))
+               (cctype (ctype:conjoin client ctype
+                                      (ctype:primary client (bir:ctype input))))
                (out (make-instance 'bir:output
                       :asserted-type actype
-                      :derived-type (ctype:single-value cctype system)
+                      :derived-type (ctype:single-value client cctype)
                       :attributes (bir:attributes input)
                       :name (bir:name input)))
                (thei (make-instance 'bir:thei
                        :inputs (list input) :outputs (list out)
                        :origin (bir:origin inst) :policy (bir:policy inst)
-                       :asserted-type (ctype:single-value ctype system)
+                       :asserted-type (ctype:single-value client ctype)
                        :type-check-function tcf)))
           (bir:insert-instruction-before thei inst)
           t)
         nil)))
 
 (defmethod meta-evaluate-instruction
-    ((instruction bir:typeq-test) system)
+    (client (instruction bir:typeq-test))
   (let* ((input (bir:input instruction))
-         (ctype (ctype:primary (bir:ctype input) system))
-         (actype (ctype:primary (bir:asserted-type input) system))
+         (ctype (ctype:primary client (bir:ctype input)))
+         (actype (ctype:primary client (bir:asserted-type input)))
          (test-ctype (bir:test-ctype instruction)))
-    (cond ((ctype:subtypep ctype test-ctype system)
+    (cond ((ctype:subtypep client ctype test-ctype)
            (replace-computation-by-constant-value instruction t)
            t)
-          ((ctype:disjointp ctype test-ctype system)
+          ((ctype:disjointp client ctype test-ctype)
            (replace-computation-by-constant-value instruction nil)
            t)
-          ((ctype:subtypep actype test-ctype system)
-           (when (insert-type-check-before test-ctype input instruction system)
+          ((ctype:subtypep client actype test-ctype)
+           (when (insert-type-check-before client test-ctype input instruction)
              (replace-computation-by-constant-value instruction t)
              t))
-          ((ctype:disjointp actype test-ctype system)
-           (when (insert-type-check-before (ctype:negate test-ctype system)
-                                           input instruction system)
+          ((ctype:disjointp client actype test-ctype)
+           (when (insert-type-check-before client
+                                           (ctype:negate client test-ctype)
+                                           input instruction)
              (replace-computation-by-constant-value instruction nil)
              t)))))
 
-(defmethod derive-types ((instruction bir:constant-reference) system)
+(defmethod derive-types (client (instruction bir:constant-reference))
   (derive-type-for-linear-datum
-   (bir:output instruction)
+   client (bir:output instruction)
    (ctype:single-value
-    (ctype:member system (bir:constant-value (bir:input instruction)))
-    system)
-   system))
+    client
+    (ctype:member client (bir:constant-value (bir:input instruction))))))
 
-(defmethod derive-types ((instruction bir:constant-fdefinition) system)
+(defmethod derive-types (client (instruction bir:constant-fdefinition))
   ;; Derive that it's a FUNCTION.
   (derive-type-for-linear-datum
-   (bir:output instruction)
-   (ctype:single-value (ctype:function-top system) system)
-   system))
+   client (bir:output instruction)
+   (ctype:single-value client (ctype:function-top client))))
 
-(defmethod derive-types ((instruction bir:constant-symbol-value) system)
+(defmethod derive-types (client (instruction bir:constant-symbol-value))
   (derive-type-for-linear-datum
-   (bir:output instruction)
-   (ctype:single-value (ctype:top system) system)
-   system))
+   client (bir:output instruction)
+   (ctype:single-value client (ctype:top client))))
 
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
-(defun substitute-single-read-variable-if-possible (variable system)
+(defun substitute-single-read-variable-if-possible (client variable)
   (let ((readers (bir:readers variable)))
     (when (and (bir:immutablep variable) (= (set:size readers) 1))
       (let* ((binder (bir:binder variable))
@@ -584,8 +574,8 @@
           (format t "~&meta-evaluate: substituting single read binding of ~a" variable)
           (let* ((input (bir:input binder))
                  (type (ctype:single-value
-                        (ctype:primary (bir:ctype input) system)
-                        system))
+                        client
+                        (ctype:primary client (bir:ctype input))))
                  (fout (make-instance 'bir:output
                          :asserted-type type
                          :derived-type type))
@@ -623,22 +613,22 @@
 ;;; For a variable, we prove that the type of its readers is just the union of
 ;;; the types of its writers. As with PHI we have to recompute each time around.
 ;;; Also: variables are always exactly one value.
-(defun compute-variable-type (variable getter system)
-  (let ((type (ctype:bottom system)))
-    (set:doset (writer (bir:writers variable) (ctype:single-value type system))
+(defun compute-variable-type (client variable getter)
+  (let ((type (ctype:bottom client)))
+    (set:doset (writer (bir:writers variable) (ctype:single-value client type))
       (let* ((inp (bir:input writer))
-             (ity (ctype:primary (funcall getter inp) system)))
-        (setq type (ctype:disjoin system type ity))))))
-(defun derive-type-for-variable (variable system)
-  (let* ((type (compute-variable-type variable #'bir:ctype system)))
+             (ity (ctype:primary client (funcall getter inp))))
+        (setq type (ctype:disjoin client type ity))))))
+(defun derive-type-for-variable (client variable)
+  (let* ((type (compute-variable-type client variable #'bir:ctype)))
       (set:doset (reader (bir:readers variable))
         (let ((out (bir:output reader)))
-          (derive-type-for-linear-datum out type system)))))
-(defun assert-type-for-variable (variable system)
-  (let* ((type (compute-variable-type variable #'bir:asserted-type system)))
+          (derive-type-for-linear-datum client out type)))))
+(defun assert-type-for-variable (client variable)
+  (let* ((type (compute-variable-type client variable #'bir:asserted-type)))
     (set:doset (reader (bir:readers variable))
       (let ((out (bir:output reader)))
-        (assert-type-for-linear-datum out type system)))))
+        (assert-type-for-linear-datum client out type)))))
 
 (defun derive-attributes-for-variable (variable)
   (when (bir:immutablep variable)
@@ -646,88 +636,82 @@
       (set:doset (reader (bir:readers variable))
         (derive-attributes (bir:output reader) attr)))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:leti) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:leti))
   (let ((variable (bir:output instruction)))
     (when variable
-      (or (substitute-single-read-variable-if-possible variable system)
+      (or (substitute-single-read-variable-if-possible client variable)
           (constant-propagate-variable-if-possible variable)))))
 
-(defmethod derive-types ((instruction bir:leti) system)
+(defmethod derive-types (client (instruction bir:leti))
   (let ((variable (bir:output instruction)))
     (when variable
       (derive-attributes-for-variable variable)
-      (assert-type-for-variable variable system)
-      (derive-type-for-variable variable system))))
+      (assert-type-for-variable client variable)
+      (derive-type-for-variable client variable))))
 
-(defmethod derive-types ((instruction bir:returni) system)
+(defmethod derive-types (client (instruction bir:returni))
   ;; Propagate the return type to local calls and enclose of the function.
   (let ((function (bir:function instruction))
         (return-type (bir:ctype (bir:input instruction)))
         (areturn-type (bir:asserted-type (bir:input instruction))))
     (set:doset (local-call (bir:local-calls function))
       (let ((out (bir:output local-call)))
-        (assert-type-for-linear-datum out areturn-type system)
-        (derive-type-for-linear-datum out return-type system)))))
+        (assert-type-for-linear-datum client out areturn-type)
+        (derive-type-for-linear-datum client out return-type)))))
 
-(defmethod derive-types ((instruction bir:enclose) system)
-  (let ((ftype (ctype:single-value (ctype:function-top system) system)))
-    (derive-type-for-linear-datum (bir:output instruction) ftype system)))
+(defmethod derive-types (client (instruction bir:enclose))
+  (let ((ftype (ctype:single-value client (ctype:function-top client))))
+    (derive-type-for-linear-datum client (bir:output instruction) ftype)))
 
 ;;; If the number of values to be saved is known, record that.
-(defmethod meta-evaluate-instruction ((instruction bir:values-save) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:values-save))
   (let ((ity (bir:ctype (bir:input instruction))))
-    (cond ((and (null (ctype:values-optional ity system))
-                (ctype:bottom-p (ctype:values-rest ity system) system))
+    (cond ((and (null (ctype:values-optional client ity))
+                (ctype:bottom-p client (ctype:values-rest client ity)))
            (change-class instruction 'bir:fixed-values-save
                          :nvalues (length
-                                   (ctype:values-required ity system)))
+                                   (ctype:values-required client ity)))
            t))))
 
 ;;; If already transformed, don't use the above method.
-(defmethod meta-evaluate-instruction ((inst bir:fixed-values-save) system)
-  (declare (ignore system)))
+(defmethod meta-evaluate-instruction (client (inst bir:fixed-values-save))
+  (declare (ignore client)))
 
-(defmethod derive-types ((instruction bir:values-save) system)
-  (assert-type-for-linear-datum (bir:output instruction)
-                                (bir:asserted-type (bir:input instruction))
-                                system)
-  (derive-type-for-linear-datum (bir:output instruction)
-                                (bir:ctype (bir:input instruction))
-                                system))
+(defmethod derive-types (client (instruction bir:values-save))
+  (assert-type-for-linear-datum client (bir:output instruction)
+                                (bir:asserted-type (bir:input instruction)))
+  (derive-type-for-linear-datum client (bir:output instruction)
+                                (bir:ctype (bir:input instruction))))
 
-(defmethod derive-types ((instruction bir:values-restore) system)
-  (assert-type-for-linear-datum (bir:output instruction)
-                                (bir:asserted-type (bir:input instruction))
-                                system)
-  (derive-type-for-linear-datum (bir:output instruction)
-                                (bir:ctype (bir:input instruction))
-                                system))
+(defmethod derive-types (client (instruction bir:values-restore))
+  (assert-type-for-linear-datum client (bir:output instruction)
+                                (bir:asserted-type (bir:input instruction)))
+  (derive-type-for-linear-datum client (bir:output instruction)
+                                (bir:ctype (bir:input instruction))))
 
-(defun append-input-types (types system)
-  (apply #'ctype:values-append system types))
+(defun append-input-types (client types)
+  (apply #'ctype:values-append client types))
 
-(defmethod meta-evaluate-instruction ((instruction bir:values-collect) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:values-collect))
   ;; Remove any inputs that are exactly zero values.
   (flet ((zvp (datum)
            (let ((ct (bir:ctype datum)))
-             (and (null (ctype:values-required ct system))
-                  (null (ctype:values-optional ct system))
-                  (ctype:bottom-p (ctype:values-rest ct system) system)))))
+             (and (null (ctype:values-required client ct))
+                  (null (ctype:values-optional client ct))
+                  (ctype:bottom-p client (ctype:values-rest client ct))))))
     (let ((inputs (bir:inputs instruction)))
       (when (some #'zvp inputs)
         (setf (bir:inputs instruction) (remove-if #'zvp inputs))
         t))))
 
-(defmethod derive-types ((instruction bir:values-collect) system)
+(defmethod derive-types (client (instruction bir:values-collect))
   (let ((inputs (bir:inputs instruction)))
     (assert-type-for-linear-datum
-     (bir:output instruction)
-     (append-input-types (mapcar #'bir:asserted-type inputs) system)
-     system)
+     client (bir:output instruction)
+     (append-input-types client (mapcar #'bir:asserted-type inputs)))
     (derive-type-for-linear-datum
-     (bir:output instruction)
-     (append-input-types (mapcar #'bir:ctype inputs) system)
-     system)))
+     client (bir:output instruction)
+     (append-input-types client (mapcar #'bir:ctype inputs)))))
 
 ;;; Move a thei to earlier in the code.
 ;;; It is not clear if this is permissible in general; while the behavior
@@ -740,20 +724,20 @@
 ;;; and then if the definition is one of certain instructions we keep moving
 ;;; up. We don't move past other checks in order to avoid repeated shuffling.
 ;;; Also, on non-SSAs we don't do anything.
-(defgeneric lift-thei (input thei system)
-  (:method ((input bir:datum) (thei bir:thei) system)
-    (declare (ignore system))
+(defgeneric lift-thei (client input thei)
+  (:method (client (input bir:datum) (thei bir:thei))
+    (declare (ignore client))
     nil))
 
-(defun lift-thei-after (input thei inst system)
+(defun lift-thei-after (client input thei inst)
   (let ((new-out (make-instance 'bir:output
                    :derived-type (ctype:values-conjoin
-                                  system
+                                  client
                                   ;; This thei is a check, therefore
                                   (bir:asserted-type thei)
                                   (bir:ctype input))
                    :asserted-type (ctype:values-conjoin
-                                   system
+                                   client
                                    (bir:asserted-type thei)
                                    (bir:asserted-type input))
                    :attributes (bir:attributes input)
@@ -767,15 +751,15 @@
     ;; Move
     (bir:move-instruction-after thei inst)
     t))
-(defun lift-thei-before (input thei inst system)
+(defun lift-thei-before (client input thei inst)
   (let ((new-out (make-instance 'bir:output
                    :derived-type (ctype:values-conjoin
-                                  system
+                                  client
                                   ;; This thei is a check, therefore
                                   (bir:asserted-type thei)
                                   (bir:ctype input))
                    :asserted-type (ctype:values-conjoin
-                                   system
+                                   client
                                    (bir:asserted-type thei)
                                    (bir:asserted-type input))
                    :attributes (bir:attributes input)
@@ -788,7 +772,7 @@
     ;; Move
     (bir:move-instruction-before thei inst)
     t))
-(defun lift-thei-to-iblock-start (input thei iblock system)
+(defun lift-thei-to-iblock-start (client input thei iblock)
   ;; In order to avoid repeated shuffling, we do not move THEIs up past other
   ;; THEIs, even for other data, etc.
   (when (not (eq (bir:iblock thei) iblock))
@@ -800,25 +784,25 @@
             (return-from lift-thei-to-iblock-start nil))
           ;; Found a non-THEI, so we can do the move.
           (return-from lift-thei-to-iblock-start
-            (lift-thei-before input thei inst system))))))
+            (lift-thei-before client input thei inst))))))
 
-(defgeneric lift-thei-through-inst (output thei inst system)
-  (:method ((datum bir:output) (thei bir:thei) (inst bir:instruction) system)
-    (lift-thei-after datum thei inst system)))
+(defgeneric lift-thei-through-inst (client output thei inst)
+  (:method (client (datum bir:output) (thei bir:thei) (inst bir:instruction))
+    (lift-thei-after client datum thei inst)))
 
-(defmethod lift-thei-through-inst ((thei-input bir:output) (thei bir:thei)
-                                   (inst bir:thei) system)
+(defmethod lift-thei-through-inst (client (thei-input bir:output)
+                                   (thei bir:thei) (inst bir:thei))
   (let ((tcf (bir:type-check-function inst)))
     (if (symbolp tcf)
         ;; This might be the thei providing a specific enough
         ;; type for us to do the lift, in which case we
         ;; shouldn't lift past it.
         (if (ctype:values-subtypep
+             client
              (bir:asserted-type (bir:input inst))
-             (bir:asserted-type thei)
-             system)
+             (bir:asserted-type thei))
             ;; We're good, continue.
-            (lift-thei (bir:input inst) thei system)
+            (lift-thei client (bir:input inst) thei)
             ;; Nope we're done.
             (call-next-method))
         ;; Don't move past other checks, in order to avoid
@@ -827,8 +811,8 @@
         ;; function itself before we move it.
         (call-next-method))))
 
-(defmethod lift-thei-through-inst ((thei-input bir:output) (thei bir:thei)
-                                   (inst bir:readvar) system)
+(defmethod lift-thei-through-inst (client (thei-input bir:output)
+                                   (thei bir:thei) (inst bir:readvar))
   (let ((var (bir:input inst)))
     (if (bir:immutablep var)
         (let ((wvinput (bir:input (bir:binder var))))
@@ -836,11 +820,11 @@
           ;; (because where else would a declaration come from?)
           ;; but I am not totally sure.
           (if (ctype:values-subtypep
+               client
                (bir:asserted-type wvinput)
-               (bir:asserted-type thei)
-               system)
+               (bir:asserted-type thei))
               ;; Lift past the readvar and leti.
-              (lift-thei wvinput thei system)
+              (lift-thei client wvinput thei)
               (call-next-method)))
         ;; For now, at least, don't duplicate checks as we'd need to do
         ;; with multiple writers.
@@ -848,20 +832,20 @@
 
 ;;; TODO: fixed-to-multiple, at least?
 
-(defmethod lift-thei ((input bir:output) (thei bir:thei) system)
-  (lift-thei-through-inst input thei (bir:definition input) system))
+(defmethod lift-thei (client (input bir:output) (thei bir:thei))
+  (lift-thei-through-inst client input thei (bir:definition input)))
 
-(defmethod lift-thei ((thei-input bir:phi) (thei bir:thei) system)
+(defmethod lift-thei (client (thei-input bir:phi) (thei bir:thei))
   ;; For a phi with multiple sources, we'd have to replicate the THEI.
   ;; We don't do that. The THEI is just moved to the start of the phi's iblock.
   ;; Maybe in the future it could be good though?
-  (lift-thei-to-iblock-start thei-input thei (bir:iblock thei-input) system))
+  (lift-thei-to-iblock-start client thei-input thei (bir:iblock thei-input)))
 
-(defmethod lift-thei ((thei-input bir:argument) (thei bir:thei) system)
+(defmethod lift-thei (client (thei-input bir:argument) (thei bir:thei))
   ;; TODO: For an argument to a function that is only called in one place
   ;; locally, we could move the thei out of the function.
-  (lift-thei-to-iblock-start thei-input thei (bir:start (bir:function thei))
-                             system))
+  (lift-thei-to-iblock-start client thei-input thei
+                             (bir:start (bir:function thei))))
 
 (defun insert-unreachable-after (instruction)
   ;; Avoid redundant work
@@ -871,15 +855,14 @@
                               (bir:end before))
       (bir:delete-iblock after))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:thei) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:thei))
   (let ((input (bir:input instruction))
         (tcf (bir:type-check-function instruction)))
     (cond
       ;; If the type assertion definitely fails, mark subsequent code
       ;; as unreachable.
-      ((and (ctype:values-disjointp (bir:ctype input)
-                                    (bir:asserted-type instruction)
-                                    system)
+      ((and (ctype:values-disjointp client (bir:ctype input)
+                                    (bir:asserted-type instruction))
             ;; Don't do this for untrusted assertions.
             tcf)
        (insert-unreachable-after instruction)
@@ -890,18 +873,18 @@
        t)
       ;; Remove THEI when its input's type is a subtype of the
       ;; THEI's asserted type.
-      ((ctype:values-subtypep (bir:ctype input)
-                              (bir:asserted-type instruction)
-                              system)
+      ((ctype:values-subtypep client
+                              (bir:ctype input)
+                              (bir:asserted-type instruction))
        (bir:delete-thei instruction)
        t)
       ;; Also remove THEI when it's not a check and its input's asserted type
       ;; is a subtype of the THEI's. Means this THEI is redundant.
       ((and (symbolp tcf)
             (ctype:values-subtypep
+             client
              (bir:asserted-type input)
-             (bir:asserted-type instruction)
-             system))
+             (bir:asserted-type instruction)))
        (bir:delete-thei instruction)
        t)
       ;; If this is a check and the asserted type is a subtype of the
@@ -911,12 +894,12 @@
       ;; declaration.
       ((and (not (symbolp tcf))
             (ctype:values-subtypep
+             client
              (bir:asserted-type input)
-             (bir:asserted-type instruction)
-             system))
-       (lift-thei input instruction system)))))
+             (bir:asserted-type instruction)))
+       (lift-thei client input instruction)))))
 
-(defmethod derive-types ((instruction bir:thei) system)
+(defmethod derive-types (client (instruction bir:thei))
   (derive-attributes (bir:output instruction)
                      (bir:attributes (bir:input instruction)))
   (let* ((type-check-function (bir:type-check-function instruction))
@@ -933,21 +916,19 @@
     ;; making this decision transparent to inference, and also type conflict
     ;; when the type is checked elsewhere.
     (derive-type-for-linear-datum
-     (bir:output instruction)
+     client (bir:output instruction)
      (if (eq type-check-function nil)
          ctype
-         (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
-     system)
+         (ctype:values-conjoin client (bir:asserted-type instruction) ctype)))
     ;; The asserted type can be propagated even if it's not checked.
     (assert-type-for-linear-datum
-     (bir:output instruction)
-     (ctype:values-conjoin system (bir:asserted-type instruction)
-                           (bir:asserted-type input))
-     system)
+     client (bir:output instruction)
+     (ctype:values-conjoin client (bir:asserted-type instruction)
+                           (bir:asserted-type input)))
     ;; Propagate the type of the input into function.
     (unless (symbolp type-check-function)
-      (derive-local-call-parameter-types type-check-function
-                                         (list ctype) system))))
+      (derive-local-call-parameter-types client type-check-function
+                                         (list ctype)))))
 
 ;; Clients can specialize this to perform specific transformations on
 ;; the IR for a call.
@@ -955,46 +936,46 @@
 ;; and so is client-defined. The attributes system has more info.
 ;; Methods should return true if a transformation took place, and otherwise
 ;; return false.
-(defgeneric transform-call (system transform call)
-  (:method (system transform (call bir:abstract-call))
-    (declare (ignore system transform))
+(defgeneric transform-call (client transform call)
+  (:method (client transform (call bir:abstract-call))
+    (declare (ignore client transform))
     nil))
 
-(defgeneric fold-call (system fold call arguments)
-  (:method (system fold (call bir:abstract-call) arguments)
-    (declare (ignore system fold arguments))
+(defgeneric fold-call (client fold call arguments)
+  (:method (client fold (call bir:abstract-call) arguments)
+    (declare (ignore client fold arguments))
     nil))
 
 ;;; Given a non-values ctype, returns two values:
 ;;; The value of the constant type, or NIL if it's not constant
 ;;; A boolean that's true iff it is constant
 ;;; FIXME: Move to ctype?
-(defun constant-type-value (ct system)
-  (cond ((ctype:member-p system ct)
-         (let ((membs (ctype:member-members system ct)))
+(defun constant-type-value (client ct)
+  (cond ((ctype:member-p client ct)
+         (let ((membs (ctype:member-members client ct)))
            (if (= (length membs) 1)
                (values (elt membs 0) t)
                (values nil nil))))
-        ((ctype:rangep ct system)
-         (multiple-value-bind (low lxp) (ctype:range-low ct system)
-           (multiple-value-bind (high hxp) (ctype:range-high ct system)
+        ((ctype:rangep client ct)
+         (multiple-value-bind (low lxp) (ctype:range-low client ct)
+           (multiple-value-bind (high hxp) (ctype:range-high client ct)
              (if (or lxp hxp (not low) (not high) (not (eql low high)))
                  (values nil nil)
                  (values low t)))))
         (t (values nil nil))))
 
-(defun constant-arguments (arguments system)
+(defun constant-arguments (client arguments)
   (loop for arg in arguments
-        for ct = (ctype:primary (bir:ctype arg) system)
+        for ct = (ctype:primary client (bir:ctype arg))
         collect (multiple-value-bind (cvalue constantp)
-                    (constant-type-value ct system)
+                    (constant-type-value client ct)
                   (if constantp
                       cvalue
                       (return (values nil nil))))
           into rargs
         finally (return (values rargs t))))
 
-(defun maybe-fold-call-1 (fold arguments instruction system)
+(defun maybe-fold-call-1 (client fold arguments instruction)
   (multiple-value-call
       (lambda (validp &rest values)
         (cond
@@ -1013,8 +994,8 @@
                             collect (bir:constant-in-module rv module)))
                     (couts
                       (loop for rv in values
-                            for ct = (ctype:member system rv)
-                            for vct = (ctype:single-value ct system)
+                            for ct = (ctype:member client rv)
+                            for vct = (ctype:single-value client ct)
                             collect (make-instance 'bir:output
                                       :asserted-type vct
                                       :derived-type vct)))
@@ -1031,44 +1012,43 @@
                (bir:insert-instruction-before ftm instruction)
                (bir:delete-instruction instruction)
                t))))
-    (fold-call system fold instruction arguments)))
+    (fold-call client fold instruction arguments)))
 
-(defun maybe-fold-call (folds arguments instruction system)
+(defun maybe-fold-call (client folds arguments instruction)
   (when (not (null folds))
-    (multiple-value-bind (args validp) (constant-arguments arguments system)
+    (multiple-value-bind (args validp) (constant-arguments client arguments)
       (when validp
         (loop for fold in folds
-                thereis (maybe-fold-call-1 fold args instruction system))))))
+                thereis (maybe-fold-call-1 client fold args instruction))))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:call) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:call))
   (let* ((attr (bir:attributes instruction))
          (identities (attributes:identities attr)))
     (or
      ;; Try all client constant folds in order.
      ;; Folding is always preferable to transformation, so we try it first.
-     (maybe-fold-call identities
-                      (rest (bir:inputs instruction))
-                      instruction system)
+     (maybe-fold-call client identities (rest (bir:inputs instruction))
+                      instruction)
      ;; Try all client transforms in order.
      ;; If any return true, a change has been made.
-     (some (lambda (identity) (transform-call system identity instruction))
+     (some (lambda (identity) (transform-call client identity instruction))
            identities))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:primop) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:primop))
   (let* ((attr (bir:attributes instruction))
          (identities (attributes:identities attr)))
     (or
-     (maybe-fold-call identities (bir:inputs instruction)
-                      instruction system)
-     (some (lambda (identity) (transform-call system identity instruction))
+     (maybe-fold-call client identities (bir:inputs instruction)
+                      instruction)
+     (some (lambda (identity) (transform-call client identity instruction))
            identities))))
 
-(defun constant-mv-arguments (vct system)
-  (if (and (null (ctype:values-optional vct system))
-           (ctype:bottom-p (ctype:values-rest vct system) system))
-      (loop for ct in (ctype:values-required vct system)
+(defun constant-mv-arguments (client vct)
+  (if (and (null (ctype:values-optional client vct))
+           (ctype:bottom-p client (ctype:values-rest client vct)))
+      (loop for ct in (ctype:values-required client vct)
             collect (multiple-value-bind (cvalue constantp)
-                        (constant-type-value ct system)
+                        (constant-type-value client ct)
                       (if constantp
                           cvalue
                           (return (values nil nil))))
@@ -1076,16 +1056,16 @@
             finally (return (values rargs t)))
       (values nil nil)))
 
-(defun maybe-fold-mv-call (folds input-type instruction system)
+(defun maybe-fold-mv-call (client folds input-type instruction)
   (when (not (null folds))
     (multiple-value-bind (args validp)
-        (constant-mv-arguments input-type system)
+        (constant-mv-arguments client input-type)
       (when validp
         (loop for fold in folds
-                thereis (maybe-fold-call-1 fold args instruction system))))))
+                thereis (maybe-fold-call-1 client fold args instruction))))))
 
 ;;; Reduce an mv-call to a normal call if all its inputs are single-valued.
-(defun mv-call->call (mv-call sys)
+(defun mv-call->call (client mv-call)
   (let* ((args (second (bir:inputs mv-call)))
          (argsdef (and (typep args 'bir:output)
                        (bir:definition args))))
@@ -1094,9 +1074,9 @@
         (flet ((svp (datum) ; single-value-p
                  (and (typep datum 'bir:output) ; can't rewrite w/o this
                       (let ((ct (bir:ctype datum)))
-                        (and (= (length (ctype:values-required ct sys)) 1)
-                             (null (ctype:values-optional ct sys))
-                             (ctype:bottom-p (ctype:values-rest ct sys) sys))))))
+                        (and (= (length (ctype:values-required client ct)) 1)
+                             (null (ctype:values-optional client ct))
+                             (ctype:bottom-p client (ctype:values-rest client ct)))))))
           (when (every #'svp vcin)
             ;; OK, we can rewrite.
             ;; First, delete the values-collect.
@@ -1114,55 +1094,54 @@
                             :inputs (list* (bir:callee mv-call) real-args))
               t)))))))
 
-(defmethod meta-evaluate-instruction ((instruction bir:mv-call) system)
+(defmethod meta-evaluate-instruction (client (instruction bir:mv-call))
   (let ((identities (attributes:identities (bir:attributes instruction))))
     (or
-     (maybe-fold-mv-call identities
+     (maybe-fold-mv-call client identities
                          (append-input-types
-                          (mapcar #'bir:ctype (rest (bir:inputs instruction)))
-                          system)
-                         instruction system)
-     (some (lambda (identity) (transform-call system identity instruction))
+                          client
+                          (mapcar #'bir:ctype (rest (bir:inputs instruction))))
+                         instruction)
+     (some (lambda (identity) (transform-call client identity instruction))
            identities)
-     (mv-call->call instruction system))))
+     (mv-call->call client instruction))))
 
-;;; Given an instruction, its identity (e.g. function name), the VALUES type
-;;; representing the incoming arguments, and the system, return the type of
-;;; the result.
+;;; Given a client, an instruction, its identity (e.g. function name),
+;;; and the VALUES type representing the incoming arguments, return
+;;; the type of the result.
 ;;; FIXME: This might warrant a more complex type system in order to
 ;;; allow combining information.
 ;;; For example, (if test #'+ #'-) could still be seen to return two
 ;;; floats if given a float.
-(defgeneric derive-return-type (instruction identity argstype system))
-(defmethod derive-return-type ((inst bir:abstract-call) identity
-                               argstype system)
+(defgeneric derive-return-type (client instruction identity argstype))
+(defmethod derive-return-type (client (inst bir:abstract-call)
+                               identity argstype)
   (declare (ignore identity argstype))
-  (ctype:values-top system))
+  (ctype:values-top client))
 
-(defmethod derive-return-type ((inst bir:primop) identity
-                               argstype system)
+(defmethod derive-return-type (client (inst bir:primop)
+                               identity argstype)
   (declare (ignore identity argstype))
-  (ctype:values-top system))
+  (ctype:values-top client))
 
-(defmethod derive-types ((inst bir:call) system)
+(defmethod derive-types (client (inst bir:call))
   (let ((identities (attributes:identities (bir:attributes inst))))
     (flet ((intype (reader)
-             (ctype:values (loop for arg in (rest (bir:inputs inst))
+             (ctype:values client
+                           (loop for arg in (rest (bir:inputs inst))
                                  for ct = (funcall reader arg)
-                                 collect (ctype:primary ct system))
-                           nil (ctype:bottom system) system))
+                                 collect (ctype:primary client ct))
+                           nil (ctype:bottom client)))
            (compute (identity intype)
-             (derive-return-type inst identity intype system)))
+             (derive-return-type client inst identity intype)))
       (cond ((null identities))
           ((= (length identities) 1)
            (derive-type-for-linear-datum
-            (bir:output inst)
-            (compute (first identities) (intype #'bir:ctype))
-            system)
+            client (bir:output inst)
+            (compute (first identities) (intype #'bir:ctype)))
            (assert-type-for-linear-datum
-            (bir:output inst)
-            (compute (first identities) (intype #'bir:asserted-type))
-            system))
+            client (bir:output inst)
+            (compute (first identities) (intype #'bir:asserted-type))))
           (t
            (let ((dtypes
                    (loop for identity in identities
@@ -1170,70 +1149,63 @@
                  (atypes
                    (loop for identity in identities
                          collect (compute identity (intype #'bir:asserted-type)))))
-             (derive-type-for-linear-datum (bir:output inst)
+             (derive-type-for-linear-datum client (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system dtypes)
-                                           system)
-             (assert-type-for-linear-datum (bir:output inst)
+                                                  client dtypes))
+             (assert-type-for-linear-datum client (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system atypes)
-                                           system)))))))
+                                                  client atypes))))))))
 
-(defmethod derive-types ((inst bir:mv-call) system)
+(defmethod derive-types (client (inst bir:mv-call))
   (let ((identities (attributes:identities (bir:attributes inst))))
     (flet ((intype (reader)
-             (append-input-types (mapcar reader (rest (bir:inputs inst))) system)))
+             (append-input-types client (mapcar reader (rest (bir:inputs inst))))))
     (cond ((null identities))
           ((= (length identities) 1)
            (derive-type-for-linear-datum
-            (bir:output inst)
-            (derive-return-type inst (first identities) (intype #'bir:ctype) system)
-            system)
+            client (bir:output inst)
+            (derive-return-type client inst (first identities) (intype #'bir:ctype)))
            (assert-type-for-linear-datum
-            (bir:output inst)
-            (derive-return-type inst (first identities) (intype #'bir:asserted-type)
-                                system)
-            system))
+            client (bir:output inst)
+            (derive-return-type client inst (first identities)
+                                (intype #'bir:asserted-type))))
           (t
            (let ((dtypes
                    (loop with arg = (intype #'bir:ctype)
                          for identity in identities
-                         collect (derive-return-type inst identity arg system)))
+                         collect (derive-return-type client inst identity arg)))
                  (atypes
                    (loop with arg = (intype #'bir:asserted-type)
                          for identity in identities
-                         collect (derive-return-type inst identity arg system))))
-             (derive-type-for-linear-datum (bir:output inst)
+                         collect (derive-return-type client inst identity arg))))
+             (derive-type-for-linear-datum client (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system dtypes)
-                                           system)
-             (derive-type-for-linear-datum (bir:output inst)
+                                                  client dtypes))
+             (derive-type-for-linear-datum client (bir:output inst)
                                            (apply #'ctype:values-conjoin
-                                                  system atypes)
-                                           system)))))))
+                                                  client atypes))))))))
 
-(defmethod derive-types ((inst bir:primop) system)
+(defmethod derive-types (client (inst bir:primop))
   ;; Only do this when there's exactly one output.
   ;; derive-return-type doesn't make much sense otherwise.
   (when (= (length (bir:outputs inst)) 1)
     (let ((identities (attributes:identities (bir:attributes inst))))
       (flet ((intype (reader)
-               (ctype:values (loop for arg in (rest (bir:inputs inst))
+               (ctype:values client
+                             (loop for arg in (rest (bir:inputs inst))
                                    for ct = (funcall reader arg)
-                                   collect (ctype:primary ct system))
-                             nil (ctype:bottom system) system))
+                                   collect (ctype:primary client ct))
+                             nil (ctype:bottom client)))
              (compute (identity intype)
-               (derive-return-type inst identity intype system)))
+               (derive-return-type client inst identity intype)))
         (cond ((null identities))
               ((= (length identities) 1)
                (derive-type-for-linear-datum
-                (bir:output inst)
-                (compute (first identities) (intype #'bir:ctype))
-                system)
+                client (bir:output inst)
+                (compute (first identities) (intype #'bir:ctype)))
                (assert-type-for-linear-datum
-                (bir:output inst)
-                (compute (first identities) (intype #'bir:asserted-type))
-                system))
+                client (bir:output inst)
+                (compute (first identities) (intype #'bir:asserted-type))))
               (t
                (let ((dtypes
                        (loop for identity in identities
@@ -1241,17 +1213,15 @@
                      (atypes
                        (loop for identity in identities
                              collect (compute identity (intype #'bir:asserted-type)))))
-                 (derive-type-for-linear-datum (bir:output inst)
+                 (derive-type-for-linear-datum client (bir:output inst)
                                                (apply #'ctype:values-conjoin
-                                                      system dtypes)
-                                               system)
-                 (assert-type-for-linear-datum (bir:output inst)
+                                                      client dtypes))
+                 (assert-type-for-linear-datum client (bir:output inst)
                                                (apply #'ctype:values-conjoin
-                                                      system atypes)
-                                               system))))))))
+                                                      client atypes)))))))))
 
-(defmethod meta-evaluate-instruction ((inst bir:abstract-local-call) system)
-  (declare (ignore system))
+(defmethod meta-evaluate-instruction (client (inst bir:abstract-local-call))
+  (declare (ignore client))
   ;; If a local function doesn't return, mark subsequent code unreachable
   ;; (unless we have already done so)
   (when (null (bir:returni (bir:callee inst)))

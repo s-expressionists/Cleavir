@@ -1,8 +1,8 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
 (defmethod convert-special-binding
-    (variable-cst value-ast next-ast env system)
-  (declare (ignore env system))
+    (client variable-cst value-ast next-ast env)
+  (declare (ignore client env))
   (make-instance 'ast:constant-dynamic-bind-ast
     :name (cst:raw variable-cst)
     :value-ast value-ast

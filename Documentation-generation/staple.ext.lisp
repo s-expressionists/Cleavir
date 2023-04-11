@@ -151,7 +151,6 @@
   (mapcar #'asdf:find-system
           '(:cleavir-example
             :cleavir-cst-to-ast
-            :cleavir-environment
             :cleavir-ast
             :cleavir-ast-to-bir
             :cleavir-bir

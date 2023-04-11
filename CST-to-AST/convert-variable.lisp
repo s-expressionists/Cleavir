@@ -1,4 +1,4 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defmethod convert-variable (cst environment system)
-  (convert-cst cst (variable-info system environment cst) environment system))
+(defmethod convert-variable (client cst environment)
+  (convert-cst client cst (describe-variable client environment cst) environment))

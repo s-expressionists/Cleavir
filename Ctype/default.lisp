@@ -11,30 +11,30 @@
 (defun values-ctype-p (ctype)
   (and (cl:consp ctype) (eql (car ctype) 'cl:values)))
 
-(defmethod subtypep (ct1 ct2 sys)
-  (declare (ignore sys))
+(defmethod subtypep (client ct1 ct2)
+  (declare (ignore client))
   (cl:subtypep ct1 ct2))
 
-(defmethod upgraded-array-element-type (ct sys)
-  (declare (ignore sys))
+(defmethod upgraded-array-element-type (client ct)
+  (declare (ignore client))
   (cl:upgraded-array-element-type ct))
 
-(defmethod upgraded-complex-part-type (ct sys)
-  (declare (ignore sys))
+(defmethod upgraded-complex-part-type (client ct)
+  (declare (ignore client))
   (cl:upgraded-complex-part-type ct))
 
-(defmethod values-subtypep (ctype1 ctype2 system)
+(defmethod values-subtypep (client ctype1 ctype2)
   (assert (and (values-ctype-p ctype1) (values-ctype-p ctype2))
           () "An argument to ~s is not a values ctype: args are ~s ~s"
           'values-subtypep ctype1 ctype2)
-  (let* ((required1 (values-required ctype1 system))
+  (let* ((required1 (values-required client ctype1))
          (required1-count (length required1))
-         (optional1 (values-optional ctype1 system))
-         (rest1 (values-rest ctype1 system))
-         (required2 (values-required ctype2 system))
+         (optional1 (values-optional client ctype1))
+         (rest1 (values-rest client ctype1))
+         (required2 (values-required client ctype2))
          (required2-count (length required2))
-         (optional2 (values-optional ctype2 system))
-         (rest2 (values-rest ctype2 system)))
+         (optional2 (values-optional client ctype2))
+         (rest2 (values-rest client ctype2)))
     (cond ((< required1-count required2-count)
            (cl:values nil t))
           ((< (+ required1-count (length optional1))
@@ -43,48 +43,48 @@
           (t
            (labels ((aux (t1 t2)
                       (if (null t1)
-                          (subtypep rest1 rest2 system)
+                          (subtypep client rest1 rest2)
                           (multiple-value-bind (answer certain)
-                              (subtypep (first t1) (if t2 (first t2) rest2)
-                                        system)
+                              (subtypep client (first t1)
+                                        (if t2 (first t2) rest2))
                             (if answer
                                 (aux (rest t1) (rest t2))
                                 (cl:values nil certain))))))
              (aux (append required1 optional1)
                   (append required2 optional2)))))))
 
-(defmethod top (sys) (declare (ignore sys)) 't)
-(defmethod bottom (sys) (declare (ignore sys)) 'nil)
+(defmethod top (client) (declare (ignore client)) 't)
+(defmethod bottom (client) (declare (ignore client)) 'nil)
 
-(defmethod top-p (ctype sys)
-  (declare (ignore sys))
+(defmethod top-p (client ctype)
+  (declare (ignore client))
   (eql ctype 't))
 
-(defmethod bottom-p (ctype sys)
-  (declare (ignore sys))
+(defmethod bottom-p (client ctype)
+  (declare (ignore client))
   (eql ctype 'nil))
 
-(defmethod values-top (sys) (values nil nil (top sys) sys))
-(defmethod values-bottom (sys)
+(defmethod values-top (client) (values client nil nil (top client)))
+(defmethod values-bottom (client)
   ;; Recapitulating the generic function's comment:
   ;; This is really actually definitely not (values &rest nil)!
-  (let ((bot (bottom sys)))
-    (values (list bot) nil bot sys)))
+  (let ((bot (bottom client)))
+    (values client (list bot) nil bot)))
 
-(defun values-bottom-p (vct sys)
-  (some (lambda (ct) (bottom-p ct sys)) (values-required vct sys)))
+(defun values-bottom-p (client vct)
+  (some (lambda (ct) (bottom-p client ct)) (values-required client vct)))
 
-(defmethod conjunctionp (ctype sys)
-  (declare (ignore sys))
+(defmethod conjunctionp (client ctype)
+  (declare (ignore client))
   (and (cl:consp ctype) (eq (car ctype) 'and)))
-(defmethod conjunction-ctypes (ctype sys)
-  (declare (ignore sys))
+(defmethod conjunction-ctypes (client ctype)
+  (declare (ignore client))
   (rest ctype))
-(defmethod disjunctionp (ctype sys)
-  (declare (ignore sys))
+(defmethod disjunctionp (client ctype)
+  (declare (ignore client))
   (and (cl:consp ctype) (eq (car ctype) 'or)))
-(defmethod disjunction-ctypes (ctype sys)
-  (declare (ignore sys))
+(defmethod disjunction-ctypes (client ctype)
+  (declare (ignore client))
   (rest ctype))
 
 ;;; internal
@@ -92,16 +92,16 @@
   (and (cl:consp ctype) (eq (car ctype) 'cl:function)))
 (defun function-return (ctype) (third ctype))
 
-(defmethod values-conjoin/2 (vct1 vct2 sys)
+(defmethod values-conjoin/2 (client vct1 vct2)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2))
           () "An argument to ~s is not a values ctype: args are ~s ~s"
           'values-conjoin vct1 vct2)
-  (loop with required1 = (values-required vct1 sys)
-        with optional1 = (values-optional vct1 sys)
-        with rest1 = (values-rest vct1 sys)
-        with required2 = (values-required vct2 sys)
-        with optional2 = (values-optional vct2 sys)
-        with rest2 = (values-rest vct2 sys)
+  (loop with required1 = (values-required client vct1)
+        with optional1 = (values-optional client vct1)
+        with rest1 = (values-rest client vct1)
+        with required2 = (values-required client vct2)
+        with optional2 = (values-optional client vct2)
+        with rest2 = (values-rest client vct2)
         with required with optional with rest
         with donep = nil
         do (if (null required1)
@@ -109,51 +109,52 @@
                    (if (null required2)
                        (if (null optional2)
                            ;; rest v rest
-                           (setf rest (conjoin/2 rest1 rest2 sys)
+                           (setf rest (conjoin/2 client rest1 rest2)
                                  donep t)
                            ;; rest v opt
-                           (push (conjoin/2 rest1 (pop optional2) sys)
+                           (push (conjoin/2 client rest1 (pop optional2))
                                  optional))
                        ;; rest v req
-                       (push (conjoin/2 rest1 (pop required2) sys)
+                       (push (conjoin/2 client rest1 (pop required2))
                              required))
                    (if (null required2)
                        (if (null optional2)
                            ;; optional v rest
-                           (push (conjoin/2 (pop optional1) rest2 sys)
+                           (push (conjoin/2 client (pop optional1) rest2)
                                  optional)
                            ;; optional v optional
-                           (push (conjoin/2 (pop optional1) (pop optional2) sys)
+                           (push (conjoin/2 client (pop optional1) (pop optional2))
                                  optional))
                        ;; optional v req
-                       (push (conjoin/2 (pop optional1) (pop required2) sys)
+                       (push (conjoin/2 client (pop optional1) (pop required2))
                              required)))
                (if (null required2)
                    (if (null optional2)
                        ;; required v rest
-                       (push (conjoin/2 (pop required1) rest2 sys)
+                       (push (conjoin/2 client (pop required1) rest2)
                              required)
                        ;; required v optional
-                       (push (conjoin/2 (pop required1) (pop optional2) sys)
+                       (push (conjoin/2 client (pop required1) (pop optional2))
                              required))
                    ;; required v required
-                   (push (conjoin/2 (pop required1) (pop required2) sys)
+                   (push (conjoin/2 client (pop required1) (pop required2))
                          required)))
         when donep
-        return (if (some (lambda (req) (bottom-p req sys)) required)
-                   (values (make-list (length required)
-                                      :initial-element (bottom sys))
-                           nil nil sys)
-                   (values (nreverse required) (nreverse optional) rest sys))))
+        return (if (some (lambda (req) (bottom-p client req)) required)
+                   (values client
+                           (make-list (length required)
+                                      :initial-element (bottom client))
+                           nil nil)
+                   (values client (nreverse required) (nreverse optional) rest))))
 
-(defmethod conjoin/2 (ct1 ct2 sys)
+(defmethod conjoin/2 (client ct1 ct2)
   (cond
     ((or (values-ctype-p ct1) (values-ctype-p ct2))
      (error "Values ctypes ~a ~a input to conjoin/2" ct1 ct2))
     ;; Pick off some very basic cases.
-    ((or (bottom-p ct1 sys) (bottom-p ct2 sys)) 'nil)
-    ((top-p ct1 sys) ct2)
-    ((top-p ct2 sys) ct1)
+    ((or (bottom-p client ct1) (bottom-p client ct2)) 'nil)
+    ((top-p client ct1) ct2)
+    ((top-p client ct2) ct1)
     ((cl:subtypep ct1 ct2) ct1)
     ((cl:subtypep ct2 ct1) ct2)
     (t (let ((ty `(and ,ct1 ,ct2)))
@@ -164,23 +165,23 @@
              nil
              ty)))))
 
-(defmethod values-disjoin/2 (vct1 vct2 sys)
+(defmethod values-disjoin/2 (client vct1 vct2)
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
   ;; If either type is bottom, return the other
   ;; (the general case below does not handle bottom types optimally;
   ;;  e.g. (values nil &rest t) (values t t) will disjoin to
   ;;  (values t &optional t))
-  (cond ((values-bottom-p vct1 sys)
+  (cond ((values-bottom-p client vct1)
          (return-from values-disjoin/2 vct2))
-        ((values-bottom-p vct2 sys)
+        ((values-bottom-p client vct2)
          (return-from values-disjoin/2 vct1)))
   ;; General case
-  (loop with required1 = (values-required vct1 sys)
-        with optional1 = (values-optional vct1 sys)
-        with rest1 = (values-rest vct1 sys)
-        with required2 = (values-required vct2 sys)
-        with optional2 = (values-optional vct2 sys)
-        with rest2 = (values-rest vct2 sys)
+  (loop with required1 = (values-required client vct1)
+        with optional1 = (values-optional client vct1)
+        with rest1 = (values-rest client vct1)
+        with required2 = (values-required client vct2)
+        with optional2 = (values-optional client vct2)
+        with rest2 = (values-rest client vct2)
         with required with optional with rest
         with donep = nil
         do (if (null required1)
@@ -188,54 +189,54 @@
                    (if (null required2)
                        (if (null optional2)
                            ;; rest v rest
-                           (setf rest (disjoin/2 rest1 rest2 sys)
+                           (setf rest (disjoin/2 client rest1 rest2)
                                  donep t)
                            ;; rest v opt
-                           (push (disjoin/2 rest1 (pop optional2) sys)
+                           (push (disjoin/2 client rest1 (pop optional2))
                                  optional))
                        ;; rest v req
-                       (push (disjoin/2 rest1 (pop required2) sys)
+                       (push (disjoin/2 client rest1 (pop required2))
                              optional))
                    (if (null required2)
                        (if (null optional2)
                            ;; optional v rest
-                           (push (disjoin/2 (pop optional1) rest2 sys)
+                           (push (disjoin/2 client (pop optional1) rest2)
                                  optional)
                            ;; optional v optional
-                           (push (disjoin/2 (pop optional1) (pop optional2) sys)
+                           (push (disjoin/2 client (pop optional1) (pop optional2))
                                  optional))
                        ;; optional v req
-                       (push (disjoin/2 (pop optional1) (pop required2) sys)
+                       (push (disjoin/2 client (pop optional1) (pop required2))
                              optional)))
                (if (null required2)
                    (if (null optional2)
                        ;; required v rest
-                       (push (disjoin/2 (pop required1) rest2 sys)
+                       (push (disjoin/2 client (pop required1) rest2)
                              optional)
                        ;; required v optional
-                       (push (disjoin/2 (pop required1) (pop optional2) sys)
+                       (push (disjoin/2 client (pop required1) (pop optional2))
                              optional))
                    ;; required v required
-                   (push (disjoin/2 (pop required1) (pop required2) sys)
+                   (push (disjoin/2 client (pop required1) (pop required2))
                          required)))
         when donep
-          return (values (nreverse required) (nreverse optional) rest sys)))
+          return (values client (nreverse required) (nreverse optional) rest)))
 
-(defmethod values-wdisjoin/2 (vct1 vct2 sys)
+(defmethod values-wdisjoin/2 (client vct1 vct2)
   ;; FIXME: This is not actually Noetherian right now, since more values can
   ;; get tacked on indefinitely!
   (assert (and (values-ctype-p vct1) (values-ctype-p vct2)))
-  (cond ((values-bottom-p vct1 sys)
+  (cond ((values-bottom-p client vct1)
          (return-from values-wdisjoin/2 vct2))
-        ((values-bottom-p vct2 sys)
+        ((values-bottom-p client vct2)
          (return-from values-wdisjoin/2 vct1)))
   ;; General case
-  (loop with required1 = (values-required vct1 sys)
-        with optional1 = (values-optional vct1 sys)
-        with rest1 = (values-rest vct1 sys)
-        with required2 = (values-required vct2 sys)
-        with optional2 = (values-optional vct2 sys)
-        with rest2 = (values-rest vct2 sys)
+  (loop with required1 = (values-required client vct1)
+        with optional1 = (values-optional client vct1)
+        with rest1 = (values-rest client vct1)
+        with required2 = (values-required client vct2)
+        with optional2 = (values-optional client vct2)
+        with rest2 = (values-rest client vct2)
         with required with optional with rest
         with donep = nil
         do (if (null required1)
@@ -243,63 +244,63 @@
                    (if (null required2)
                        (if (null optional2)
                            ;; rest v rest
-                           (setf rest (wdisjoin/2 rest1 rest2 sys)
+                           (setf rest (wdisjoin/2 client rest1 rest2)
                                  donep t)
                            ;; rest v opt
-                           (push (wdisjoin/2 rest1 (pop optional2) sys)
+                           (push (wdisjoin/2 client rest1 (pop optional2))
                                  optional))
                        ;; rest v req
-                       (push (wdisjoin/2 rest1 (pop required2) sys)
+                       (push (wdisjoin/2 client rest1 (pop required2))
                              optional))
                    (if (null required2)
                        (if (null optional2)
                            ;; optional v rest
-                           (push (wdisjoin/2 (pop optional1) rest2 sys)
+                           (push (wdisjoin/2 client (pop optional1) rest2)
                                  optional)
                            ;; optional v optional
-                           (push (wdisjoin/2 (pop optional1) (pop optional2) sys)
+                           (push (wdisjoin/2 client (pop optional1) (pop optional2))
                                  optional))
                        ;; optional v req
-                       (push (wdisjoin/2 (pop optional1) (pop required2) sys)
+                       (push (wdisjoin/2 client (pop optional1) (pop required2))
                              optional)))
                (if (null required2)
                    (if (null optional2)
                        ;; required v rest
-                       (push (wdisjoin/2 (pop required1) rest2 sys)
+                       (push (wdisjoin/2 client (pop required1) rest2)
                              optional)
                        ;; required v optional
-                       (push (wdisjoin/2 (pop required1) (pop optional2) sys)
+                       (push (wdisjoin/2 client (pop required1) (pop optional2))
                              optional))
                    ;; required v required
-                   (push (wdisjoin/2 (pop required1) (pop required2) sys)
+                   (push (wdisjoin/2 client (pop required1) (pop required2))
                          required)))
         when donep
-          return (values (nreverse required) (nreverse optional) rest sys)))
+          return (values client (nreverse required) (nreverse optional) rest)))
 
-(defmethod disjoin/2 (ct1 ct2 sys)
+(defmethod disjoin/2 (client ct1 ct2)
   (cond
     ((or (values-ctype-p ct1) (values-ctype-p ct2))
      (error "values ctypes ~a ~a input to disjoin" ct1 ct2))
-    ((top-p ct1 sys) ct1)
-    ((top-p ct2 sys) ct2)
-    ((bottom-p ct1 sys) ct2)
-    ((bottom-p ct2 sys) ct1)
+    ((top-p client ct1) ct1)
+    ((top-p client ct2) ct2)
+    ((bottom-p client ct1) ct2)
+    ((bottom-p client ct2) ct1)
     ((cl:subtypep ct1 ct2) ct2)
     ((cl:subtypep ct2 ct1) ct1)
     (t `(or ,ct1 ,ct2))))
 
-(defmethod wdisjoin/2 (ct1 ct2 sys)
+(defmethod wdisjoin/2 (client ct1 ct2)
   (cond
-    ((top-p ct1 sys) ct1)
-    ((top-p ct2 sys) ct2)
-    ((bottom-p ct1 sys) ct2)
-    ((bottom-p ct2 sys) ct1)
+    ((top-p client ct1) ct1)
+    ((top-p client ct2) ct2)
+    ((bottom-p client ct1) ct2)
+    ((bottom-p client ct2) ct1)
     (t (let ((sum `(or ,ct1 ,ct2)))
          (macrolet ((tcases (&rest type-specifiers)
                       `(cond
                          ,@(loop for ts in type-specifiers
                                  collect `((cl:subtypep sum ',ts) ',ts))
-                         (t (top sys)))))
+                         (t (top client)))))
            (tcases cl:nil cl:cons cl:null cl:symbol cl:base-char cl:character
                    cl:hash-table cl:function cl:readtable cl:package
                    cl:pathname cl:stream cl:random-state cl:condition
@@ -318,133 +319,134 @@
                    simple-vector cl:string (simple-array * (*)) vector
                    simple-array cl:array))))))
 
-(defmethod negate (ct sys)
-  (cond ((top-p ct sys) 'nil)
-        ((bottom-p ct sys) 't)
+(defmethod negate (client ct)
+  (cond ((top-p client ct) 'nil)
+        ((bottom-p client ct) 't)
         (t `(not ,ct))))
 
-(defmethod subtract (ct1 ct2 sys)
-  (cond ((bottom-p ct1 sys) 'nil)
-        ((bottom-p ct2 sys) ct1)
-        ((top-p ct2 sys) 'nil)
-        (t (conjoin/2 ct1 (negate ct2 sys) sys))))
+(defmethod subtract (client ct1 ct2)
+  (cond ((bottom-p client ct1) 'nil)
+        ((bottom-p client ct2) ct1)
+        ((top-p client ct2) 'nil)
+        (t (conjoin/2 client ct1 (negate client ct2)))))
 
-(defmethod values-append/2 (ct1 ct2 system)
+(defmethod values-append/2 (client ct1 ct2)
   ;; This is considerably complicated by nontrivial &optional and &rest.
   ;; For a start (to be improved? FIXME) we take the required values of the
   ;; first form, and record the minimum number of required values, which is
   ;; just the sum of those of the values types.
   ;; Also, if the number of values of the first type is fixed (no &optional
   ;; and the &rest is bottom) we give the simple exact result.
-  (let ((req1 (values-required ct1 system))
-        (opt1 (values-optional ct1 system))
-        (rest1 (values-rest ct1 system))
-        (req2 (values-required ct2 system))
-        (opt2 (values-optional ct2 system))
-        (rest2 (values-rest ct2 system)))
-    (if (and (null opt1) (bottom-p rest1 system))
+  (let ((req1 (values-required client ct1))
+        (opt1 (values-optional client ct1))
+        (rest1 (values-rest client ct1))
+        (req2 (values-required client ct2))
+        (opt2 (values-optional client ct2))
+        (rest2 (values-rest client ct2)))
+    (if (and (null opt1) (bottom-p client rest1))
         ;; simple case
-        (values (append req1 req2) opt2 rest2 system)
+        (values client (append req1 req2) opt2 rest2)
         ;; Approximate as described
         (values
+         client
          (append req1 (make-list (length req2)
-                                 :initial-element (top system)))
-         nil (top system) system))))
+                                 :initial-element (top client)))
+         nil (top client)))))
 
 (defun function-returns (fctype) (third fctype))
 
-(defun general-function-returns (fctype system)
+(defun general-function-returns (client fctype)
   (cond ((function-ctype-p fctype)
          (function-returns fctype))
-        ((conjunctionp fctype system)
-         (cl:apply #'conjoin system
-                   (loop for fc in (conjunction-ctypes fctype system)
-                         collect (general-function-returns fc system))))
-        ((disjunctionp fctype system)
-         (cl:apply #'disjoin system
-                   (loop for fc in (disjunction-ctypes fctype system)
-                         collect (general-function-returns fc system))))
+        ((conjunctionp client fctype)
+         (cl:apply #'conjoin client
+                   (loop for fc in (conjunction-ctypes client fctype)
+                         collect (general-function-returns client fc))))
+        ((disjunctionp client fctype)
+         (cl:apply #'disjoin client
+                   (loop for fc in (disjunction-ctypes client fctype)
+                         collect (general-function-returns client fc))))
         ;; give up
         (t `(cl:values &rest t))))
 
-(defmethod apply (fctype actype system)
+(defmethod apply (client fctype actype)
   (declare (ignore actype))
-  (general-function-returns fctype system))
+  (general-function-returns client fctype))
 
-(defmethod funcall (system fctype &rest atypes)
+(defmethod funcall (client fctype &rest atypes)
   (declare (ignore atypes))
-  (general-function-returns fctype system))
+  (general-function-returns client fctype))
 
-(defmethod class (class sys) (declare (ignore sys)) class)
+(defmethod class (client class) (declare (ignore client)) class)
 
-(defmethod cons (car cdr sys)
-  (declare (ignore sys))
+(defmethod cons (client car cdr)
+  (declare (ignore client))
   (cond ((eql car 'nil) 'nil)
         ((eql cdr 'nil) 'nil)
         (t `(cl:cons ,car ,cdr))))
 
-(defmethod consp (type sys)
-  (declare (ignore sys))
+(defmethod consp (client type)
+  (declare (ignore client))
   (and (cl:consp type) (eq (car type) 'cl:cons)
        (cl:consp (cdr type))
        (cl:consp (cddr type))
        (cl:null (cdddr type))))
-(defmethod cons-car (type sys)
-  (declare (ignore sys))
+(defmethod cons-car (client type)
+  (declare (ignore client))
   (second type))
-(defmethod cons-cdr (type sys)
-  (declare (ignore sys))
+(defmethod cons-cdr (client type)
+  (declare (ignore client))
   (third type))
 
 (defun normalize-dimensions (dimensions)
   (if (integerp dimensions)
       (make-list dimensions :initial-element '*)
       dimensions))
-(defmethod array (element dimensions simplicity sys)
-  (declare (ignore sys))
+(defmethod array (client element dimensions simplicity)
+  (declare (ignore client))
   `(,simplicity ,element ,dimensions))
-(defmethod arrayp (type sys)
+(defmethod arrayp (client type)
   ;; FIXME: Doesn't work on string types.
-  (declare (ignore sys))
+  (declare (ignore client))
   (and (cl:consp type) (cl:member (car type) '(cl:array cl:simple-array))
        (cl:consp (cdr type))
        (cl:consp (cddr type))
        (cl:null (cdddr type))))
-(defmethod array-element-type (type sys)
-  (declare (ignore sys))
+(defmethod array-element-type (client type)
+  (declare (ignore client))
   (second type))
-(defmethod array-dimensions (type sys)
-  (declare (ignore sys))
+(defmethod array-dimensions (client type)
+  (declare (ignore client))
   (third type))
 
-(defmethod string (dimension simplicity sys)
-  (declare (ignore sys))
+(defmethod string (client dimension simplicity)
+  (declare (ignore client))
   `(,(ecase simplicity
        ((cl:array) 'cl:string)
        ((cl:simple-array) 'cl:simple-string))
     ,dimension))
 
-(defmethod character (sys) (declare (ignore sys)) 'cl:character)
-(defmethod base-char (sys) (declare (ignore sys)) 'cl:base-char)
-(defmethod standard-char (sys) (declare (ignore sys)) 'cl:standard-char)
+(defmethod character (client) (declare (ignore client)) 'cl:character)
+(defmethod base-char (client) (declare (ignore client)) 'cl:base-char)
+(defmethod standard-char (client) (declare (ignore client)) 'cl:standard-char)
 
-(defmethod complex (part sys)
-  (declare (ignore sys))
+(defmethod complex (client part)
+  (declare (ignore client))
   `(cl:complex ,part))
 
-(defmethod complexp (type sys)
-  (declare (ignore sys))
+(defmethod complexp (client type)
+  (declare (ignore client))
   (and (cl:consp type) (eq (car type) 'cl:complex)
        (cl:consp (cdr type)) (cl:null (cddr type))))
-(defmethod complex-part-type (type sys)
-  (declare (ignore sys))
+(defmethod complex-part-type (client type)
+  (declare (ignore client))
   (second type))
 
-(defmethod range (type low high sys)
-  (declare (ignore sys))
+(defmethod range (client type low high)
+  (declare (ignore client))
   `(,type ,low ,high))
-(defmethod rangep (type sys)
-  (declare (ignore sys))
+(defmethod rangep (client type)
+  (declare (ignore client))
   (and (cl:consp type) (cl:member (car type) '(cl:integer cl:ratio cl:rational
                                                cl:float cl:single-float cl:double-float
                                                cl:short-float cl:long-float cl:real))
@@ -454,20 +456,21 @@
   (cond ((eq desig '*) (cl:values nil nil))
         ((listp desig) (cl:values (first desig) t))
         (t (cl:values desig nil))))
-(defmethod range-kind (type sys)
-  (declare (ignore sys))
+(defmethod range-kind (client type)
+  (declare (ignore client))
   (first type))
-(defmethod range-low (type sys)
-  (declare (ignore sys))
+(defmethod range-low (client type)
+  (declare (ignore client))
   (process-interval-designator (second type)))
-(defmethod range-high (type sys)
-  (declare (ignore sys))
+(defmethod range-high (client type)
+  (declare (ignore client))
   (process-interval-designator (third type)))
 
-(defmethod fixnum (sys) (declare (ignore sys)) 'cl:fixnum)
+(defmethod fixnum (client) (declare (ignore client)) 'cl:fixnum)
 
-(defun constant-real->range (real sys)
+(defun constant-real->range (client real)
   (range
+   client
    (etypecase real
      ((integer) 'integer)
      ((rational) 'rational)
@@ -475,42 +478,42 @@
      ((double-float) 'double-float)
      ((short-float) 'short-float)
      ((long-float) 'long-float))
-   real real sys))
+   real real))
 
-(defmethod member (sys &rest elems)
+(defmethod member (client &rest elems)
   ;; Try to represent reals as ranges instead.
   (let ((reals (remove-if-not #'realp elems)))
     (if reals
-        (cl:apply #'disjoin sys `(cl:member ,@(set-difference elems reals))
+        (cl:apply #'disjoin client `(cl:member ,@(set-difference elems reals))
                   (loop for real in reals
-                        collecting (constant-real->range real sys)))
+                        collecting (constant-real->range client real)))
         `(cl:member ,@elems))))
 
-(defmethod member-p (sys ctype)
-  (declare (ignore sys))
+(defmethod member-p (client ctype)
+  (declare (ignore client))
   (and (cl:consp ctype) (eq (first ctype) 'cl:member)))
-(defmethod member-members (sys ctype)
-  (declare (ignore sys))
+(defmethod member-members (client ctype)
+  (declare (ignore client))
   (rest ctype))
 
-(defmethod satisfies (fname sys)
-  (declare (ignore sys))
+(defmethod satisfies (client fname)
+  (declare (ignore client))
   `(cl:satisfies ,fname))
 
-(defmethod keyword (sys) (declare (ignore sys)) 'cl:keyword)
+(defmethod keyword (client) (declare (ignore client)) 'cl:keyword)
 
-(defmethod function (req opt rest keyp keys aokp returns sys)
-  (declare (ignore sys))
+(defmethod function (client req opt rest keyp keys aokp returns)
+  (declare (ignore client))
   `(cl:function (,@req &optional ,@opt &rest ,rest
                        ,@(when keyp `(&key ,@keys))
                        ,@(when aokp '(&allow-other-keys)))
                 ,returns))
 
-(defmethod compiled-function (sys) (declare (ignore sys))
+(defmethod compiled-function (client) (declare (ignore client))
   'cl:compiled-function)
 
-(defmethod values (req opt rest sys)
-  (declare (ignore sys))
+(defmethod values (client req opt rest)
+  (declare (ignore client))
   (when (or (some #'values-ctype-p req) (some #'values-ctype-p opt)
             (values-ctype-p rest))
     (error "Nested values ctype on ~a ~a ~a" req opt rest))
@@ -542,56 +545,56 @@
 (defun ll-aokp (lambda-list)
   (cl:member '&allow-other-keys lambda-list))
 
-(defmethod values-required (ctype system)
-  (declare (ignore system))
+(defmethod values-required (client ctype)
+  (declare (ignore client))
   (ll-required (cl:rest ctype)))
 
-(defmethod values-optional (ctype system)
-  (declare (ignore system))
+(defmethod values-optional (client ctype)
+  (declare (ignore client))
   (ll-optional (cl:rest ctype)))
 
-(defmethod values-rest (ctype system)
-  (declare (ignore system))
+(defmethod values-rest (client ctype)
+  (declare (ignore client))
   (ll-rest (cl:rest ctype)))
 
-(defmethod nth-value (n ctype system)
-  (let* ((req (values-required ctype system))
+(defmethod nth-value (client n ctype)
+  (let* ((req (values-required client ctype))
          (nreq (length req)))
     (cond ((< n nreq) (nth n req))
-          ((some (lambda (ct) (bottom-p ct system)) req) (bottom system))
+          ((some (lambda (ct) (bottom-p client ct)) req) (bottom client))
           (t (disjoin
-              system
-              (member system nil)
-              (let* ((opt (values-optional ctype system))
+              client
+              (member client nil)
+              (let* ((opt (values-optional client ctype))
                      (nopt (length opt)))
                 (if (< n (+ nreq nopt))
                     (nth (- n nreq) opt)
-                    (values-rest ctype system))))))))
+                    (values-rest client ctype))))))))
 
-(defmethod function-required (ctype system)
-  (declare (ignore system))
+(defmethod function-required (client ctype)
+  (declare (ignore client))
   (ll-required (second ctype)))
 
-(defmethod function-optional (ctype system)
-  (declare (ignore system))
+(defmethod function-optional (client ctype)
+  (declare (ignore client))
   (ll-optional (second ctype)))
 
-(defmethod function-rest (ctype system)
-  (declare (ignore system))
+(defmethod function-rest (client ctype)
+  (declare (ignore client))
   (ll-rest (second ctype)))
 
-(defmethod function-keysp (ctype system)
-  (declare (ignore system))
+(defmethod function-keysp (client ctype)
+  (declare (ignore client))
   (ll-keysp (second ctype)))
 
-(defmethod function-keys (ctype system)
-  (declare (ignore system))
+(defmethod function-keys (client ctype)
+  (declare (ignore client))
   (ll-keys (second ctype)))
 
-(defmethod function-allow-other-keys-p (ctype system)
-  (declare (ignore system))
+(defmethod function-allow-other-keys-p (client ctype)
+  (declare (ignore client))
   (ll-aokp (second ctype)))
 
-(defmethod function-values (ctype system)
-  (declare (ignore system))
+(defmethod function-values (client ctype)
+  (declare (ignore client))
   (third ctype))

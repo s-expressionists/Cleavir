@@ -2,9 +2,10 @@
 
 (defpackage #:cleavir-cst-to-ast
   (:use #:common-lisp)
-  (:local-nicknames (#:env #:cleavir-env)
-                    (#:ast #:cleavir-ast)
+  (:local-nicknames (#:ast #:cleavir-ast)
                     (#:ctype #:cleavir-ctype))
+  (:shadow #:eval
+           #:find-class)
   (:export #:cst-to-ast
            #:*compiler*
            #:convert
@@ -13,16 +14,20 @@
            #:convert-special-binding
            #:convert-special-variable
            #:convert-variable
-	   #:convert-function-reference
+           #:convert-function-reference
            #:convert-called-function-reference
-	   #:convert-global-function-reference
+           #:convert-global-function-reference
            #:convert-code
            #:convert-setq-special-variable
            #:convert-setq
            #:convert-let
            #:convert-let*
+           #:eval
+           #:cst-eval
            #:cst-eval-for-effect
            #:type-wrap
+           #:attributes
+           #:policy
            #:process-parameter-groups
            #:process-parameter-group
            #:process-parameters-in-group
@@ -32,6 +37,13 @@
            #:entries-from-parameter-group
            #:lambda-list-from-parameter-group
            #:defprimop
+           ;; Type information.
+           #:type-expand
+           #:find-class
+           #:parse-type-specifier
+           #:parse-values-type-specifier
+           #:parse-expanded-type-specifier
+           #:parse-compound-type-specifier
            ;; Names of conditions.
            #:compilation-condition
            #:compilation-program-error
@@ -62,9 +74,9 @@
            #:setq-var-must-be-symbol
            #:setq-constant-variable
            #:bind-constant-variable
-           #:no-info
-           #:no-function-info #:no-variable-info
-           #:no-tag-info #:no-block-info
+           #:no-description
+           #:no-function-description #:no-variable-description
+           #:no-tag-description #:no-block-description
            #:function-name-names-global-macro
            #:function-name-names-local-macro
            #:function-name-names-special-operator

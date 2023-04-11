@@ -9,10 +9,11 @@
 ;;;; since it may inline functions.
 
 ;;; Warn about a compile time type conflict.
-(defun maybe-warn-type-conflict (thei system)
+(defun maybe-warn-type-conflict (client thei)
   (let ((input (bir:input thei)))
-    (when (ctype:values-disjointp (bir:asserted-type thei) (bir:ctype input)
-                                  system)
+    (when (ctype:values-disjointp client
+                                  (bir:asserted-type thei)
+                                  (bir:ctype input))
       (warn 'bir:type-conflict
             :datum input
             :asserted-type (bir:asserted-type thei)
@@ -49,16 +50,16 @@
     (setf (bir:dynamic-environment mv-block) collect)
     (bir:insert-instruction-before call (bir:end mv-block))))
 
-(defun generate-type-check (thei system)
+(defun generate-type-check (client thei)
   (let ((type-check-function (bir:type-check-function thei)))
     (unless (symbolp type-check-function)
       ;; If the input to the type check is known to be single valued,
       ;; just do a normal call. Otherwise do the much more complex mv call.
       (let* ((input (bir:input thei))
              (ctype (bir:ctype input)))
-        (if (and (= (length (ctype:values-required ctype system)) 1)
-                 (null (ctype:values-optional ctype system))
-                 (ctype:bottom-p (ctype:values-rest ctype system) system))
+        (if (and (= (length (ctype:values-required client ctype)) 1)
+                 (null (ctype:values-optional client ctype))
+                 (ctype:bottom-p client (ctype:values-rest client ctype)))
             (let ((call (make-instance 'bir:local-call
                           :inputs (list type-check-function input)
                           :outputs (list (bir:output thei))
@@ -71,7 +72,7 @@
         (setf (bir:type-check-function thei) nil)
         (bir:delete-instruction thei)))))
 
-(defun generate-type-checks (function system)
+(defun generate-type-checks (client function)
   (let ((theis '()))
     (bir:do-iblocks (iblock function)
       (bir:do-iblock-instructions (instruction iblock)
@@ -79,9 +80,9 @@
           (push instruction theis))))
     ;; We first warn about type conflicts in case we lose derived
     ;; types when generating type checks.
-    (dolist (thei theis) (maybe-warn-type-conflict thei system))
-    (mapc (lambda (thei) (generate-type-check thei system)) theis)))
+    (dolist (thei theis) (maybe-warn-type-conflict client thei))
+    (mapc (lambda (thei) (generate-type-check client thei)) theis)))
 
-(defun module-generate-type-checks (module system)
+(defun module-generate-type-checks (client module)
   (bir:do-functions (function module)
-    (generate-type-checks function system)))
+    (generate-type-checks client function)))

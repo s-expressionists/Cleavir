@@ -1,21 +1,21 @@
 (in-package #:cleavir-example)
 
 (defun cst->ast (cst)
-  (cst-to-ast:cst-to-ast cst *environment* *system*))
+  (cst-to-ast:cst-to-ast *client* cst *environment*))
 
 (defun ast->bir (ast)
-  (ast-to-bir:compile-toplevel ast *system*))
+  (ast-to-bir:compile-toplevel *client* ast))
 
 (defun cst->bir (cst)
   (ast->bir (cst->ast cst)))
 
 (defun abstract-interpret (module)
   (let* ((strategy (make-instance 'abstract-interpreter:sequential-slots))
-         (system *system*)
+         (client *client*)
          (atype (make-instance 'abstract-interpreter:asserted-type
-                  :system system))
+                  :client client))
          (dtype (make-instance 'abstract-interpreter:derived-type
-                  :system system))
+                  :client client))
          (attr (make-instance 'abstract-interpreter:attribute))
          (reach (make-instance 'abstract-interpreter:reachability))
          (ra (make-instance 'abstract-interpreter:reachability->data
@@ -42,11 +42,11 @@
     ((:optimize-variables)
      (bir-transformations:module-optimize-variables bir))
     ((:meta-evaluate)
-     (bir-transformations:meta-evaluate-module bir *system*))
+     (bir-transformations:meta-evaluate-module *client* bir))
     ((:abstract-interpret)
      (abstract-interpret bir))
     ((:generate-type-checks)
-     (bir-transformations:module-generate-type-checks bir *system*))
+     (bir-transformations:module-generate-type-checks *client* bir))
     ((:extents)
      (bir-transformations:determine-function-environments bir)
      (bir-transformations:determine-closure-extents bir)
@@ -62,5 +62,5 @@
   bir)
 
 (defun frontend (cst)
-  "Given a CST, compile it in the example system and return the resulting post-optimization BIR."
+  "Given a CST, compile it in the example client and return the resulting post-optimization BIR."
   (transform (bir:module (cst->bir cst))))

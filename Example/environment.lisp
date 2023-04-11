@@ -8,19 +8,19 @@
 ;;;; A few macros for this environment are defined in macros.lisp,
 ;;;; but not every standard macro.
 
-(defclass environment ()
-  ((%variables :initform (make-hash-table) :reader variables
-               :type hash-table)
-   (%functions :initform (make-hash-table :test #'eq)
-               :reader functions :type hash-table)
-   (%classes :initform (make-hash-table)
-             :reader classes :type hash-table)
-   (%type-expanders :initform (make-hash-table)
-                    :reader type-expanders :type hash-table)
-   (%optimize :initform '((safety 1) (debug 1) (speed 1)
-                          (space 1) (compilation-speed 1))
-              :accessor optimize* :type list)
-   (%policy :accessor policy :type list)))
+(defclass environment (trucler-reference:environment)
+  ((%type-expanders
+    :reader type-expanders
+    :initform (make-hash-table)
+    :type hash-table)
+   (%optimize
+    :accessor optimize*
+    :initform '((speed 1) (compilation-speed 1)
+                (debug 1) (space 1) (safety 1))
+    :type list)
+   (%policy :accessor policy :type list))
+  (:default-initargs
+   :global-environment (make-instance 'clostrum-basic:run-time-environment)))
 
 (defvar *environment* (make-instance 'environment)
   "The \"global\" environment used by the example compiler.")
@@ -30,29 +30,54 @@
 ;;; Basic definitions
 ;;;
 
-(defun %defspecial (name env)
-  (setf (gethash name (variables env)) `(:special t)))
-(defun %defconstant (name value env)
-  (setf (gethash name (variables env)) `(:constant t ,value)))
-(defun %defsmacro (name expansion env)
-  (setf (gethash name (variables env)) `(:macro t ,expansion)))
-(defun proclaim-vartype (name type env)
-  (let ((info (gethash name (variables env))))
-    (if info
-        (setf (second info) `(and ,(second info) ,type))
-        nil)))
+(defun %defspecial (name init-p value environment)
+  ;; FIXME(paul) What value to initialize this to if INIT-P is NIL?
+  ;; This function is not actually even used.
+  (setf (env:special-variable *client*
+                              (trucler:global-environment *client* environment)
+                              name init-p)
+        value))
 
-(defun %defun (name env)
-  (setf (gethash name (functions env)) `(:function)))
-(defun %defmacro (name macrofun env)
-  (setf (gethash name (functions env)) `(:macro ,macrofun)))
+(defun %defconstant (name value environment)
+  (setf (env:constant-variable *client*
+                               (trucler:global-environment *client* environment)
+                               name)
+        value))
 
-(defun %defclass (name class env)
-  (setf (gethash name (classes env)) class))
+(defun %defsmacro (name expansion environment)
+  (setf (env:symbol-macro *client*
+                          (trucler:global-environment *client* environment)
+                          name)
+        expansion))
 
-(defun proclaim-optimize (optimize env)
-  (setf (optimize* env)
-        (policy:normalize-optimize (append optimize (optimize* env))
-                                   env)
-        (policy env)
-        (policy:compute-policy (optimize* env) env)))
+(defun proclaim-vartype (name type environment)
+  (setf (env:variable-type *client*
+                           (trucler:global-environment *client* environment)
+                           name)
+        type))
+
+(defun %defun (name function environment)
+  (let ((global-environment (trucler:global-environment *client* environment)))
+    (setf (env:fdefinition *client* global-environment name) function
+          (env:function-type *client* global-environment name)
+          (cst-to-ast:parse-type-specifier *client* 'function environment))))
+
+(defun %defmacro (name expander environment)
+  (setf (env:macro-function *client*
+                            (trucler:global-environment *client* environment)
+                            name)
+        expander))
+
+(defun %defclass (name class environment)
+  (setf (env:find-class *client*
+                        (trucler:global-environment *client* environment)
+                        name)
+        class))
+
+(defun proclaim-optimize (optimize environment)
+  (let ((optimize (policy:normalize-optimize
+                   *client*
+                   (append optimize (optimize* environment)))))
+    (setf (optimize* environment) optimize
+          (policy environment)
+          (policy:compute-policy *client* optimize))))

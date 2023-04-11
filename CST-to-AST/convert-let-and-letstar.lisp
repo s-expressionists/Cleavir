@@ -31,36 +31,37 @@
         until (cst:null remaining)
         do (check-binding (cst:first remaining))))
 
-(defun process-remaining-let-bindings (bindings idspecs rdspecs body-forms-cst environment system)
+(defun process-remaining-let-bindings (client bindings idspecs rdspecs body-forms-cst environment)
   (if (null bindings)
       ;; We ran out of bindings.  We must build an AST for the body of
       ;; the function.
-      (let ((new-env (augment-environment-with-declarations environment system rdspecs)))
-	(process-progn (convert-sequence body-forms-cst new-env system)))
+      (let ((new-env (augment-environment-with-declarations
+                      client environment rdspecs)))
+        (process-progn (convert-sequence client body-forms-cst new-env)))
       (destructuring-bind (variable-cst . lexical-variable) (first bindings)
-	(let* (;; We enter the new variable into the environment and
-	       ;; then we process remaining parameters and ultimately
-	       ;; the body of the function.
-	       (new-env (augment-environment-with-variable
-			 variable-cst (first (first idspecs)) system environment environment))
-	       ;; We compute the AST of the remaining computation by
-	       ;; recursively calling this same function with the
-	       ;; remaining bindings (if any) and the environment that
-	       ;; we obtained by augmenting the original one with the
-	       ;; parameter variable.
-	       (next-ast (process-remaining-let-bindings (rest bindings)
-							 (rest idspecs)
-							 rdspecs
-							 body-forms-cst
-							 new-env
-							 system)))
-	  ;; All that is left to do now, is to construct the AST to
-	  ;; return by using the new variable and the AST of the
-	  ;; remaining computation as components.
-	  (set-or-bind-variable variable-cst lexical-variable next-ast new-env system)))))
+        (let* (;; We enter the new variable into the environment and
+               ;; then we process remaining parameters and ultimately
+               ;; the body of the function.
+               (new-env (augment-environment-with-variable
+                         client variable-cst (first (first idspecs)) environment environment))
+               ;; We compute the AST of the remaining computation by
+               ;; recursively calling this same function with the
+               ;; remaining bindings (if any) and the environment that
+               ;; we obtained by augmenting the original one with the
+               ;; parameter variable.
+               (next-ast (process-remaining-let-bindings client
+                                                         (rest bindings)
+                                                         (rest idspecs)
+                                                         rdspecs
+                                                         body-forms-cst
+                                                         new-env)))
+          ;; All that is left to do now, is to construct the AST to
+          ;; return by using the new variable and the AST of the
+          ;; remaining computation as components.
+          (set-or-bind-variable client variable-cst lexical-variable next-ast new-env)))))
 
 ;;; We convert a LET form CST by lexically binding every variable.
-(defmethod convert-let (cst environment system)
+(defmethod convert-let (client cst environment)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (let-cst bindings-cst . body-forms-cst) cst
@@ -70,7 +71,8 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (env:declarations environment) declaration-csts))
+                client (trucler:describe-declarations client environment)
+                declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts (loop for binding-cst in binding-csts
                                   collect (if (cst:atom binding-cst)
@@ -82,16 +84,16 @@
                                               (make-atom-cst nil origin)
                                               (cst:second binding-cst))))
              (value-asts (loop for initform-cst in initform-csts
-                               collect (convert initform-cst environment system))))
+                               collect (convert client initform-cst environment))))
         (multiple-value-bind (item-specific-dspecs remaining-dspecs)
             (itemize-declaration-specifiers (mapcar #'list variable-csts)
                                             canonical-declaration-specifiers)
-          (process-remaining-let-bindings (mapcar #'cons variable-csts value-asts)
+          (process-remaining-let-bindings client
+                                          (mapcar #'cons variable-csts value-asts)
                                           item-specific-dspecs
                                           remaining-dspecs
                                           forms-cst
-                                          environment
-                                          system))))))
+                                          environment))))))
 
 ;;; NOTE: The following is how LETs used to be converted. We needed to
 ;;; go through a LAMBDA form for technical reasons related to cell
@@ -102,7 +104,7 @@
 ;;; We convert a LET form CST by transforming it into an equivalent
 ;;; LAMBDA form CST.
 #+(or)
-(defmethod convert-let (cst environment system)
+(defmethod convert-let (client cst environment)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (let-cst bindings-cst . body-forms-cst) cst
@@ -129,14 +131,14 @@
                                           body-forms-cst)
                                 :source origin)
                :rest (cst:cstify initform-csts))))
-      (convert lambda-form-cst environment system))))
+      (convert client lambda-form-cst environment))))
 
 ;;; We convert a LET* form CST by transforming it into nested LET form
 ;;; CSTs and then converting those instead.  This is not trivial,
 ;;; because we need to associate the right declarations with the
 ;;; corresponding LET form CST.
 
-(defmethod convert-let* (cst environment system)
+(defmethod convert-let* (client cst environment)
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 nil)
   (cst:db origin (let*-cst bindings-cst . body-forms-cst) cst
@@ -146,7 +148,8 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (env:declarations environment) declaration-csts))
+                client (trucler:describe-declarations client environment)
+                declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts
                (loop for binding-cst in binding-csts
@@ -173,4 +176,4 @@
                                    (declare
                                     (cst:unquote-splicing declarations-cst))
                                    (cst:unquote result))))
-                finally (return (convert result environment system))))))))
+                finally (return (convert client result environment))))))))
