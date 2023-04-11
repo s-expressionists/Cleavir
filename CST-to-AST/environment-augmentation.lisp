@@ -28,15 +28,15 @@
      declaration-identifier-cst
      declaration-data-cst
      environment)
-  (declare (ignore client declaration-identifier-cst))
+  (declare (ignore declaration-identifier-cst))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst))))
     (if (consp var-or-function)
         ;; (dynamic-extent (function foo))
-        (env:add-function-dynamic-extent
-         environment (second var-or-function))
+        (trucler:add-function-dynamic-extent
+         client environment (second var-or-function))
         ;; (dynamic-extent foo)
-        (env:add-variable-dynamic-extent
-         environment var-or-function))))
+        (trucler:add-variable-dynamic-extent
+         client environment var-or-function))))
 
 (defmethod augment-environment-with-declaration
     (client
@@ -45,9 +45,9 @@
      declaration-data-cst
      environment)
   (declare (ignore declaration-identifier-cst))
-  (env:add-function-type
-   environment (cst:raw (cst:second declaration-data-cst))
-   (env:parse-type-specifier
+  (trucler:add-function-type
+   client environment (cst:raw (cst:second declaration-data-cst))
+   (parse-type-specifier
     client
     (cst:raw (cst:first declaration-data-cst))
     environment)))
@@ -58,14 +58,13 @@
      declaration-identifier-cst
      declaration-data-cst
      environment)
-  (declare (ignore client))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
-        (env:add-function-ignore
-         environment (second var-or-function) ignore)
-        (env:add-variable-ignore
-         environment var-or-function ignore))))
+        (trucler:add-function-ignore
+         client environment (second var-or-function) ignore)
+        (trucler:add-variable-ignore
+         client environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
     (client
@@ -73,14 +72,13 @@
      declaration-identifier-cst
      declaration-data-cst
      environment)
-  (declare (ignore client))
   (let ((var-or-function (cst:raw (cst:first declaration-data-cst)))
         (ignore (cst:raw declaration-identifier-cst)))
     (if (consp var-or-function)
-        (env:add-function-ignore
-         environment (second var-or-function) ignore)
-        (env:add-variable-ignore
-         environment var-or-function ignore))))
+        (trucler:add-function-ignore
+         client environment (second var-or-function) ignore)
+        (trucler:add-variable-ignore
+         client environment var-or-function ignore))))
 
 (defmethod augment-environment-with-declaration
     (client
@@ -88,9 +86,8 @@
      declaration-identifier-cst
      declaration-data-cst
      environment)
-  (declare (ignore client))
-  (env:add-inline
-   environment (cst:raw (cst:first declaration-data-cst))
+  (trucler:add-inline
+   client environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
 (defmethod augment-environment-with-declaration
@@ -99,9 +96,8 @@
      declaration-identifier-cst
      declaration-data-cst
      environment)
-  (declare (ignore client))
-  (env:add-inline
-   environment (cst:raw (cst:first declaration-data-cst))
+  (trucler:add-inline
+   client environment (cst:raw (cst:first declaration-data-cst))
    (cst:raw declaration-identifier-cst)))
 
 (defmethod augment-environment-with-declaration
@@ -114,16 +110,18 @@
   ;; This case is a bit tricky, because if the
   ;; variable is globally special, nothing should
   ;; be added to the environment.
-  (let ((info (env:variable-info
-               client environment (cst:raw (cst:first declaration-data-cst)))))
-    (cond ((typep info 'env:symbol-macro-info)
-           (error 'special-symbol-macro
-                  :cst (cst:first declaration-data-cst)))
-          ((and (typep info 'env:special-variable-info)
-                (env:global-p info))
-           environment)
-          (t (env:add-special-variable
-              environment (cst:raw (cst:first declaration-data-cst)))))))
+  (let ((description (trucler:describe-variable
+                      client environment
+                      (cst:raw (cst:first declaration-data-cst)))))
+    (typecase description
+      (trucler:symbol-macro-description
+       (error 'special-symbol-macro
+              :cst (cst:first declaration-data-cst)))
+      (trucler:global-special-variable-description
+       environment)
+      (t (trucler:add-local-special-variable
+          client environment
+          (cst:raw (cst:first declaration-data-cst)))))))
 
 (defmethod augment-environment-with-declaration
     (client
@@ -133,9 +131,9 @@
      environment)
   (declare (ignore declaration-identifier-cst))
   (cst:db source (type-cst variable-cst) declaration-data-cst
-    (env:add-variable-type
-     environment (cst:raw variable-cst)
-     (env:parse-type-specifier client (cst:raw type-cst) environment))))
+    (trucler:add-variable-type
+     client environment (cst:raw variable-cst)
+     (parse-type-specifier client (cst:raw type-cst) environment))))
 
 (defmethod augment-environment-with-declaration
     (client
@@ -151,15 +149,24 @@
   ;; which signals a warning, isn't called.
   environment)
 
+(defun augment-environment-with-single-optimize (client optimize environment)
+  (multiple-value-bind (quality value)
+      (if (symbolp optimize)
+          (values optimize 3)
+          (values (first optimize) (second optimize)))
+    (ecase quality
+      (speed (trucler:add-speed client environment value))
+      (compilation-speed (trucler:add-compilation-speed client environment value))
+      (debug (trucler:add-debug client environment value))
+      (space (trucler:add-space client environment value))
+      (safety (trucler:add-safety client environment value)))))
+
 ;;; Augment the environment with an OPTIMIZE specifier.
 (defun augment-environment-with-optimize (client optimize environment)
-  ;; Make sure every environment has a complete optimize & policy.
-  (let* ((previous (env:optimize (env:optimize-info environment)))
-         (total (cleavir-policy:normalize-optimize
-                 client (append optimize previous)))
-         ;; Compute also normalizes, so this is slightly wasteful.
-         (policy (cleavir-policy:compute-policy client total)))
-    (env:add-optimize environment total policy)))
+  (let ((result environment))
+    (dolist (single-optimize optimize result)
+      (setf result (augment-environment-with-single-optimize
+                    client single-optimize result)))))
 
 ;;; Extract any OPTIMIZE information from a set of canonicalized
 ;;; declaration specifiers.
@@ -199,23 +206,25 @@
 ;;; the binding form is compiled, return true if and only if the
 ;;; variable to be bound is special.  Return a second value indicating
 ;;; whether the variable is globally special.
-(defun variable-is-special-p (variable declarations existing-var-info)
+(defun variable-is-special-p (variable declarations existing-var-description)
   (let ((special-var-p
-          (typep existing-var-info 'env:special-variable-info)))
+          (typep existing-var-description 'trucler:special-variable-description)))
     (cond ((loop for declaration in declarations
                  thereis (and (eq (cst:raw (cst:first declaration)) 'special)
                               (eq (cst:raw (cst:second declaration)) variable)))
            ;; If it is declared special it is.
-           (values t
-                   (and special-var-p
-                        (env:global-p existing-var-info))))
+           (values t (and special-var-p
+                          (typep existing-var-description
+                                 'trucler:global-special-variable-description))))
+
           ((and special-var-p
-            (env:global-p existing-var-info))
+                (typep existing-var-description
+                       'trucler:global-special-variable-description))
            ;; It is mentioned in the environment as globally special.
-           ;; if it's only special because of a local declaration,
-           ;; this binding is not special.
            (values t t))
           (t
+           ;; If it's only special because of a local declaration,
+           ;; this binding is not special.
            (values nil nil)))))
 
 ;;; Given a list of canonicalized declaration specifiers for a single
@@ -244,33 +253,39 @@
   (let* ((new-env env)
          (raw-variable (cst:raw variable-cst))
          (raw-declarations (mapcar #'cst:raw declarations))
-         (info (env:variable-info client orig-env raw-variable)))
-    (when (typep info 'env:constant-variable-info)
+         (description (trucler:describe-variable client orig-env raw-variable)))
+    (when (typep description 'trucler:constant-variable-description)
       (warn 'bind-constant-variable :cst variable-cst))
     (multiple-value-bind (special-p globally-p)
-        (variable-is-special-p raw-variable declarations info)
+        (variable-is-special-p raw-variable declarations description)
       (if special-p
           (unless globally-p
             (setf new-env
-                  (env:add-special-variable new-env raw-variable)))
-          (let ((lexical-variable (ast:make-lexical-variable raw-variable :origin variable-cst)))
+                  (trucler:add-local-special-variable
+                   client new-env raw-variable)))
+          (let ((lexical-variable (ast:make-lexical-variable
+                                   raw-variable :origin variable-cst)))
             (setf new-env
-                  (env:add-lexical-variable
-                   new-env raw-variable lexical-variable)))))
+                  (trucler:add-lexical-variable
+                   client new-env raw-variable lexical-variable)))))
     (let* ((type (declared-type declarations))
-           (ptype (env:parse-type-specifier client type env)))
+           (ptype (parse-type-specifier client type env)))
       (unless (ctype:top-p client ptype)
         (setf new-env
-              (env:add-variable-type new-env raw-variable ptype))))
+              (trucler:add-variable-type
+               client new-env raw-variable ptype))))
     (when (member 'ignore raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (env:add-variable-ignore new-env raw-variable 'ignore)))
+            (trucler:add-variable-ignore
+             client new-env raw-variable 'ignore)))
     (when (member 'ignorable raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (env:add-variable-ignore new-env raw-variable 'ignorable)))
+            (trucler:add-variable-ignore
+             client new-env raw-variable 'ignorable)))
     (when (member 'dynamic-extent raw-declarations :test #'eq :key #'car)
       (setf new-env
-            (env:add-variable-dynamic-extent new-env raw-variable)))
+            (trucler:add-variable-dynamic-extent
+             client new-env raw-variable)))
     new-env))
 
 ;;; The only purpose of this function is to call the function
@@ -289,7 +304,7 @@
           (augment-environment-with-variable
            client supplied-p-cst (second dspecs) new-env new-env))))
 
-(defun augment-environment-with-local-function-name (name-cst environment)
+(defun augment-environment-with-local-function-name (client name-cst environment)
   (let* ((name (cst:raw name-cst))
          (lexical-variable (ast:make-lexical-variable name :origin name-cst)))
-    (env:add-local-function environment name lexical-variable)))
+    (trucler:add-local-function client environment name lexical-variable)))

@@ -418,7 +418,7 @@ While COMPILED-FUNCTION = (SATISFIES COMPILED-FUNCTION-P), this function exists 
 The parameters after the first represent the parsed lambda list. REQUIRED and OPTIONAL are lists of ctypes. REST is a ctype.
 
 The semantics of values types in the standard are self-contradictory.
-This function uses the strict semantics described for the VALUES type specifier. A client expecting fuzziness, as it needs to to implement CL:THE, should apply that before using this function. See the parsing in the cleavir-environment system for an example of this.
+This function uses the strict semantics described for the VALUES type specifier. A client expecting fuzziness, as it needs to to implement CL:THE, should apply that before using this function. See the parsing in the cleavir-cst-to-ast system for an example of this.
 
 Strictness means that, for example, (values integer &rest nil) is disjoint from (values integer integer &rest nil), which is very different from how CL:THE works. Strict types are useful for when the compiler can derive exacting types; e.g. (values-list '(nil)) is of type (values null &rest nil) and cannot be zero values.
 

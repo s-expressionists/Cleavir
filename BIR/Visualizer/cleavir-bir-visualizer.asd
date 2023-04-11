@@ -12,6 +12,8 @@
                 "cleavir-bir"
                 "cleavir-bir-transformations"
 
+                "trucler-reference"
+
                 "mcclim"
                 "clouseau")
   :serial t

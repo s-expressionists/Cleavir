@@ -17,8 +17,9 @@
            ;; simply because it might be a special form that is handled
            ;; specially.  So we must wait until we have more
            ;; information.
-           (let ((info (function-info client environment (cst:first cst))))
-             (convert-cst client cst info environment)))
+           (let ((description (describe-function client environment
+                                                 (cst:first cst))))
+             (convert-cst client cst description environment)))
           (t
            ;; The form must be a compound form where the CAR is a lambda
            ;; expression.  Evaluating such a form might have some
@@ -26,7 +27,7 @@
            ;; in COMPILE-TIME-TOO mode, in which case we must evaluate
            ;; the form as well.
            (when (and *current-form-is-top-level-p* *compile-time-too*)
-             (cst-eval-for-effect client cst environment))
+             (cst-eval-for-effect-encapsulated client cst environment))
            (convert-lambda-call client cst environment)))))
 
 (defmethod convert :around (client cst environment)
@@ -37,7 +38,10 @@
       (let ((*current-form-is-top-level-p* *subforms-are-top-level-p*)
             (*subforms-are-top-level-p* nil)
             ;; gives all generated ASTs the appropriate policy.
-            (ast:*policy* (env:environment-policy environment)))
+            (ast:*policy* (policy
+                           client
+                           (trucler:describe-optimize client environment)
+                           environment)))
         (call-next-method))
     (continue ()
       :report "Replace with call to ERROR."

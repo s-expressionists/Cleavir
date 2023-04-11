@@ -22,8 +22,10 @@ like types, and sometimes inferred like types, but usually
 a meet or join operation won't return information as interesting
 as that you might get from a type.
 
+FIXME(paul) make-attributes doesn't exist
+
 For clients: You can use make-attributes to make attributes to
-return from CLEAVIR-ENV:FUNCTION-INFO etc.
+return from CLEAVIR-CST-TO-AST:ATTRIBUTES, etc.
 
 TODO: All of this stuff should be more client-customizable.
 Per-argument attributes might be good.

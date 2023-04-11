@@ -11,24 +11,25 @@
 ;;; LEXICAL-BIND-AST that assigns the value to the variable, and the second
 ;;; one is the NEXT-AST.
 (defun set-or-bind-variable (client variable-cst value-ast next-ast env)
-  (let* ((info (env:variable-info client env (cst:raw variable-cst)))
-         (_ (assert (not (null info))))
+  (let* ((description (trucler:describe-variable client env
+                                                 (cst:raw variable-cst)))
+         (_ (assert (not (null description))))
          ;; Type wrap the value. Per CLHS 3.3.4 "Declaration Scope"
          ;; bound declarations do apply to the initial value of the binding.
          ;; (The page on the TYPE declaration also specifically says it
          ;;  applies to the initial values of bindings.)
          (value-ast
-           (type-wrap client value-ast (env:type info)
+           (type-wrap client value-ast (trucler:type description)
                       :setq (ast:origin value-ast) env)))
     (declare (ignore _))
-    (if (typep info 'env:special-variable-info)
+    (if (typep description 'trucler:special-variable-description)
         (convert-special-binding
          client variable-cst value-ast next-ast env)
-	(ast:make-progn-ast
-	 (list (ast:make-lexical-bind-ast
-		(env:identity info)
-		value-ast
+        (ast:make-progn-ast
+         (list (ast:make-lexical-bind-ast
+                (trucler:identity description)
+                value-ast
                 :origin variable-cst
-                :ignore (env:ignore info))
-	       next-ast)
+                :ignore (trucler:ignore description))
+               next-ast)
          :origin variable-cst))))

@@ -3,6 +3,7 @@
 ;;;; Demonstration of constant folding.
 
 (defparameter *constant-fold* t)
+;; FIXME(paul) Remove one of the *folds*
 (defparameter *folds* (make-hash-table :test #'equal))
 
 (defmethod bir-transformations:fold-call ((client example) fold call args)

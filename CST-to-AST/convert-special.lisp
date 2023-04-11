@@ -5,7 +5,7 @@
              *current-form-is-top-level-p*
              (not (member operator
                           '(progn locally macrolet symbol-macrolet eval-when))))
-    (cst-eval-for-effect client cst environment)))
+    (cst-eval-for-effect-encapsulated client cst environment)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -33,7 +33,7 @@
       (unless (symbolp name)
         (error 'block-name-must-be-a-symbol :cst name-cst))
       (let* ((ast (ast:make-block-ast nil :name name :origin cst))
-             (new-env (env:add-block env name ast)))
+             (new-env (trucler:add-block client env name ast)))
         (setf (ast:body-ast ast)
               (process-progn (convert-sequence client body-cst new-env)
                              cst))
@@ -51,12 +51,12 @@
     (declare (ignore return-from-cst))
     (unless (symbolp (cst:raw block-name-cst))
       (error 'block-name-must-be-a-symbol :cst block-name-cst))
-    (let ((info (block-info env block-name-cst))
+    (let ((description (describe-block client env block-name-cst))
           (value-cst (if (cst:null rest-csts)
                          (make-atom-cst nil origin)
                          (cst:first rest-csts))))
       (ast:make-return-from-ast
-       (env:identity info)
+       (trucler:identity description)
        (convert client value-cst env)
        :origin cst))))
 
@@ -135,7 +135,7 @@
                     ;; No   No   Yes  CTT
                     (and ct (not lt))
                     (and (not ct) (not lt) e *compile-time-too*))
-                   (cst-eval-for-effect
+                   (cst-eval-for-effect-encapsulated
                     client
                     (cst:quasiquote s (progn (cst:unquote-splicing body-cst)))
                     environment)
@@ -164,21 +164,23 @@
 ;;; definition.  Return a new environment which is like the one passed
 ;;; as an argument, except the it has been augmented by the name of
 ;;; the local function.
-(defun augment-environment-from-fdef (environment definition-cst)
+(defun augment-environment-from-fdef (client environment definition-cst)
   (let ((name-cst (cst:first definition-cst)))
-    (augment-environment-with-local-function-name name-cst environment)))
+    (augment-environment-with-local-function-name
+     client name-cst environment)))
 
 ;;; Take an environment, a CST representing a list of function
 ;;; definitions, and return a new environment which is like the one
 ;;; passed as an argument, except that is has been augmented by the
 ;;; local function names in the list.
-(defun augment-environment-from-fdefs (environment definitions-cst)
+(defun augment-environment-from-fdefs (client environment definitions-cst)
   (loop with result = environment
         for remaining = definitions-cst then (cst:rest remaining)
         until (cst:null remaining)
         do (let ((definition-cst (cst:first remaining)))
              (setf result
-                   (augment-environment-from-fdef result definition-cst)))
+                   (augment-environment-from-fdef
+                    client result definition-cst)))
         finally (return result)))
 
 ;;; Convert a local function definition.
@@ -220,12 +222,12 @@
 ;;; corresponding to each function name.
 (defun compute-function-init-asts (client functions env)
   (loop for (name . fun-ast) in functions
-        for info = (env:function-info client env name)
+        for description = (trucler:describe-function client env name)
         collect (ast:make-lexical-bind-ast
-                 (env:identity info)
+                 (trucler:identity description)
                  fun-ast
                  :origin (ast:origin fun-ast)
-                 :ignore (env:ignore info))))
+                 :ignore (trucler:ignore description))))
 
 (defun check-function-bindings (bindings operator)
   (check-cst-proper-list bindings 'bindings-must-be-proper-list
@@ -247,9 +249,11 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                client (env:declarations env) declaration-csts))
+                client (trucler:describe-declarations client env)
+                declaration-csts))
              (defs (convert-local-functions client definitions-cst symbol env))
-             (new-env (augment-environment-from-fdefs env definitions-cst))
+             (new-env (augment-environment-from-fdefs
+                       client env definitions-cst))
              (final-env (augment-environment-with-declarations
                          client new-env canonical-declaration-specifiers))
              (init-asts
@@ -275,8 +279,10 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                client (env:declarations env) declaration-csts))
-             (new-env (augment-environment-from-fdefs env definitions-cst))
+                client (trucler:describe-declarations client env)
+                declaration-csts))
+             (new-env (augment-environment-from-fdefs
+                       client env definitions-cst))
              (defs (convert-local-functions client definitions-cst symbol new-env))
              (final-env (augment-environment-with-declarations
                          client new-env canonical-declaration-specifiers))
@@ -347,7 +353,8 @@
             (new-env env))
         ;; Set up the environment for the inside of the tagbody.
         (loop for ast in tag-asts
-              do (setf new-env (env:add-tag new-env (ast:name ast) ast)))
+              do (setf new-env (trucler:add-tag client new-env
+                                                (ast:name ast) ast)))
         (let ((prefix-ast
                 (process-progn
                  (loop for prefix-cst in prefix-csts
@@ -374,13 +381,12 @@
 
 (defmethod convert-special
     (client (symbol (eql 'go)) cst env)
-  (declare (ignore client))
   (check-cst-proper-list cst 'form-must-be-proper-list)
   (check-argument-count cst 1 1)
   (cst:db origin (go-cst tag-cst) cst
     (declare (ignore go-cst))
-    (let ((info (tag-info env tag-cst)))
-      (ast:make-go-ast (env:identity info) :origin cst))))
+    (let ((description (describe-tag client env tag-cst)))
+      (ast:make-go-ast (trucler:identity description) :origin cst))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -427,15 +433,16 @@
         ;; and not a "generalized boolean".
         (error 'read-only-p-must-be-boolean
                :cst (cst:first remaining-cst)))
-      ;; FIXME: We probably want to create and use
-      ;; env:constantp in case the environments don't match
-      ;; up.
+      ;; FIXME: We probably want to create and use cst-to-ast:constantp
+      ;; in case the environments don't match up.
       (if (or (not read-only-p)
               (and (eq *compiler* 'cl:compile-file)
                    (not (constantp form env))))
           (ast:make-load-time-value-ast form read-only-p :origin cst)
           (ast:make-constant-ast
-           (cst-eval client form-cst (env:compile-time env))
+           (cst-eval-encapsulated
+            client form-cst
+            (trucler:restrict-for-macrolet-expander client env))
            :origin cst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -469,9 +476,9 @@
                                               lambda-list-cst
                                               (cst:raw body-cst)
                                               environment)))
-      (env:eval lambda-expression
-                (env:compile-time environment)
-                environment))))
+      (eval lambda-expression
+            (trucler:restrict-for-macrolet-expander client environment)
+            environment))))
 
 (defmethod convert-special
     (client (symbol (eql 'macrolet)) cst env)
@@ -488,7 +495,7 @@
                       (name (cst:raw name-cst))
                       (expander (expander client definition-cst env)))
                  (setf new-env
-                       (env:add-local-macro new-env name expander))))
+                       (trucler:add-local-macro client new-env name expander))))
       (with-preserved-toplevel-ness
         (convert client
                  (cst:quasiquote origin
@@ -511,27 +518,27 @@
             do (cst:db definition-origin (name-cst expansion-cst)
                    (cst:first remaining)
                  (let* ((name (cst:raw name-cst))
-                        ;; We use cleavir-env directly, because it's
+                        ;; We use Trucler directly, because it's
                         ;; okay if the variable is unbound.
-                        (info (env:variable-info client env name))
+                        (description (trucler:describe-variable
+                                      client env name))
                         (expansion (cst:raw expansion-cst)))
-                   (typecase info
-                     (env:constant-variable-info
+                   (typecase description
+                     (trucler:constant-variable-description
                       (cerror "Bind it anyway."
                               'symbol-macro-names-constant :cst name-cst))
-                     (env:special-variable-info
-                      ;; Rebinding a local special is okay.
-                      ;; Maybe? CLHS is a little ambiguous here - it
-                      ;; says "global variable"s can't be rebound, but
-                      ;; defines "global variable" to include all specials,
-                      ;; possibly including local specials.
-                      (when (env:global-p info)
-                        (cerror "Bind it anyway."
-                                'symbol-macro-names-global-special
-                                :cst name-cst))))
+                     (trucler:global-special-variable-description
+                      (cerror "Bind it anyway."
+                              'symbol-macro-names-global-special
+                              :cst name-cst)))
+                   ;; Rebinding a local special is okay.
+                   ;; Maybe? CLHS is a little ambiguous here - it
+                   ;; says "global variable"s can't be rebound, but
+                   ;; defines "global variable" to include all specials,
+                   ;; possibly including local specials.
                    (setf new-env
-                         (env:add-local-symbol-macro
-                          new-env name expansion)))))
+                         (trucler:add-local-symbol-macro
+                          client new-env name expansion)))))
       (with-preserved-toplevel-ness
         (convert client
                  (cst:quasiquote origin
@@ -544,8 +551,8 @@
 ;;;
 
 (defun convert-named-function (client name-cst environment)
-  (let ((info (function-info client environment name-cst)))
-    (convert-function-reference client name-cst info environment)))
+  (let ((description (describe-function client environment name-cst)))
+    (convert-function-reference client name-cst description environment)))
 
 (defun convert-lambda-function (client lambda-form-cst env)
   (convert-code client
@@ -591,7 +598,7 @@
     (declare (ignore the-cst))
     (type-wrap client
                (convert client form-cst environment)
-               (env:parse-values-type-specifier
+               (parse-values-type-specifier
                 client (cst:raw value-type-cst) environment)
                :the cst environment)))
 
@@ -732,7 +739,8 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                client (env:declarations environment) declaration-csts))
+                client (trucler:describe-declarations client environment)
+                declaration-csts))
              (new-env (augment-environment-with-declarations
                        client environment canonical-declaration-specifiers)))
         (with-preserved-toplevel-ness

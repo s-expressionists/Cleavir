@@ -40,7 +40,9 @@ For implementors:
   (= (cleavir-policy:optimize-value optimize 'safety) 3))
 ```
 
-3. Make sure your client respects the `OPTIMIZE-INFO` protocol
-   in `cleavir-environment`. You can use `COMPUTE-POLICY` to
-   compute policies from optimize declarations, but you should
-   avoid doing this on every `OPTIMIZE-INFO` call.
+<!-- FIXME(paul): Does it really have to respect the protocol?
+     In what way is it used here? -->
+3. Make sure your client respects the `OPTIMIZE-DESCRIPTION`
+   protocol in Trucler. You can use `COMPUTE-POLICY` to compute
+   policies from optimize declarations, but you should avoid
+   doing this on every `DESCRIBE-OPTIMIZE` call.

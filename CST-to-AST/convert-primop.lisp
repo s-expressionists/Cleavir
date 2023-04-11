@@ -68,7 +68,7 @@
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
+    (let ((vctype (parse-values-type-specifier
                    client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
        (convert client form-cst env)
@@ -90,7 +90,7 @@
   (check-argument-count cst 2 2)
   (cst:db origin (the-cst value-type-cst form-cst) cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
+    (let ((vctype (parse-values-type-specifier
                    client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
        (convert client form-cst env)
@@ -113,7 +113,7 @@
                           type-check-function-cst form-cst)
       cst
     (declare (ignore the-cst))
-    (let ((vctype (env:parse-values-type-specifier
+    (let ((vctype (parse-values-type-specifier
                    client (cst:raw value-type-cst) env)))
       (ast:make-the-ast
        (convert client form-cst env)
@@ -134,7 +134,7 @@
     (declare (ignore typeq-cst))
     (ast:make-typeq-ast
      (convert client arg1-cst env)
-     (env:parse-type-specifier client (cst:raw arg2-cst) env)
+     (parse-type-specifier client (cst:raw arg2-cst) env)
      :origin cst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -35,7 +35,8 @@
   (if (null bindings)
       ;; We ran out of bindings.  We must build an AST for the body of
       ;; the function.
-      (let ((new-env (augment-environment-with-declarations client environment rdspecs)))
+      (let ((new-env (augment-environment-with-declarations
+                      client environment rdspecs)))
         (process-progn (convert-sequence client body-forms-cst new-env)))
       (destructuring-bind (variable-cst . lexical-variable) (first bindings)
         (let* (;; We enter the new variable into the environment and
@@ -70,7 +71,8 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                client (env:declarations environment) declaration-csts))
+                client (trucler:describe-declarations client environment)
+                declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts (loop for binding-cst in binding-csts
                                   collect (if (cst:atom binding-cst)
@@ -146,7 +148,8 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                client (env:declarations environment) declaration-csts))
+                client (trucler:describe-declarations client environment)
+                declaration-csts))
              (binding-csts (cst:listify bindings-cst))
              (variable-csts
                (loop for binding-cst in binding-csts

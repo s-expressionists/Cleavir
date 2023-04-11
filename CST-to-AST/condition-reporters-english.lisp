@@ -196,18 +196,18 @@
 	  (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
-    ((condition no-block-info)
+    ((condition no-block-description)
      stream
      (language acclimation:english))
   (format stream
-	  "In a RETURN or RETURN-FROM special form, the block name given~@
+          "In a RETURN or RETURN-FROM special form, the block name given~@
            must have been established by a BLOCK special form,~@
            but the following was found instead:~@
            ~s"
           (name condition)))
 
 (defmethod acclimation:report-condition
-    ((condition no-tag-info)
+    ((condition no-tag-description)
      stream
      (language acclimation:english))
   (format stream
@@ -286,11 +286,11 @@
           (cst:raw (cst condition))))
 
 (defmethod acclimation:report-condition
-    ((condition no-variable-info)
+    ((condition no-variable-description)
      stream
      (language acclimation:english))
   (format stream
-	  "A variable referred to must have been previously defined,~@
+          "A variable referred to must have been previously defined,~@
            using either some global operator such as DEFVAR or DEFPARAMETER,~@
            or some form such as LET or LET* for creating a local variable,~@
            but the following undefined variable was found:~@
@@ -298,11 +298,11 @@
           (name condition)))
 
 (defmethod acclimation:report-condition
-    ((condition no-function-info)
+    ((condition no-function-description)
      stream
      (language acclimation:english))
   (format stream
-	  "A function referred to must have been previously defined,~@
+          "A function referred to must have been previously defined,~@
            using either some global operator such as DEFUN or DEFGENERIC,~@
            or some form such as FLET or LABELS for creating a local function,~@
            but the following undefined function was found:~@

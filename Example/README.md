@@ -4,7 +4,7 @@ This makes it harder to get started on understanding and using Cleavir. To recti
 
 # Getting started
 
-1. Load the `cleavir-example` system. Besides Cleavir systems, it depends on the external systems `concrete-syntax-tree` and `acclimation`, both of which should be available from Quicklisp.
+1. Load the `cleavir-example` system. Besides Cleavir systems, it depends on the external systems `concrete-syntax-tree`, `ctype`, `trucler` and `acclimation`, all of which should be available from Quicklisp, and `clostrum`, which isn't.
 2. Run `(cleavir-example:load-environment)` to set up the compilation environment.
 3. You can now compile a subset of Lisp code to BIR (Cleavir's intermediate representation). Try `(cleavir-example:frontend (cst:cst-from-expression '(lambda (x) x)))`, for example.
 4. This will return a BIR "module". You can display a disassembly of this module with `(cleavir-bir-disassembler:display module)`.

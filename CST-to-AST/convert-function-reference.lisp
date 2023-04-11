@@ -1,33 +1,33 @@
 (cl:in-package #:cleavir-cst-to-ast)
 
-(defmethod convert-global-function-reference (client cst info global-env)
-  (declare (ignore client global-env))
+(defmethod convert-global-function-reference
+    (client cst description global-env)
   (ast:make-constant-fdefinition-ast
-   (env:name info)
-   :attributes (env:attributes info) :origin cst))
+   (trucler:name description)
+   :attributes (attributes client description global-env) :origin cst))
 
 (defmethod convert-function-reference
-    (client cst (info env:global-function-info) env)
+    (client cst (description trucler:global-function-description) env)
   (convert-global-function-reference
-   client cst info (env:global-environment env)))
+   client cst description (trucler:global-environment client env)))
 
 (defmethod convert-function-reference
-    (client cst (info env:local-function-info) env)
+    (client cst (description trucler:local-function-description) env)
   (declare (ignore client env))
-  (ast:make-lexical-ast (env:identity info) :origin cst))
+  (ast:make-lexical-ast (trucler:identity description) :origin cst))
 
 (defmethod convert-function-reference
-    (client cst (info env:global-macro-info) env)
+    (client cst (description trucler:global-macro-description) env)
   (declare (ignore client env))
   (error 'function-name-names-global-macro :cst cst))
 
 (defmethod convert-function-reference
-    (client cst (info env:local-macro-info) env)
+    (client cst (description trucler:local-macro-description) env)
   (declare (ignore client env))
   (error 'function-name-names-local-macro :cst cst))
 
 (defmethod convert-function-reference
-    (client cst (info env:special-operator-info) env)
+    (client cst (description trucler:special-operator-description) env)
   (declare (ignore client env))
   (error 'function-name-names-special-operator :cst cst))
 
@@ -37,32 +37,32 @@
 ;;; of type UNDEFINED-FUNCTION, allowing an fboundp check to be skipped.
 ;;; Other than the inlining, they by default have the same behavior.
 
-(defmethod convert-called-function-reference (client cst info env)
-  (when (not (eq (env:inline info) 'cl:notinline))
-    (let ((ast (env:ast info)))
+(defmethod convert-called-function-reference (client cst description env)
+  (when (not (eq (trucler:inline description) 'cl:notinline))
+    (let ((ast (trucler:inline-data description)))
       (when ast
         (return-from convert-called-function-reference
           (make-instance 'ast:inline-ast
             :origin cst :body-ast ast)))))
   (convert-global-function-reference
-   client cst info (env:global-environment env)))
+   client cst description (trucler:global-environment client env)))
 
 (defmethod convert-called-function-reference
-    (client cst (info env:local-function-info) env)
+    (client cst (description trucler:local-function-description) env)
   (declare (ignore client env))
-  (ast:make-lexical-ast (env:identity info) :origin cst))
+  (ast:make-lexical-ast (trucler:identity description) :origin cst))
 
 (defmethod convert-called-function-reference
-    (client cst (info env:global-macro-info) env)
+    (client cst (description trucler:global-macro-description) env)
   (declare (ignore client env))
   (error 'function-name-names-global-macro :cst cst))
 
 (defmethod convert-called-function-reference
-    (client cst (info env:local-macro-info) env)
+    (client cst (description trucler:local-macro-description) env)
   (declare (ignore client env))
   (error 'function-name-names-local-macro :cst cst))
 
 (defmethod convert-called-function-reference
-    (client cst (info env:special-operator-info) env)
+    (client cst (description trucler:special-operator-description) env)
   (declare (ignore client env))
   (error 'function-name-names-special-operator :cst cst))

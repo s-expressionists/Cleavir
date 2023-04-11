@@ -12,7 +12,7 @@ For an example of usage, check the cleavir-example system.
 
 # Environment interface
 
-In order to convert CSTs, CST-to-AST must sometimes get information from the environment. It does this by using the `cleavir-environment` system. Clients need to specialize some generic functions in that system in order for CST-to-AST to understand the environment code is compiled in. See that system for more information.
+In order to convert CSTs, CST-to-AST must sometimes get information from the environment. It does this by using the Trucler system. Clients need to specialize some generic functions in that system in order for CST-to-AST to understand the environment code is compiled in. See that system for more information.
 
 # Conditions
 
@@ -30,13 +30,13 @@ CST-to-AST makes several kinds of restart available. In general, the `continue` 
 
 CST-to-AST signals errors in situations where most clients may not wish to propagate errors to the user. For example, if CST-to-AST sees a variable not known from the environment, it will signal an error. If a client instead wishes for something less severe, like proceeding under the assumption that the variable is special, it will have to handle the error. The most notable errors of this kind are:
 
-* `no-variable-info`: indicates that a variable is unknown. CST-to-AST can be made to proceed under the assumption that the variable is special by use of the `continue` or `consider-special` restarts.
-* `no-function-info`: indicates that an operator is unknown. CST-to-AST can be made to proceed under the assumption that the operator names a global function by use of the `consider-global` restart.
+* `no-variable-description`: indicates that a variable is unknown. CST-to-AST can be made to proceed under the assumption that the variable is special by use of the `continue` or `consider-special` restarts.
+* `no-function-description`: indicates that an operator is unknown. CST-to-AST can be made to proceed under the assumption that the operator names a global function by use of the `consider-global` restart.
 * `compiler-macro-expansion-error`: indicates that a compiler macro function signaled an error. CST-to-AST can be made to ignore the macro and proceed with the original call by use of the `continue` restart.
 
 # Customization
 
-To add additional special operators, the `convert-special` function should be specialized. This function takes four arguments: The client, the name of the operator (a symbol), the CST of the special form, and the environment. Methods should parse the special form CST by whatever means peculiar to the operator's syntax, and return some AST representing the form. Subforms should be converted into CSTs using `convert`. Note that merely defining a `convert-special` method is not sufficient for CST-to-AST to understand a symbol to be a special operator: you will also need `cleavir-env:function-info` to report that it is a special operator.
+To add additional special operators, the `convert-special` function should be specialized. This function takes four arguments: The client, the name of the operator (a symbol), the CST of the special form, and the environment. Methods should parse the special form CST by whatever means peculiar to the operator's syntax, and return some AST representing the form. Subforms should be converted into CSTs using `convert`. Note that merely defining a `convert-special` method is not sufficient for CST-to-AST to understand a symbol to be a special operator: you will also need `trucler:describe-function` to report that it is a special operator.
 
 # Handling of types
 

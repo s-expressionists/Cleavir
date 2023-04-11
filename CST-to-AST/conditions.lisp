@@ -51,7 +51,7 @@
 
 ;;; This class of conditions is signaled when the compiler runs into a
 ;;; reference to a name not bound in the provided compilation environment.
-(define-condition no-info (compilation-program-error)
+(define-condition no-description (compilation-program-error)
   ((%name :initarg :name :reader name)))
 
 ;;; The class of conditions signaled when an odd number of
@@ -66,19 +66,19 @@
 
 ;;; This condition is signaled when a reference to a function not
 ;;; known from the compilation environment is encountered.
-(define-condition no-function-info (no-info) ())
+(define-condition no-function-description (no-description) ())
 
 ;;; This condition is signaled when a reference to a variable not
 ;;; known from the compilation environment is encountered.
-(define-condition no-variable-info (no-info) ())
+(define-condition no-variable-description (no-description) ())
 
 ;;; This condition is signaled when a reference to a tagbody tag
 ;;; not present in the lexical environment is encountered.
-(define-condition no-tag-info (no-info) ())
+(define-condition no-tag-description (no-description) ())
 
 ;;; This condition is signaled when a reference to a block not
 ;;; present in the lexical environment is encountered.
-(define-condition no-block-info (no-info) ())
+(define-condition no-block-description (no-description) ())
 
 ;;; This condition is signaled by a call to ERROR that was introduced
 ;;; as a replacement of a form that triggered a compilation error.

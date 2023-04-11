@@ -486,7 +486,8 @@
                      append (cdr (cst:listify declaration-cst))))
              (canonicalized-dspecs
                (cst:canonicalize-declaration-specifiers
-                client (env:declarations env) declaration-specifiers))
+                client (trucler:describe-declarations client env)
+                declaration-specifiers))
              (itemized-lambda-list
                (itemize-lambda-list parsed-lambda-list)))
         (multiple-value-bind (idspecs rdspecs)

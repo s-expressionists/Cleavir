@@ -4,7 +4,7 @@
 ;;;; This is just an object used for discrimination, so it is
 ;;;; defined trivially.
 
-(defclass example () ())
+(defclass example (trucler-reference:client) ())
 
 (defvar *client* (make-instance 'example)
   "An object representing the example client, for use specializing Cleavir generic functions.")

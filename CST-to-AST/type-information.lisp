@@ -1,4 +1,4 @@
-(cl:in-package #:cleavir-environment)
+(cl:in-package #:cleavir-cst-to-ast)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -9,10 +9,14 @@
 ;;; repeatedly. That is to say, this is macroexpand, not
 ;;; macroexpand-1 or macroexpand-all.
 
-(defgeneric type-expand (environment type-specifier))
+(defgeneric type-expand (client type-specifier environment))
 
-(defmethod type-expand ((env entry) type-specifier)
-  (type-expand (next env) type-specifier))
+;; FIXME(paul) I don't think this expands repeatedly.
+;; Then again, what the other one used to do is call TYPE-EXPAND until
+;; the environment is NIL.
+(defmethod type-expand (client type-specifier environment)
+  (type-expand client type-specifier
+               (trucler:global-environment client environment)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -67,7 +71,7 @@
 (defun parse-type-specifier (client type-specifier environment)
   (parse-expanded-type-specifier
    client
-   (type-expand environment type-specifier)
+   (type-expand client type-specifier environment)
    environment))
 
 (defgeneric parse-expanded-type-specifier
@@ -483,7 +487,7 @@
     (values rreq opt rest)))
 
 (defun parse-values-type-specifier (client type-specifier environment)
-  (let ((spec (type-expand environment type-specifier)))
+  (let ((spec (type-expand client type-specifier environment)))
     (if (consp spec)
         (parse-compound-values-type-specifier client (car spec) (cdr spec)
                                               environment)
