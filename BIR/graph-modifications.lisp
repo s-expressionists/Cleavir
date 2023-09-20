@@ -399,7 +399,8 @@ See MAYBE-DELETE-IBLOCK"
     ;; iblocks that have already been deleted, somehow). FIXME.
     #+(or)
     (assert (eq (%next prev) iblock))
-    (setf (%next prev) next)
+    (when prev
+      (setf (%next prev) next))
     (cond (next
            #+(or)
            (assert (eq (%prev next) iblock))
