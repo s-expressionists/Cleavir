@@ -44,7 +44,9 @@ See EXTENT"))
 ;;; Retrieve the function bound to a constant.
 (defclass constant-fdefinition (one-input one-output instruction)
   ()
-  (:documentation "Instruction representing the lookup of a global function with a known name. The single input is a CONSTANT whose value must be a function name, and the single output is the function looked up."))
+  (:documentation "Instruction representing the lookup of a global function with a known name. The single input is a FUNCTION-CELL, and the single output is the function looked up.
+
+See FUNCTION-CELL"))
 
 (defclass load-time-value-reference (one-input one-output instruction)
   ()
@@ -53,11 +55,11 @@ See EXTENT"))
 ;;; Retrieve the value bound to a known symbol.
 (defclass constant-symbol-value (one-input one-output instruction)
   ()
-  (:documentation "Instruction representing the lookup of the value of a symbol with a known name. The single input is a CONSTANT whose value must be a symbol, and the single output is its value."))
+  (:documentation "Instruction representing the lookup of the value of a symbol with a known name. The single input is a VARIABLE-CELL, and the single output is its value."))
 
 (defclass set-constant-symbol-value (no-output instruction)
   ()
-  (:documentation "Instruction representing the modification of the value of a symbol with a known name. The first input is a CONSTANT whose value must be a symbol, and the second is the value the symbol's value will be changed to. No output."))
+  (:documentation "Instruction representing the modification of the value of a symbol with a known name. The first input is a VARIABLE-CELL, and the second is the value the symbol's value will be changed to. No output."))
 
 (defclass primop (instruction)
   ((%info :initarg :info :reader info
@@ -180,7 +182,7 @@ See LETI"))
 ;;; Dynamic binding. Inputs are the symbol and the new value.
 (defclass constant-bind (dynamic-environment no-output terminator1)
   ()
-  (:documentation "Terminator and dynamic environment representing the binding of a dynamic variable. Within this dynamic environment, the symbol has this value (unless there is a more recent binding, of course). The first input is the symbol being bound, and the second input its new value. No outputs."))
+  (:documentation "Terminator and dynamic environment representing the binding of a dynamic variable. Within this dynamic environment, the symbol has this value (unless there is a more recent binding, of course). The first input is the VARIABLE-CELL being bound, and the second input its new value. No outputs."))
 
 (defclass unwind (terminator0)
   ((%come-from :initarg :come-from :reader come-from

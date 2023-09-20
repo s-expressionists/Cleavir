@@ -108,10 +108,36 @@ For linearity purposes, constants cannot be used directly as inputs to most inst
 
 See CONSTANT-REFERENCE"))
 
+(defclass function-cell (value)
+  (;; %FUNCTION-NAME is a separate slot from %NAME, even though they are
+   ;; usually identical, to emphasize that they don't have to be, and that
+   ;; the %NAME is only for debugging.
+   (%function-name :initarg :function-name :reader function-name)
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:documentation "A datum representing a function cell.
+A function cell is an implementation defined object that is the identity of a function definition, so for example (setf fdefinition) on the name does alter the cell to refer to the new function. This separates the definition from the name, which is useful for e.g. allowing the same name to refer to different functions in different global environments.
+If an implementation does not have special function cells, it could just use the function name as a cell.
+Cleavir marks cells as different from other constants so that they may be resolved specially by an implementation's linking loader.
+
+See CONSTANT-FDEFINITION"))
+
+(defclass variable-cell (value)
+  ((%variable-name :initarg :variable-name :reader variable-name)
+   (%readers :initform (set:empty-set) :accessor readers))
+  (:documentation "A datum representing a variable cell.
+A variable cell is an implementation defined object that is the identity of a dynamic variable definition, so for example makunbound followed by (setf symbol-value) on the name does alter the cell to refer to the new value. This separates the definition from the name, which is useful for e.g. allowing the same name to refer to different functions in different global environments.
+If an implementation does not have special variable cells, it could just use the variable name as a cell.
+Cleavir marks cells as different from other constants so that they may be resolved specially by an implementation's linking loader.
+
+See CONSTANT-SYMBOL-VALUE
+See SET-CONSTANT-SYMBOL-VALUE
+See CONSTANT-BIND"))
+
 (defmethod print-object ((object constant) stream)
   (print-unreadable-object (object stream :type t :identity t)
     (write (constant-value object) :stream stream)))
 
+;;; FIXME: move load time value handling more to client
 (defclass load-time-value (value)
   ((%form :initarg :form :reader form)
    (%read-only-p :initarg :read-only-p :reader read-only-p)
@@ -466,13 +492,11 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
    (%constants :accessor constants
                :initform (set:empty-set)
                :type set:set)
-   ;; FIXME: move load time value handling more to client
-   (%load-time-values :accessor load-time-values
-                      :initform (set:empty-set)
-                      :type set:set)
    ;; This table ensures that only one constant object per similar
    ;; object is created.
-   (%constant-table :accessor constant-table))
+   (%constant-table :accessor constant-table)
+   (%function-cell-table :accessor function-cell-table)
+   (%variable-cell-table :accessor variable-cell-table))
   (:documentation "A set of functions which are compiled together (as opposed to \"separate compilation\") and which can participate in interprocedural optimizations such as inlining.
  For example, lexically nested functions are always compiled together."))
 
@@ -480,7 +504,9 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
   ;; FIXME: In code with file compilation semantics, we are allowed to
   ;; coalesce EQUAL constants. Figure out how to allow clients to plug
   ;; into the table initialization logic here.
-  (setf (constant-table module) (make-hash-table :test #'eq)))
+  (setf (constant-table module) (make-hash-table :test #'eq)
+        (function-cell-table module) (make-hash-table :test #'equal)
+        (variable-cell-table module) (make-hash-table :test #'eq)))
 
 (defun constant-in-module (constant-value module)
   "Find the CONSTANT for the given value in MODULE, allocating a new one in the module if necessary.
@@ -500,8 +526,32 @@ See CONSTANT"
   ;; We can look into coalescence later if we need to.
   (let ((ltv (make-instance 'load-time-value
                :form form :read-only-p read-only-p)))
-    (set:nadjoinf (load-time-values module) ltv)
+    (set:nadjoinf (constants module) ltv)
     ltv))
+
+(defun function-cell-in-module (function-name module)
+  "Find the FUNCTION-CELL for the given name in MODULE, or allocate a new one in the module if necessary.
+
+See FUNCTION-CELL"
+  (let ((table (function-cell-table module)))
+    (or (gethash function-name table)
+        (let ((fcell (make-instance 'function-cell
+                       :name function-name :function-name function-name)))
+          (set:nadjoinf (constants module) fcell)
+          (setf (gethash function-name table) fcell)
+          fcell))))
+
+(defun variable-cell-in-module (variable-name module)
+  "Find the VARIABLE-CELL for the given name in MODULE, or allocate a new one in the module if necessary.
+
+See VARIABLE-CELL"
+  (let ((table (variable-cell-table module)))
+    (or (gethash variable-name table)
+        (let ((vcell (make-instance 'variable-cell
+                       :name variable-name :variable-name variable-name)))
+          (set:nadjoinf (constants module) vcell)
+          (setf (gethash variable-name table) vcell)
+          vcell))))
 
 (defmethod entrances ((function function))
   "The set of blocks in a function that have nonlocal entrances."

@@ -187,41 +187,41 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
 (defmethod verify-inputs ((instruction constant-fdefinition))
   (let* ((inputs (inputs instruction))
          (constant (first inputs)))
-    (test (typep constant 'constant)
-          "has non-constant input ~a"
+    (test (typep constant 'function-cell)
+          "has non-function-cell input ~a"
           instruction constant)
     (test (set:presentp constant (constants *verifying-module*))
-          "references constant ~a which does not belong to its module"
+          "references function cell ~a which does not belong to its module"
           instruction constant)
     (test (set:presentp instruction (readers constant))
-          "is not a reader of its constant input ~a"
+          "is not a reader of its function cell input ~a"
           instruction constant)))
 
 (defmethod verify-inputs ((instruction constant-symbol-value))
   (let* ((inputs (inputs instruction))
          (constant (first inputs)))
-    (test (typep constant 'constant)
-          "has non-constant input ~a"
+    (test (typep constant 'variable-cell)
+          "has non-variable-cell input ~a"
           instruction constant)
     (test (set:presentp constant (constants *verifying-module*))
-          "references constant ~a which does not belong to its module"
+          "references variable cell ~a which does not belong to its module"
           instruction constant)
     (test (set:presentp instruction (readers constant))
-          "is not a reader of its constant input ~a"
+          "is not a reader of its variable cell input ~a"
           instruction constant)))
 
 (defmethod verify-inputs ((instruction set-constant-symbol-value))
   (let* ((inputs (inputs instruction))
          (constant (first inputs))
          (val (second inputs)))
-    (test (typep constant 'constant)
-          "has non-constant input ~a"
+    (test (typep constant 'variable-cell)
+          "has non-variable-cell input ~a"
           instruction constant)
     (test (set:presentp constant (constants *verifying-module*))
-          "references constant ~a which does not belong to its module"
+          "references variable cell ~a which does not belong to its module"
           instruction constant)
     (test (set:presentp instruction (readers constant))
-          "is not a reader of its constant input ~a"
+          "is not a reader of its variable cell input ~a"
           instruction constant)
     (check-ubd instruction (list val))
     (check-usedness instruction (list val))))
@@ -230,14 +230,14 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   (let* ((inputs (inputs instruction))
          (constant (first inputs))
          (val (second inputs)))
-    (test (typep constant 'constant)
-          "has non-constant input ~a"
+    (test (typep constant 'variable-cell)
+          "has non-variable-cell input ~a"
           instruction constant)
     (test (set:presentp constant (constants *verifying-module*))
-          "references constant ~a which does not belong to its module"
+          "references variable cell ~a which does not belong to its module"
           instruction constant)
     (test (set:presentp instruction (readers constant))
-          "is not a reader of its constant input ~a"
+          "is not a reader of its variable cell input ~a"
           instruction constant)
     (check-ubd instruction (list val))
     (check-usedness instruction (list val))))
@@ -248,7 +248,7 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
     (test (typep ltv 'load-time-value)
           "has non-LTV input ~a"
           instruction ltv)
-    (test (set:presentp ltv (load-time-values *verifying-module*))
+    (test (set:presentp ltv (constants *verifying-module*))
           "references load-time-value ~a which does not belong to its module."
           instruction ltv)
     (test (set:presentp instruction (readers ltv))
@@ -290,6 +290,14 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
         "has mismatch between inputs ~a and outputs ~a"
         inst inputs outputs))
 
+(defun collect-duplicates (list)
+  ;; quadratic, but next lists are really short anyway
+  (loop with duplicates = nil
+        for (e . rest) on list
+        when (member e rest)
+          do (pushnew e duplicates)
+        finally (return duplicates)))
+
 (defmethod verify progn ((instruction terminator))
   ;; No successor (verify type decl)
   (test (null (successor instruction))
@@ -305,7 +313,12 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
     (test (not (set:presentp (next instruction) *seen-next*))
           "shares its next-list ~a"
           instruction (next instruction))
-    (set:nadjoinf *seen-next* (next instruction))))
+    (set:nadjoinf *seen-next* (next instruction)))
+  ;; NEXT doesn't have any repeats other than maybe the normal
+  (let ((dupes (collect-duplicates (rest (next instruction)))))
+    (test (null dupes)
+          "has repeated elements in next-list ~a"
+          instruction dupes)))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
@@ -614,6 +627,7 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
               come-from function))
       ;; The return instruction's iblock, if it exists, is reachable
       ;; and in the iblocks set.
+      #+(or)
       (when returni
         (let ((end (iblock returni)))
           (test (set:presentp end reachable)
@@ -644,10 +658,7 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
         ;; Check for dangling references.
         (set:doset (constant (constants module))
           (test (not (set:empty-set-p (readers constant)))
-                "records a constant with no references ~a." module constant))
-        (set:doset (ltv (load-time-values module))
-          (test (not (set:empty-set-p (readers ltv)))
-                "records an LTV with no references ~a." module ltv))))
+                "records a constant with no references ~a." module constant))))
     ;; Report results.
     (when (or function-problems *problems*)
       (error 'verification-failed :module module

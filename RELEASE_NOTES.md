@@ -1,3 +1,8 @@
+# v2.1.0 (pending)
+
+## Changed
+* BIR now represents function and variable "cells" explicitly for linking.
+
 # v2.0.0 (2022-11-24)
 
 ## Added

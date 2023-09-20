@@ -151,7 +151,7 @@
       (list* (list (disassemble-datum function) (iblock-id (start function))
                    (disassemble-lambda-list (lambda-list function))
                    (set:mapset 'list #'disassemble-datum
-                                       (environment function)))
+                               (environment function)))
              iblocks))))
 
 (defmethod cleavir-bir-disassembler:disassemble ((module module))

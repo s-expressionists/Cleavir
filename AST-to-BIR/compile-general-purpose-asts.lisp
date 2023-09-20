@@ -398,7 +398,7 @@
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
     (let* ((during (make-iblock inserter))
            (ode (dynamic-environment inserter))
-           (const (bir:constant-in-module (ast:name ast) *current-module*))
+           (const (bir:variable-cell-in-module (ast:name ast) *current-module*))
            (bind (make-instance 'bir:constant-bind
                    :inputs (list* const rv) :next (list during))))
       (setf (bir:dynamic-environment during) bind)
@@ -472,7 +472,7 @@
 (defmethod compile-ast ((ast ast:constant-symbol-value-ast)
                         inserter system)
   (declare (ignore system))
-  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+  (let ((const (bir:variable-cell-in-module (ast:name ast) *current-module*))
         (sv-out (make-instance 'bir:output :name (ast:name ast))))
     (insert inserter 'bir:constant-symbol-value
             :inputs (list const) :outputs (list sv-out))
@@ -481,7 +481,7 @@
 (defmethod compile-ast ((ast ast:set-constant-symbol-value-ast)
                         inserter system)
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-    (let ((const (bir:constant-in-module (ast:name ast) *current-module*)))
+    (let ((const (bir:variable-cell-in-module (ast:name ast) *current-module*)))
       (insert inserter 'bir:set-constant-symbol-value
               :inputs (list* const rv))
       :no-value)))
@@ -489,7 +489,7 @@
 (defmethod compile-ast ((ast ast:constant-fdefinition-ast)
                         inserter system)
   (declare (ignore system))
-  (let ((const (bir:constant-in-module (ast:name ast) *current-module*))
+  (let ((const (bir:function-cell-in-module (ast:name ast) *current-module*))
         (fdef-out (make-instance 'bir:output
                     :name (ast:name ast)
                     :attributes (ast:attributes ast))))
