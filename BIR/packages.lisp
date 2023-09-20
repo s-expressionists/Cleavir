@@ -10,7 +10,8 @@
                     (#:conditions #:cleavir-conditions)
                     (#:ctype #:cleavir-ctype))
   (:export #:module #:functions #:constants #:constant-in-module
-           #:load-time-values #:load-time-value-in-module)
+           #:load-time-value-in-module #:function-cell-in-module
+           #:variable-cell-in-module)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables #:come-froms
            #:environment #:other-uses
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)
@@ -25,7 +26,9 @@
            #:record-variable-ref #:record-variable-set
            #:immutablep #:closed-over-p)
   (:export #:constant #:load-time-value
-           #:constant-value #:form #:read-only-p)
+           #:constant-value #:form #:read-only-p
+           #:function-cell #:function-name
+           #:variable-cell #:variable-name)
   (:export #:instruction #:inputs #:outputs #:input
            #:no-input #:one-input #:no-output #:one-output
            #:terminator #:terminator0 #:terminator1
