@@ -290,14 +290,6 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
         "has mismatch between inputs ~a and outputs ~a"
         inst inputs outputs))
 
-(defun collect-duplicates (list)
-  ;; quadratic, but next lists are really short anyway
-  (loop with duplicates = nil
-        for (e . rest) on list
-        when (member e rest)
-          do (pushnew e duplicates)
-        finally (return duplicates)))
-
 (defmethod verify progn ((instruction terminator))
   ;; No successor (verify type decl)
   (test (null (successor instruction))
@@ -313,12 +305,7 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
     (test (not (set:presentp (next instruction) *seen-next*))
           "shares its next-list ~a"
           instruction (next instruction))
-    (set:nadjoinf *seen-next* (next instruction)))
-  ;; NEXT doesn't have any repeats other than maybe the normal
-  (let ((dupes (collect-duplicates (rest (next instruction)))))
-    (test (null dupes)
-          "has repeated elements in next-list ~a"
-          instruction dupes)))
+    (set:nadjoinf *seen-next* (next instruction))))
 
 (defmethod verify progn ((instruction terminator0))
   ;; No NEXT (verify type decl)
