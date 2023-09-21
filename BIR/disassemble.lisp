@@ -45,6 +45,10 @@
 
 (defgeneric disassemble-datum (datum))
 (defmethod disassemble-datum ((value constant)) `',(constant-value value))
+(defmethod disassemble-datum ((value function-cell))
+  `(function-cell ,(function-name value)))
+(defmethod disassemble-datum ((value variable-cell))
+  `(variable-cell ,(variable-name value)))
 (defmethod disassemble-datum ((value datum))
   (or (gethash value *ids*)
       (setf (gethash value *ids*)
@@ -157,7 +161,7 @@
 (defmethod cleavir-bir-disassembler:disassemble ((module module))
   (check-type module module)
   (cleavir-bir-disassembler:with-disassembly ()
-    (list* (set:mapset 'list #'constant-value (constants module))
+    (list* (set:mapset 'list #'disassemble-datum (constants module))
            (set:mapset 'list #'cleavir-bir-disassembler:disassemble
                        (functions module)))))
 
