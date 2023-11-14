@@ -399,21 +399,18 @@ See MAYBE-DELETE-IBLOCK"
         (next (%next iblock)))
     ;; Clasp bug #1260 demonstrates a situation in which we accidentally
     ;; called this function on an iblock which was not in fact in the flow
-    ;; order to begin with. These asserts check that it is.
-    ;; ...but unfortunately, we can't use them, because they're triggered
-    ;; by some correct code duplications as well, such as when delete-iblock
-    ;; recurses into a loop. I have tried a few simple deletion checks but
-    ;; they failed for various reasons (e.g. variable deletion can implicate
-    ;; iblocks that have already been deleted, somehow). FIXME.
-    #+(or)
-    (assert (eq (%next prev) iblock))
-    (when prev
+    ;; order to begin with. This can happen in correct code duplications,
+    ;; such as when delete-iblock recurses into a loop.
+    ;; So in order to avoid incorrect flow orders we only change the order
+    ;; when the block is actually in the order.
+    (when (and prev (eq (%next prev) iblock))
       (setf (%next prev) next))
     (cond (next
-           #+(or)
-           (assert (eq (%prev next) iblock))
-           (setf (%prev next) prev))
-          (t (setf (tail (function iblock)) prev)))))
+           (when (eq (%prev next) iblock)
+             (setf (%prev next) prev)))
+          (t
+           (when (eq (tail (function iblock)) iblock)
+             (setf (tail (function iblock)) prev))))))
 
 ;;; Insert the new iblock into the flow order after AFTER.
 (defun insert-iblock-into-flow-order (new after)
