@@ -11,8 +11,12 @@
 ;;; Warn about a compile time type conflict.
 (defun maybe-warn-type-conflict (thei system)
   (let ((input (bir:input thei)))
-    (when (ctype:values-disjointp (bir:asserted-type thei) (bir:ctype input)
-                                  system)
+    (when (and (ctype:values-disjointp (bir:asserted-type thei) (bir:ctype input)
+                                       system)
+               ;; If something is declared to be unreachable, it will always be
+               ;; "disjoint" with whatever we derived, but that doesn't mean that
+               ;; we proved reachability, so there may not be an actual conflict.
+               (not (ctype:values-bottom-p (bir:asserted-type thei) system)))
       (warn 'bir:type-conflict
             :datum input
             :asserted-type (bir:asserted-type thei)
