@@ -1052,7 +1052,9 @@
      ;; Try all client transforms in order.
      ;; If any return true, a change has been made.
      (some (lambda (identity) (transform-call system identity instruction))
-           identities))))
+           identities)
+     ;; If we've determined this call never returns, axe later code.
+     (maybe-unreach-call instruction system))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:primop) system)
   (let* ((attr (bir:attributes instruction))
@@ -1061,7 +1063,22 @@
      (maybe-fold-call identities (bir:inputs instruction)
                       instruction system)
      (some (lambda (identity) (transform-call system identity instruction))
-           identities))))
+           identities)
+     (maybe-unreach-call instruction system))))
+
+;;; If we've derived the output of a call to be bottom type, the call never
+;;; returns. Delete subsequent code, unless it's already an UNREACHABLE
+;;; instruction in which case we don't need to do anything.
+(defun maybe-unreach-call (call system)
+  (when (and ;; This works on primops, so try all outputs.
+         (loop for out in (bir:outputs call)
+               thereis (ctype:values-bottom-p (bir:ctype out) system))
+         (not (typep (bir:successor call) 'bir:unreachable)))
+    ;; INSERT-UNREACHABLE-AFTER also checks the next instruction, but as it
+    ;; happens we need to make sure we return T if we made a change, so we
+    ;; do a redundant check. FIXME.
+    (insert-unreachable-after call)
+    t))
 
 (defun constant-mv-arguments (vct system)
   (if (and (null (ctype:values-optional vct system))
@@ -1124,6 +1141,7 @@
                          instruction system)
      (some (lambda (identity) (transform-call system identity instruction))
            identities)
+     (maybe-unreach-call instruction system)
      (mv-call->call instruction system))))
 
 ;;; Given an instruction, its identity (e.g. function name), the VALUES type
