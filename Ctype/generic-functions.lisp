@@ -65,6 +65,16 @@ See BOTTOM"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions TOP-P, BOTTOM-P.
+;;;
+
+(defgeneric values-top-p (ctype system)
+  (:documentation "Return true if the given values ctype is the top ctype (i.e. (VALUES &REST CL:T)). As this function is approximate, false may be returned even on a ctype equivalent to top."))
+(defgeneric values-bottom-p (ctype system)
+  (:documentation "Return true if the given values ctype is the bottom ctype (i.e. (VALUES NIL ...)). As this function is approximate, false may be returned even on a ctype equivalent to bottom."))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic functions CONJOIN/2, DISJOIN/2.
 ;;;
 
@@ -86,10 +96,10 @@ See DISJOIN"))
 
 (defgeneric conjunctionp (ctype system)
   (:documentation "Return true iff the given non-values ctype is a conjunction ctype.
-Note that whether a given type specifier ends up as a conjunction ctype may be client-dependent. For example, (and (integer 1 7) (integer 2 4)) may end up as a conjunction on some clients, but reduced to an integer type by others."))
+Whether a given type specifier ends up as a conjunction ctype is client-dependent. For example, (and (integer 1 7) (integer 2 4)) may end up as a conjunction on some clients, but reduced to an integer type by others."))
 (defgeneric disjunctionp (ctype system)
   (:documentation "Return true iff the given non-values ctype is a disjunction ctype.
-Note that whether a given type specifier ends up as a disjunction ctype may be client dependent. For example, (or (integer 1 7) (integer 4 9)) may end up as a disjunction on some clients, but reduced to (integer 1 9) on others."))
+Whether a given type specifier ends up as a disjunction ctype is client dependent. For example, (or (integer 1 7) (integer 4 9)) may end up as a disjunction on some clients, but reduced to (integer 1 9) on others."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -170,6 +180,18 @@ See VALUES-APPEND"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Generic functions NEGATIONP, NEGATION-CTYPE.
+;;;
+
+(defgeneric negationp (ctype system)
+  (:documentation "Return true iff the given non-values ctype is a negation ctype.
+Note that whether a given type specifier ends up as a conjunction ctype may be client-dependent."))
+
+(defgeneric negation-ctype (negation-ctype system)
+  (:documentation "Given a negation ctype, return the ctype it is a negation of."))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Generic function SUBTRACT.
 ;;;
 
@@ -239,7 +261,7 @@ The simplicity mark is one of the symbols ARRAY or SIMPLE-ARRAY."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic functions ARRAYP, ARRAY-ELEMENT-TYPE, ARRAY-DIMENSIONS.
+;;; Generic functions ARRAYP, ARRAY-ELEMENT-TYPE, ARRAY-DIMENSIONS, ARRAY-SIMPLICITY.
 ;;;
 
 (defgeneric arrayp (ctype system)
@@ -251,7 +273,11 @@ See ARRAYP"))
 (defgeneric array-dimensions (array-ctype system)
   (:documentation "Return the dimensions specifier of an array ctype.
 
-See ARRAYP."))
+See ARRAYP"))
+(defgeneric array-simplicity (array-ctype system)
+  (:documentation "Return the simplicity mark of an array ctype.
+
+See ARRAYP"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -368,11 +394,18 @@ See MEMBER-P"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Generic function SATISFIES.
+;;; Generic function SATISFIES, SATISFIESP, SATISFIES-FNAME.
 ;;;
 
 (defgeneric satisfies (fname system)
   (:documentation "Return the ctype for (SATISFIES fname)"))
+
+(defgeneric satisfiesp (ctype sys)
+  (:documentation "Return true iff the given non-values ctype is a SATISFIES ctype.
+Whether a given type specifier ends up as a satisfies ctype is client-dependent."))
+
+(defgeneric satisfies-fname (satisfies-ctype sys)
+  (:documentation "Return the function name of the given SATISFIES ctype."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -445,6 +478,9 @@ Values ctypes are only used in certain contexts. See the documentation for other
 ;;; Generic functions FUNCTION-REQUIRED, FUNCTION-OPTIONAL, FUNCTION-REST, FUNCTION-KEYSP, FUNCTION-KEYS, FUNCTION-ALLOW-OTHER-KEYS-P,
 ;;; and FUNCTION-VALUES.
 ;;;
+
+(defgeneric functionp (ctype system)
+  (:documentation "Return true iff the given non-values ctype is a function ctype."))
 
 (defgeneric function-required (ctype system)
   (:documentation "Return the required parameter ctypes of a function ctype."))

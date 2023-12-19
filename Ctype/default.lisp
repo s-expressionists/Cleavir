@@ -71,7 +71,12 @@
   (let ((bot (bottom sys)))
     (values (list bot) nil bot sys)))
 
-(defun values-bottom-p (vct sys)
+(defmethod values-top-p (vct sys)
+  (flet ((tp (ct) (top-p ct sys)))
+    (and (null (values-required vct sys))
+         (every #'tp (values-optional vct sys))
+         (tp (values-rest vct sys)))))
+(defmethod values-bottom-p (vct sys)
   (some (lambda (ct) (bottom-p ct sys)) (values-required vct sys)))
 
 (defmethod conjunctionp (ctype sys)
@@ -323,6 +328,15 @@
         ((bottom-p ct sys) 't)
         (t `(not ,ct))))
 
+(defmethod negationp (ct sys)
+  (declare (ignore sys))
+  (and (cl:consp ct) (eq (car ct) 'not)
+       (cl:consp (cdr ct)) (cl:null (cddr ct))))
+
+(defmethod negation-ctype (ct sys)
+  (declare (ignore sys))
+  (second ct))
+
 (defmethod subtract (ct1 ct2 sys)
   (cond ((bottom-p ct1 sys) 'nil)
         ((bottom-p ct2 sys) ct1)
@@ -410,6 +424,9 @@
        (cl:consp (cdr type))
        (cl:consp (cddr type))
        (cl:null (cdddr type))))
+(defmethod array-simplicity (ctype sys)
+  (declare (ignore sys))
+  (first ctype))
 (defmethod array-element-type (type sys)
   (declare (ignore sys))
   (second type))
@@ -497,6 +514,11 @@
   (declare (ignore sys))
   `(cl:satisfies ,fname))
 
+(defmethod satisfiesp (ct sys)
+  (and (cl:consp ct) (cl:consp (cdr ct)) (cl:null (cddr ct))))
+
+(defmethod satisfies-fname (ct sys) (second ct))
+
 (defmethod keyword (sys) (declare (ignore sys)) 'cl:keyword)
 
 (defmethod function (req opt rest keyp keys aokp returns sys)
@@ -567,6 +589,10 @@
                 (if (< n (+ nreq nopt))
                     (nth (- n nreq) opt)
                     (values-rest ctype system))))))))
+
+(defmethod functionp (ctype system)
+  (declare (ignore system))
+  (and (cl:consp ctype) (eq (first ctype) 'cl:function)))
 
 (defmethod function-required (ctype system)
   (declare (ignore system))
