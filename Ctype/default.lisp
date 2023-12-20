@@ -515,9 +515,12 @@
   `(cl:satisfies ,fname))
 
 (defmethod satisfiesp (ct sys)
+  (declare (ignore sys))
   (and (cl:consp ct) (cl:consp (cdr ct)) (cl:null (cddr ct))))
 
-(defmethod satisfies-fname (ct sys) (second ct))
+(defmethod satisfies-fname (ct sys)
+  (declare (ignore sys))
+  (second ct))
 
 (defmethod keyword (sys) (declare (ignore sys)) 'cl:keyword)
 
