@@ -41,26 +41,21 @@
                      :policy (ast:policy ast)
                      :attributes (ast:attributes ast)
                      :module module))
-         (inserter (make-instance 'inserter))
-         (start (make-iblock inserter
-                             :name (symbolicate (write-to-string (ast:name ast))
-                                                '#:-start)
-                             :function function :dynamic-environment function)))
+         (inserter (make-instance 'build:inserter))
+         (sname (symbolicate (write-to-string (ast:name ast)) '#:-start))
+         (start (build:make-iblock
+                 inserter :name sname :function function
+                 :dynamic-environment function)))
     (set:nadjoinf (bir:functions module) function)
     (let ((lambda-list (bind-lambda-list-arguments (ast:lambda-list ast)
                                                    function)))
       (setf (bir:lambda-list function) lambda-list))
     (setf (bir:start function) start)
-    (begin inserter start)
+    (build:begin inserter start)
     (let ((rv (compile-ast (ast:body-ast ast) inserter system)))
-      (cond
-        ((eq rv :no-return)
-         (setf (bir:returni function) nil))
-        (t
-         (let ((returni (make-instance 'bir:returni
-                          :inputs rv)))
-           (setf (bir:returni function) returni)
-           (terminate inserter returni)))))
+      (if (eq rv :no-return)
+          (setf (bir:returni function) nil)
+          (build:terminate inserter 'bir:returni :inputs rv)))
     (bir:compute-iblock-flow-order function)
     function))
 
@@ -75,11 +70,11 @@
     (let ((map (loop with r = nil
                      for iblock in iblocks
                      for ast in branch-asts
-                     for ins = (make-instance 'inserter)
-                     do (proceed ins iblock)
+                     for ins = (make-instance 'build:inserter)
+                     do (build:proceed ins iblock)
                         (let ((rv (compile-ast ast ins system)))
                           (unless (eq rv :no-return)
-                            (push (list ins (iblock ins) rv) r)))
+                            (push (list ins (bir:iblock ins) rv) r)))
                      finally (return (nreverse r)))))
       (case (length map)
         ((0) ; no branch returned, so neither do we
@@ -87,20 +82,20 @@
         ((1) ; a single branch returned, so don't bother with a merge
          (destructuring-bind (_ block rv) (first map)
            (declare (ignore _))
-           (proceed inserter block)
+           (build:proceed inserter block)
            rv))
         (t ; multiple blocks, so we have to merge their results
-         (let ((mergeb (make-iblock inserter :name '#:merge)))
+         (let ((mergeb (build:make-iblock inserter :name '#:merge)))
            ;; Dump everything into multiple-values.
            (let ((phi (make-instance 'bir:phi :iblock mergeb)))
              (loop for (ins nil rv) in map
-                   do (terminate
+                   do (build:terminate
                        ins
                        (make-instance 'bir:jump
                          :inputs rv :outputs (list phi)
                          :next (list mergeb))))
              (setf (bir:inputs mergeb) (list phi))
-             (begin inserter mergeb)
+             (build:begin inserter mergeb)
              (list phi))))))))
 
 (defmethod compile-ast ((ast ast:if-ast) inserter system)
@@ -109,10 +104,10 @@
 
 (defmethod compile-test-ast (ast inserter system)
   (with-compiled-asts (test (ast) inserter system)
-    (let ((tblock (make-iblock inserter :name '#:if-then))
-          (eblock (make-iblock inserter :name '#:if-else)))
-      (terminate inserter 'bir:ifi
-                 :inputs test :next (list tblock eblock))
+    (let ((tblock (build:make-iblock inserter :name '#:if-then))
+          (eblock (build:make-iblock inserter :name '#:if-else)))
+      (build:terminate inserter 'bir:ifi
+                       :inputs test :next (list tblock eblock))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -146,44 +141,39 @@
   (setf (gethash block-ast *block-info*) new-info))
 
 (defun insert-unwind (inserter come-from dest &optional inputs outputs)
-  (let ((uw (make-instance 'bir:unwind
-              :inputs inputs :outputs outputs :come-from come-from
-              :destination dest)))
-    (terminate inserter uw)
-    (set:nadjoinf (bir:unwinds come-from) uw)
-    (set:nadjoinf (bir:entrances dest) (iblock inserter)))
+  (build:terminate inserter 'bir:unwind
+                   :inputs inputs :outputs outputs :come-from come-from
+                   :destination dest)
   (values))
 
 (defmethod compile-ast ((ast ast:block-ast) inserter system)
-  (let* ((function (function inserter))
-         (de (dynamic-environment inserter))
-         (during (make-iblock inserter
-                              :name (symbolicate '#:block-
-                                                 (ast:name ast))))
-         (mergeb (make-iblock inserter
-                              :name (symbolicate
-                                     '#:block-
-                                     (ast:name ast)
-                                     '#:-merge)
-                              :function function
-                              :dynamic-environment de))
+  (let* ((function (bir:function inserter))
+         (de (bir:dynamic-environment inserter))
+         (during (build:make-iblock inserter
+                                    :name (symbolicate '#:block-
+                                                       (ast:name ast))))
+         (mergeb (build:make-iblock inserter
+                                    :name (symbolicate
+                                           '#:block-
+                                           (ast:name ast)
+                                           '#:-merge)
+                                    :function function
+                                    :dynamic-environment de))
          (phi (make-instance 'bir:phi :iblock mergeb))
          (come-from (make-instance 'bir:come-from
                       :next (list during mergeb)
                       :name (ast:name ast))))
-    (set:nadjoinf (bir:come-froms function) come-from)
     (setf (bir:inputs mergeb) (list phi))
-    (setf (bir:dynamic-environment during) come-from)
-    (terminate inserter come-from)
-    (begin inserter during)
+    (build:terminate inserter come-from)
+    (build:begin inserter during)
     (setf (block-info ast) (list function come-from mergeb))
     (let ((normal-rv (compile-ast (ast:body-ast ast) inserter system)))
       (unless (eq normal-rv :no-return)
-        (terminate inserter 'bir:jump
-                   :inputs normal-rv
-                   :outputs (copy-list (bir:inputs mergeb))
-                   :next (list mergeb))))
-    (begin inserter mergeb)
+        (build:terminate inserter 'bir:jump
+                         :inputs normal-rv
+                         :outputs (copy-list (bir:inputs mergeb))
+                         :next (list mergeb))))
+    (build:begin inserter mergeb)
     (list phi)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -195,12 +185,12 @@
     (unless (eq rv :no-return)
       (destructuring-bind (function come-from mergeb)
           (block-info (ast:block-ast ast))
-        (if (eq function (function inserter))
+        (if (eq function (bir:function inserter))
             ;; local
-            (terminate inserter 'bir:jump
-                       :inputs rv
-                       :outputs (copy-list (bir:inputs mergeb))
-                       :next (list mergeb))
+            (build:terminate inserter 'bir:jump
+                             :inputs rv
+                             :outputs (copy-list (bir:inputs mergeb))
+                             :next (list mergeb))
             ;; nonlocal
             (insert-unwind inserter come-from mergeb rv
                            (copy-list (bir:inputs mergeb)))))))
@@ -227,35 +217,33 @@
             :no-return
             ())))
     ;; General case
-    (let* ((old-dynenv (dynamic-environment inserter))
-           (function (function inserter))
-           (prefix-iblock (make-iblock inserter :name '#:tagbody))
+    (let* ((old-dynenv (bir:dynamic-environment inserter))
+           (function (bir:function inserter))
+           (prefix-iblock (build:make-iblock inserter :name '#:tagbody))
            (tag-iblocks
              (loop for tag-ast in item-asts
                    ;; name could be an integer, so write it out
                    for tagname = (write-to-string (ast:name tag-ast))
                    for bname = (symbolicate '#:tag- tagname)
-                   collecting (make-iblock inserter :name bname)))
+                   collecting (build:make-iblock inserter :name bname)))
            (come-from (make-instance 'bir:come-from
                         :next (list* prefix-iblock tag-iblocks))))
-      (set:nadjoinf (bir:come-froms function) come-from)
       ;; this is used to check whether the come-from is actually necessary.
       (setf (go-info come-from) nil)
-      (setf (bir:dynamic-environment prefix-iblock) come-from)
       (loop for tag-ast in item-asts
             for tag-iblock in tag-iblocks
             do (setf (bir:dynamic-environment tag-iblock) come-from
                      (go-info tag-ast) (list come-from tag-iblock function)))
-      (terminate inserter come-from)
-      (begin inserter prefix-iblock)
+      (build:terminate inserter come-from)
+      (build:begin inserter prefix-iblock)
       (unless (eq (compile-ast prefix-ast inserter system) :no-return)
-        (terminate inserter 'bir:jump
-                   :inputs () :outputs ()
-                   :next (list (first tag-iblocks))))
+        (build:terminate inserter 'bir:jump
+                         :inputs () :outputs ()
+                         :next (list (first tag-iblocks))))
       (loop for tag-ast in item-asts
             for body-ast = (ast:body-ast tag-ast)
             for (ib . rest) on tag-iblocks
-            do (begin inserter ib)
+            do (build:begin inserter ib)
             if (eq (compile-ast body-ast inserter system) :no-return)
               ;; Code doesn't return. If this is the last tag, that means the
               ;; tagbody doesn't either.
@@ -264,16 +252,16 @@
             else do (let ((next
                             (if rest
                                 (first rest)
-                                (make-iblock inserter
-                                             :name '#:tagbody-resume
-                                             :dynamic-environment
-                                             old-dynenv))))
-                      (terminate inserter 'bir:jump
-                                 :inputs () :outputs ()
-                                 :next (list next))
+                                (build:make-iblock inserter
+                                                   :name '#:tagbody-resume
+                                                   :dynamic-environment
+                                                   old-dynenv))))
+                      (build:terminate inserter 'bir:jump
+                                       :inputs () :outputs ()
+                                       :next (list next))
                       (unless rest
                         ;; Start on the block after the tagbody.
-                        (begin inserter next)
+                        (build:begin inserter next)
                         ;; We return no values.
                         (return-from compile-ast :no-value)))))))
 
@@ -284,13 +272,13 @@
 (defmethod compile-ast ((ast ast:go-ast) inserter system)
   (declare (ignore system))
   (destructuring-bind (come-from iblock cfunction) (go-info (ast:tag-ast ast))
-    (let ((function (function inserter)))
+    (let ((function (bir:function inserter)))
       (cond
         ((eq function cfunction)
          ;; local
-         (terminate inserter 'bir:jump
-                    :inputs () :outputs ()
-                    :next (list iblock)))
+         (build:terminate inserter 'bir:jump
+                          :inputs () :outputs ()
+                          :next (list iblock)))
         (t
          (setf (go-info come-from) t)
          ;; nonlocal
@@ -304,20 +292,20 @@
 (defmethod compile-ast ((ast ast:unwind-protect-ast) inserter system)
   (with-compiled-ast (fu (ast:cleanup-ast ast) inserter system)
     (let* ((uw (make-instance 'bir:unwind-protect :inputs fu))
-           (ode (dynamic-environment inserter))
-           (during (make-iblock inserter :dynamic-environment uw)))
+           (ode (bir:dynamic-environment inserter))
+           (during (build:make-iblock inserter :dynamic-environment uw)))
       (setf (bir:next uw) (list during))
-      (terminate inserter uw)
-      (begin inserter during)
+      (build:terminate inserter uw)
+      (build:begin inserter during)
       (with-compiled-ast (rv (ast:body-ast ast) inserter system)
         ;; Pass the return values through a phi so that they're easy for
         ;; the client to get at. KLUDGEy.
-        (let* ((next (make-iblock inserter :dynamic-environment ode))
+        (let* ((next (build:make-iblock inserter :dynamic-environment ode))
                (phi (make-instance 'bir:phi :iblock next)))
           (setf (bir:inputs next) (list phi))
-          (terminate inserter 'bir:jump
-                     :inputs rv :outputs (list phi) :next (list next))
-          (begin inserter next)
+          (build:terminate inserter 'bir:jump
+                           :inputs rv :outputs (list phi) :next (list next))
+          (build:begin inserter next)
           (list phi))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -328,9 +316,9 @@
   (with-compiled-ast (callee (ast:callee-ast ast) inserter system)
     (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
       (let ((call-out (make-instance 'bir:output)))
-        (insert inserter 'bir:call
-                :inputs (list* (first callee) args)
-                :outputs (list call-out))
+        (build:insert inserter 'bir:call
+                      :inputs (list* (first callee) args)
+                      :outputs (list call-out))
         (list call-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -353,11 +341,8 @@
 
 (defmethod compile-ast ((ast ast:function-ast) inserter system)
   (let* ((f (compile-function ast system))
-         (enclose-out (make-instance 'bir:output :name (bir:name f)))
-         (enclose (make-instance 'bir:enclose
-                    :code f :outputs (list enclose-out))))
-    (setf (bir:enclose f) enclose)
-    (insert inserter enclose)
+         (enclose-out (make-instance 'bir:output :name (bir:name f))))
+    (build:insert inserter 'bir:enclose :code f :outputs (list enclose-out))
     (list enclose-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -366,12 +351,8 @@
 
 (defmethod compile-ast ((ast ast:lexical-bind-ast) inserter system)
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-    (let* ((var (bind-variable (ast:lexical-variable ast) (ast:ignore ast)))
-           (leti (make-instance 'bir:leti
-                   :inputs rv :outputs (list var))))
-      (adjoin-variable inserter var)
-      (insert inserter leti)
-      (setf (bir:binder var) leti))
+    (let ((var (bind-variable (ast:lexical-variable ast) (ast:ignore ast))))
+      (build:insert inserter 'bir:leti :inputs rv :outputs (list var)))
     ;; return no values
     :no-value))
 
@@ -381,13 +362,12 @@
 
 (defmethod compile-ast ((ast ast:setq-ast) inserter system)
   (let ((var (find-variable (ast:lexical-variable ast))))
-    (bir:record-variable-set var)
     (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-      (insert inserter 'bir:writevar
-              :inputs rv :outputs (list var))
+      (build:insert inserter 'bir:writevar
+                    :inputs rv :outputs (list var))
       (let ((readvar-out (make-instance 'bir:output :name (bir:name var))))
-        (insert inserter 'bir:readvar
-                :inputs (list var) :outputs (list readvar-out))
+        (build:insert inserter 'bir:readvar
+                      :inputs (list var) :outputs (list readvar-out))
         (list readvar-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -396,19 +376,17 @@
 
 (defmethod compile-ast ((ast ast:constant-dynamic-bind-ast) inserter system)
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-    (let* ((during (make-iblock inserter))
-           (ode (dynamic-environment inserter))
-           (const (bir:variable-cell-in-module (ast:name ast) *current-module*))
-           (bind (make-instance 'bir:constant-bind
-                   :inputs (list* const rv) :next (list during))))
-      (setf (bir:dynamic-environment during) bind)
-      (terminate inserter bind)
-      (begin inserter during)
+    (let* ((during (build:make-iblock inserter))
+           (ode (bir:dynamic-environment inserter))
+           (const (build:vcell inserter (ast:name ast))))
+      (build:terminate inserter 'bir:constant-bind
+                       :inputs (list* const rv) :next (list during))
+      (build:begin inserter during)
       (with-compiled-ast (rv (cleavir-ast:body-ast ast) inserter system)
-        (let ((next (make-iblock inserter :dynamic-environment ode)))
-          (terminate inserter 'bir:jump
-                     :inputs () :outputs () :next (list next))
-          (begin inserter next))
+        (let ((next (build:make-iblock inserter :dynamic-environment ode)))
+          (build:terminate inserter 'bir:jump
+                           :inputs () :outputs () :next (list next))
+          (build:begin inserter next))
         rv))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -427,11 +405,11 @@
       linear-datum
       (let ((thei-out (make-instance 'bir:output
                         :name (bir:name linear-datum))))
-        (insert inserter 'bir:thei
-                :inputs (list linear-datum)
-                :outputs (list thei-out)
-                :asserted-type asserted-type
-                :type-check-function type-check-function)
+        (build:insert inserter 'bir:thei
+                      :inputs (list linear-datum)
+                      :outputs (list thei-out)
+                      :asserted-type asserted-type
+                      :type-check-function type-check-function)
         thei-out)))
 
 (defmethod compile-ast ((ast ast:the-ast) inserter system)
@@ -451,13 +429,13 @@
            ;; so we force receiving and outputting multiple values.
            (let ((out (make-instance 'bir:output
                         :name (bir:name (first rv)))))
-             (insert inserter 'bir:thei
-                     :inputs rv :outputs (list out)
-                     :asserted-type ctype
-                     :type-check-function type-check-function)
+             (build:insert inserter 'bir:thei
+                           :inputs rv :outputs (list out)
+                           :asserted-type ctype
+                           :type-check-function type-check-function)
              (list out)))
           ((some (lambda (ctype) (ctype:bottom-p ctype system)) required)
-           (terminate inserter 'bir:unreachable)
+           (build:terminate inserter 'bir:unreachable)
            :no-return)
           (t ; arbitrary values
            (list (wrap-thei inserter (first rv)
@@ -472,29 +450,29 @@
 (defmethod compile-ast ((ast ast:constant-symbol-value-ast)
                         inserter system)
   (declare (ignore system))
-  (let ((const (bir:variable-cell-in-module (ast:name ast) *current-module*))
+  (let ((const (build:vcell inserter (ast:name ast)))
         (sv-out (make-instance 'bir:output :name (ast:name ast))))
-    (insert inserter 'bir:constant-symbol-value
-            :inputs (list const) :outputs (list sv-out))
+    (build:insert inserter 'bir:constant-symbol-value
+                  :inputs (list const) :outputs (list sv-out))
     (list sv-out)))
 
 (defmethod compile-ast ((ast ast:set-constant-symbol-value-ast)
                         inserter system)
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
-    (let ((const (bir:variable-cell-in-module (ast:name ast) *current-module*)))
-      (insert inserter 'bir:set-constant-symbol-value
-              :inputs (list* const rv))
+    (let ((const (build:vcell inserter (ast:name ast))))
+      (build:insert inserter 'bir:set-constant-symbol-value
+                    :inputs (list* const rv))
       :no-value)))
 
 (defmethod compile-ast ((ast ast:constant-fdefinition-ast)
                         inserter system)
   (declare (ignore system))
-  (let ((const (bir:function-cell-in-module (ast:name ast) *current-module*))
+  (let ((const (build:fcell inserter (ast:name ast)))
         (fdef-out (make-instance 'bir:output
                     :name (ast:name ast)
                     :attributes (ast:attributes ast))))
-    (insert inserter 'bir:constant-fdefinition
-            :inputs (list const) :outputs (list fdef-out))
+    (build:insert inserter 'bir:constant-fdefinition
+                  :inputs (list const) :outputs (list fdef-out))
     (list fdef-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -508,11 +486,10 @@
            (tspec-str (write-to-string tspec))
            (tq-out (make-instance 'bir:output
                      :name (symbolicate
-                            '#:typeq- tspec-str '#:-result)))
-           (tq (make-instance 'bir:typeq-test
-                 :inputs obj :outputs (list tq-out)
-                 :test-ctype tspec)))
-      (insert inserter tq)
+                            '#:typeq- tspec-str '#:-result))))
+      (build:insert inserter 'bir:typeq-test
+                    :inputs obj :outputs (list tq-out)
+                    :test-ctype tspec)
       (list tq-out))))
 
 (defmethod compile-test-ast ((ast ast:typeq-ast) inserter system)
@@ -520,22 +497,21 @@
     (let* ((tspec (ast:test-ctype ast))
            ;; FIXME: Will get weird with custom ctypes.
            (tspec-str (write-to-string tspec))
-           (tblock (make-iblock inserter
-                                :name (symbolicate
-                                       '#:typeq- tspec-str '#:-then)))
-           (eblock (make-iblock inserter
-                                :name (symbolicate
-                                       '#:typeq- tspec-str '#:-else)))
+           (tblock (build:make-iblock inserter
+                                      :name (symbolicate
+                                             '#:typeq- tspec-str '#:-then)))
+           (eblock (build:make-iblock inserter
+                                      :name (symbolicate
+                                             '#:typeq- tspec-str '#:-else)))
            (tq-out (make-instance 'bir:output
                      :name (symbolicate
-                            '#:typeq- tspec-str '#:-result)))
-           (tq (make-instance 'bir:typeq-test
-                 :inputs obj :outputs (list tq-out)
-                 :test-ctype tspec)))
-      (insert inserter tq)
-      (terminate inserter 'bir:ifi
-                 :inputs (list tq-out)
-                 :next (list tblock eblock))
+                            '#:typeq- tspec-str '#:-result))))
+      (build:insert inserter 'bir:typeq-test
+                    :inputs obj :outputs (list tq-out)
+                    :test-ctype tspec)
+      (build:terminate inserter 'bir:ifi
+                       :inputs (list tq-out)
+                       :next (list tblock eblock))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -544,7 +520,7 @@
 
 (defmethod compile-ast ((ast ast:unreachable-ast) inserter system)
   (declare (ignore system))
-  (terminate inserter 'bir:unreachable)
+  (build:terminate inserter 'bir:unreachable)
   :no-return)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -559,10 +535,9 @@
     (typecase var
       (bir:argument (list var))
       (t
-       (bir:record-variable-ref var)
        (let ((readvar-out (make-instance 'bir:output :name (bir:name var))))
-         (insert inserter 'bir:readvar
-                 :inputs (list var) :outputs (list readvar-out))
+         (build:insert inserter 'bir:readvar
+                       :inputs (list var) :outputs (list readvar-out))
          (list readvar-out))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -572,16 +547,15 @@
 (defmethod compile-test-ast ((ast ast:eq-ast) inserter system)
   (with-compiled-asts (args ((ast:arg1-ast ast) (ast:arg2-ast ast))
                             inserter system)
-    (let ((tblock (make-iblock inserter :name '#:eq-then))
-          (eblock (make-iblock inserter :name '#:eq-else)))
-      (let* ((eq-out (make-instance 'bir:output
-                       :name '#:eq-result))
-             (eq-test (make-instance 'bir:eq-test
-                        :inputs args :outputs (list eq-out))))
-        (insert inserter eq-test)
-        (terminate inserter 'bir:ifi
-                   :inputs (list eq-out)
-                   :next (list tblock eblock)))
+    (let ((tblock (build:make-iblock inserter :name '#:eq-then))
+          (eblock (build:make-iblock inserter :name '#:eq-else)))
+      (let ((eq-out (make-instance 'bir:output
+                      :name '#:eq-result)))
+        (build:insert inserter 'bir:eq-test
+                      :inputs args :outputs (list eq-out))
+        (build:terminate inserter 'bir:ifi
+                         :inputs (list eq-out)
+                         :next (list tblock eblock)))
       (list tblock eblock))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -592,10 +566,10 @@
   (with-compiled-ast (obj (ast:arg-ast ast) inserter system)
     (let* ((comparees (ast:comparees ast))
            (iblocks (loop repeat (1+ (length comparees))
-                          collect (make-iblock inserter))))
-      (terminate inserter 'bir:case
-                 :inputs obj
-                 :comparees comparees :next iblocks)
+                          collect (build:make-iblock inserter))))
+      (build:terminate inserter 'bir:case
+                       :inputs obj
+                       :comparees comparees :next iblocks)
       iblocks)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -604,10 +578,10 @@
 
 (defmethod compile-ast ((ast ast:constant-ast) inserter system)
   (declare (ignore system))
-  (let ((const (bir:constant-in-module (ast:value ast) *current-module*))
+  (let ((const (build:constant inserter (ast:value ast)))
         (constref-out (make-instance 'bir:output)))
-    (insert inserter 'bir:constant-reference
-            :inputs (list const) :outputs (list constref-out))
+    (build:insert inserter 'bir:constant-reference
+                  :inputs (list const) :outputs (list constref-out))
     (list constref-out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -618,8 +592,8 @@
   (declare (ignore system))
   (let ((ltv (bir:load-time-value-in-module
               (ast:form ast) (ast:read-only-p ast)
-              *current-module*))
+              (bir:module inserter)))
         (ltv-out (make-instance 'bir:output)))
-   (insert inserter 'bir:load-time-value-reference
-           :inputs (list ltv) :outputs (list ltv-out))
+    (build:insert inserter 'bir:load-time-value-reference
+                  :inputs (list ltv) :outputs (list ltv-out))
     (list ltv-out)))

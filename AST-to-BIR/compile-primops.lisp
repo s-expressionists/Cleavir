@@ -7,20 +7,20 @@
       (let ((outputs (ecase out
                        ((:value) (list (make-instance 'bir:output)))
                        ((:effect) nil))))
-        (insert inserter 'bir:primop
-                :info info :inputs args :outputs outputs)
+        (build:insert inserter 'bir:primop
+                      :info info :inputs args :outputs outputs)
         (copy-list outputs)))))
 
 (defmethod compile-test-ast ((ast ast:primop-ast) inserter system)
   (with-compiled-arguments (args (ast:argument-asts ast) inserter system)
     (let* ((info (ast:info ast)))
-      (let* ((ibs (loop repeat 2 collect (make-iblock inserter)))
+      (let* ((ibs (loop repeat 2 collect (build:make-iblock inserter)))
              (p-out (make-instance 'bir:output))
              (p (make-instance 'bir:primop
                   :info info :inputs args :outputs (list p-out))))
-        (insert inserter p)
-        (terminate inserter 'bir:ifi
-                   :inputs (list p-out) :next ibs)
+        (build:insert inserter p)
+        (build:terminate inserter 'bir:ifi
+                         :inputs (list p-out) :next ibs)
         (copy-list ibs)))))
 
 (defmacro defprimop (primop ast &rest readers)
@@ -31,15 +31,14 @@
       ((2)
        `(defmethod compile-test-ast ((ast ,ast) inserter system)
           (with-compiled-asts (args ,ca inserter system)
-            (let* ((ibs
-                     (list ,@(loop repeat out
-                                   collect `(make-iblock inserter))))
-                   (p-out (make-instance 'bir:output))
-                   (p (make-instance 'bir:primop
-                        :info ',info :inputs args :outputs (list p-out))))
-              (insert inserter p)
-              (terminate inserter 'bir:ifi
-                         :inputs (list p-out) :next ibs)
+            (let ((ibs
+                    (list ,@(loop repeat out
+                                  collect `(build:make-iblock inserter))))
+                  (p-out (make-instance 'bir:output)))
+              (build:insert inserter 'bir:primop
+                            :info ',info :inputs args :outputs (list p-out))
+              (build:terminate inserter 'bir:ifi
+                               :inputs (list p-out) :next ibs)
               (copy-list ibs)))))
       ((:value :effect)
        `(defmethod compile-ast ((ast ,ast) inserter system)
@@ -48,6 +47,6 @@
                            ((:value)
                             '(list (make-instance 'bir:output)))
                            ((:effect) nil))))
-              (insert inserter 'bir:primop
-                      :info ',info :inputs args :outputs outs)
+              (build:insert inserter 'bir:primop
+                            :info ',info :inputs args :outputs outs)
               (copy-list outs))))))))

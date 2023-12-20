@@ -427,9 +427,15 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
   (print-unreadable-object (o s :type t)
     (write (name o) :stream s)))
 
-(defun iblock-started-p (iblock)
-  "Return true iff the IBLOCK has begun being generated, i.e. has any instructions in it."
-  (slot-boundp iblock '%start))
+(defgeneric startedp (ir)
+  (:documentation "Return true iff the IR has begun being generated, i.e. has any instructions in it.")
+  (:method ((iblock iblock))
+    (slot-boundp iblock '%start)))
+
+(defgeneric terminatedp (ir)
+  (:documentation "Return true iff the IR has a terminator.")
+  (:method ((iblock iblock))
+    (slot-boundp iblock '%end)))
 
 (defun successors (iblock)
   (next (end iblock)))
