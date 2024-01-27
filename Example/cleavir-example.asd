@@ -15,7 +15,7 @@
                :cleavir-bir-transformations
                :cleavir-abstract-interpreter
                :concrete-syntax-tree
-               :ctype :ctype-tfun)
+               :ctype :ctype/tfun)
   :components
   ((:file "packages")
    (:file "system" :depends-on ("packages"))
