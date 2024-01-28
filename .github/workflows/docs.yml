@@ -42,7 +42,7 @@ jobs:
           echo "(:TREE #P\"${{ github.workspace }}/\")" > $HOME/.config/common-lisp/source-registry.conf.d/cleavir.conf
       - name: Generate site with Staple
         run: | # We quickload external dependencies since Staple doesn't. KLUDGE.
-          sbcl --non-interactive --eval "(ql:quickload '(:staple-markdown :ctype :ctype-tfun :mcclim :clouseau))" --eval "(staple:generate :cleavir-documentation-generation :output-directory #p\"_site/\")"
+          sbcl --non-interactive --eval "(ql:quickload '(:staple-markdown :ctype :ctype/tfun :mcclim :clouseau))" --eval "(staple:generate :cleavir-documentation-generation :output-directory #p\"_site/\")"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
