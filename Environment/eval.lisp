@@ -141,8 +141,8 @@
 (defgeneric macro-function (symbol environment))
 
 ;;; The default method specialized to ENTRY is called for entries that
-;;; are not of type MACRO.  This method just makes a recursive call,
-;;; passing the next environment as an argument.
+;;; are not of type MACRO or FUNCTION.  This method just makes a
+;;; recursive call, passing the next environment as an argument.
 (defmethod macro-function (symbol (environment entry))
   (macro-function symbol (next environment)))
 
@@ -154,6 +154,14 @@
 (defmethod macro-function (symbol (environment macro))
   (if (eq symbol (name environment))
       (expander environment)
+      (macro-function symbol (next environment))))
+
+;;; This method is invoked when the environment is of type FUNCTION so
+;;; it might potentially contain a shadowing function. If it does, we
+;;; return NIL immediately; otherwise we continue searching.
+(defmethod macro-function (symbol (environment function))
+  (if (eq symbol (name environment))
+      nil
       (macro-function symbol (next environment))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
