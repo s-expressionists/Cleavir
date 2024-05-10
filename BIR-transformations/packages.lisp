@@ -9,7 +9,8 @@
   (:export #:module-eliminate-come-froms #:eliminate-come-froms)
   (:export #:module-optimize-variables #:function-optimize-variables)
   (:export #:simple-unwinding-p #:simple-dynenv-p)
-  (:export #:find-module-local-calls #:maybe-interpolate)
+  (:export #:find-module-local-calls
+           #:interpolate-module-calls #:maybe-interpolate)
   (:export #:determine-function-environments)
   (:export #:determine-closure-extents)
   (:export #:determine-variable-extents)
