@@ -361,3 +361,19 @@
             ;; itself.
             (unless (eq function target-owner)
               (contify function local-calls return-point common-use common-dynenv target-owner))))))))
+
+(defun interpolate-module-calls (module)
+  ;; Since contification depends on all non-tail local calls being in
+  ;; the same function, it may be the case that contifying triggers
+  ;; more contification. Therefore, we do a second pass/fixpoint loop
+  ;; to make sure everything gets contified. This also ensures that we
+  ;; contify deterministically, since the result of a single pass
+  ;; depends on the order of iteration over the set of functions in
+  ;; the module.
+  (let ((did-something nil))
+    (loop do (let ((changed nil))
+               (bir:do-functions (function module)
+                 (when (maybe-interpolate function)
+                   (setq changed t)))
+               (setq did-something changed))
+          while did-something)))

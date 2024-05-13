@@ -1,11 +1,5 @@
 (in-package #:cleavir-bir-transformations)
 
-;;; We just attempted to detect local calls. See if anything is worth
-;;; doing after. FIXME: Think of a nice CLOSy way to make this optional
-;;; and specializable.
-(defun post-find-local-calls (function)
-  (maybe-interpolate function))
-
 ;;; Return true if the call arguments are compatible with those of the
 ;;; function lambda list. If they're not, warn and return false.
 ;;; This checks argument counts but does NOT check &key argument validity,
@@ -52,8 +46,7 @@
 (defun find-function-local-calls (function)
   (let ((enclose (bir:enclose function)))
     (when enclose
-      (fflc-use function (bir:output enclose))))
-  (post-find-local-calls function))
+      (fflc-use function (bir:output enclose)))))
 
 ;;; Find local calls for a given use of a function enclosure.
 ;;; Because the closure may be stored in a variable or etc, it is convenient
@@ -101,18 +94,4 @@
        (bir:delete-instruction def)))))
 
 (defun find-module-local-calls (module)
-  (bir:map-functions #'find-function-local-calls module)
-  ;; Since contification depends on all non-tail local calls being in
-  ;; the same function, it may be the case that contifying triggers
-  ;; more contification. Therefore, we do a second pass/fixpoint loop
-  ;; to make sure everything gets contified. This also ensures that we
-  ;; contify deterministically, since the result of a single pass
-  ;; depends on the order of iteration over the set of functions in
-  ;; the module.
-  (let ((did-something nil))
-    (loop do (let ((changed nil))
-               (bir:do-functions (function module)
-                 (when (maybe-interpolate function)
-                   (setq changed t)))
-               (setq did-something changed))
-          while did-something)))
+  (bir:map-functions #'find-function-local-calls module))
