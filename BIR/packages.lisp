@@ -33,7 +33,7 @@
            #:no-input #:one-input #:no-output #:one-output
            #:terminator #:terminator0 #:terminator1
            #:successor #:predecessor #:next
-           #:origin #:policy)
+           #:origin #:policy #:merge-origins #:inline-origin)
   (:export #:*origin* #:*policy* #:*top-ctype*)
   (:export #:fixed-to-multiple
            #:accessvar #:writevar #:readvar

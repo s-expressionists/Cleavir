@@ -272,8 +272,8 @@
 ;;; as long as the local function never returns normally.
 ;;; When the function does return normally, wire the return value of
 ;;; the function into the common ``transitive'' use of the local calls.
-(defun contify (function local-calls return-point common-use common-dynenv target-owner)
-  (declare (ignore common-use))
+(defun contify (function local-calls return-point common-use common-dynenv target-owner system)
+  (declare (ignore common-use system))
   (let* ((returni (bir:returni function))
          ;; If there is exactly one outside call to the function, it may be in
          ;; the middle of a block, and have its output used somewhere other
@@ -282,6 +282,14 @@
          (unique-call
            (and (not (eq return-point :unknown))
                 (unique-outside-call function local-calls)))
+         (outside-call-origin
+           (if unique-call
+               (bir:origin unique-call)
+               (let ((origins nil))
+                 (set:doset (call local-calls)
+                   (unless (eq (bir:function call) function)
+                     (push (bir:origin call) origins)))
+                 (apply #'bir:merge-origins system origins))))
          (return-point
            (cond
              (unique-call
@@ -304,6 +312,11 @@
              (t (bir:iblock return-point))))
          (start (bir:start function)))
     (unless (and returni (eq return-point :unknown))
+      (bir:map-local-instructions
+       (lambda (i)
+         (setf (bir:origin i)
+               (bir:inline-origin (bir:origin i) outside-call-origin system)))
+       function)
       (move-function-arguments-to-iblock function)
       (unless (eq return-point :unknown)
         (when returni
@@ -340,7 +353,7 @@
      lambda-list)
     too-hairy-p))
 
-(defun maybe-interpolate (function)
+(defun maybe-interpolate (function system)
   ;; When a function has no enclose and returns to a single control
   ;; point, it is eligible for interpolation.
   (when (and (null (bir:enclose function))
@@ -360,9 +373,9 @@
             ;; are hard to maintain from outside the BIR system
             ;; itself.
             (unless (eq function target-owner)
-              (contify function local-calls return-point common-use common-dynenv target-owner))))))))
+              (contify function local-calls return-point common-use common-dynenv target-owner system))))))))
 
-(defun interpolate-module-calls (module)
+(defun interpolate-module-calls (module system)
   ;; Since contification depends on all non-tail local calls being in
   ;; the same function, it may be the case that contifying triggers
   ;; more contification. Therefore, we do a second pass/fixpoint loop
@@ -373,7 +386,7 @@
   (let ((did-something nil))
     (loop do (let ((changed nil))
                (bir:do-functions (function module)
-                 (when (maybe-interpolate function)
+                 (when (maybe-interpolate function system)
                    (setq changed t)))
                (setq did-something changed))
           while did-something)))

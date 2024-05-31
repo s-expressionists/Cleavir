@@ -186,7 +186,7 @@ See REPLACE-USES"))
    (%iblock :initarg :iblock :accessor iblock :type iblock
             :documentation "The IBLOCK this instruction belongs to.")
    (%policy :initform (current-policy) :initarg :policy :reader policy)
-   (%origin :initform (current-origin) :initarg :origin :reader origin))
+   (%origin :initform (current-origin) :initarg :origin :accessor origin))
   (:documentation "Abstract. Cleavir's representation of a computation to be done.
 All instructions have a sequence of input data and a sequence of output data. With a few exceptions, documented in individual instruction classes, all inputs and outputs are linear.
 
@@ -566,3 +566,20 @@ See VARIABLE-CELL"
       (set:doset (unwind (unwinds come-from))
         (set:nadjoinf entrances (destination unwind))))
     entrances))
+
+(defgeneric merge-origins (system &rest origins)
+  (:method (system &rest origins)
+    (declare (cl:ignore system))
+    (first origins)))
+
+;;; Modify a source position to indicate information about inlining.
+;;; ORIGIN is the origin for some part of the inlined body, and INLINED-AT
+;;; is the origin of the callee.
+;;; The nature of ORIGINs is still client-defined.
+(defgeneric inline-origin (origin inlined-at system)
+  (:method (origin (inlined-at null) system)
+    (declare (cl:ignore system))
+    origin)
+  (:method (origin inlined-at system)
+    (declare (cl:ignore inlined-at system))
+    origin))

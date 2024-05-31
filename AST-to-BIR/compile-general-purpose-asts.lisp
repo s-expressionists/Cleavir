@@ -332,7 +332,7 @@
   (let ((*variables* (make-hash-table :test #'eq))
         (*block-info* (make-hash-table :test #'eq))
         (*go-info* (make-hash-table :test #'eq))
-        (*inlined-at* (inline-origin (ast:origin ast) *inlined-at* system)))
+        (*inlined-at* (bir:inline-origin (ast:origin ast) *inlined-at* system)))
     (compile-ast (ast:body-ast ast) inserter system)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

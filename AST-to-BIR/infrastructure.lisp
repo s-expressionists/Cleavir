@@ -43,21 +43,9 @@
 (defun make-module ()
   (make-instance 'bir:module))
 
-;;; Modify a source position to indicate information about inlining.
-;;; ORIGIN is the origin for some part of the inlined body, and INLINED-AT
-;;; is the origin of the callee.
-;;; The nature of ORIGINs is still client-defined.
-(defgeneric inline-origin (origin inlined-at system)
-  (:method (origin (inlined-at null) system)
-    (declare (ignore system))
-    origin)
-  (:method (origin inlined-at system)
-    (declare (ignore inlined-at system))
-    origin))
-
 (defgeneric compile-function (ast system)
   (:method :around ((ast ast:function-ast) system)
-    (let ((bir:*origin* (inline-origin (ast:origin ast) *inlined-at* system))
+    (let ((bir:*origin* (bir:inline-origin (ast:origin ast) *inlined-at* system))
           (bir:*policy* (ast:policy ast)))
       (call-next-method))))
 
@@ -77,7 +65,7 @@
 (defgeneric compile-ast (ast inserter system)
   (:method :around ((ast ast:ast) inserter system)
     (declare (ignore inserter))
-    (let* ((bir:*origin* (inline-origin (ast:origin ast) *inlined-at* system))
+    (let* ((bir:*origin* (bir:inline-origin (ast:origin ast) *inlined-at* system))
            (bir:*policy* (ast:policy ast))
            (result (call-next-method)))
       (assert (or (listp result) (eq result :no-value) (eq result :no-return)))
@@ -86,7 +74,7 @@
 (defgeneric compile-test-ast (ast inserter system)
   (:method :around ((ast ast:ast) inserter system)
     (declare (ignore inserter))
-    (let ((bir:*origin* (inline-origin (ast:origin ast) *inlined-at* system))
+    (let ((bir:*origin* (bir:inline-origin (ast:origin ast) *inlined-at* system))
           (bir:*policy* (ast:policy ast)))
       (call-next-method))))
 
