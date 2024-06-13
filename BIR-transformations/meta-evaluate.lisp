@@ -6,23 +6,35 @@
 
 (in-package #:cleavir-bir-transformations)
 
+;; This keeps track of whether any types were derived on the previous pass. We
+;; want to keep making passes until we reach a fixed point, or in other words,
+;; have derived all the types we possibly can.
+(defparameter *derived-anything-on-last-pass* T)
+
 (defun meta-evaluate-module (module system)
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
-  (dotimes (repeat 3)
-    (declare (ignorable repeat))
-    (bir:do-functions (function module)
-      ;; This check is necessary because meta-evaluation might have deleted
-      ;; the function during our iteration. KLUDGE?
-      (when (set:presentp function (bir:functions module))
-        (meta-evaluate-function function system)
-        (bir:compute-iblock-flow-order function)))))
+  (loop while *derived-anything-on-last-pass*
+	;; Make sure we stop looping if we don't derive any types in the
+	;; current iteration
+	do (setq *derived-anything-on-last-pass* NIL)
+	   (bir:do-functions (function module)
+	     ;; This check is necessary because meta-evaluation might have deleted
+	     ;; the function during our iteration. KLUDGE?
+	     (when (set:presentp function (bir:functions module))
+               (meta-evaluate-function function system)
+               (bir:compute-iblock-flow-order function)))))
 
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
-  (setf (bir:derived-type linear-datum)
-        (ctype:values-conjoin system (bir:ctype linear-datum) derived-type)))
+  (let ((old-type (bir:ctype linear-datum)))
+    (setf (bir:derived-type linear-datum)
+          (ctype:values-conjoin system (bir:ctype linear-datum) derived-type))
+    ;; If we derive a type in the current pass
+    (if (not (equal old-type (bir:ctype linear-datum)))
+	(setq *derived-anything-on-last-pass* T))))
+
 ;;; Pass along an assertion that LINEAR-DATUM is of type ASSERTED-TYPE.
 (defun assert-type-for-linear-datum (linear-datum asserted-type system)
   (setf (bir:asserted-type linear-datum)
