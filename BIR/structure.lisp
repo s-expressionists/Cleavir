@@ -186,7 +186,12 @@ See REPLACE-USES"))
    (%iblock :initarg :iblock :accessor iblock :type iblock
             :documentation "The IBLOCK this instruction belongs to.")
    (%policy :initform (current-policy) :initarg :policy :reader policy)
-   (%origin :initform (current-origin) :initarg :origin :reader origin))
+   (%origin :initform (current-origin) :initarg :origin :reader origin)
+   (%should-process :initform T
+                    :initarg :should-process
+                    :accessor :should-process
+                    :type boolean
+                    :documentation "Determines whether to process this instruction on the next pass during meta-evaluation."))
   (:documentation "Abstract. Cleavir's representation of a computation to be done.
 All instructions have a sequence of input data and a sequence of output data. With a few exceptions, documented in individual instruction classes, all inputs and outputs are linear.
 
@@ -419,7 +424,12 @@ It can be read from and written to any number of times, and across FUNCTIONs, bu
    ;; The function this belongs to.
    (%function :initarg :function :accessor function :type (or null function)) ; null is for deleted blocks
    ;; For debug/introspection
-   (%name :initarg :name :reader name :initform nil))
+   (%name :initarg :name :reader name :initform nil)
+   (%should-process :initform T
+                    :initarg :should-process
+                    :accessor :should-process
+                    :type boolean
+                    :documentation "Determines whether to process this iblock on the next pass during meta-evaluation."))
   (:documentation "A sequence of instructions with no branching.
 In other words this is a conventional \"basic block\", except that Cleavir will sometimes keep distinct iblock segments around for various purposes, such as to indicate differnet dynamic environments."))
 
@@ -484,7 +494,12 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
    (%attributes :initarg :attributes :accessor attributes
                 :initform (attributes:default-attributes))
    ;; The module containing this function.
-   (%module :initarg :module :reader module :type module))
+   (%module :initarg :module :reader module :type module)
+   (%should-process :initform T
+                    :initarg :should-process
+                    :accessor :should-process
+                    :type boolean
+                    :documentation "Determines whether to process this function on the next pass during meta-evaluation."))
   (:documentation "Cleavir's representation of the code for a Lisp function."))
 
 (defmethod print-object ((o function) s)
