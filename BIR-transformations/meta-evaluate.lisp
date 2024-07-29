@@ -11,7 +11,19 @@
 ;; have derived all the types we possibly can.
 (defparameter *derived-anything-on-last-pass* T)
 
+;; Simple flag to indicate whether we're on the first pass of meta-evaluation.
+(defparameter *is-first-pass* T)
+
 (defun meta-evaluate-module (module system)
+
+  ;; First pass to establish a baseline for type derivation
+  (bir:do-functions (function module)
+    (when (set:presentp function (bir:functions module))
+      (meta-evaluate-function function system)
+      (bir:compute-iblock-flow-order function)))
+
+  (setq *is-first-pass* NIL)
+  
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
@@ -26,14 +38,30 @@
                (meta-evaluate-function function system)
                (bir:compute-iblock-flow-order function)))))
 
+
+;;; Given a linear datum, flag the instruction where it's used, along with the
+;;; iblock and function containing the instruction.
+(defun flag-datum-use (linear-datum)
+  ;; flag the instruction using this datum for reprocessing
+  (setf (:should-process (bir:use linear-datum)) T)
+  ;; flag the instruction's iblock
+  (setf (:should-process (bir:iblock (bir:use linear-datum))) T)
+  ;; flag the iblock's function
+  (setf (:should-process (bir:function (bir:iblock (bir:use linear-datum)))) T))
+
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
+;;; Returns T if a type was derived, and NIL otherwise.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
   (let ((old-type (bir:ctype linear-datum)))
     (setf (bir:derived-type linear-datum)
           (ctype:values-conjoin system (bir:ctype linear-datum) derived-type))
+
     ;; If we derive a type in the current pass
-    (if (not (equal old-type (bir:ctype linear-datum)))
-	(setq *derived-anything-on-last-pass* T))))
+    (when (and (not (equal old-type (bir:ctype linear-datum))) (cleavir-ctype:subtypep (bir:ctype linear-datum) old-type system) (bir:use linear-datum))
+      (setq *derived-anything-on-last-pass* T)
+      (flag-datum-use linear-datum)
+      (return-from derive-type-for-linear-datum T)))
+  (return-from derive-type-for-linear-datum NIL))
 
 ;;; Pass along an assertion that LINEAR-DATUM is of type ASSERTED-TYPE.
 (defun assert-type-for-linear-datum (linear-datum asserted-type system)
@@ -211,8 +239,9 @@
     ;; of whether a rewrite is on the way, and if we do things in this order we
     ;; can derive types through any amount of straight line code during a single
     ;; meta-evaluate pass, promoting flow.
-    (derive-types instruction system)
-    (meta-evaluate-instruction instruction system)))
+    (when (:should-process instruction)
+      (derive-types instruction system)
+      (meta-evaluate-instruction instruction system))))
 
 (defgeneric maybe-flush-instruction (instruction system))
 
@@ -465,7 +494,7 @@
       (ctype:bottom system)
       system)
      system)
-    (derive-type-for-linear-datum
+    (let ((derived-a-type (derive-type-for-linear-datum
      (bir:output instruction)
      (ctype:values
       (loop for inp in inputs
@@ -474,6 +503,10 @@
       (ctype:bottom system)
       system)
      system)))
+      ;; If we didn't derive a type for this datum, and we've analyzed the
+      ;; instruction before, then we can ignore it for now.
+      (when (and (not derived-a-type) (not *is-first-pass*))
+        (setf (:should-process instruction) NIL)))))
 
 (defmethod meta-evaluate-instruction ((instruction bir:eq-test) system)
   (let ((inputs (bir:inputs instruction)))
@@ -563,25 +596,38 @@
              t)))))
 
 (defmethod derive-types ((instruction bir:constant-reference) system)
-  (derive-type-for-linear-datum
+  (let ((derived-a-type (derive-type-for-linear-datum
    (bir:output instruction)
    (ctype:single-value
     (ctype:member system (bir:constant-value (bir:input instruction)))
     system)
-   system))
+   system)))
+    ;; If we didn't derive a type for this datum, and we've analyzed the
+    ;; instruction before, then we can ignore it for now.
+    (when (and (not derived-a-type) (not *is-first-pass*))
+      (setf (:should-process instruction) NIL))))
 
 (defmethod derive-types ((instruction bir:constant-fdefinition) system)
   ;; Derive that it's a FUNCTION.
-  (derive-type-for-linear-datum
+  (let ((derived-a-type (derive-type-for-linear-datum
    (bir:output instruction)
    (ctype:single-value (ctype:function-top system) system)
-   system))
+   system)))
+     ;; If we didn't derive a type for this datum, and we've analyzed the
+     ;; instruction before, then we can ignore it for now.
+     (when (and (not derived-a-type) (not *is-first-pass*))
+       (setf (:should-process instruction) NIL))))
+     
 
 (defmethod derive-types ((instruction bir:constant-symbol-value) system)
-  (derive-type-for-linear-datum
+  (let ((derived-a-type (derive-type-for-linear-datum
    (bir:output instruction)
    (ctype:single-value (ctype:top system) system)
-   system))
+   system)))
+    ;; If we didn't derive a type for this datum, and we've analyzed the
+    ;; instruction before, then we can ignore it for now.
+    (when (and (not derived-a-type) (not *is-first-pass*))
+      (setf (:should-process instruction) NIL))))
 
 ;;; Local variable with one reader and one writer can be substituted
 ;;; away,
@@ -679,11 +725,19 @@
     (set:doset (local-call (bir:local-calls function))
       (let ((out (bir:output local-call)))
         (assert-type-for-linear-datum out areturn-type system)
-        (derive-type-for-linear-datum out return-type system)))))
+        (let ((derived-a-type (derive-type-for-linear-datum out return-type system)))
+          ;; If we didn't derive a type for this datum, and we've analyzed the
+          ;; instruction before, then we can ignore it for now.
+          (when (and (not derived-a-type) (not *is-first-pass*))
+            (setf (:should-process instruction) NIL)))))))
 
 (defmethod derive-types ((instruction bir:enclose) system)
   (let ((ftype (ctype:single-value (ctype:function-top system) system)))
-    (derive-type-for-linear-datum (bir:output instruction) ftype system)))
+    (let ((derived-a-type (derive-type-for-linear-datum (bir:output instruction) ftype system)))
+      ;; If we didn't derive a type for this datum, and we've analyzed the
+      ;; instruction before, then we can ignore it for now.
+      (when (and (not derived-a-type) (not *is-first-pass*))
+        (setf (:should-process instruction) NIL)))))
 
 ;;; If the number of values to be saved is known, record that.
 (defmethod meta-evaluate-instruction ((instruction bir:values-save) system)
@@ -703,17 +757,25 @@
   (assert-type-for-linear-datum (bir:output instruction)
                                 (bir:asserted-type (bir:input instruction))
                                 system)
-  (derive-type-for-linear-datum (bir:output instruction)
+  (let ((derived-a-type (derive-type-for-linear-datum (bir:output instruction)
                                 (bir:ctype (bir:input instruction))
-                                system))
+                                system)))
+    ;; If we didn't derive a type for this datum, and we've analyzed the
+    ;; instruction before, then we can ignore it for now.
+    (when (and (not derived-a-type) (not *is-first-pass*))
+      (setf (:should-process instruction) NIL))))
 
 (defmethod derive-types ((instruction bir:values-restore) system)
   (assert-type-for-linear-datum (bir:output instruction)
                                 (bir:asserted-type (bir:input instruction))
                                 system)
-  (derive-type-for-linear-datum (bir:output instruction)
+  (let ((derived-a-type (derive-type-for-linear-datum (bir:output instruction)
                                 (bir:ctype (bir:input instruction))
-                                system))
+                                system)))
+    ;; If we didn't derive a type for this datum, and we've analyzed the
+    ;; instruction before, then we can ignore it for now.
+    (when (and (not derived-a-type) (not *is-first-pass*))
+      (setf (:should-process instruction) NIL))))
 
 (defun append-input-types (types system)
   (apply #'ctype:values-append system types))
@@ -736,10 +798,14 @@
      (bir:output instruction)
      (append-input-types (mapcar #'bir:asserted-type inputs) system)
      system)
-    (derive-type-for-linear-datum
+    (let ((derived-a-type (derive-type-for-linear-datum
      (bir:output instruction)
      (append-input-types (mapcar #'bir:ctype inputs) system)
      system)))
+      ;; If we didn't derive a type for this datum, and we've analyzed the
+      ;; instruction before, then we can ignore it for now.
+      (when (and (not derived-a-type) (not *is-first-pass*))
+        (setf (:should-process instruction) NIL)))))
 
 ;;; Move a thei to earlier in the code.
 ;;; It is not clear if this is permissible in general; while the behavior
@@ -944,12 +1010,17 @@
     ;; freedom to trust or explicitly check the assertion as needed while
     ;; making this decision transparent to inference, and also type conflict
     ;; when the type is checked elsewhere.
-    (derive-type-for-linear-datum
+    (let ((derived-a-type (derive-type-for-linear-datum
      (bir:output instruction)
      (if (eq type-check-function nil)
          ctype
          (ctype:values-conjoin system (bir:asserted-type instruction) ctype))
-     system)
+     system)))
+      ;; If we didn't derive a type for this datum, and we've analyzed the
+      ;; instruction before, then we can ignore it for now.
+      (when (and (not derived-a-type) (not *is-first-pass*))
+        (setf (:should-process instruction) NIL)))
+  
     ;; The asserted type can be propagated even if it's not checked.
     (assert-type-for-linear-datum
      (bir:output instruction)
@@ -1185,11 +1256,16 @@
              (derive-return-type inst identity intype system)))
       (cond ((null identities))
           ((= (length identities) 1)
-           (derive-type-for-linear-datum
+           (let ((derived-a-type (derive-type-for-linear-datum
             (bir:output inst)
             (compute (first identities) (intype #'bir:ctype))
-            system)
-           (assert-type-for-linear-datum
+            system)))
+             ;; If we didn't derive a type for this datum, and we've
+             ;; analyzed the instruction before, then we can ignore it
+             ;; for now.
+             (when (and (not derived-a-type) (not *is-first-pass*))
+               (setf (:should-process inst) NIL)))
+          (assert-type-for-linear-datum
             (bir:output inst)
             (compute (first identities) (intype #'bir:asserted-type))
             system))
@@ -1200,10 +1276,15 @@
                  (atypes
                    (loop for identity in identities
                          collect (compute identity (intype #'bir:asserted-type)))))
-             (derive-type-for-linear-datum (bir:output inst)
+             (let ((derived-a-type (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
                                                   system dtypes)
-                                           system)
+                                           system)))
+               ;; If we didn't derive a type for this datum, and we've
+               ;; analyzed the instruction before, then we can ignore it
+               ;; for now.
+               (when (and (not derived-a-type) (not *is-first-pass*))
+                 (setf (:should-process inst) NIL)))
              (assert-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
                                                   system atypes)
@@ -1215,10 +1296,14 @@
              (append-input-types (mapcar reader (rest (bir:inputs inst))) system)))
     (cond ((null identities))
           ((= (length identities) 1)
-           (derive-type-for-linear-datum
+           (let ((derived-a-type (derive-type-for-linear-datum
             (bir:output inst)
             (derive-return-type inst (first identities) (intype #'bir:ctype) system)
-            system)
+            system)))
+             ;; If we didn't derive a type for this datum, and we've analyzed
+             ;; the instruction before, then we can ignore it for now.
+             (when (and (not derived-a-type) (not *is-first-pass*))
+               (setf (:should-process inst) NIL)))
            (assert-type-for-linear-datum
             (bir:output inst)
             (derive-return-type inst (first identities) (intype #'bir:asserted-type)
@@ -1233,14 +1318,19 @@
                    (loop with arg = (intype #'bir:asserted-type)
                          for identity in identities
                          collect (derive-return-type inst identity arg system))))
-             (derive-type-for-linear-datum (bir:output inst)
+             (let ((derived-a-type (or (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
                                                   system dtypes)
                                            system)
              (derive-type-for-linear-datum (bir:output inst)
                                            (apply #'ctype:values-conjoin
                                                   system atypes)
-                                           system)))))))
+                                           system))))
+               ;; If we didn't derive a type for this datum, and we've
+               ;; analyzed the instruction before, then we can ignore it
+               ;; for now.
+               (when (and (not derived-a-type) (not *is-first-pass*))
+                 (setf (:should-process inst) NIL)))))))))
 
 (defmethod derive-types ((inst bir:primop) system)
   ;; Only do this when there's exactly one output.
@@ -1256,10 +1346,15 @@
                (derive-return-type inst identity intype system)))
         (cond ((null identities))
               ((= (length identities) 1)
-               (derive-type-for-linear-datum
+               (let ((derived-a-type (derive-type-for-linear-datum
                 (bir:output inst)
                 (compute (first identities) (intype #'bir:ctype))
-                system)
+                system)))
+                 ;; If we didn't derive a type for this datum, and we've
+                 ;; analyzed the instruction before, then we can ignore it
+                 ;; for now.
+                 (when (and (not derived-a-type) (not *is-first-pass*))
+                   (setf (:should-process inst) NIL)))
                (assert-type-for-linear-datum
                 (bir:output inst)
                 (compute (first identities) (intype #'bir:asserted-type))
@@ -1271,10 +1366,15 @@
                      (atypes
                        (loop for identity in identities
                              collect (compute identity (intype #'bir:asserted-type)))))
-                 (derive-type-for-linear-datum (bir:output inst)
+                 (let ((derived-a-type (derive-type-for-linear-datum (bir:output inst)
                                                (apply #'ctype:values-conjoin
                                                       system dtypes)
-                                               system)
+                                               system)))
+                   ;; If we didn't derive a type for this datum, and we've
+                   ;; analyzed the instruction before, then we can ignore it
+                   ;; for now.
+                   (when (and (not derived-a-type) (not *is-first-pass*))
+                     (setf (:should-process inst) NIL)))
                  (assert-type-for-linear-datum (bir:output inst)
                                                (apply #'ctype:values-conjoin
                                                       system atypes)
