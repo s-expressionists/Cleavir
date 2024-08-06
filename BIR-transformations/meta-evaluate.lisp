@@ -6,16 +6,15 @@
 
 (in-package #:cleavir-bir-transformations)
 
-;; This keeps track of whether any types were derived on the previous pass. We
-;; want to keep making passes until we reach a fixed point, or in other words,
-;; have derived all the types we possibly can.
-(defparameter *derived-anything-on-last-pass* T)
+;; This keeps track of whether any types were derived on the previous pass, or
+;; the code was changed in some manner. We want to keep making passes until we
+;; reach a fixed point, and have derived all the types we possibly can.
+(defparameter *changed-anything-on-last-pass* T)
 
 ;; Simple flag to indicate whether we're on the first pass of meta-evaluation.
 (defparameter *is-first-pass* T)
 
 (defun meta-evaluate-module (module system)
-
   ;; First pass to establish a baseline for type derivation
   (bir:do-functions (function module)
     (when (set:presentp function (bir:functions module))
@@ -27,10 +26,14 @@
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
-  (loop while *derived-anything-on-last-pass*
+  (loop while *changed-anything-on-last-pass*
 	;; Make sure we stop looping if we don't derive any types in the
-	;; current iteration
-	do (setq *derived-anything-on-last-pass* NIL)
+	;; current iteration        
+	do (setq *changed-anything-on-last-pass* NIL)
+
+           ;; debug
+           (format t "in main loop, about to evaluate the functions~%")
+           
 	   (bir:do-functions (function module)
 	     ;; This check is necessary because meta-evaluation might have deleted
 	     ;; the function during our iteration. KLUDGE?
@@ -49,6 +52,12 @@
   ;; flag the iblock's function
   (setf (:should-process (bir:function (bir:iblock (bir:use linear-datum)))) T))
 
+;;; Given an iblock, flag all of its instructions for reprocessing.
+(defun flag-instructions-in-iblock (iblock)
+  (bir:do-iblock-instructions (instruction iblock)
+    (setf (:should-process instruction) T)))
+
+
 ;;; Prove that LINEAR-DATUM is of type DERIVED-TYPE.
 ;;; Returns T if a type was derived, and NIL otherwise.
 (defun derive-type-for-linear-datum (linear-datum derived-type system)
@@ -58,8 +67,9 @@
 
     ;; If we derive a type in the current pass
     (when (and (not (equal old-type (bir:ctype linear-datum))) (cleavir-ctype:subtypep (bir:ctype linear-datum) old-type system) (bir:use linear-datum))
-      (setq *derived-anything-on-last-pass* T)
+      (setq *changed-anything-on-last-pass* T)
       (flag-datum-use linear-datum)
+;;      (format t "derived a type for this datum!~%")
       (return-from derive-type-for-linear-datum T)))
   (return-from derive-type-for-linear-datum NIL))
 
@@ -241,7 +251,14 @@
     ;; meta-evaluate pass, promoting flow.
     (when (:should-process instruction)
       (derive-types instruction system)
-      (meta-evaluate-instruction instruction system))))
+      ;; Since meta-evaluate-instruction can transform the code, we need to
+      ;; make sure that we process any new code that might appear.
+      (when (meta-evaluate-instruction instruction system)
+        (setq *changed-anything-on-last-pass* T)
+        ;; debug
+;;        (format t "Just set *changed-anything-on-last-pass* to T~%")
+;;        (flag-instructions-in-iblock iblock)
+        ))))
 
 (defgeneric maybe-flush-instruction (instruction system))
 
