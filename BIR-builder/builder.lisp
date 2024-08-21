@@ -154,3 +154,5 @@
 
 (defmethod post ((inst bir:constant-bind))
   (setf (bir:dynamic-environment (first (bir:next inst))) inst))
+(defmethod post ((inst bir:unwind-protect))
+  (setf (bir:dynamic-environment (first (bir:next inst))) inst))
