@@ -167,6 +167,18 @@ See VALUES-SAVE"))
 
 See UNWIND"))
 
+(defclass catchi (one-input no-output terminator dynamic-environment)
+  ()
+  (:documentation "Terminator and dynamic environment representing a dynamic exit point, i.e. CL:CATCH. The one input is the catch tag and there are no outputs. The first of the NEXT IBLOCKs is the normal child continuation, i.e. the body of the cl:catch, and the second IBLOCK is the end of the catch, i.e. the destination of any throws.
+
+See THROWI"))
+
+(defclass throwi (no-output terminator0)
+  ()
+  (:documentation "Terminator representing a dynamic exit i.e. CL:THROW. The first input is the catch tag, and the second input is the values thrown.
+
+See CATCHI"))
+
 (defclass leti (writevar)
   ()
   (:documentation "Instruction representing the initial binding of a variable.

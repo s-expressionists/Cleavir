@@ -396,6 +396,18 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   ;; ensure inputs match destination
   (match-jump-types u (inputs u) (outputs u)))
 
+(defmethod verify progn ((c catchi))
+  (test (= (length (next c)) 2)
+        "has wrong number of successors" c)
+  (test (eq (dynamic-environment (first (next c))) c)
+        "has normal successor ~a with wrong dynamic environment ~a"
+        c (first (next c)) (dynamic-environment (first (next c)))))
+
+(defmethod verify progn ((th throwi))
+  (test (= (length (inputs th)) 2)
+        "has wrong number of inputs: ~s"
+        th (inputs th)))
+
 (defmethod verify progn ((j jump))
   (match-jump-types j (inputs j) (outputs j))
   ;; Check accuracy of unwindp (TODO: Check that the dynenv is a parent)

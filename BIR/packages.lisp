@@ -45,7 +45,7 @@
            #:eq-test #:typeq-test #:test-ctype
            #:ifi #:conditional-test
            #:case #:comparees
-           #:unwind-protect
+           #:unwind-protect #:catchi #:throwi
            #:come-from #:unwinds #:unwind #:destination
            #:values-save #:fixed-values-save #:nvalues
            #:values-restore #:values-collect
