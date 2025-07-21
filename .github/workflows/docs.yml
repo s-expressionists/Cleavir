@@ -35,7 +35,7 @@ jobs:
           curl -kLO https://beta.quicklisp.org/quicklisp.lisp
           sbcl --non-interactive --load quicklisp.lisp --eval "(quicklisp-quickstart:install)" --eval "(ql-util:without-prompting (ql:add-to-init-file))"
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Configure ASDF to find Cleavir
         run: |
           mkdir -p $HOME/.config/common-lisp/source-registry.conf.d
@@ -44,10 +44,10 @@ jobs:
         run: | # We quickload external dependencies since Staple doesn't. KLUDGE.
           sbcl --non-interactive --eval "(ql:quickload '(:staple-markdown :ctype :ctype/tfun :mcclim :clouseau))" --eval "(staple:generate :cleavir-documentation-generation :output-directory #p\"_site/\")"
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
           path: '_site/'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
