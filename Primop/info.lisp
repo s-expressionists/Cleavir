@@ -50,10 +50,9 @@
       (error "BUG: No primop: ~a" name)))
 
 (defmacro defprimop (name ninputs out &rest flags)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (setf (gethash ',name *primops*)
-           (make-instance 'info
-             :name ',name
-             :attributes (make-instance 'cleavir-attributes:attributes
-                           :flags (cleavir-attributes:make-flags ,@flags))
-             :out-kind ',out :ninputs ',ninputs))))
+  `(setf (gethash ',name *primops*)
+         (make-instance 'info
+           :name ',name
+           :attributes (make-instance 'cleavir-attributes:attributes
+                         :flags (cleavir-attributes:make-flags ,@flags))
+           :out-kind ',out :ninputs ',ninputs)))
