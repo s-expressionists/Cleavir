@@ -247,7 +247,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (env:declarations env) declaration-csts))
+                system (env:declarations system env) declaration-csts))
              (defs (convert-local-functions definitions-cst symbol env system))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (final-env (augment-environment-with-declarations
@@ -275,7 +275,7 @@
         (cst:separate-ordinary-body body-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (env:declarations env) declaration-csts))
+                system (env:declarations system env) declaration-csts))
              (new-env (augment-environment-from-fdefs env definitions-cst))
              (defs (convert-local-functions definitions-cst symbol new-env system))
              (final-env (augment-environment-with-declarations
@@ -470,7 +470,7 @@
                                               environment)))
       (env:eval lambda-expression
                 (env:compile-time environment)
-                environment))))
+                system))))
 
 (defmethod convert-special
     ((symbol (eql 'macrolet)) cst env system)
@@ -727,7 +727,7 @@
         (cst:separate-ordinary-body body-forms-cst)
       (let* ((canonical-declaration-specifiers
                (cst:canonicalize-declarations
-                system (env:declarations environment) declaration-csts))
+                system (env:declarations system environment) declaration-csts))
              (new-env (augment-environment-with-declarations
                        environment system canonical-declaration-specifiers)))
         (with-preserved-toplevel-ness

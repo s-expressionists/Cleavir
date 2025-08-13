@@ -10,8 +10,6 @@
            #:dynamic-extent
            #:compiler-macro
            #:eval
-           #:macro-function
-           #:compiler-macro-function
            #:find-class
            #:function
            #:block
@@ -67,8 +65,6 @@
    #:add-inline-expansion
    #:eval
    #:cst-eval
-   #:macro-function
-   #:compiler-macro-function
    #:symbol-macro-expansion
    #:find-class
    #:lexical-variable

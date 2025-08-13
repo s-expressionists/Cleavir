@@ -876,17 +876,17 @@
 ;;; This makes the existence of a dedicated optimize-info class
 ;;; redundant, but it's not a big deal.
 
-(defmethod optimize-info ((environment optimize))
+(defmethod optimize-info (system (environment optimize))
   (make-instance 'optimize-info
     :optimize (optimize environment)
     :policy (policy environment)))
 
-(defmethod optimize-info ((environment entry))
-  (optimize-info (next environment)))
+(defmethod optimize-info (system (environment entry))
+  (optimize-info system (next environment)))
 
 ;;; OK it's a big enough deal that here is a helper.
-(defun environment-policy (environment)
-  (policy (optimize-info environment)))
+(defun environment-policy (system environment)
+  (policy (optimize-info system environment)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

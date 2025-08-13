@@ -9,10 +9,10 @@
 ;;; repeatedly. That is to say, this is macroexpand, not
 ;;; macroexpand-1 or macroexpand-all.
 
-(defgeneric type-expand (environment type-specifier))
+(defgeneric type-expand (system environment type-specifier))
 
-(defmethod type-expand ((env entry) type-specifier)
-  (type-expand (next env) type-specifier))
+(defmethod type-expand (system (env entry) type-specifier)
+  (type-expand system (next env) type-specifier))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -66,7 +66,7 @@
 
 (defun parse-type-specifier (type-specifier environment system)
   (parse-expanded-type-specifier
-   (type-expand environment type-specifier)
+   (type-expand system environment type-specifier)
    environment system))
 
 (defgeneric parse-expanded-type-specifier
@@ -482,7 +482,7 @@
 
 (defun parse-values-type-specifier (type-specifier
                                     environment system)
-  (let ((spec (type-expand environment type-specifier)))
+  (let ((spec (type-expand system environment type-specifier)))
     (if (consp spec)
         (parse-compound-values-type-specifier (car spec) (cdr spec)
                                               environment system)

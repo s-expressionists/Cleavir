@@ -151,9 +151,9 @@
   environment)
 
 ;;; Augment the environment with an OPTIMIZE specifier.
-(defun augment-environment-with-optimize (optimize environment)
+(defun augment-environment-with-optimize (optimize environment system)
   ;; Make sure every environment has a complete optimize & policy.
-  (let* ((previous (env:optimize (env:optimize-info environment)))
+  (let* ((previous (env:optimize (env:optimize-info system environment)))
          (total (cleavir-policy:normalize-optimize
                  (append optimize previous)
                  environment))
@@ -178,7 +178,7 @@
           ;; handle OPTIMIZE specially.
           (let ((optimize (extract-optimize canonical-dspecs)))
             (if optimize
-                (augment-environment-with-optimize optimize environment)
+                (augment-environment-with-optimize optimize environment system)
                 environment))))
     (loop for spec in canonical-dspecs
           for declaration-identifier-cst = (cst:first spec)
