@@ -11,7 +11,8 @@
 (defmethod acclimation:report-condition
     ((condition unknown-optimize-quality) stream (language acclimation:english))
   (format stream "Ignoring unknown OPTIMIZE quality ~s"
-	  (first (specifier condition))))
+	  (let ((spec (specifier condition)))
+            (if (consp spec) (first spec) spec))))
 
 (defmethod acclimation:report-condition
     ((condition no-policy-computer) stream (language acclimation:english))
