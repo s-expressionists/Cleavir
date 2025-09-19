@@ -107,6 +107,13 @@
           (rest (ctype:function-rest ftype system))
           (keysp (ctype:function-keysp ftype system))
           (values (ctype:function-values ftype system)))
+      (when (or (< (length argument-asts) (length required)) ; not enough
+                (and (ctype:bottom-p rest system) (not keysp)
+                     (> (length argument-asts)
+                        (+ (length required) (length optional))))) ; too many
+        ;; FIXME: Use a condition class here.
+        (warn "A call to ~a was passed a number of arguments incompatible with its declared type ~a."
+              (cst:raw name-cst) ftype))
       (type-wrap
        (ast:make-call-ast function-ast
                           (mapcar
@@ -118,17 +125,9 @@
                                     ;; FIXME: Actually treat &key properly!
                                     (keysp (ctype:top system))
                                     (t (if (ctype:bottom-p rest system)
-                                           (progn
-                                             ;; FIXME: Use a
-                                             ;; condition
-                                             ;; class here.
-                                             (warn "A call to ~a was passed a number of arguments incompatible with its declared type ~a."
-                                                   (cst:raw name-cst) ftype)
-                                             ;; Without this
-                                             ;; we'll get a
-                                             ;; borked call
-                                             ;; as a result.
-                                             (ctype:top system))
+                                           ;; too many args - warned above,
+                                           ;; so no type check here
+                                           (ctype:top system)
                                            rest)))
                               :argument cst env system))
                            argument-asts)
