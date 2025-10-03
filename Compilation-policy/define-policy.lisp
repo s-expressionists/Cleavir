@@ -1,12 +1,12 @@
 (cl:in-package #:cleavir-compilation-policy)
 
-;;; Public interface. Given an environment return the available
-;;; policy-qualities in that environment. The returned value has is a
+;;; Public interface. Given a client, return the available
+;;; policy-qualities for that environment. The returned value has is a
 ;;; proper list of entries of the form (NAME TYPE DEFAULT), where NAME
 ;;; is the name of the quality, TYPE is the type of allowable values
 ;;; of the policy, and DEFAULT is the value used for a declaration
 ;;; like (OPTIMIZE NAME).
-(defgeneric policy-qualities (environment)
+(defgeneric policy-qualities (client)
   (:method-combination append))
 
 ;;; Private. A list to return from policy-qualities's default
@@ -16,13 +16,8 @@
 ;;; it should specialize POLICY-QUALITIES.
 (defvar *cleavir-policy-qualities* nil)
 
-;;; Default method. If global, use cleavir's. If not, jump up.
-(defmethod policy-qualities append (environment)
-  ;; FIXME
-  (let ((global (cleavir-env:global-environment environment)))
-    (if (eq global environment)
-	*cleavir-policy-qualities*
-	(policy-qualities global))))
+;;; Default method: Use Cleavir's.
+(defmethod policy-qualities append (client) *cleavir-policy-qualities*)
 
 ;;; Define a cleavir policy quality, respecting redefinition.
 (defun make-cleavir-policy-quality (name type default)

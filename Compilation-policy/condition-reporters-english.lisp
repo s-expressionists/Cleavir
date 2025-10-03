@@ -17,4 +17,4 @@
     ((condition no-policy-computer) stream (language acclimation:english))
   (format stream "~s is a defined policy quality for ~s, but there~@
                   is no method on COMPUTE-POLICY-QUALITY for it."
-	  (quality condition) (environment condition)))
+	  (quality condition) (client condition)))

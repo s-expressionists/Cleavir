@@ -257,10 +257,6 @@
 (defmethod cleavir-env:type-expand ((env sb-kernel:lexenv) ts)
   (sb-ext:typexpand ts env))
 
-(defmethod cleavir-env:optimize-qualities ((env sb-kernel:lexenv))
-  (loop for (opt) in (sb-cltl2:declaration-information 'optimize env)
-        collect `(,opt (integer 0 3) 3)))
-
 (defmethod cleavir-env:declarations ((env sb-kernel:lexenv))
   ;; CLTL2 only has accessors for information on a given decl, not
   ;; a list of all DECLAIM DECLARATION'd declarations.

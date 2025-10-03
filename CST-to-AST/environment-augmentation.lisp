@@ -155,12 +155,10 @@
   ;; Make sure every environment has a complete optimize & policy.
   (let* ((previous (env:optimize (env:optimize-info system environment)))
          (total (cleavir-policy:normalize-optimize
-                 (append optimize previous)
-                 environment))
+                 system
+                 (append optimize previous)))
          ;; Compute also normalizes, so this is slightly wasteful.
-         (policy (cleavir-policy:compute-policy
-                  total
-                  (env:global-environment environment))))
+         (policy (cleavir-policy:compute-policy system total)))
     (env:add-optimize environment total policy)))
 
 ;;; Extract any OPTIMIZE information from a set of canonicalized
