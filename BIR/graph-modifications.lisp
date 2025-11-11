@@ -435,6 +435,9 @@ If it is possible, return true, otherwise false."
          (let* ((successor (first successors))
                 (predecessors (predecessors successor)))
            (and (= (set:size predecessors) 1)
+                ;; if iblock is a zombie, it may have a successor
+                ;; that doesn't have it as a predecessor.
+                (eq (set:arb predecessors) iblock)
                 (set:empty-set-p (entrances successor))
                 (eq (function iblock) (function successor))
                 (eq (dynamic-environment iblock)
