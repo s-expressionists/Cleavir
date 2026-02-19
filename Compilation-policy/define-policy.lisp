@@ -17,7 +17,9 @@
 (defvar *cleavir-policy-qualities* nil)
 
 ;;; Default method: Use Cleavir's.
-(defmethod policy-qualities append (client) *cleavir-policy-qualities*)
+(defmethod policy-qualities append (client)
+  (declare (ignore client))
+  *cleavir-policy-qualities*)
 
 ;;; Define a cleavir policy quality, respecting redefinition.
 (defun make-cleavir-policy-quality (name type default)

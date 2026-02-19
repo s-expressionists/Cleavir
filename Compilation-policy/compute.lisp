@@ -8,6 +8,7 @@
 ;;; If a policy is directly specified, just use that.
 (defmethod compute-policy-quality :around
     (client name optimize)
+  (declare (ignore client))
   (multiple-value-bind (value present-p)
       (optimize-value optimize name)
     (if present-p

@@ -877,6 +877,7 @@
 ;;; redundant, but it's not a big deal.
 
 (defmethod optimize-info (system (environment optimize))
+  (declare (cl:ignore system))
   (make-instance 'optimize-info
     :optimize (optimize environment)
     :policy (policy environment)))
