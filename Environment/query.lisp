@@ -281,7 +281,7 @@
 ;;; Cleavir tools call this function in order to obtain information
 ;;; about the policy and optimization levels that are in scope.
 
-(defgeneric optimize-info (environment))
+(defgeneric optimize-info (system environment))
 
 (defclass optimize-info ()
   ((%optimize :initarg :optimize :reader optimize)

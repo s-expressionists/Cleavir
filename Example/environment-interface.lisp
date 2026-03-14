@@ -62,13 +62,13 @@
                                    :identities (list name))
                                  (attributes:default-attributes))))))))))
 
-(defmethod env:declarations ((env environment)) '())
+(defmethod env:declarations ((sys example) (env environment)) '())
 
-(defmethod env:optimize-info ((env environment))
+(defmethod env:optimize-info ((sys example) (env environment))
   (make-instance 'env:optimize-info
     :optimize (optimize* env) :policy (policy env)))
 
-(defmethod env:type-expand ((env environment) typespec)
+(defmethod env:type-expand ((system example) (env environment) typespec)
   (let* ((head (if (consp typespec) (first typespec) typespec))
          (expander (gethash head (type-expanders env))))
     (if expander
@@ -81,14 +81,13 @@
         (errorp (error "No class named ~s" name))
         (t nil)))
 
-(defmethod env:eval (form env (dispatch-env environment))
+(defmethod env:eval (form env (system example))
   (declare (ignore env))
   ;; Ignoring the environment is incorrect, but writing an evaluator
   ;; is out of scope for this example.
   (eval form))
 
-(defmethod env:cst-eval (cst env (dispatch-env environment)
-                         (system example))
+(defmethod env:cst-eval (cst env (system example))
   (declare (ignore env))
   (eval (cst:raw cst)))
 

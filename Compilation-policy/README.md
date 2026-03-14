@@ -15,7 +15,7 @@ generic function. Cleavir defines several of its own policies
 with `DEFINE-CLEAVIR-COMPILER-POLICY`, but implementations can
 as well for their own compiler transforms. `POLICY-QUALITIES`'s
 return value has the same format as
-`CLEAVIR-ENV:OPTIMIZE-QUALITIES`, and an `APPEND` method combo.
+`OPTIMIZE-QUALITIES`, and an `APPEND` method combo.
 
 Every AST and instruction stores the policy that was computed
 for its lexical region. (This means that policies should be
@@ -34,8 +34,8 @@ For implementors:
 
 ```lisp
 (defmethod cleavir-policy:compute-policy-quality
-    ((name (eql 'cleavir-typed-transforms:insert-type-checks))
-     optimize (env sys:global-environment))
+    (client (name (eql 'cleavir-typed-transforms:insert-type-checks))
+     optimize)
   (= (cleavir-policy:optimize-value optimize 'safety) 3))
 ```
 

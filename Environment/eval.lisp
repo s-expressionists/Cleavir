@@ -4,9 +4,9 @@
 ;;;
 ;;; Generic function EVAL.
 ;;;
-;;; We define EVAL as a generic function with three arguments: a form
-;;; and two environments.  The first environment is the environment in
-;;; which the form is to be evaluated.  The second environment is used
+;;; We define EVAL as a generic function with three arguments: a form,
+;;; an environment, and a system.  The environment is the environment
+;;; in which the form is to be evaluated.  The system is used
 ;;; for generic dispatch only.
 ;;;
 ;;; When some Cleavir tools such as the minimal compiler or the AST
@@ -88,136 +88,8 @@
 ;;; is incorrect because any declarations present in the environment
 ;;; are lost when CL:EVAL is called.
 
-(defgeneric eval (form environment dispatch-environment))
-
-(defmethod eval (form environment1 (environment2 entry))
-  (eval form environment1 (next environment2)))
+(defgeneric eval (form environment system))
 
 ;;; This version of EVAL takes a concrete syntax tree rather than a
-;;; Common Lisp form.  Also, this version of eval has an additional
-;;; parameter SYSTEM, so that we can evaluate CSTs differently
-;;; according to the particular implementation we have.
-(defgeneric cst-eval (cst environment dispatch-environment system))
-
-(defmethod cst-eval (cst environment1 (environment2 entry) system)
-  (cst-eval cst environment1 (next environment2) system))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Generic function MACRO-FUNCTION.
-;;;
-;;; We define MACRO-FUNCTION as a generic function with two arguments:
-;;; a symbol and an environment.
-;;;
-;;; An implementation can use this function in the following way.
-;;; Rather than defining implementation-specific methods on
-;;; environment augmentation functions that create instances of
-;;; corresponding implementation-specific environment augmentation
-;;; classes, the implementation might choose to handle both the
-;;; implementation-specific augmentation classes and the default
-;;; augmentation classes provided by Cleavir.  In order to make this
-;;; technique work, the implementation needs to do two things:
-;;;
-;;;   * Modify the existing implementation of CL:MACRO-FUNCTION so
-;;;     that it calls the generic MACRO-FUNCTION here.  If the
-;;;     optional argument to CL:MACRO-FUNCTION was supplied, it is
-;;;     passed directly as the second argument to the generic
-;;;     MACRO-FUNCTION.  If not, an argument representing the global
-;;;     environment is passed instead.
-;;;
-;;;   * Supply one or more methods on the generic MACRO-FUNCTION,
-;;;     specialized to the implementation-specific global environment
-;;;     classes (for implementations with first-class global
-;;;     environments), or to an artificial class used as a proxy for
-;;;     the global environment (for implementations that do not have
-;;;     first-class global environments).  These methods should return
-;;;     NIL when no macro function is found.
-;;;
-;;;   * Also, if CL:MACRO-FUNCTION will still be called with
-;;;     implementation-specific lexical environments, supply one or
-;;;     more methods on the generic MACRO-FUNCTION specialized to the
-;;;     implementations-specific lexical environment classes.
-
-(defgeneric macro-function (symbol environment))
-
-;;; The default method specialized to ENTRY is called for entries that
-;;; are not of type MACRO or FUNCTION.  This method just makes a
-;;; recursive call, passing the next environment as an argument.
-(defmethod macro-function (symbol (environment entry))
-  (macro-function symbol (next environment)))
-
-;;; This method is invoked when the environment is of type MACRO so it
-;;; might potentially contain the macro function that we are looking
-;;; for.  It is the one we are looking for if and only if the NAME of
-;;; the environment is the symbol we are passed as an argument.  If
-;;; not, we continue searching in the next environment.
-(defmethod macro-function (symbol (environment macro))
-  (if (eq symbol (name environment))
-      (expander environment)
-      (macro-function symbol (next environment))))
-
-;;; This method is invoked when the environment is of type FUNCTION so
-;;; it might potentially contain a shadowing function. If it does, we
-;;; return NIL immediately; otherwise we continue searching.
-(defmethod macro-function (symbol (environment function))
-  (if (eq symbol (name environment))
-      nil
-      (macro-function symbol (next environment))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Generic function COMPILER-MACRO-FUNCTION
-;;;
-;;; The standard Common Lisp function MACRO-FUNCTION takes an optional
-;;; ENVIRONMENT argument.  When that argument is a local environment
-;;; in which there is a local function or macro definition with the
-;;; same name, then that local definition shadows any existing global
-;;; macro function.  For that reason, we must first search the local
-;;; environment and return NIL if we see a local function or macro
-;;; definition.  We accomplish this by defining a generic function,
-;;; also called COMPILER-MACRO-FUNCTION.  We supply methods on that
-;;; generic function that return NIL when called with a local function
-;;; or macro definition with the right name.
-;;;
-;;; Implementations should define a method on this generic function
-;;; that accomplishes the task for the specific global environment.
-
-(defgeneric compiler-macro-function (function-name environment))
-
-;;; The default method specialized to ENTRY is called for entries that
-;;; are not of type MACRO or FUNCTION.  This method just makes a
-;;; recursive call, passing the next environment as an argument.
-(defmethod compiler-macro-function (symbol (environment entry))
-  (macro-function symbol (next environment)))
-
-;;; This method is invoked when the environment is of type MACRO so it
-;;; might potentially contain a macro function with the same name as
-;;; the compiler macro.  If it does, we return NIL.  If not, we
-;;; continue searching in the next environment.
-(defmethod compiler-macro-function (function-name (environment macro))
-  (if (eq function-name (name environment))
-      nil
-      (compiler-macro-function function-name (next environment))))
-
-;;; This method is invoked when the environment is of type FUNCTION so
-;;; it might potentially contain a function with the same name as the
-;;; compiler macro.  If it does, we return NIL.  If not, we continue
-;;; searching in the next environment.
-(defmethod compiler-macro-function (function-name (environment function))
-  (if (eq function-name (name environment))
-      nil
-      (compiler-macro-function function-name (next environment))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Generic function SYMBOL-MACRO-EXPANSION.
-
-(defgeneric symbol-macro-expansion (symbol environment))
-
-(defmethod symbol-macro-expansion (symbol (environment entry))
-  (symbol-macro-expansion symbol (next environment)))
-
-(defmethod symbol-macro-expansion (symbol (environment symbol-macro))
-  (if (eq symbol (name environment))
-      (expansion environment)
-      (symbol-macro-expansion symbol (next environment))))
+;;; Common Lisp form.
+(defgeneric cst-eval (cst environment system))

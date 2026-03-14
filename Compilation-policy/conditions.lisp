@@ -12,4 +12,4 @@
 (define-condition no-policy-computer
     (error acclimation:condition)
   ((%quality :initarg :quality :reader quality)
-   (%environment :initarg :env :reader environment)))
+   (%client :initarg :client :reader client)))

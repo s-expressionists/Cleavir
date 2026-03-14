@@ -4,11 +4,11 @@
 ;;; declaration identifers declared by the implementation or user
 ;;; (by (DECLAIM (DECLARATION ...)))
 
-(defgeneric declarations (environment))
+(defgeneric declarations (system environment))
 
 ;;; An implementation should track declaim declaration, so we don't
 ;;; define a default empty method.
 
 ;;; But if it's called on a Cleavir environment, we should go up.
-(defmethod declarations ((environment entry))
-  (declarations (next environment)))
+(defmethod declarations (system (environment entry))
+  (declarations system (next environment)))

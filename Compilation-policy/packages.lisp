@@ -5,5 +5,5 @@
   (:nicknames #:cleavir-policy)
   (:export #:policy-value)
   (:export #:policy-qualities #:define-cleavir-policy-quality)
-  (:export #:optimize-value #:normalize-optimize)
+  (:export #:optimize-qualities #:optimize-value #:normalize-optimize)
   (:export #:compute-policy #:compute-policy-quality))

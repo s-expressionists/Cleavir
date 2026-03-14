@@ -483,7 +483,7 @@
                      append (cdr (cst:listify declaration-cst))))
              (canonicalized-dspecs
                (cst:canonicalize-declaration-specifiers
-                system (env:declarations env) declaration-specifiers))
+                system (env:declarations system env) declaration-specifiers))
              (itemized-lambda-list
                (itemize-lambda-list parsed-lambda-list)))
         (multiple-value-bind (idspecs rdspecs)

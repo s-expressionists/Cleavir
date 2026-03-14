@@ -21,14 +21,6 @@
 (defmethod cleavir-env:type-expand ((env visualizer-environment) type)
   (cleavir-env:type-expand (environment env) type))
 
-(defmethod cleavir-compilation-policy:policy-qualities append ((env visualizer-environment))
-  (loop :for (quality value) :in (optimize* env)
-        :collect `(,quality (integer 0 3) ,value)))
-
-(defmethod cleavir-policy:compute-policy-quality
-    (name optimize (environment visualizer-environment))
-  (cleavir-policy:compute-policy-quality name optimize (environment environment)))
-
 (defmethod cleavir-env:optimize-info ((environment visualizer-environment))
   (let ((optimize (optimize* environment)))
     (make-instance 'cleavir-env:optimize-info

@@ -10,8 +10,6 @@
            #:dynamic-extent
            #:compiler-macro
            #:eval
-           #:macro-function
-           #:compiler-macro-function
            #:find-class
            #:function
            #:block
@@ -33,7 +31,6 @@
    #:block-info
    #:tag-info
    #:optimize-info
-   #:optimize-qualities
    #:global-environment
    #:name
    #:origin
@@ -67,8 +64,6 @@
    #:add-inline-expansion
    #:eval
    #:cst-eval
-   #:macro-function
-   #:compiler-macro-function
    #:symbol-macro-expansion
    #:find-class
    #:lexical-variable
