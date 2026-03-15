@@ -15,13 +15,14 @@
 (defmethod cleavir-env:function-info (sys (env visualizer-environment) (sym t))
   (cleavir-env:function-info sys (environment env) sym))
 
-(defmethod cleavir-env:declarations ((env visualizer-environment))
-  (cleavir-env:declarations (environment env)))
+(defmethod cleavir-env:declarations (sys (env visualizer-environment))
+  (cleavir-env:declarations sys (environment env)))
 
-(defmethod cleavir-env:type-expand ((env visualizer-environment) type)
-  (cleavir-env:type-expand (environment env) type))
+(defmethod cleavir-env:type-expand (sys (env visualizer-environment) type)
+  (cleavir-env:type-expand sys (environment env) type))
 
-(defmethod cleavir-env:optimize-info ((environment visualizer-environment))
+(defmethod cleavir-env:optimize-info (sys (environment visualizer-environment))
+  (declare (ignore sys))
   (let ((optimize (optimize* environment)))
     (make-instance 'cleavir-env:optimize-info
                    :optimize optimize
