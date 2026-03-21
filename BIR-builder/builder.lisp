@@ -148,6 +148,10 @@
   ;; Not any others, since they may be a block merge afterwards.
   (setf (bir:dynamic-environment (first (bir:next inst))) inst))
 
+(defmethod post ((inst bir:catchi))
+  (set:nadjoinf (bir:catches (bir:function inst)) inst)
+  (setf (bir:dynamic-environment (first (bir:next inst))) inst))
+
 (defmethod post ((inst bir:unwind))
   (set:nadjoinf (bir:unwinds (bir:come-from inst)) inst)
   (set:nadjoinf (bir:entrances (bir:destination inst)) (bir:iblock inst)))

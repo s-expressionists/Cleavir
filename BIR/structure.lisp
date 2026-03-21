@@ -461,6 +461,10 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
    (%come-froms :initarg :come-froms :accessor come-froms
                 :initform (set:empty-set)
                 :type set:set)
+   ;; The set of catchis in this function.
+   (%catches :initarg :catches :accessor catches
+             :initform (set:empty-set)
+             :type set:set)
    ;; The set of lexicals closed over by this function. Currently
    ;; filled in by process-captured-variables.
    (%environment :initform (set:empty-set) :accessor environment

@@ -167,9 +167,11 @@ See VALUES-SAVE"))
 
 See UNWIND"))
 
-(defclass catchi (one-input no-output terminator dynamic-environment)
+(defclass catchi (one-input one-output terminator dynamic-environment)
   ()
-  (:documentation "Terminator and dynamic environment representing a dynamic exit point, i.e. CL:CATCH. The one input is the catch tag and there are no outputs. The first of the NEXT IBLOCKs is the normal child continuation, i.e. the body of the cl:catch, and the second IBLOCK is the end of the catch, i.e. the destination of any throws.
+  (:documentation "Terminator and dynamic environment representing a dynamic exit point, i.e. CL:CATCH.
+The one input is the catch tag. The optional single output represents the value(s) returned by any CL:THROW, which would otherwise be undefined if the catch body never exits normally. This output, if it exists, is defined in only the second NEXT IBLOCK, not the first.
+The first of the NEXT IBLOCKs is the normal child continuation, i.e. the body of the cl:catch, and the second IBLOCK is the end of the catch, i.e. the destination of any throws.
 
 See THROWI"))
 
