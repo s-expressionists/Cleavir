@@ -160,3 +160,5 @@
   (setf (bir:dynamic-environment (first (bir:next inst))) inst))
 (defmethod post ((inst bir:unwind-protect))
   (setf (bir:dynamic-environment (first (bir:next inst))) inst))
+(defmethod post ((inst bir:progvi))
+  (setf (bir:dynamic-environment (first (bir:next inst))) inst))

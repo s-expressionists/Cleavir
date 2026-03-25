@@ -242,6 +242,8 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   (let* ((inputs (inputs instruction))
          (constant (first inputs))
          (val (second inputs)))
+    (test (= (length inputs) 2)
+          "has more or less than two inputs ~a" instruction inputs)
     (test (typep constant 'variable-cell)
           "has non-variable-cell input ~a"
           instruction constant)
@@ -253,6 +255,13 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
           instruction constant)
     (check-ubd instruction (list val))
     (check-usedness instruction (list val))))
+
+(defmethod verify-inputs ((instruction progvi))
+  (let ((inputs (inputs instruction)))
+    (test (= (length inputs) 2)
+          "has more or less than two inputs ~a" instruction inputs)
+    (check-ubd instruction inputs)
+    (check-usedness instruction inputs)))
 
 (defmethod verify-inputs ((instruction load-time-value-reference))
   (let* ((inputs (inputs instruction))

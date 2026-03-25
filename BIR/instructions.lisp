@@ -198,6 +198,10 @@ See LETI"))
   ()
   (:documentation "Terminator and dynamic environment representing the binding of a dynamic variable. Within this dynamic environment, the symbol has this value (unless there is a more recent binding, of course). The first input is the VARIABLE-CELL being bound, and the second input its new value. No outputs."))
 
+(defclass progvi (dynamic-environment no-output terminator1)
+  ()
+  (:documentation "Terminator and dynamic environment representing the binding of several dynamic variables determined at runtime, as by CL:PROGV. Within this dynamic environment, the symbols have the values or lack thereof (unless there is a more recent binding, of course.) The first input is the list of symbols, and the second input is the list of values. No outputs."))
+
 (defclass unwind (terminator0)
   ((%come-from :initarg :come-from :reader come-from
                :type come-from)
