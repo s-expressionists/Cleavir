@@ -114,17 +114,18 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
 (defmethod verify-outputs ((instruction unwind))
   (verify-phi-outputs instruction))
 (defmethod verify-outputs ((c catchi))
-  (test (typep (output c) 'phi)
-        "has non-phi output ~a" c (output c))
-  (test (set:presentp c (definitions (output c)))
-        "is not a definition of its output ~a" c (output c))
-  (test (null (inputs (first (next c))))
-        "has body NEXT ~a with more than zero inputs ~a"
-        c (first (next c)) (inputs (first (next c))))
-  (let* ((aib (second (next c))) (inputs (inputs aib)))
-    (test (and (= (length inputs) 1) (eq (first inputs) (output c)))
-          "has alt NEXT ~a with inputs ~a other than this catchi's output"
-          aib inputs)))
+  (test (member (length (outputs c)) '(0 1))
+        "has more than one output ~a" (outputs c))
+  (when (= 1 (length (outputs c)))
+    (let ((output (first (outputs c))))
+      (test (typep output 'phi)
+            "has non-phi output ~a" c output)
+      (test (set:presentp c (definitions output))
+            "is not a definition of its output ~a" c output)
+      (let* ((aib (second (next c))) (inputs (inputs aib)))
+        (test (and (= (length inputs) 1) (eq (first inputs) output))
+              "has alt NEXT ~a with inputs ~a other than this catchi's output"
+              aib inputs)))))
 
 (defmethod verify-outputs ((instruction instruction))
   (let ((outputs (outputs instruction)))
@@ -423,17 +424,9 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   (test (eq (dynamic-environment (first (next c))) c)
         "has normal successor ~a with wrong dynamic environment ~a"
         c (first (next c)) (dynamic-environment (first (next c))))
-  (test (typep (output c) 'phi)
-        "has non-phi output ~a" c (output c))
-  (test (set:presentp c (definitions (output c)))
-        "is not a definition of its output ~a" c (output c))
   (test (null (inputs (first (next c))))
         "has body NEXT ~a with more than zero inputs ~a"
         c (first (next c)) (inputs (first (next c))))
-  (let* ((aib (second (next c))) (inputs (inputs aib)))
-    (test (and (= (length inputs) 1) (eq (first inputs) (output c)))
-          "has alt NEXT ~a with inputs ~a other than this catchi's output"
-          aib inputs))
   (test (set:presentp c (catches (function c)))
         "not in its function ~s's catches set" c (function c)))
 
