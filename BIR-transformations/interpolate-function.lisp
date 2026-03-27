@@ -237,6 +237,7 @@
 (defun interpolate-function (function target-function dynenv)
   (set:nunionf (bir:variables target-function) (bir:variables function))
   (set:nunionf (bir:come-froms target-function) (bir:come-froms function))
+  (set:nunionf (bir:catches target-function) (bir:catches function))
   ;; Re-home iblocks (and indirectly, instructions), and if the
   ;; function unwinds to its target function, change it to a local
   ;; unwind.
