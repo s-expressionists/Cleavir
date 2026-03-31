@@ -10,8 +10,7 @@
   :bug-tracker "https://github.com/s-expressionists/Cleavir/issues"
   :source-control (:git "https://github.com/s-expressionists/Cleavir.git")
   :depends-on (:cleavir-primop :cleavir-set :cleavir-attributes
-                               :acclimation :cleavir-conditions :cleavir-ctype
-               :concrete-syntax-tree)
+                               :acclimation :cleavir-conditions :cleavir-ctype)
   :components
   ((:file "packages")
    (:file "structure" :depends-on ("packages"))
