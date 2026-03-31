@@ -176,8 +176,14 @@
 ;;; definitions, instead of narrowing the types conservatively.
 (defun compute-phi-type (phi system)
   (let ((type (ctype:values-bottom system)))
-    (set:doset (inp (bir:phi-inputs phi) type)
-      (setq type (ctype:values-disjoin system type (bir:ctype inp))))))
+    (set:doset (def (bir:definitions phi) type)
+      (etypecase def
+        ((or bir:jump bir:unwind)
+         (let* ((pos (position phi (bir:outputs def)))
+                (inp (nth pos (bir:inputs def))))
+           (setq type (ctype:values-disjoin system type (bir:ctype inp)))))
+        (bir:catchi ; could be anything.
+         (return-from compute-phi-type (ctype:values-top system)))))))
 
 (defun derive-iblock-input-types (iblock system)
   (dolist (phi (bir:inputs iblock))
@@ -185,8 +191,14 @@
 
 (defun compute-phi-attributes (phi)
   (let ((attr t))
-    (set:doset (inp (bir:phi-inputs phi) attr)
-      (setq attr (attributes:meet-attributes attr (bir:attributes inp))))))
+    (set:doset (def (bir:definitions phi) attr)
+      (etypecase def
+        ((or bir:jump bir:unwind)
+         (let* ((pos (position phi (bir:outputs def)))
+                (inp (nth pos (bir:inputs def))))
+           (setq attr (attributes:meet-attributes attr (bir:attributes inp)))))
+        (bir:catchi
+         (return-from compute-phi-attributes (attributes:default-attributes)))))))
 
 (defun derive-iblock-input-attributes (iblock)
   (dolist (phi (bir:inputs iblock))
