@@ -4,4 +4,4 @@
                     (#:set #:cleavir-set))
   (:export #:inserter #:constant #:vcell #:fcell #:adjoin-variable)
   (:export #:begin #:proceed #:insert #:terminate)
-  (:export #:make-iblock))
+  (:export #:make-iblock #:make-start-iblock))

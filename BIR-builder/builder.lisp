@@ -52,6 +52,19 @@
     (set:nadjoinf (bir:scope dynamic-environment) ib)
     ib))
 
+;;; Make a function's initial iblock.
+;;; make-iblock can do this too, since the inserter is only used
+;;; for defaults that a start iblock doesn't need, but this function
+;;; lets you do it without an inserter, and also sets it up in the
+;;; function for you.
+(defun make-start-iblock (function &key (name '#:start))
+  (let ((ib (make-instance 'bir:iblock
+              :name name
+              :function function :dynamic-environment function)))
+    (setf (bir:start function) ib)
+    (set:nadjoinf (bir:scope function) ib)
+    ib))
+
 ;;; Function called to carry out any convenient post-processing
 ;;; called when an instruction is built.
 ;;; NOTE: An alternate design would be to make INSERT and TERMINATE generic,
