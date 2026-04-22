@@ -171,7 +171,7 @@
   (destructuring-bind (assign outs . rest) inst-disasm
     (declare (cl:ignore assign))
     (format t "~&     ")
-    (format t "~{~(~a~)~}" rest)
+    (format t "~{~(~s~)~}" rest)
     (when outs
       (format t " -> "))
     (format t "~{~a~^, ~}" (mapcar #'first outs))
@@ -182,7 +182,7 @@
                            types)
                     (every (lambda (type-spec) (eq type-spec nil)) type-specs))
           (format t "~45T; ")
-          (format t "~{ctype: ~a~^, ~}" types)))))
+          (format t "~{ctype: ~s~^, ~}" types)))))
   (values))
 
 (defun cleavir-bir-disassembler:display-iblock-disassembly
@@ -197,7 +197,7 @@
     (when show-dynenv
       (format t "~&   dynenv = ~a" dynenv))
     (when entrances
-      (format t "~&   entrances = ~(~:a~)" entrances))
+      (format t "~&   entrances = ~(~:s~)" entrances))
     (mapc #'cleavir-bir-disassembler:display-instruction-disassembly insts))
   (values))
 
