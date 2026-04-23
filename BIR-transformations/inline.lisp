@@ -1,39 +1,5 @@
 (in-package #:cleavir-bir-transformations)
 
-;;; Return true if the call arguments are compatible with those of the
-;;; function lambda list. If they're not, warn and return false.
-;;; This checks argument counts but does NOT check &key argument validity,
-;;; which for non-constant keywords can involve complex analysis.
-(defun check-argument-list-compatible (arguments function)
-  (let ((lambda-list (bir:lambda-list function))
-        (nsupplied (length arguments))
-        (nrequired 0)
-        (noptional 0)
-        (restp nil))
-    (bir:map-lambda-list
-     (lambda (state item index)
-       (declare (ignore item index))
-       (case state
-         (:required (incf nrequired))
-         (&optional (incf noptional))
-         ((&rest &key) (setf restp t))
-         (&allow-other-keys)
-         (otherwise
-          ;; Implementation-specific keyword. We don't know how to deal
-          ;; with this, so silently give up. KLUDGEy.
-          (return-from check-argument-list-compatible nil))))
-     lambda-list)
-    (let ((nfixed (+ nrequired noptional)))
-      (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
-          t
-          (warn "~a is passed ~d arguments, but expects ~@?"
-                (bir:name function) nsupplied
-                (cond (restp "at least ~d")
-                      ((zerop noptional) "exactly ~d")
-                      ((zerop nrequired) "at most ~*~d")
-                      (t "between ~d and ~d"))
-                nrequired nfixed)))))
-
 ;;; Detect calls to a function via its closure and mark them as direct
 ;;; local calls to the function, doing compile time argument
 ;;; checking. If there are no more references to the closure, we can
@@ -55,10 +21,7 @@
   (let ((use (bir:use datum)) (def (bir:definition datum)))
     (typecase use
       (bir:call
-       (when (and (eq datum (bir:callee use))
-                  (check-argument-list-compatible
-                   (rest (bir:inputs use))
-                   function))
+       (when (eq datum (bir:callee use))
          (change-class use 'bir:local-call)
          (bir:replace-uses function datum)
          (bir:delete-instruction def)))

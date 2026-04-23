@@ -341,6 +341,44 @@
      lambda-list)
     too-hairy-p))
 
+;;; Return true if the call arguments are compatible with those of the
+;;; function lambda list. If they're not, warn and return false.
+;;; This checks argument counts but does NOT check &key argument validity,
+;;; which for non-constant keywords can involve complex analysis.
+(defun check-argument-list-compatible (arguments function)
+  (let ((lambda-list (bir:lambda-list function))
+        (nsupplied (length arguments))
+        (nrequired 0)
+        (noptional 0)
+        (restp nil))
+    (bir:map-lambda-list
+     (lambda (state item index)
+       (declare (ignore item index))
+       (case state
+         (:required (incf nrequired))
+         (&optional (incf noptional))
+         ((&rest &key) (setf restp t))
+         (&allow-other-keys)
+         (otherwise
+          ;; Implementation-specific keyword. We don't know how to deal
+          ;; with this, so silently give up. KLUDGEy.
+          (return-from check-argument-list-compatible nil))))
+     lambda-list)
+    (let ((nfixed (+ nrequired noptional)))
+      (if (and (<= nrequired nsupplied) (or restp (<= nsupplied nfixed)))
+          t
+          (warn "~a is passed ~d arguments, but expects ~@?"
+                (bir:name function) nsupplied
+                (cond (restp "at least ~d")
+                      ((zerop noptional) "exactly ~d")
+                      ((zerop nrequired) "at most ~*~d")
+                      (t "between ~d and ~d"))
+                nrequired nfixed)))))
+
+(defun invalid-call-p (local-call)
+  (not (check-argument-list-compatible (rest (bir:inputs local-call))
+                                       (bir:callee local-call))))
+
 (defun maybe-interpolate (function)
   ;; When a function has no enclose and returns to a single control
   ;; point, it is eligible for interpolation.
@@ -349,7 +387,9 @@
     ;; FIXME: We should respect inline and not inline declarations.
     (let ((local-calls (bir:local-calls function)))
       (unless (or (set:empty-set-p local-calls)
-                  (set:some (lambda (c) (typep c 'bir:mv-local-call))
+                  (set:some (lambda (c)
+                              (or (typep c 'bir:mv-local-call)
+                                  (invalid-call-p c)))
                             local-calls))
         (multiple-value-bind (return-point common-use common-dynenv target-owner)
             (common-return-cont function local-calls)

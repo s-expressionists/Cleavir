@@ -94,19 +94,12 @@ See MV-CALL"))
 (defmethod attributes ((instruction abstract-call))
   (attributes (callee instruction)))
 
-;;; A local call is a legal call to a function within the same
+;;; A local call is a call to a function within the same
 ;;; module. Therefore, the first input is actually a
-;;; FUNCTION. Importantly, illegal calls (i.e. ones whose arguments
-;;; are not compatible with the lambda list of the callee) are not
-;;; classified as local calls, both so that they can reuse the same
-;;; runtime mechanism for argument count errors that normal calls from
-;;; outside a module use, and so that we can make the assumption that
-;;; local calls have compatible arguments with the lambda list of the
-;;; callee.
+;;; FUNCTION.
 (defclass abstract-local-call (abstract-call)
   ()
-  (:documentation "Abstract instruction representing a local call, i.e. a call to a FUNCTION in this MODULE. The first input is this callee.
-Importantly, illegal calls, i.e. ones whose arguments are not compatible with the lambda list of the callee, are not classified as local calls. This so that the presumed runtime mechanism for argument count errors can be used. MV-LOCAL-CALLs do not have a known argument count, and therefore could end up being illegal at runtime, but otherwise this also lets us assume local calls are legal."))
+  (:documentation "Abstract instruction representing a local call, i.e. a call to a FUNCTION in this MODULE. The first input is this callee."))
 
 (defclass local-call (abstract-local-call)
   ()
