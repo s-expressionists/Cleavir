@@ -176,7 +176,10 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
   (let ((inputs (inputs instruction)))
     (test (typep (first inputs) 'function)
           "has non-function callee ~a"
-          instruction (first inputs))
+      instruction (first inputs))
+    (test (set:presentp instruction (local-calls (first inputs)))
+      "is not listed as a local call of its callee ~a"
+      instruction (first inputs))
     (check-ubd instruction (rest inputs))
     (check-usedness instruction (rest inputs))))
 
@@ -677,6 +680,9 @@ If there are problems, a VERIFICATION-FAILED is signaled. If the verification pr
             (when *problems*
               (push (list* function *problems*) function-problems))))
         ;; Now do module-level tests
+        ;; Make sure we have entry points.
+        (test (not (set:empty-set-p (entry-points module)))
+          "has no entry points" module)
         ;; Check for dangling references.
         (set:doset (constant (constants module))
           (test (not (set:empty-set-p (readers constant)))

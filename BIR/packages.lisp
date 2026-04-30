@@ -11,7 +11,7 @@
                     (#:ctype #:cleavir-ctype))
   (:export #:module #:functions #:constants #:constant-in-module
            #:load-time-value-in-module #:function-cell-in-module
-           #:variable-cell-in-module)
+           #:variable-cell-in-module #:entry-points #:entry-point-p)
   (:export #:function #:iblocks #:start #:end #:inputs #:variables
            #:come-froms #:catches #:environment #:other-uses
            #:local-calls #:lambda-list #:name #:docstring #:original-lambda-list)

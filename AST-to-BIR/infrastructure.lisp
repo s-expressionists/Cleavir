@@ -71,7 +71,10 @@
     (compile-function ast system)))
 
 (defun compile-toplevel (ast system)
-  (compile-into-module ast (make-module) system))
+  (let* ((module (make-module))
+         (irfun (compile-into-module ast module system)))
+    (set:nadjoinf (entry-points module) irfun)
+    irfun))
 
 ;;; Returns a list of data, or :no-return, or one datum (representing mvalues).
 (defgeneric compile-ast (ast inserter system)

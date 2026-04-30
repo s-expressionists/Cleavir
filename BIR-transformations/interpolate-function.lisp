@@ -322,6 +322,11 @@
         (bir:merge-successor-if-possible (bir:iblock returni)))
       (when unique-call
         (bir:merge-successor-if-possible (bir:iblock unique-call)))
+      ;; Remove the interpolated function from the module.
+      ;; We don't need to perform any other actions in
+      ;; bir::clean-up-function since the actual code of the function
+      ;; is still around, just not owned by it any more.
+      (set:nremovef (bir:functions (bir:module function)) function)
       ;; We've interpolated and there are potentially useless
       ;; come-froms in TARGET-OWNER, so now that the IR is in a
       ;; consistent state, eliminate them.

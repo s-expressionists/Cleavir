@@ -26,9 +26,9 @@
          (dolist (domain domains)
            (initialize-instruction strategy domain inst)))
        function))
-    ;; Entry points. FIXME: BIR should indicate entry points better.
+    ;; Entry points.
     (bir:do-functions (function module)
-      (when (or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
+      (when (or (bir:enclose function) (bir:entry-point-p function))
         (dolist (domain domains)
           (initialize-entry-point strategy domain function)))))
   (bir:do-functions (function module)

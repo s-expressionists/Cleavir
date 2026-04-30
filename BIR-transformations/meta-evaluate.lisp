@@ -115,40 +115,44 @@
 ;;; Derive the type of the function arguments from the types of the
 ;;; arguments of its local calls.
 (defun derive-function-argument-types (function system)
-  (let ((local-calls (bir:local-calls function)))
-    (if (or (bir:enclose function) (set:empty-set-p local-calls))
-        ;; If there is an enclose, we can be called from pretty much anywhere,
-        ;; so there's not much we can determine about the arguments. We can mark
-        ;; &rest arguments as being lists, and everything as being single
-        ;; values at least.
-        ;; If there is no enclose and no local calls, we treat this as a top
-        ;; level function which could again be called from anywhere.
-        (let* ((top (ctype:top system))
-               (svtop (ctype:single-value top system)))
-          (bir:map-lambda-list
-           (lambda (state item index)
-             (declare (ignore index))
-             (case state
-               ((:required) (derive-type-for-linear-datum item svtop system))
-               ((&optional)
-                (derive-type-for-linear-datum (first item) svtop system)
-                (derive-type-for-linear-datum (second item) svtop system))
-               ((&rest)
-                (derive-type-for-linear-datum
-                 item
-                 ;; LIST is of course (or null cons)
-                 (ctype:single-value
-                  (ctype:disjoin/2
-                   (ctype:member system nil)
-                   (ctype:cons top top system)
-                   system)
-                  system)
-                 system))
-               ((&key)
-                (derive-type-for-linear-datum (second item) svtop system)
-                (derive-type-for-linear-datum (third item) svtop system))))
-           (bir:lambda-list function)))
-        (derive-local-call-argument-types function local-calls system))))
+  (if (or (bir:enclose function)
+        (not (set:empty-set-p (bir:other-uses function)))
+        (bir:entry-point-p function))
+      ;; If there is an enclose, we can be called from pretty much anywhere,
+      ;; so there's not much we can determine about the arguments. We can mark
+      ;; &rest arguments as being lists, and everything as being single
+      ;; values at least.
+      ;; If we have other uses we pretend we're called from anywhere
+      ;; but this is overly pessimistic: we're used in THEI or
+      ;; something. This is suboptimal. FIXME
+      ;; If this is an entry point, we could be called
+      ;; from anywhere.
+      (let* ((top (ctype:top system))
+             (svtop (ctype:single-value top system)))
+        (bir:map-lambda-list
+         (lambda (state item index)
+           (declare (ignore index))
+           (case state
+             ((:required) (derive-type-for-linear-datum item svtop system))
+             ((&optional)
+              (derive-type-for-linear-datum (first item) svtop system)
+              (derive-type-for-linear-datum (second item) svtop system))
+             ((&rest)
+              (derive-type-for-linear-datum
+               item
+               ;; LIST is of course (or null cons)
+               (ctype:single-value
+                (ctype:disjoin/2
+                 (ctype:member system nil)
+                 (ctype:cons top top system)
+                 system)
+                system)
+               system))
+             ((&key)
+              (derive-type-for-linear-datum (second item) svtop system)
+              (derive-type-for-linear-datum (third item) svtop system))))
+         (bir:lambda-list function)))
+      (derive-local-call-argument-types function (bir:local-calls function) system)))
 
 (defun meta-evaluate-function (function system)
   (derive-function-argument-types function system)

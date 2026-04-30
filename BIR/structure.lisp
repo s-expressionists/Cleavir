@@ -502,6 +502,11 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
    (%constants :accessor constants
                :initform (set:empty-set)
                :type set:set)
+   ;; The set of functions that are used externally. This basically
+   ;; serves to keep functions alive even if they are not enclosed
+   ;; or called.
+   (%entry-points :initform (set:empty-set) :accessor entry-points
+                  :type set:set)
    ;; This table ensures that only one constant object per similar
    ;; object is created.
    (%constant-table :accessor constant-table)
@@ -517,6 +522,9 @@ In other words this is a conventional \"basic block\", except that Cleavir will 
   (setf (constant-table module) (make-hash-table :test #'eq)
         (function-cell-table module) (make-hash-table :test #'equal)
         (variable-cell-table module) (make-hash-table :test #'eq)))
+
+(defun entry-point-p (function)
+  (set:presentp function (entry-points (module function))))
 
 (defun constant-in-module (constant-value module)
   "Find the CONSTANT for the given value in MODULE, allocating a new one in the module if necessary.
