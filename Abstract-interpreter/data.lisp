@@ -212,7 +212,7 @@
                                    (inst bir:returni))
   (let* ((function (bir:function inst))
           (local-calls (bir:local-calls function)))
-     (if (or (bir:enclose function) (set:empty-set-p local-calls))
+     (if (or (bir:enclose function) (bir:entry-point-p function))
          ;; arbitrary call sites, give up
          (supremum domain)
          (let ((result (infimum domain)))

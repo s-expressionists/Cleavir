@@ -87,8 +87,9 @@
     (set:nremovef (constants module) ltv)))
 (defmethod remove-if-unused ((value function) module)
   (declare (cl:ignore module))
-  (when (and (null (enclose value))
-          (set:empty-set-p (local-calls value)))
+  (when (and (null (enclose value)) (not (entry-point-p value))
+          (set:empty-set-p (local-calls value))
+          (set:empty-set-p (other-uses value)))
     (clean-up-function value)))
 
 (defmethod (setf outputs) :before (new-outputs (inst instruction))

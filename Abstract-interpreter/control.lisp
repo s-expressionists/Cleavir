@@ -50,7 +50,7 @@
                       (info (info strategy domain end)))
                  (setf accum (join domain accum info))))
              accum))
-          ((or (bir:enclose function) (set:empty-set-p (bir:local-calls function)))
+          ((or (bir:enclose function) (bir:entry-point-p function))
            ;; We're at the start of a function and it can be called from anywhere.
            (supremum domain))
           (t ; We're at the start of a function and we understand where it's called.
