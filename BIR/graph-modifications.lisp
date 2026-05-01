@@ -174,7 +174,9 @@
 ;;; Verification requires unused constants to be deleted.
 (defun remove-unused-values (module)
   (set:doset (constant (constants module))
-    (remove-if-unused constant module)))
+    (remove-if-unused constant module))
+  (set:doset (function (functions module))
+    (remove-if-unused function module)))
 
 ;;; Remove backpointers to an instruction, etc.
 (defgeneric clean-up-instruction (instruction)
