@@ -114,6 +114,22 @@
     (dolist (output outputs)
       (add-definition output inst))))
 
+(defmethod update-instance-for-different-class :after
+    ((previous instruction) (current instruction) &rest initargs)
+  (declare (cl:ignore initargs))
+  (when (slot-boundp previous '%inputs)
+    (dolist (input (inputs previous))
+      ;; CLHS says previous is a copy and current is the actual
+      ;; instance, so the input should have CURRENT as its use.
+      (remove-use input current))
+    (dolist (input (inputs current))
+      (add-use input current)))
+  (when (slot-boundp previous '%outputs)
+    (dolist (output (outputs previous))
+      (remove-definition output current))
+    (dolist (output (outputs current))
+      (add-definition output current))))
+
 (defmethod shared-initialize :before
     ((inst thei) slot-names &rest initargs
      &key (type-check-function nil tcfp))
