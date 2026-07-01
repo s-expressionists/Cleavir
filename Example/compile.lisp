@@ -8,7 +8,7 @@
 
 (defun cst->bir (cst)
   (ast->bir (cst->ast cst)))
-
+#+(or)
 (defun abstract-interpret (module)
   (let* ((strategy (make-instance 'abstract-interpreter:sequential-slots))
          (system *system*)
@@ -43,6 +43,7 @@
      (bir-transformations:module-optimize-variables bir))
     ((:meta-evaluate)
      (bir-transformations:meta-evaluate-module bir *system*))
+    #+(or)
     ((:abstract-interpret)
      (abstract-interpret bir))
     ((:generate-type-checks)
