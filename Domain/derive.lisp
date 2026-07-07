@@ -76,8 +76,8 @@
                                           (sv-join ,client ,vrest ,default))))))
             (when rest
               (list `(,rest (values-info ,client ,domain
-                                         ,vreq ,vopt ,vrest)))))))
-        (list ginfo vreq vopt vrest))))
+                                         ,vreq ,vopt ,vrest))))))
+         (list ginfo vreq vopt vrest)))))
 
 ;;; Bind info from multiple domains simultaneously within a body, the info
 ;;; being projected from a product domain.
@@ -92,20 +92,20 @@
 ;;; the remaining values.
 (defmacro with-info ((client &rest specs &key &allow-other-keys)
                      pdomain info &body body)
-  (let ((gclient (gensym "CLIENT")) (ginfo (gensym "INFO")))
+  (let ((ginfo (gensym "INFO")))
     (multiple-value-bind (bindings ignorable)
         (loop with bindings = ()
               with ignorable = ()
               for (domain-name ll) on specs by #'cddr
-              for info = `(project ,gclient ,pdomain ,domain-name ,ginfo)
+              for info = `(project ,client ,pdomain ,domain-name ,ginfo)
               do (multiple-value-bind (sub-bindings ign)
-                     (domain-bindings gclient domain-name info ll)
+                     (domain-bindings client domain-name info ll)
                    (setf bindings (nconc bindings sub-bindings)
                          ignorable (nconc ignorable ign)))
               finally (return (values bindings ignorable)))
-      `(let* ((,gclient ,client) (,ginfo ,info)
+      `(let* ((,client ,client) (,ginfo ,info)
               ,@bindings)
-         (declare (ignorable ,gclient ,ginfo ,@ignorable))
+         (declare (ignorable ,ginfo ,@ignorable))
          ,@body))))
 
 (defun kwarg-type (client keyword default required optional rest)
@@ -183,31 +183,34 @@
 (defmacro with-info-type ((client type default &rest specs
                            &key &allow-other-keys)
                           pdomain info &body body)
-  (let ((gclient (gensym "CLIENT")) (ginfo (gensym "INFO"))
+  (let ((ginfo (gensym "INFO"))
         (bname (gensym "BLOCK")))
     (multiple-value-bind (bindings ignorable)
         (loop with bindings = ()
               with ignorable = ()
               for (domain-name ll) on specs by #'cddr
-              for info = `(project ,gclient ,pdomain ,domain-name ,ginfo)
+              for info = `(project ,client ,pdomain ,domain-name ,ginfo)
               do (multiple-value-bind (sub-bindings ign)
-                     (domain-bindings gclient domain-name info ll)
+                     (domain-bindings client domain-name info ll)
                    (setf bindings (nconc bindings sub-bindings)
                          ignorable (nconc ignorable ign)))
               finally (return (values bindings ignorable)))
       (multiple-value-bind (type-bindings type-ignorable)
-          (type-domain-bindings gclient info type
-                                `(return-from ,bname ,default))
+          (type-domain-bindings client
+                                `(project ,client ,pdomain type ,ginfo)
+                                type `(return-from ,bname ,default))
         `(block ,bname
-           (let* ((,gclient ,client) (,ginfo ,info)
+           (let* ((,client ,client) (,ginfo ,info)
                   ,@type-bindings
                   ,@bindings)
-             (declare (ignorable ,gclient ,ginfo ,@type-ignorable ,@ignorable))
+             (declare (ignorable ,ginfo ,@type-ignorable ,@ignorable))
              ,@body))))))
 
-(defmacro deriver-lambda ((client domain type &rest specs) &body body)
+(defmacro deriver-lambda ((client block-name domain type &rest specs)
+                          &body body)
   (let ((pdomain (gensym "PRODUCT-DOMAIN")) (info (gensym "PRODUCT-INFO")))
     `(lambda (,client ,pdomain ,info)
-       (with-info-type (,client ,type (infimum ,client ,domain) ,@specs)
-           ,pdomain ,info
-         ,@body))))
+       (block ,block-name
+         (with-info-type (,client ,type (infimum ,client ,domain) ,@specs)
+             ,pdomain ,info
+           ,@body)))))

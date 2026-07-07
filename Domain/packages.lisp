@@ -12,7 +12,7 @@
            #:values-info #:values-required #:values-optional #:values-rest
            #:info-values-nth #:primary #:single-value)
   (:export #:noetherian-mixin #:noetherian-values-mixin)
-  (:export #:product #:product-info #:project)
+  (:export #:product #:domains #:product-info #:project)
   (:export #:with-info #:with-info-type #:deriver-lambda)
   ;; particular domains
   (:export #:type #:bits-used #:equivalence))
