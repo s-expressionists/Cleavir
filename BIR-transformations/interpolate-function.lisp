@@ -104,10 +104,13 @@
       (let ((call-arguments (rest (bir:inputs call)))
             (ftmd-arguments
               (loop for datum in (rest (bir:inputs call))
+                    ;; inputs may have been multiple values (being implicitly
+                    ;; reduced to single values by the call) which we would have
+                    ;; to account for in types, and that would require a client.
+                    ;; Any type inference can propagate the types forward
+                    ;; easily, so we don't go through the effort here.
                     collect (make-instance 'bir:output
-                              :name (bir:name datum)
-                              :asserted-type (bir:asserted-type datum)
-                              :derived-type (bir:ctype datum))))
+                              :name (bir:name datum))))
             (inputs '()))
         ;; Remove the local call.
         (bir:delete-instruction call)
