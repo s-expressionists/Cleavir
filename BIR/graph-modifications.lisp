@@ -86,7 +86,7 @@
   (when (set:empty-set-p (readers ltv))
     (set:nremovef (constants module) ltv)))
 (defmethod remove-if-unused ((value function) module)
-  (declare (ignore module))
+  (declare (cl:ignore module))
   (when (and (null (enclose value))
           (set:empty-set-p (local-calls value)))
     (clean-up-function value)))
