@@ -352,7 +352,8 @@
 (defmethod compile-ast ((ast ast:lexical-bind-ast) inserter system)
   (with-compiled-ast (rv (ast:value-ast ast) inserter system)
     (let ((var (bind-variable (ast:lexical-variable ast) (ast:ignore ast))))
-      (build:insert inserter 'bir:leti :inputs rv :outputs (list var)))
+      (build:insert inserter 'bir:leti :inputs rv :outputs (list var)
+                    :dynamic-extent (ast:dynamic-extent ast)))
     ;; return no values
     :no-value))
 

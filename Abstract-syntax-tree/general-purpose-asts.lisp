@@ -440,20 +440,27 @@ This points directly to the corresponding BLOCK-AST rather than recording the na
 (defclass lexical-bind-ast (ast)
   ((%lexical-variable :initarg :lexical-variable :reader lexical-variable)
    (%value-ast :initarg :value-ast :reader value-ast)
-   (%ignore :initarg :ignore :reader ignore))
+   (%ignore :initarg :ignore :reader ignore)
+   ;; True when a DYNAMIC-EXTENT declaration is in scope for the variable.
+   (%dynamic-extent :initarg :dynamic-extent :initform nil
+                    :reader dynamic-extent))
   (:documentation "AST representing the binding of a lexical variable."))
 
-(defun make-lexical-bind-ast (lexical-variable value-ast &key ignore origin (policy *policy*))
+(defun make-lexical-bind-ast (lexical-variable value-ast
+                              &key ignore dynamic-extent
+                                origin (policy *policy*))
   (make-instance 'lexical-bind-ast
     :origin origin :policy policy
     :lexical-variable lexical-variable
     :value-ast value-ast
-    :ignore ignore))
+    :ignore ignore
+    :dynamic-extent dynamic-extent))
 
 (cleavir-io:define-save-info lexical-bind-ast
   (:lexical-variable lexical-variable)
   (:value-ast value-ast)
-  (:ignore ignore))
+  (:ignore ignore)
+  (:dynamic-extent dynamic-extent))
 
 (define-children lexical-bind-ast (lexical-variable value-ast))
 
