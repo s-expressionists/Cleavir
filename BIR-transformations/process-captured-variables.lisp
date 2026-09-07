@@ -27,7 +27,10 @@
 
 ;;; Determine the extent of closures. We mark closures created by
 ;;; ENCLOSE instructions as dynamic extent if all of its uses are
-;;; calls with the DX-call attribute in the enclosing function.
+;;; calls with the DX-call attribute in the enclosing function, or if
+;;; the sole use is an UNWIND-PROTECT: its cleanup function runs only
+;;; while the dynamic environment that holds it is live and is never
+;;; stored anywhere else.
 ;;; We only mark closures as dynamic extent and do not try to mark a
 ;;; function as indefinite extent, since there may be an explicit
 ;;; dynamic extent declaration on the function which we should preserve.
@@ -44,6 +47,7 @@
       (let* ((eout (bir:output enclose))
              (use (bir:use eout)))
         (typecase use
+          (bir:unwind-protect (setf (bir:extent enclose) :dynamic))
           (bir:call (when (safe-call-p use)
                       (setf (bir:extent enclose) :dynamic)))
           (bir:writevar
