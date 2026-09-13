@@ -10,7 +10,18 @@
   ;; Obviously this should actually be a worklist algorithm and not
   ;; just two or three passes. We repeat on the module level so that
   ;; types are more likely to get propagated interprocedurally.
-  (dotimes (repeat 3)
+  ;; The count is 10 and not 3 because 3 exhausts the budget mid-expression on ordinary
+  ;; float-array code: (setf (aref d 0) (* (aref a 0) (aref b 0))) on a declared
+  ;; (simple-array single-float (16)) needs FOUR transforms, and a four-multiply
+  ;; multiply-accumulate needs ten.  Under the old limit only the first aref pair and the
+  ;; first multiply were inlined; every later aref, multiply and add became a full generic
+  ;; call, and the store went through a type-checker plus a generic (SETF AREF).
+  ;; Measured on a 4x4 single-float matrix multiply, native, arm64: 5934 ns/call at 3
+  ;; passes, 473 ns/call at 10 -- 12.5x -- with bit-identical results at every count.
+  ;; Compile time is +17% on small functions and +67% on that numeric one.
+  ;; A worklist iterating to a fixpoint would pay the cost only where it buys something;
+  ;; this constant is the bounded interim fix.
+  (dotimes (repeat 10)
     (declare (ignorable repeat))
     (bir:do-functions (function module)
       ;; This check is necessary because meta-evaluation might have deleted
