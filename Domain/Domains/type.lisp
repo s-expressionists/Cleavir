@@ -5,8 +5,8 @@
 (defclass type (values-mixin domain) ())
 (defvar type (make-instance 'type))
 
-(defmethod infimum (client (domain type)) (ctype:bottom client))
-(defmethod supremum (client (domain type)) (ctype:top client))
+(defmethod sv-infimum (client (domain type)) (ctype:bottom client))
+(defmethod sv-supremum (client (domain type)) (ctype:top client))
 (defmethod sv-subinfop (client (domain type) ty1 ty2)
   (ctype:subtypep ty1 ty2 client))
 (defmethod sv-join/2 (client (domain type) ty1 ty2)
@@ -17,11 +17,13 @@
 ;; we need to worry about expanding intervals and disjunctions, including as
 ;; components of a greater type (e.g. (and foo (or bar baz ...)))
 
+(defmethod values-info (client (domain type) required optional rest)
+  (ctype:values required optional rest client))
 (defmethod values-required (client (domain type) vtype)
   (ctype:values-required vtype client))
 (defmethod values-optional (client (domain type) vtype)
   (ctype:values-optional vtype client))
-(defmethod values-reset (client (domain type) vtype)
+(defmethod values-rest (client (domain type) vtype)
   (ctype:values-rest vtype client))
 
 ;;; Use ctype values-conjoin to get strictness, i.e. that any required type
