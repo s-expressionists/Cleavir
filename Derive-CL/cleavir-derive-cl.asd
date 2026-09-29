@@ -7,7 +7,8 @@
    (:module "Type"
     :depends-on ("aux" "derive" "packages")
     :components ((:file "data")
-                 (:file "numbers")
+                 (:file "interval")
+                 (:file "numbers" :depends-on ("interval"))
                  (:file "arrays")
                  (:file "strings")
                  (:file "sequences")))

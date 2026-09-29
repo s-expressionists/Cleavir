@@ -68,6 +68,29 @@
                            (if (or hxp1 hxp2) (list sum) sum)))
                      client)))))
 
+(defun coerce-bound (bound kind)
+  (flet ((%coerce (num)
+           (ecase kind
+             ((integer rational) (rational num))
+             ((short-float single-float double-float long-float float)
+              (coerce num kind))
+             ((real) num))))
+    (cond ((null bound) '*)
+          ((consp bound) (list (%coerce (car bound))))
+          (t (%coerce bound)))))
+
+(defun interval->range (client kind interval)
+  (ctype:range kind
+               (coerce-bound (interval-low interval) kind)
+               (coerce-bound (interval-high interval) kind) client))
+
+(defun range->interval (client range)
+  (multiple-value-bind (low lxp) (ctype:range-low range client)
+    (multiple-value-bind (high hxp) (ctype:range-high range client)
+      (make-interval (if lxp (list low) low) (if hxp (list high) high)))))
+
+;;;
+
 (defun range-negate (client range)
   (multiple-value-bind (low lxp high hxp) (range-bounds client range)
     (ctype:range (ctype:range-kind range client)
@@ -84,6 +107,14 @@
       (simple-range-2op client #'+ ty1 ty2)
       (type-number client)))
 
+(defun values-type-+ (client required optional rest)
+  (if (or optional (not (ctype:bottom-p rest client)))
+      (type-number client) ; FIXME
+      (loop with result = (range client 'integer 0 nil 0 nil)
+            for arg in required
+            do (setf result (type-+ client result arg))
+            finally (return result))))
+
 (defun type-negate (client type)
   (distribute client
               (lambda (type)
@@ -92,36 +123,98 @@
                     (type-number client)))
               type))
 
+(defun range-* (client range1 range2)
+  (let ((i1 (range->interval client range1)) (i2 (range->interval client range2)))
+    (interval->range client
+                     (contagion (ctype:range-kind range1 client)
+                                (ctype:range-kind range2 client))
+                     (interval* i1 i2))))
+
+(defun type-* (client type1 type2)
+  (if (and (ctype:rangep type1 client) (ctype:rangep type2 client))
+      (range-* client type1 type2)
+      (type-number client)))
+
+(defun range-expt (client kind low lxp high hxp exponent)
+  (let ((lowe (if low (expt low exponent) low))
+        (highe (if high (expt high exponent) high)))
+    (cond ((oddp exponent) (range client kind lowe lxp highe hxp))
+          ((not low)
+           (if (and high (<= high 0))
+               (range client kind highe hxp nil nil)
+               (range client kind (coerce 0 kind) nil highe hxp)))
+          ((not high)
+           (if (and low (<= low 0))
+               (range client kind (coerce 0 kind) nil highe hxp)
+               (range client kind lowe lxp nil nil)))
+          ((<= high 0) (range client kind highe hxp lowe lxp))
+          ((< highe lowe) (range client kind highe hxp lowe lxp))
+          (t (range client kind lowe lxp highe hxp)))))
+
 (defun type-expt (client type exponent)
   ;; type is a type, exponent is an integer > 0.
-  (cond ((= exponent 1) type)
-        ((ctype:rangep type client)
-         (multiple-value-bind (low lxp high hxp) (range-bounds client type)
-           (range (ctype:range-kind type client)
-                  (if low (expt low exponent) low) lxp
-                  (if high (expt high exponent) high) hxp
-                  client)))
-        (t (type-number client))))
+  (if (= exponent 1)
+      type
+      (distribute client
+                  (lambda (type)
+                    (if (ctype:rangep type client)
+                        (multiple-value-bind (low lxp high hxp)
+                            (range-bounds client type)
+                          (range-expt client (ctype:range-kind type client)
+                                      low lxp high hxp exponent))
+                        (type-number client)))
+                  type)))
 
-#+(or)
+(define-deriver (+ domain:type) (client (&rest args))
+  (ctype:single-value
+   (values-type-+ client
+                 (ctype:values-required args client)
+                 (ctype:values-optional args client)
+                 (ctype:values-rest args client))
+   client))
+
+(define-deriver (- domain:type) (client (&rest args))
+  (let ((required (ctype:values-required args client))
+        (optional (ctype:values-optional args client))
+        (rest (ctype:values-rest args client)))
+    (ctype:single-value
+     (cond ((or optional (not (ctype:bottom-p rest client)))
+            (return-from - (ctype:values-bottom client))) ; FIXME
+           ((null required) (ctype:bottom client))
+           ((null (rest required))
+            (type-negate client (first required)))
+           (t (type-+ client (first required)
+                      (type-negate
+                       client
+                       (values-type-+ client (rest required) optional rest)))))
+     client)))
+
 (define-deriver (* domain:type)
     (client (&rest args) domain:equivalence (&rest equiv))
+  (when (or (not (null (ctype:values-optional args client)))
+            (not (ctype:bottom-p (ctype:values-rest args client) client)))
+    (return-from * (ctype:single-value (type-number client) client)))
   ;; first gather exponents for any repeated arguments.
   ;; this lets us determine for example that (* x x) is positive.
   (ctype:single-value
    (loop with equivs = ()
-         for arg in (rest-types client args)
-         for eq in (rest-infos client domain:equivalence equiv)
-         for p = (assoc eq equivs)
+         with eq-sup = (domain:sv-supremum client domain:equivalence)
+         for arg in (ctype:values-required args client)
+         for i from 0
+         for eq = (domain:info-values-nth client domain:equivalence i equiv)
+         for p = (if (domain:sv-subinfop client domain:equivalence eq-sup eq)
+                     nil ; info is eq-sup, so no equivalence is available
+                     (assoc eq equivs))
          if p
            do (incf (third p))
          else
-           do (push (list eq arg 1) p)
-         finally (loop with result = (range 'integer 1 nil 1 nil client)
-                       for (_ range exponent) in equivs
-                       for re = (type-expt client range exponent)
-                       do (setf result (type-* client result re))
-                       finally (return result)))
+           do (push (list eq arg 1) equivs)
+         finally (return
+                   (loop with result = (range client 'integer 1 nil 1 nil)
+                         for (_ range exponent) in equivs
+                         for re = (type-expt client range exponent)
+                         do (setf result (type-* client result re))
+                         finally (return result))))
    client))
 
 ;;; Given an irrational monotonic function, and a range for its one argument,
@@ -384,13 +477,17 @@
           (t (values nil nil)))))
 
 (define-deriver (logand domain:type) (client (&rest args))
+  ;; FIXME
+  (when (or (not (null (ctype:values-optional args client)))
+            (not (ctype:bottom-p (ctype:values-rest args client) client)))
+    (return-from logand (ctype:single-value (type-number client) client)))
   (ctype:single-value
    (flet ((min-bits (a b) (cond ((not a) b) ((not b) a) (t (min a b))))
           (max-bits (a b) (cond ((not a) a) ((not b) b) (t (max a b)))))
-     (loop with min-nbits = nil with max-nbits = nil
+     (loop with min-nbits = nil with max-nbits = 0
            with some-nonnegativep = nil
            with all-nonnegativep = t
-           for arg in (rest-types client args)
+           for arg in (ctype:values-required args client)
            do (multiple-value-bind (low high emptyp) (type-integer-bounds client arg)
                 (when emptyp (return (ctype:bottom client))) ; strictness
                 (if (and low (>= low 0))
@@ -401,24 +498,34 @@
                        (max (max-bits lowbits highbits)))
                   (setf min-nbits (min-bits min-nbits max)
                         max-nbits (max-bits max-nbits max))))
-           finally (cond (all-nonnegativep
-                          (ctype:range 'integer 0 (1- (ash 1 min-nbits)) client))
-                         (some-nonnegativep
-                          (ctype:range 'integer 0 (1- (ash 1 max-nbits)) client))
-                         (t
-                          (ctype:range 'integer
-                                       (- (ash 1 max-nbits))
-                                       (1- (ash 1 max-nbits))
-                                       client)))))
+           finally (return
+                     (cond (all-nonnegativep
+                            (ctype:range 'integer 0 (1- (ash 1 min-nbits)) client))
+                           (some-nonnegativep
+                            (ctype:range 'integer 0 (if max-nbits
+                                                        (1- (ash 1 max-nbits))
+                                                        '*)
+                                         client))
+                           (t
+                            (if max-nbits
+                                (ctype:range 'integer
+                                             (- (ash 1 max-nbits))
+                                             (1- (ash 1 max-nbits))
+                                             client)
+                                (ctype:range 'integer '* '* client)))))))
    client))
 (define-deriver (logior domain:type) (client (&rest args))
+  ;; FIXME
+  (when (or (not (null (ctype:values-optional args client)))
+            (not (ctype:bottom-p (ctype:values-rest args client) client)))
+    (return-from logior (ctype:single-value (type-number client) client)))
   (ctype:single-value
    (flet ((min-bits (a b) (cond ((not a) b) ((not b) a) (t (min a b))))
           (max-bits (a b) (cond ((not a) a) ((not b) b) (t (max a b)))))
-     (loop with min-nbits = nil with max-nbits = nil
+     (loop with min-nbits = nil with max-nbits = 0
            with some-nonpositivep = nil
            with all-nonpositivep = t
-           for arg in (rest-types client args)
+           for arg in (ctype:values-required args client)
            do (multiple-value-bind (low high emptyp) (type-integer-bounds client arg)
                 (when emptyp (return (ctype:bottom client)))
                 (if (and high (<= high 0))
@@ -429,15 +536,21 @@
                        (max (max-bits lowbits highbits)))
                   (setf min-nbits (min-bits min-nbits max)
                         max-nbits (max-bits max-nbits max))))
-           finally (cond (all-nonpositivep
-                          (ctype:range 'integer (- (ash 1 min-nbits)) 0 client))
-                         (some-nonpositivep
-                          (ctype:range 'integer (- (ash 1 max-nbits)) 0 client))
-                         (t
-                          (ctype:range 'integer
-                                       (- (ash 1 max-nbits))
-                                       (1- (ash 1 max-nbits))
-                                       client)))))
+           finally (return
+                     (cond (all-nonpositivep
+                            (ctype:range 'integer (- (ash 1 min-nbits)) 0 client))
+                           (some-nonpositivep
+                            (ctype:range 'integer (if max-nbits
+                                                      (- (ash 1 max-nbits))
+                                                      '*)
+                                         0 client))
+                           (t
+                            (if max-nbits
+                                (ctype:range 'integer
+                                             (- (ash 1 max-nbits))
+                                             (1- (ash 1 max-nbits))
+                                             client)
+                                (ctype:range 'integer '* '* client)))))))
    client))
 
 (define-deriver (logxor domain:type) (client (&rest arguments))
