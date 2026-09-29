@@ -23,6 +23,12 @@
             nil)
         (compute-deriver domain operator-name))))
 
+(defun default-deriver (domain)
+  (flet ((default-deriver (client product info)
+           (declare (ignore product info))
+           (domain:supremum client domain)))
+    #'default-deriver))
+
 ;;; compute a deriver from the table. This only makes sense for products.
 ;;; it doesn't get put into the table because cache invalidation would be
 ;;; annoying to deal with. FIXME
@@ -38,7 +44,7 @@
                                 collect (if deriver
                                             (funcall deriver client product info)
                                             (domain:supremum client domain))))))
-      nil))
+      (default-deriver domain)))
 
 (defun (setf deriver) (new domain operator-name)
   (let ((table (or (gethash domain *derivers*)
