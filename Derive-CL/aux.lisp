@@ -24,7 +24,7 @@
          (ctype:negate (distribute client function
                                    (ctype:negation-ctype type client))
                        client))
-        (t (funcall function client type))))
+        (t (funcall function type))))
 
 (defun maybe (client type)
   (ctype:disjoin client type (ctype:member client nil)))
