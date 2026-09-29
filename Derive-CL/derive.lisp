@@ -63,3 +63,56 @@
          (domain:deriver-lambda (,client ,(function-block-name operator)
                                          ,domain ,type ,@specs)
            ,@body)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Baby's first abstract interpreter: Derive one (fun)call.
+;;; You give this function a call form and some infos, and it derives infos
+;;; based on the call.
+;;; This probably isn't really useful except for convenience when debugging whether
+;;; derivers provide any useful information.
+;;;
+
+#|
+(cleavir-derive-cl::derive-call
+ client '(logand x y)
+ (list domain:bits-used (domain:supremum nil domain:bits-used))
+ `((x ,domain:type (integer 0 15)) (y ,domain:type (integer 237 237)))
+ ())
+; => #<DOMAIN:PRODUCT-INFO>
+(domain::infos #<DOMAIN:PRODUCT-INFO>)
+; => (#<DOMAIN:VALUES-INFO (VALUES &OPTIONAL &REST 13)>
+;     (VALUES (INTEGER 0 15) &OPTIONAL &REST NIL))
+; i.e., from x and y we use only the bits in 13, and the result of the call
+; is one value of type (integer 0 15).
+|#
+(defun derive-call (client call result bindings predecessor)
+  (let* ((operator (first call))
+         (arguments (rest call))
+         (arg-domains
+           (delete-duplicates
+            (loop for (name . rest) in bindings
+                  nconc (loop for (domain _) on rest by #'cddr
+                              collect domain))))
+         (domains
+           (nconc (loop for (domain _) on predecessor by #'cddr
+                        collect domain)
+                  (loop for (domain _) on result by #'cddr
+                        collect domain)
+                  arg-domains))
+         (product (make-instance 'domain:product :domains domains))
+         (infos
+           (nconc
+            (loop for (_ info) on predecessor by #'cddr collect info)
+            (loop for (_ info) on result by #'cddr collect info)
+            (loop for domain in arg-domains
+                  for sv-sup = (domain:sv-supremum client domain)
+                  for sv-inf = (domain:sv-infimum client domain)
+                  collect (loop for arg in arguments
+                                for bind = (cdr (assoc arg bindings))
+                                for info = (getf bind domain sv-sup)
+                                collect info into req
+                                finally (return (domain:values-info
+                                                 client domain req () sv-inf))))))
+         (info (domain:product client product infos)))
+    (funcall (deriver product operator) client product info)))
