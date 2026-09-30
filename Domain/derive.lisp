@@ -152,10 +152,10 @@
             (loop for o in opt
                   collect (multiple-value-bind (var default)
                               (normalize-optional o)
-                            `(,var (cond (,vreq (pop ,vreq))
-                                         (,vopt (sv-disjoin ,client ,domain
-                                                            (pop ,vopt) ,default))
-                                         (t ,vrest)))))
+                            `(,var (if ,vreq
+                                       (pop ,vreq)
+                                       (sv-join ,client ,domain ,default
+                                                (if ,vopt (pop ,vopt) ,vrest))))))
             (when rest
               (list `(,rest (values-info ,client ,domain
                                          ,vreq ,vopt ,vrest))))
