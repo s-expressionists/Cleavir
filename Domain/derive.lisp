@@ -26,7 +26,10 @@
          (req (ldiff lambda-list (or subopt subrest subkey))))
     (values req opt rest subkey key)))
 
-(defun normalize-optional (optional)
+(defun normalize-optional (client-var domain-var optional)
+  (when (symbolp optional)
+    (return-from normalize-optional
+      (values optional `(sv-supremum ,client-var ,domain-var) nil)))
   (unless (and (consp optional) (consp (cdr optional))
                (symbolp (first optional))
                (or (null (cddr optional))
@@ -71,7 +74,7 @@
                                      (t ,vrest))))
             (loop for o in opt
                   nconc (multiple-value-bind (var default requiredp)
-                            (normalize-optional o)
+                            (normalize-optional client domain o)
                           (nconc
                            (if requiredp
                                (list `(,requiredp ,vreq))
@@ -162,7 +165,7 @@
                                      ,r))))
             (loop for o in opt
                   nconc (multiple-value-bind (var default requiredp)
-                            (normalize-optional o)
+                            (normalize-optional client domain o)
                           (nconc
                            (if requiredp
                                (list `(,requiredp ,vreq))
