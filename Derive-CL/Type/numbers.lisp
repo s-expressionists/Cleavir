@@ -88,6 +88,84 @@
   (multiple-value-bind (low lxp high hxp) (range-bounds client range)
     (make-interval (if lxp (list low) low) (if hxp (list high) high))))
 
+;;; Given a type, try to return a range approximating it. This is used below
+;;; when it's not possible to distribute (e.g. because there are multiple types
+;;; and full distribution could cause combinatorial explosion).
+;;; Returns either a range type, top type, or bottom type.
+(defun type-approximate-range (client type)
+  (flet ((kind<= (k1 k2)
+           (ecase k1
+             ((integer) (case k2 ((integer rational real) t) (otherwise nil)))
+             ((ratio) (case k2 ((ratio rational real) t) (otherwise nil)))
+             ((rational) (case k2 ((rational real) t) (otherwise nil)))
+             ((short-float) (case k2 ((short-float float real) t) (otherwise nil)))
+             ((single-float) (case k2 ((single-float float real) t) (otherwise nil)))
+             ((double-float) (case k2 ((double-float float real) t) (otherwise nil)))
+             ((long-float) (case k2 ((long-float float real) t) (otherwise nil)))
+             ((float) (case k2 ((float real) t) (otherwise nil)))
+             ((real) (case k2 ((real) t) (otherwise nil)))))
+         (recur (type) (type-approximate-range client type))
+         (top-p (type) (ctype:top-p type client))
+         (bot-p (type) (ctype:bottom-p type client)))
+    (cond ((ctype:rangep type client) type)
+          ((ctype:conjunctionp type client)
+           (let* ((pst (mapcar #'recur (ctype:conjunction-ctypes type client)))
+                  (st (remove-if #'top-p pst)))
+             (cond ((null st) (ctype:top client))
+                   ((some #'bot-p st) (ctype:bottom client))
+                   (t ; ok, we have all ranges. tighten the bounds.
+                    (loop with kind = 'real
+                          with low = nil with lxp = nil with high = nil with hxp = nil
+                          for ty in st
+                          for sub-kind = (ctype:range-kind ty client)
+                          do (cond ((kind<= sub-kind kind) (setf kind sub-kind))
+                                   ((kind<= kind sub-kind))
+                                   (t (return (ctype:bottom client))))
+                          do (multiple-value-bind (sub-low sub-lxp sub-high sub-hxp)
+                                 (range-bounds client ty)
+                               (cond ((null low) (setf low sub-low lxp sub-lxp))
+                                     ((null sub-low))
+                                     ((> sub-low low) (setf low sub-low lxp sub-lxp))
+                                     ((= sub-low low) (setf lxp (or lxp sub-lxp))))
+                               (cond ((null high) (setf high sub-high hxp sub-hxp))
+                                     ((null sub-high))
+                                     ((< sub-high high) (setf high sub-high hxp sub-hxp))
+                                     ((= sub-high high) (setf hxp (or hxp sub-hxp)))))
+                          finally (return (range client kind low lxp high hxp)))))))
+          ((ctype:disjunctionp type client)
+           (let* ((pst (mapcar #'recur (ctype:disjunction-ctypes type client)))
+                  (st (remove-if #'bot-p pst)))
+             (cond ((null st) (ctype:bottom client))
+                   ((some #'top-p st) (ctype:top client))
+                   (t
+                    (loop with kind = nil
+                          with low = t with lxp = nil with high = t with hxp = nil
+                          for ty in st
+                          for sub-kind = (ctype:range-kind ty client)
+                          do (cond ((null kind) (setf kind sub-kind))
+                                   ((kind<= kind sub-kind) (setf kind sub-kind))
+                                   ((kind<= sub-kind kind))
+                                   (t (setf kind 'real)))
+                          do (multiple-value-bind (sub-low sub-lxp sub-high sub-hxp)
+                                 (range-bounds client ty)
+                               (cond ((eql low t) (setf low sub-low lxp sub-lxp))
+                                     ((null low))
+                                     ((null sub-low) (setf low sub-low lxp sub-lxp))
+                                     ((< sub-low low) (setf low sub-low lxp sub-lxp))
+                                     ((= sub-low low) (setf lxp (and lxp sub-lxp))))
+                               (cond ((eql high t) (setf high sub-high hxp sub-hxp))
+                                     ((null high))
+                                     ((null sub-high) (setf high sub-high hxp sub-hxp))
+                                     ((> sub-high high) (setf high sub-high hxp sub-hxp))
+                                     ((= sub-high high) (setf hxp (and hxp sub-hxp)))))
+                          finally (return (range client kind low lxp high hxp)))))))
+          ((ctype:negationp type client)
+           (let ((type (ctype:negation-ctype type client)))
+             (cond ((top-p type) (ctype:bottom client))
+                   ((bot-p type) (ctype:top client))
+                   (t (ctype:top client))))) ; FIXME weak
+          (t (ctype:top client)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Addition and subtraction
@@ -104,9 +182,11 @@
                  client)))
 
 (defun type-+ (client ty1 ty2)
-  (if (and (ctype:rangep ty1 client) (ctype:rangep ty2 client))
-      (simple-range-2op client #'+ ty1 ty2)
-      (type-number client)))
+  (let ((r1 (type-approximate-range client ty1))
+        (r2 (type-approximate-range client ty2)))
+    (if (and (ctype:rangep r1 client) (ctype:rangep r2 client))
+        (simple-range-2op client #'+ r1 r2)
+        (type-number client))))
 
 (defun values-type-+ (client required optional rest)
   (if (or optional (not (ctype:bottom-p rest client)))
@@ -160,9 +240,11 @@
                      (interval* i1 i2))))
 
 (defun type-* (client type1 type2)
-  (if (and (ctype:rangep type1 client) (ctype:rangep type2 client))
-      (range-* client type1 type2)
-      (type-number client)))
+  (let ((r1 (type-approximate-range client type1))
+        (r2 (type-approximate-range client type2)))
+    (if (and (ctype:rangep r1 client) (ctype:rangep r2 client))
+        (range-* client r1 r2)
+        (type-number client))))
 
 (defun range-expt (client kind low lxp high hxp exponent)
   (let ((lowe (if low (expt low exponent) low))
@@ -350,9 +432,11 @@
                    (range-divide client range1 range2)))
 
 (defun type-/ (client type1 type2)
-  (if (and (ctype:rangep type1 client) (ctype:rangep type2 client))
-      (range-/ client type1 type2)
-      (type-number client)))
+  (let ((r1 (type-approximate-range client type1))
+        (r2 (type-approximate-range client type2)))
+    (if (and (ctype:rangep r1 client) (ctype:rangep r2 client))
+        (range-/ client r1 r2)
+        (type-number client))))
 
 (define-deriver (/ domain:type) (client (&rest args))
   (let ((required (ctype:values-required args client))
@@ -374,29 +458,31 @@
      client)))
 
 (defun derive-floor-etc (client dividend divisor quokindfun quofun remfun)
-  (if (and (ctype:rangep dividend client) (ctype:rangep divisor client))
-      ;; The CLHS actually only says that the remainder
-      ;; is a float if an argument is a float, i.e. it doesn't
-      ;; specify that it has to be a double given doubles, etc.
-      ;; Instead we use the usual contagion rules for the remainder,
-      ;; as per WSCL issue FLOOR-ETC-REMAINDER-TYPE. If an implementation
-      ;; does something else it can just not use these derivers.
-      (let* ((dividend-kind (ctype:range-kind dividend client))
-             (divisor-kind (ctype:range-kind divisor client))
-             (rkind (contagion dividend-kind divisor-kind)))
-        (ctype:values
-         (list (interval->range
-                client (funcall quokindfun dividend-kind divisor-kind)
-                (funcall quofun (range-divide client dividend divisor)))
-               (interval->range
-                client rkind
-                (funcall remfun (range->interval client dividend)
-                         (range->interval client divisor))))
-         nil (ctype:bottom client) client))
-      (ctype:values (list (ctype:range (funcall quokindfun 'real 'real)
-                                       '* '* client)
-                          (ctype:range 'real '* '* client))
-                    nil (ctype:bottom client) client)))
+  (let ((dividend (type-approximate-range client dividend))
+        (divisor (type-approximate-range client divisor)))
+    (if (and (ctype:rangep dividend client) (ctype:rangep divisor client))
+        ;; The CLHS actually only says that the remainder
+        ;; is a float if an argument is a float, i.e. it doesn't
+        ;; specify that it has to be a double given doubles, etc.
+        ;; Instead we use the usual contagion rules for the remainder,
+        ;; as per WSCL issue FLOOR-ETC-REMAINDER-TYPE. If an implementation
+        ;; does something else it can just not use these derivers.
+        (let* ((dividend-kind (ctype:range-kind dividend client))
+               (divisor-kind (ctype:range-kind divisor client))
+               (rkind (contagion dividend-kind divisor-kind)))
+          (ctype:values
+           (list (interval->range
+                  client (funcall quokindfun dividend-kind divisor-kind)
+                  (funcall quofun (range-divide client dividend divisor)))
+                 (interval->range
+                  client rkind
+                  (funcall remfun (range->interval client dividend)
+                           (range->interval client divisor))))
+           nil (ctype:bottom client) client))
+        (ctype:values (list (ctype:range (funcall quokindfun 'real 'real)
+                                         '* '* client)
+                            (ctype:range 'real '* '* client))
+                      nil (ctype:bottom client) client))))
 
 (defun floor-quokind (k1 k2) (declare (ignore k1 k2)) 'integer)
 
@@ -415,23 +501,27 @@
 
 (define-deriver (mod domain:type) (client (number divisor))
   (ctype:single-value
-   (if (and (ctype:rangep number client) (ctype:rangep divisor client))
-       (interval->range client
-                        (contagion (ctype:range-kind number client)
-                                   (ctype:range-kind divisor client))
-                        (floor-remainder (range->interval client number)
-                                         (range->interval client divisor)))
-       (range client 'real nil nil nil nil))
+   (let ((number (type-approximate-range client number))
+         (divisor (type-approximate-range client divisor)))
+     (if (and (ctype:rangep number client) (ctype:rangep divisor client))
+         (interval->range client
+                          (contagion (ctype:range-kind number client)
+                                     (ctype:range-kind divisor client))
+                          (floor-remainder (range->interval client number)
+                                           (range->interval client divisor)))
+         (range client 'real nil nil nil nil)))
    client))
 (define-deriver (rem domain:type) (client (number divisor))
   (ctype:single-value
-   (if (and (ctype:rangep number client) (ctype:rangep divisor client))
-       (interval->range client
-                        (contagion (ctype:range-kind number client)
-                                   (ctype:range-kind divisor client))
-                        (truncate-remainder (range->interval client number)
-                                            (range->interval client divisor)))
-       (range client 'real nil nil nil nil))
+   (let ((number (type-approximate-range client number))
+         (divisor (type-approximate-range client divisor)))
+     (if (and (ctype:rangep number client) (ctype:rangep divisor client))
+         (interval->range client
+                          (contagion (ctype:range-kind number client)
+                                     (ctype:range-kind divisor client))
+                          (truncate-remainder (range->interval client number)
+                                              (range->interval client divisor)))
+         (range client 'real nil nil nil nil)))
    client))
 
 ;;; The specification of the quotient's type in the CLHS is self-contradictory:
@@ -1057,81 +1147,91 @@
   ;; not optimal, but should be fine.
   ;; example non optimality: (logcount (integer 10 15)) could be (integer 2 4)
   (ctype:single-value
-   (if (and (ctype:rangep arg client)
-            (member (ctype:range-kind arg client) '(integer rational real)))
-       (multiple-value-bind (low high) (normalize-integer-bounds client arg)
-         (if (and low high)
-             (ctype:range 'integer
-                          (if (or (> low 0) (< high -1)) 1 0)
-                          (max (integer-length low) (integer-length high))
-                          client)
-             (ctype:range 'integer '* '* client)))
-         (ctype:range 'integer '* '* client))
+   (distribute
+    client
+    (lambda (arg)
+      (if (and (ctype:rangep arg client)
+               (member (ctype:range-kind arg client) '(integer rational real)))
+          (multiple-value-bind (low high) (normalize-integer-bounds client arg)
+            (if (and low high)
+                (ctype:range 'integer
+                             (if (or (> low 0) (< high -1)) 1 0)
+                             (max (integer-length low) (integer-length high))
+                             client)
+                (ctype:range 'integer 0 '* client)))
+          (ctype:range 'integer 0 '* client)))
+    arg)
    client))
 
 (define-deriver (integer-length domain:type) (client (arg))
   (ctype:single-value
-   (if (and (ctype:rangep arg client)
-            (member (ctype:range-kind arg client) '(integer rational real)))
-       (multiple-value-bind (low high) (normalize-integer-bounds client arg)
-         (multiple-value-bind (nlow nhigh)
-             ;; We compute bounds based on integer-length being nondecreasing
-             ;; from 0 on up and from -1 on down. So if we're entirely positive
-             ;; or negative we just work monotonically, otherwise min is zero
-             ;; and max is whatever's biggest.
-             (cond ((and low (> low 0))
-                    ;; entirely positive range.
-                    (values (integer-length low)
-                            (if high (integer-length high) '*)))
-                   ((and high (< high 0))
-                    ;; entirely negative
-                    (values (integer-length high)
-                            (if low (integer-length low) '*)))
-                   (t
-                    ;; zero-crossing
-                    (values 0 (if (and low high)
-                                  (max (integer-length low) (integer-length high))
-                                  '*))))
-           (ctype:range 'integer nlow nhigh client)))
-       (ctype:range 'integer 0 '* client))
+   (distribute
+    client
+    (lambda (arg)
+      (if (and (ctype:rangep arg client)
+               (member (ctype:range-kind arg client) '(integer rational real)))
+          (multiple-value-bind (low high) (normalize-integer-bounds client arg)
+            (multiple-value-bind (nlow nhigh)
+                ;; We compute bounds based on integer-length being nondecreasing
+                ;; from 0 on up and from -1 on down. So if we're entirely positive
+                ;; or negative we just work monotonically, otherwise min is zero
+                ;; and max is whatever's biggest.
+                (cond ((and low (> low 0))
+                       ;; entirely positive range.
+                       (values (integer-length low)
+                               (if high (integer-length high) '*)))
+                      ((and high (< high 0))
+                       ;; entirely negative
+                       (values (integer-length high)
+                               (if low (integer-length low) '*)))
+                      (t
+                       ;; zero-crossing
+                       (values 0 (if (and low high)
+                                     (max (integer-length low) (integer-length high))
+                                     '*))))
+              (ctype:range 'integer nlow nhigh client)))
+          (ctype:range 'integer 0 '* client)))
+    arg)
    client))
 
 (define-deriver (ash domain:type) (client (integer count))
   (ctype:single-value
-   (cond
-     ((or (not (ctype:rangep integer client)) (not (ctype:rangep count client)))
-      (ctype:range 'integer '* '* client))
-     (;; We could end up with rational/real range inputs, in which case only the
-      ;; integers are valid, so we can use ceiling/floor on the bounds.
-      (and (member (ctype:range-kind integer client) '(integer rational real))
-           (member (ctype:range-kind count client) '(integer rational real)))
-      (flet ((pash (integer count default)
-               ;; "protected ASH": Avoid huge numbers when they don't really help.
-               ;; Otherwise we end up computing
-               ;; (ash most-positive-fixnum most-positive-fixnum) and such.
-               (if (< count (* 2 (integer-length most-positive-fixnum))) ; arbitrary
-                   (ash integer count)
-                   default)))
-        (multiple-value-bind (ilow ihigh) (normalize-integer-bounds client integer)
-          (multiple-value-bind (clow chigh) (normalize-integer-bounds client count)
-            ;; ASH with a positive count increases magnitude while a negative
-            ;; count decreases it. Therefore: If the integer can be negative,
-            ;; the low point of the range must be (ASH ILOW CHIGH). Even if
-            ;; CHIGH is negative, this can at worst result in 0, which is <=
-            ;; any lower bound from IHIGH. If the integer can't be negative,
-            ;; low bound must be (ASH ILOW CLOW). Vice versa for the upper bound.
-            (ctype:range 'integer
-                         (cond ((not ilow) '*)
-                               ((< ilow 0)  (if chigh (pash ilow chigh  '*) '*))
-                               ((> ilow 0)  (if clow  (pash ilow clow    0)  0))
-                             (t 0))
-                         (cond ((not ihigh) '*)
-                               ((< ihigh 0) (if clow  (pash ihigh clow  -1) -1))
-                               ((> ihigh 0) (if chigh (pash ihigh chigh '*) '*))
-                               (t 0))
-                         client)))))
-     ;; ranges but they don't include integers
-     (t (ctype:bottom client)))
+   (let ((integer (type-approximate-range client integer))
+         (count (type-approximate-range client count)))
+     (cond
+       ((or (not (ctype:rangep integer client)) (not (ctype:rangep count client)))
+        (ctype:range 'integer '* '* client))
+       (;; We could end up with rational/real range inputs, in which case only the
+        ;; integers are valid, so we can use ceiling/floor on the bounds.
+        (and (member (ctype:range-kind integer client) '(integer rational real))
+             (member (ctype:range-kind count client) '(integer rational real)))
+        (flet ((pash (integer count default)
+                 ;; "protected ASH": Avoid huge numbers when they don't really help.
+                 ;; Otherwise we end up computing
+                 ;; (ash most-positive-fixnum most-positive-fixnum) and such.
+                 (if (< count (* 2 (integer-length most-positive-fixnum))) ; arbitrary
+                     (ash integer count)
+                     default)))
+          (multiple-value-bind (ilow ihigh) (normalize-integer-bounds client integer)
+            (multiple-value-bind (clow chigh) (normalize-integer-bounds client count)
+              ;; ASH with a positive count increases magnitude while a negative
+              ;; count decreases it. Therefore: If the integer can be negative,
+              ;; the low point of the range must be (ASH ILOW CHIGH). Even if
+              ;; CHIGH is negative, this can at worst result in 0, which is <=
+              ;; any lower bound from IHIGH. If the integer can't be negative,
+              ;; low bound must be (ASH ILOW CLOW). Vice versa for the upper bound.
+              (ctype:range 'integer
+                           (cond ((not ilow) '*)
+                                 ((< ilow 0)  (if chigh (pash ilow chigh  '*) '*))
+                                 ((> ilow 0)  (if clow  (pash ilow clow    0)  0))
+                                 (t 0))
+                           (cond ((not ihigh) '*)
+                                 ((< ihigh 0) (if clow  (pash ihigh clow  -1) -1))
+                                 ((> ihigh 0) (if chigh (pash ihigh chigh '*) '*))
+                                 (t 0))
+                           client)))))
+       ;; ranges but they don't include integers
+       (t (ctype:bottom client))))
    client))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
