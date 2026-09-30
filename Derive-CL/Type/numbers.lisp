@@ -512,17 +512,18 @@
               type))
 
 (defun range-boundbelow-irrat-monotonic1 (client range function lowbound
-                                          &key (inf '*) (sup '*))
+                                          &key (inf '*) (sup '*) strict)
   (let ((low (ctype:range-low range client)))
-    (if (and low (>= low lowbound))
+    (if (and low (if strict (> low lowbound) (>= low lowbound)))
         (range-irrat-monotonic1 client range function :inf inf :sup sup)
         (type-number client))))
 
 (defun type-boundbelow-irrat-monotonic1 (client type function lowbound
-                                         &key (inf '*) (sup '*))
+                                         &key (inf '*) (sup '*) strict)
   (distribute client (lambda (ty)
                        (range-boundbelow-irrat-monotonic1 client ty function
-                                                          lowbound :inf inf :sup sup))
+                                                          lowbound :strict strict
+                                                          :inf inf :sup sup))
               type))
 
 ;;; Does the interval contain offset + n*multiple for some integer n?
@@ -561,6 +562,26 @@
 
 (define-deriver (exp domain:type) (client (arg))
   (ctype:single-value (type-irrat-monotonic1 client arg #'exp :inf 0f0) client))
+
+(defun type-log (client type)
+  (distribute
+   client
+   (lambda (type)
+     (if (ctype:rangep type client)
+         (type-boundbelow-irrat-monotonic1 client type #'log 0 :strict t)
+         (type-number client)))
+   type))
+
+(define-deriver (log domain:type)
+    (client (arg &optional (base (ctype:bottom client) base-required-p)))
+  (ctype:single-value
+   (cond (base-required-p
+          (type-/ client (type-log client arg) (type-log client base)))
+         ((ctype:bottom-p client base) (type-log client arg))
+         (t (ctype:disjoin
+             client (type-/ client (type-log client arg) (type-log client base))
+             (type-log client arg))))
+   client))
 
 (define-deriver (sqrt domain:type) (client (arg))
   (type-boundbelow-irrat-monotonic1 client arg #'sqrt 0 :inf 0f0))
@@ -1111,4 +1132,82 @@
                          client)))))
      ;; ranges but they don't include integers
      (t (ctype:bottom client)))
+   client))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Miscellaneous
+
+(defun derive-to-float (client realtype format)
+  (distribute
+   client
+   (lambda (realtype)
+     (if (ctype:rangep realtype client)
+         (multiple-value-bind (low lxp high hxp) (range-bounds client realtype)
+           (ctype:range format
+                        (cond ((not low) '*)
+                              (lxp (list (coerce low format)))
+                              (t (coerce low format)))
+                        (cond ((not high) '*)
+                              (hxp (list (coerce high format)))
+                              (t (coerce high format)))
+                        client))
+         (ctype:range format '* '* client)))
+   realtype))
+
+(define-deriver (float domain:type)
+    (client (num &optional (proto (ctype:bottom client) proto-required-p)))
+  (let ((floatt (ctype:range 'float '* '* client)))
+    (flet ((float1 ()
+             ;; TODO: disjunctions
+             (cond ((ctype:subtypep num floatt client) num) ; no coercion
+                   ((ctype:subtypep num (ctype:negate floatt client) client)
+                    (derive-to-float client num 'single-float))
+                   (t floatt)))
+           (float2 ()
+             (cond ((ctype:subtypep proto (ctype:range 'single-float '* '* client) client)
+                    (derive-to-float client num 'single-float))
+                   ((ctype:subtypep proto (ctype:range 'double-float '* '* client) client)
+                    (derive-to-float client num 'double-float))
+                   ((ctype:subtypep proto (ctype:range 'long-float '* '* client) client)
+                    (derive-to-float client num 'long-float))
+                   (t floatt))))
+      (ctype:single-value
+       (cond ((ctype:bottom-p proto client) (float1))
+             (proto-required-p (float2)) ; definitely supplied
+             (t
+              (ctype:disjoin client (float1) (float2))))
+       client))))
+
+(define-deriver (random domain:type)
+    (client (max &optional (random-state (ctype:top client))))
+  (declare (ignore random-state))
+  (ctype:single-value
+   (distribute
+    client
+    (lambda (max)
+      (cond
+        ((ctype:rangep max client)
+         (let* ((kind (ctype:range-kind max client))
+                (high (ctype:range-high max client))) ; x-p irrelevant here
+           (when (and high (< high 0))
+             (return-from random (ctype:values-bottom client)))
+           (ecase kind
+             ((integer rational)
+              (ctype:range 'integer 0 (if high (list (floor high)) '*) client))
+             ((ratio) (return-from random (ctype:values-bottom client)))
+             ((real) (ctype:range kind 0 (if high (list high) '*) client))
+             ((float short-float single-float double-float long-float)
+              (ctype:range kind (coerce 0 kind) (if high (list high) '*) client)))))
+        ((ctype:subtypep max (ctype:range 'integer 0 most-positive-fixnum client)
+                         client)
+         (ctype:range 'integer 0 most-positive-fixnum client))
+        ((ctype:subtypep max (ctype:range 'single-float 0f0 '* client) client)
+         (ctype:range 'single-float 0f0 '* client))
+        ((ctype:subtypep max (ctype:range 'double-float 0d0 '* client) client)
+         (ctype:range 'double-float 0d0 '* client))
+        ((ctype:subtypep max (ctype:range 'long-float 0l0 '* client) client)
+         (ctype:range 'long-float 0l0 '* client))
+        (t (ctype:range 'real 0 '* client))))
+    max)
    client))
