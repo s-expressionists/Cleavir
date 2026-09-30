@@ -89,7 +89,9 @@
     (multiple-value-bind (high hxp) (ctype:range-high range client)
       (make-interval (if lxp (list low) low) (if hxp (list high) high)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Addition and subtraction
 
 (defun range-negate (client range)
   (multiple-value-bind (low lxp high hxp) (range-bounds client range)
@@ -122,6 +124,34 @@
                     (range-negate client type)
                     (type-number client)))
               type))
+
+(define-deriver (+ domain:type) (client (&rest args))
+  (ctype:single-value
+   (values-type-+ client
+                 (ctype:values-required args client)
+                 (ctype:values-optional args client)
+                 (ctype:values-rest args client))
+   client))
+
+(define-deriver (- domain:type) (client (&rest args))
+  (let ((required (ctype:values-required args client))
+        (optional (ctype:values-optional args client))
+        (rest (ctype:values-rest args client)))
+    (ctype:single-value
+     (cond (; FIXME
+            (or optional (not (ctype:bottom-p rest client))) (type-number client))
+           ((null required) (return-from - (ctype:values-bottom client)))
+           ((null (rest required))
+            (type-negate client (first required)))
+           (t (type-+ client (first required)
+                      (type-negate
+                       client
+                       (values-type-+ client (rest required) optional rest)))))
+     client)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Multiplication and integer exponentiation
 
 (defun range-* (client range1 range2)
   (let ((i1 (range->interval client range1)) (i2 (range->interval client range2)))
@@ -165,30 +195,6 @@
                         (type-number client)))
                   type)))
 
-(define-deriver (+ domain:type) (client (&rest args))
-  (ctype:single-value
-   (values-type-+ client
-                 (ctype:values-required args client)
-                 (ctype:values-optional args client)
-                 (ctype:values-rest args client))
-   client))
-
-(define-deriver (- domain:type) (client (&rest args))
-  (let ((required (ctype:values-required args client))
-        (optional (ctype:values-optional args client))
-        (rest (ctype:values-rest args client)))
-    (ctype:single-value
-     (cond ((or optional (not (ctype:bottom-p rest client)))
-            (return-from - (ctype:values-bottom client))) ; FIXME
-           ((null required) (ctype:bottom client))
-           ((null (rest required))
-            (type-negate client (first required)))
-           (t (type-+ client (first required)
-                      (type-negate
-                       client
-                       (values-type-+ client (rest required) optional rest)))))
-     client)))
-
 (define-deriver (* domain:type)
     (client (&rest args) domain:equivalence (&rest equiv))
   (when (or (not (null (ctype:values-optional args client)))
@@ -216,6 +222,236 @@
                          do (setf result (type-* client result re))
                          finally (return result))))
    client))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Division
+
+;;; Split into two intervals, one wholly less than zero and one greater.
+;;; If either range is empty, NIL is returned for it instead.
+(defun range->intervals-for-reciprocal (client range)
+  (multiple-value-bind (low lxp) (ctype:range-low range client)
+    (multiple-value-bind (high hxp) (ctype:range-high range client)
+      (if (eq (ctype:range-kind range client) 'integer)
+          ;; Integer ranges we treat specially when they include 0,
+          ;; because the interval arithmetic doesn't understand discreteness.
+          ;; For example, the reciprocal of an (integer -7 7) is a rational
+          ;; between -1 and 1, but the reciprocal of a
+          ;; (rational -7 7) is unbounded as it approaches zero.
+          ;; We also normalize exclusive bounds while we're at it.
+          (values
+           (if (and low (>= low (if lxp -1 0)))
+               nil
+               (make-interval (cond ((not low) low)
+                                    (lxp (1+ low))
+                                    (t low))
+                              (cond ((or (not high) (>= high 0)) -1)
+                                    (hxp (1- high))
+                                    (t high))))
+           (if (and high (<= high (if hxp 1 0)))
+               nil
+               (make-interval (cond ((or (not low) (<= low 0)) 1)
+                                    (lxp (1+ low))
+                                    (t low))
+                              (cond ((not high) high)
+                                    (hxp (1- high))
+                                    (t high)))))
+          (values
+           (if (and low (>= low 0))
+               nil
+               (make-interval (cond ((not low) low)
+                                    (lxp (list low))
+                                    (t low))
+                              (cond ((or (not high) (>= high 0)) '(0))
+                                    (hxp (list high))
+                                    (t high))))
+           (if (and high (<= high 0))
+               nil
+               (make-interval (cond ((or (not low) (<= low 0)) '(0))
+                                    (lxp (list low))
+                                    (t low))
+                              (cond ((not high) high)
+                                    (hxp (list high))
+                                    (t high)))))))))
+
+;;; Given two range types, return an interval for the result.
+;;; We take types rather than intervals because the divisor being an integer
+;;; can restrict the result when it crosses zero (see range->intervals-for-reciprocal)
+(defun range-divide (client n1 n2)
+  (let* ((int1 (range->interval client n1)))
+    (multiple-value-bind (below2 above2)
+        (range->intervals-for-reciprocal client n2)
+      (let ((rbelow (if below2
+                        (interval-negate
+                         (interval*-1-pos
+                          (interval-reciprocal-+ (interval-negate below2))
+                          int1))
+                        nil))
+            (rabove (if above2
+                        (interval*-1-pos (interval-reciprocal-+ above2) int1)
+                        nil)))
+        (cond ((and rbelow rabove) (interval-merge rbelow rabove))
+              (rbelow rbelow)
+              (rabove rabove)
+              ;; arises from division by zero.
+              ;; this can result in infinities and NaN, so we punt a bit.
+              ;; FIXME: We could be a bit more intelligent, e.g. NIL type
+              ;; for rationals, and get the sign of infinities.
+              (t (make-unbounded-interval)))))))
+
+(defun range-reciprocal (client type)
+  (let* ((kind (ctype:range-kind type client))
+         (rkind (if (eq kind 'integer) 'rational kind)))
+    (multiple-value-bind (below above)
+        (range->intervals-for-reciprocal client type)
+      (let ((rbelow
+              (if below
+                  (interval-negate
+                   (interval-reciprocal-+ (interval-negate below)))
+                  nil))
+            (rabove
+              (if above
+                  (interval-reciprocal-+ above)
+                  nil)))
+        (cond (rabove
+               (interval->range
+                client rkind (if rbelow
+                                 (interval-merge rbelow rabove)
+                                 rabove)))
+              (rbelow (interval->range rbelow rkind client))
+              ;; Both being NIL happens if the input range is all zero.
+              ;; As in / above, this can result in infinities rather than
+              ;; being an error, so we punt.
+              (t (ctype:range rkind '* '* client)))))))
+
+(defun type-reciprocal (client type)
+  (distribute
+   client
+   (lambda (type)
+     (if (ctype:rangep type client)
+         (range-reciprocal client type)
+         (type-number client)))
+   type))
+
+(defun range-/ (client range1 range2)
+  (interval->range client (divcontagion (ctype:range-kind range1 client)
+                                        (ctype:range-kind range2 client))
+                   (range-divide client range1 range2)))
+
+(defun type-/ (client type1 type2)
+  (if (and (ctype:rangep type1 client) (ctype:rangep type2 client))
+      (range-/ client type1 type2)
+      (type-number client)))
+
+(define-deriver (/ domain:type) (client (&rest args))
+  (let ((required (ctype:values-required args client))
+        (optional (ctype:values-optional args client))
+        (rest (ctype:values-rest args client)))
+    (ctype:single-value
+     (cond (; FIXME
+            (or optional (not (ctype:bottom-p rest client))) (type-number client))
+           ((null required) (return-from / (ctype:values-bottom client)))
+           ((null (rest required)) (type-reciprocal client (first required)))
+           (t (type-/ client (first required)
+                      ;; obviously this is what the * deriver does, but
+                      ;; without equivalence information. Could soup that up if
+                      ;; we really want to. TODO?
+                      (loop with result = (range client 'integer 1 nil 1 nil)
+                            for re in (rest required)
+                            do (setf result (type-* client result re))
+                            finally (return result)))))
+     client)))
+
+(defun derive-floor-etc (client dividend divisor quokindfun quofun remfun)
+  (if (and (ctype:rangep dividend client) (ctype:rangep divisor client))
+      ;; The CLHS actually only says that the remainder
+      ;; is a float if an argument is a float, i.e. it doesn't
+      ;; specify that it has to be a double given doubles, etc.
+      ;; Instead we use the usual contagion rules for the remainder,
+      ;; as per WSCL issue FLOOR-ETC-REMAINDER-TYPE. If an implementation
+      ;; does something else it can just not use these derivers.
+      (let* ((dividend-kind (ctype:range-kind dividend client))
+             (divisor-kind (ctype:range-kind divisor client))
+             (rkind (contagion dividend-kind divisor-kind)))
+        (ctype:values
+         (list (interval->range
+                client (funcall quokindfun dividend-kind divisor-kind)
+                (funcall quofun (range-divide client dividend divisor)))
+               (interval->range
+                client rkind
+                (funcall remfun (range->interval client dividend)
+                         (range->interval client divisor))))
+         nil (ctype:bottom client) client))
+      (ctype:values (list (ctype:range (funcall quokindfun 'real 'real)
+                                       '* '* client)
+                          (ctype:range 'real '* '* client))
+                    nil (ctype:bottom client) client)))
+
+(defun floor-quokind (k1 k2) (declare (ignore k1 k2)) 'integer)
+
+(define-deriver (truncate domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'floor-quokind #'interval-truncate #'truncate-remainder))
+(define-deriver (floor domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'floor-quokind #'interval-floor #'floor-remainder))
+(define-deriver (ceiling domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'floor-quokind #'interval-ceiling #'ceiling-remainder))
+
+(define-deriver (mod domain:type) (client (number divisor))
+  (ctype:single-value
+   (if (and (ctype:rangep number client) (ctype:rangep divisor client))
+       (interval->range client
+                        (contagion (ctype:range-kind number client)
+                                   (ctype:range-kind divisor client))
+                        (floor-remainder (range->interval client number)
+                                         (range->interval client divisor)))
+       (range client 'real nil nil nil nil))
+   client))
+(define-deriver (rem domain:type) (client (number divisor))
+  (ctype:single-value
+   (if (and (ctype:rangep number client) (ctype:rangep divisor client))
+       (interval->range client
+                        (contagion (ctype:range-kind number client)
+                                   (ctype:range-kind divisor client))
+                        (truncate-remainder (range->interval client number)
+                                            (range->interval client divisor)))
+       (range client 'real nil nil nil nil))
+   client))
+
+;;; The specification of the quotient's type in the CLHS is self-contradictory:
+;;; Arguments and Types says they return a float, and this is presumably the point
+;;; of the functions (as opposed to floor et al. which return integer quotients),
+;;; but the description says the quotient type is mostly determined by the usual
+;;; contagion rules, which would mean e.g. (ffloor 2 3) should return a rational.
+;;; Instead we do the following: If both arguments are rational, a single float.
+;;; Otherwise, a float of the largest format among the arguments.
+(defun ffloor-quokind (k1 k2)
+  (cond ((or (member k1 '(float real)) (member k2 '(float real))) 'float)
+        ((and (member k1 '(integer ratio real)) (member k2 '(integer ratio real)))
+         'single-float)
+        (t (contagion k1 k2))))
+
+(define-deriver (ffloor domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'ffloor-quokind #'interval-floor #'floor-remainder))
+(define-deriver (fceiling domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'ffloor-quokind #'interval-ceiling #'ceiling-remainder))
+(define-deriver (ftruncate domain:type)
+    (client (dividend &optional (divisor (range client 'integer 1 nil 1 nil))))
+  (derive-floor-etc client dividend divisor
+                    #'ffloor-quokind #'interval-truncate #'truncate-remainder))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Trigonometry
 
 ;;; Given an irrational monotonic function, and a range for its one argument,
 ;;; return a range for the result. Assumes that the function returns an irrational
@@ -346,7 +582,9 @@
   (ctype:single-value (type-irrat-monotonic1 client arg #'tanh :inf -1f0 :sup 1f0)
                       client))
 
-;;; Bitwise integer stuff.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Bitwise operations
 
 ;;; Return (values low high) for the given range. high can be *.
 (defun %range-integer-length (low high)
