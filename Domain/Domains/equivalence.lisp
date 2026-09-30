@@ -1,8 +1,8 @@
 (in-package #:cleavir-domain)
 
 ;;;; Track equivalence classes among values. Each value is somehow assigned an
-;;;; object representing its equivalence class. If two values have EQL objects,
-;;;; they are in the same equivalence class.
+;;;; object representing its equivalence class. If two values have EQUIVALENTP
+;;;; objects, they are in the same equivalence class.
 ;;;; The nature of these objects is left up to the user, but they could for
 ;;;; example be the BIR instructions producing values.
 ;;;; This domain should be useful for reducing other domain information, and
@@ -18,6 +18,12 @@
 
 (defvar +eql-infimum+ (make-symbol "INFIMUM"))
 (defvar +eql-supremum+ (make-symbol "SUPREMUM"))
+
+(defun equivalentp (marker1 marker2)
+  (cond ((eql marker1 +eql-infimum+) (not (eql marker2 +eql-supremum+)))
+        ((eql marker2 +eql-infimum+) (not (eql marker1 +eql-supremum+)))
+        ((or (eql marker1 +eql-supremum+) (eql marker2 +eql-supremum+)) nil)
+        ((eql marker1 marker2))))
 
 (defmethod sv-infimum (client (domain equivalence))
   (declare (ignore client))

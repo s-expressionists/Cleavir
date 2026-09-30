@@ -8,7 +8,7 @@
 
 (defun derive-eq/l (client arg1 arg2 eq1 eq2)
   (ctype:single-value
-   (cond ((eql eq1 eq2) (true client))
+   (cond ((domain:equivalentp eq1 eq2) (true client))
          ((ctype:disjointp arg1 arg2 client) (false client))
          (t (ctype:top client)))
    client))

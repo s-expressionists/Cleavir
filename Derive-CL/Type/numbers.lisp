@@ -289,9 +289,7 @@
          for arg in (ctype:values-required args client)
          for i from 0
          for eq = (domain:info-values-nth client domain:equivalence i equiv)
-         for p = (if (domain:sv-subinfop client domain:equivalence eq-sup eq)
-                     nil ; info is eq-sup, so no equivalence is available
-                     (assoc eq equivs))
+         for p = (assoc eq equivs :test #'domain:equivalentp)
          if p
            do (incf (third p))
          else

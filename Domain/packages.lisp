@@ -15,4 +15,5 @@
   (:export #:product #:domains #:product-info #:project)
   (:export #:with-info #:with-info-type #:deriver-lambda)
   ;; particular domains
-  (:export #:type #:bits-used #:equivalence))
+  (:export #:type #:bits-used
+           #:equivalence #:equivalentp))
