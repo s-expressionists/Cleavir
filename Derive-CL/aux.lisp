@@ -54,6 +54,15 @@
           (domain:values-optional client domain values-info)
           (list (domain:values-rest client domain values-info))))
 
+;;; Return the minimum and maximum value count of a values type.
+;;; NIL maximum means no bound.
+(defun values-type-minmax (client values-type)
+  (let* ((nreq (length (ctype:values-required values-type client))))
+    (values nreq
+            (if (ctype:bottom-p (ctype:values-rest values-type client) client)
+                (+ nreq (length (ctype:values-optional values-type client)))
+                nil))))
+
 ;;; Given a values type as received in &rest, return a list of all types in it.
 ;;; Useful for functions that don't care about the structure, like n-ary arithmetic.
 (defun rest-types (client values-ctype)

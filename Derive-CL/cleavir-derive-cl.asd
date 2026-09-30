@@ -11,6 +11,7 @@
                  (:file "conditions")
                  (:file "interval")
                  (:file "numbers" :depends-on ("interval"))
+                 (:file "conses")
                  (:file "arrays")
                  (:file "strings")
                  (:file "sequences")
