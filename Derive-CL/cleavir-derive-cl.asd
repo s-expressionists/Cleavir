@@ -15,5 +15,6 @@
                  (:file "arrays")
                  (:file "strings")
                  (:file "sequences")
-                 (:file "printer")))
+                 (:file "printer")
+                 (:file "misc")))
    (:file "bits-used" :depends-on ("aux" "derive" "packages"))))
