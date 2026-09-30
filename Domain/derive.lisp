@@ -27,15 +27,18 @@
     (values req opt rest subkey key)))
 
 (defun normalize-optional (optional)
-  (unless (and (consp optional) (consp (cdr optional)) (null (cddr optional))
-               (symbolp (first optional)))
-    (error "Invalid OPTIONAL parameter: must be (symbol default), not ~s"
+  (unless (and (consp optional) (consp (cdr optional))
+               (symbolp (first optional))
+               (or (null (cddr optional))
+                   (and (consp (cddr optional)) (symbolp (caddr optional))
+                        (null (cdddr optional)))))
+    (error "Invalid OPTIONAL parameter: must be (symbol default [requiredp]), not ~s"
            optional))
-  (values (first optional) (second optional)))
+  (values (first optional) (second optional) (third optional)))
 
 (defun normalize-key (key)
   (unless (and (consp key) (consp (cdr key)) (null (cddr key)))
-    (error "Invalid KEY parameter: must be (symbol default) or ((key symbol) default), not ~s" key))
+    (error "Invalid KEY parameter: must be (symbol default [requiredp]) or ((key symbol) default [requiredp]), not ~s" key))
   (cond ((symbolp (first key))
          (values (intern (symbol-name (first key)) "KEYWORD")
                  (first key) (second key)))
@@ -67,13 +70,18 @@
                                      (,vopt (pop ,vopt))
                                      (t ,vrest))))
             (loop for o in opt
-                  collect (multiple-value-bind (var default)
-                              (normalize-optional o)
+                  nconc (multiple-value-bind (var default requiredp)
+                            (normalize-optional o)
+                          (nconc
+                           (if requiredp
+                               (list `(,requiredp ,vreq))
+                               ())
+                           (list
                             `(,var (cond (,vreq (pop ,vreq))
                                          (,vopt
                                           (sv-join ,client (pop ,vopt) ,default))
                                          (t
-                                          (sv-join ,client ,vrest ,default))))))
+                                          (sv-join ,client ,vrest ,default))))))))
             (when rest
               (list `(,rest (values-info ,client ,domain
                                          ,vreq ,vopt ,vrest))))))
@@ -90,6 +98,9 @@
 ;;; variables are bound to the corresponding single-value infos, and any rest
 ;;; argument is bound to a multiple value info for that domain describing all
 ;;; the remaining values.
+;;; Where normal lambda lists have a suppliedp variable for &optional/&key,
+;;; these have a "requiredp" variable. This is true if the given argument is
+;;; certainly supplied and false if it's not supplied or only possibly supplied.
 (defmacro with-info ((client &rest specs &key &allow-other-keys)
                      pdomain info &body body)
   (let ((ginfo (gensym "INFO")))
@@ -150,12 +161,17 @@
                                      ,default
                                      ,r))))
             (loop for o in opt
-                  collect (multiple-value-bind (var default)
-                              (normalize-optional o)
+                  nconc (multiple-value-bind (var default requiredp)
+                            (normalize-optional o)
+                          (nconc
+                           (if requiredp
+                               (list `(,requiredp ,vreq))
+                               ())
+                           (list
                             `(,var (if ,vreq
                                        (pop ,vreq)
                                        (sv-join ,client ,domain ,default
-                                                (if ,vopt (pop ,vopt) ,vrest))))))
+                                                (if ,vopt (pop ,vopt) ,vrest))))))))
             (when rest
               (list `(,rest (values-info ,client ,domain
                                          ,vreq ,vopt ,vrest))))
