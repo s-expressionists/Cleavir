@@ -12,5 +12,6 @@
                  (:file "numbers" :depends-on ("interval"))
                  (:file "arrays")
                  (:file "strings")
-                 (:file "sequences")))
+                 (:file "sequences")
+                 (:file "printer")))
    (:file "bits-used" :depends-on ("aux" "derive" "packages"))))
