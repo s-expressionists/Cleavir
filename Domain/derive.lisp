@@ -39,7 +39,11 @@
            optional))
   (values (first optional) (second optional) (third optional)))
 
-(defun normalize-key (key)
+(defun normalize-key (client-var domain-var key)
+  (when (symbolp key)
+    (return-from normalize-key
+      (values (intern (symbol-name key) "KEYWORD") key
+              `(sv-supremum ,client-var ,domain-var))))
   (unless (and (consp key) (consp (cdr key)) (null (cddr key)))
     (error "Invalid KEY parameter: must be (symbol default [requiredp]) or ((key symbol) default [requiredp]), not ~s" key))
   (cond ((symbolp (first key))
@@ -185,7 +189,7 @@
                                ,default))))
             (loop for k in key
                   collect (multiple-value-bind (keyword var default)
-                              (normalize-key k)
+                              (normalize-key client domain k)
                             `(,var (kwarg-type ,client ',keyword ,default
                                                ,vreq ,vopt ,vrest)))))
            (if (and (not rest) (not keysp))
