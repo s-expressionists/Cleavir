@@ -1,8 +1,8 @@
 (in-package #:cleavir-derive-cl)
 
-(define-deriver (simple-string-p domain:type) (client (object))
-  (derive-type-predicate client 'simple-string-p object
-                         (ctype:string '* 'simple-array client)))
+(define-deriver-type-predicate simple-string-p client
+  (ctype:string '* 'simple-array client))
+(define-deriver-type-predicate stringp client (ctype:string '* 'array client))
 
 (defun derive-char (client string index)
   (declare (ignore index))
@@ -30,10 +30,6 @@
   (derive-char client string index))
 (define-deriver (schar domain:type) (client (string index))
   (derive-char client string index))
-
-(define-deriver (stringp domain:type) (client (object))
-  (derive-type-predicate client 'stringp object
-                         (ctype:string '* 'array client)))
 
 (define-deriver (make-string domain:type)
     (client (size &key (initial-element (ctype:character client))

@@ -168,6 +168,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Type predicates
+
+(define-deriver-type-predicate numberp client (class-type client 'number))
+(define-deriver-type-predicate complexp client
+  (ctype:complex (ctype:top client) client))
+(define-deriver-type-predicate realp client (ctype:range 'real '* '* client))
+(define-deriver-type-predicate rationalp client (ctype:range 'rational '* '* client))
+(define-deriver-type-predicate floatp client (ctype:range 'float '* '* client))
+(define-deriver-type-predicate integerp client (ctype:range 'integer '* '* client))
+
+(define-deriver-type-predicate random-state-p client
+  (class-type client 'random-state))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Addition and subtraction
 
 (defun range-negate (client range)

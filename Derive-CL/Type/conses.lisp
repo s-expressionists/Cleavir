@@ -1,5 +1,16 @@
 (in-package #:cleavir-derive-cl)
 
+(define-deriver-type-predicate consp client
+  (ctype:cons (ctype:top client) (ctype:top client) client))
+(define-deriver-type-predicate atom client
+  (ctype:negate (ctype:cons (ctype:top client) (ctype:top client) client) client))
+(define-deriver-type-predicate listp client
+  (ctype:disjoin client
+                 (ctype:cons (ctype:top client) (ctype:top client) client)
+                 (ctype:member client nil)))
+(define-deriver-type-predicate endp client (ctype:member client nil))
+(define-deriver-type-predicate null client (ctype:member client nil))
+
 (define-deriver (cons domain:type) (client (car cdr))
   (declare (ignore car cdr))
   ;; We can't forward the argument types into the cons type, since we don't

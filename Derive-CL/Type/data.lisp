@@ -6,6 +6,10 @@
 (defun true (client)
   (ctype:negate (ctype:member client nil) client))
 
+(define-deriver-type-predicate functionp client (ctype:function-top client))
+(define-deriver-type-predicate compiled-function-p client
+  (ctype:compiled-function client))
+
 (defun derive-eq/l (client arg1 arg2 eq1 eq2)
   (ctype:single-value
    (cond ((domain:equivalentp eq1 eq2) (true client))

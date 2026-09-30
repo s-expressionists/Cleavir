@@ -43,9 +43,16 @@
   (ctype:single-value
    (cond ((ctype:subtypep objtype ctype client) (generalized-true client operator))
          ((ctype:disjointp objtype ctype client) (ctype:member client nil))
-         (t (ctype:disjoin client (ctype:member client nil)
-                           (generalized-true client operator))))
+         (t (generalized-boolean client operator)))
    client))
+
+(defun class-type (client class-name)
+  (ctype:class (find-class class-name) client))
+
+(defmacro define-deriver-type-predicate (name client type)
+  (let ((object (gensym "OBJECT")))
+    `(define-deriver (,name domain:type) (,client (,object))
+       (derive-type-predicate ,client ',name ,object ,type))))
 
 ;;; Given a values info as received in &rest, return a list of all sv infos in it.
 ;;; Useful for functions that don't care about the structure, like n-ary arithmetic.

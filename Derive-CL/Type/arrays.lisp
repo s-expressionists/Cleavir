@@ -8,6 +8,13 @@
 (defgeneric simple-arrays-actually-adjustable-p (client)
   (:method (client) (declare (ignore client)) t))
 
+(define-deriver-type-predicate arrayp client (ctype:array '* '* 'array client))
+(define-deriver-type-predicate vectorp client (ctype:array '* '(*) 'array client))
+(define-deriver-type-predicate bit-vector-p client
+  (ctype:array 'bit '(*) 'array client))
+(define-deriver-type-predicate simple-bit-vector-p client
+  (ctype:array 'bit '(*) 'simple-array client))
+
 #+(or)
 (define-deriver (make-array domain:type)
     (client (dimensions &key (element-type (ctype:member client 't))
