@@ -223,6 +223,20 @@
                          finally (return result))))
    client))
 
+(define-deriver (expt domain:type) (client (base power))
+  (ctype:single-value
+   (cond ((and (ctype:rangep power client)
+               (eq 'integer (ctype:range-kind power client))
+               (multiple-value-bind (low lxp) (ctype:range-low power client)
+                 (multiple-value-bind (high hxp) (ctype:range-high power client)
+                   (and (not lxp) (not hxp) (= low high) (> low 0)))))
+          ;; constant power
+          (type-expt client base (ctype:range-low power client)))
+         ;; otherwise we give up. TODO!
+         ;; rational arguments can give complex results, so be careful
+         (t (type-number client)))
+   client))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Division
@@ -451,13 +465,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Trigonometry
+;;; Trigonometry and other irrational operations
 
 ;;; Given an irrational monotonic function, and a range for its one argument,
 ;;; return a range for the result. Assumes that the function returns an irrational
 ;;; (i.e. a float) even in the few cases that the function may not be irrational,
 ;;; e.g. (sin 0) => 0.0
-(defun range-irrat-monotonic1 (client range function &key (inf '*) (sup '*))
+(defun range-irrat-monotonic1 (client range function
+                               &key (inf '*) (sup '*) decreasing)
   (let* ((kind (ctype:range-kind range client))
          (mkind (irrat-kind kind)))
     (multiple-value-bind (low lxp high hxp) (range-bounds client range)
@@ -469,7 +484,9 @@
                           (if (numberp sup) (coerce sup mkind) sup))
                          (hxp (list (funcall function high)))
                          (t (funcall function high)))))
-        (ctype:range mkind olow ohigh client)))))
+        (if decreasing
+            (ctype:range mking ohigh olow client)
+            (ctype:range mkind olow ohigh client))))))
 
 (defun type-irrat-monotonic1 (client type function &key (inf '*) (sup '*))
   (distribute client (lambda (ty)
@@ -477,6 +494,38 @@
                            (range-irrat-monotonic1 client ty function
                                                    :inf inf :sup sup)
                            (type-number client)))
+              type))
+
+(defun range-bound-irrat-monotonic1 (client range function lowb highb
+                                     &key (inf '*) (sup '*) decreasing)
+  (let ((low (ctype:range-low range client))
+        (high (ctype:range-high range client)))
+    (if (and low (>= low lowb)
+             high (<= high highb))
+        (range-irrat-monotonic1 client range function :inf inf :sup sup
+                                :decreasing decreasing)
+        (type-number client))))
+
+(defun type-bound-irrat-monotonic1 (client type function lowb highb
+                                    &key (inf '*) (sup '*) decreasing)
+  (distribute client (lambda (ty)
+                       (range-bound-irrat-monotonic1 client ty function lowb highb
+                                                     :inf inf :sup sup
+                                                     :decreasing decreasing))
+              ty))
+
+(defun range-boundbelow-irrat-monotonic1 (client range lowbound
+                                          &key (inf '*) (sup '*))
+  (let ((low (ctype:range-low range client)))
+    (if (and low (>= low lowbound))
+        (range-irrat-monotonic1 client range function :inf inf :sup sup)
+        (type-number client))))
+
+(defun type-boundbelow-irrat-monotonic1 (client type function lowbound
+                                         &key (inf '*) (sup '*))
+  (distribute client (lambda (ty)
+                       (range-boundbelow-irrat-monotonic1 client ty function
+                                                          lowbound :inf inf :sup sup))
               type))
 
 ;;; Does the interval contain offset + n*multiple for some integer n?
@@ -516,6 +565,9 @@
 (define-deriver (exp domain:type) (client (arg))
   (ctype:single-value (type-irrat-monotonic1 client arg #'exp :inf 0f0) client))
 
+(define-deriver (sqrt domain:type) (client (arg))
+  (type-boundbelow-irrat-monotonic1 arg #'sqrt 0 :inf 0f0))
+
 (define-deriver (sin domain:type) (client (arg))
   (ctype:single-value
    (distribute client (lambda (ty) (if (ctype:rangep ty client)
@@ -547,6 +599,15 @@
                             rlow rlxp rhigh rhxp)))
                  (type-number client)))
     arg)
+   client))
+
+(define-deriver (asin domain:type) (client (arg))
+  (ctype:single-value
+   (type-bound-irrat-monotonic1 arg #'asin -1 1 :inf (- (/ pi 2)) :sup (/ pi 2))
+   client))
+(define-deriver (acos domain:type) (client (arg))
+  (ctype:single-value
+   (type-bound-irrat-monotonic1 arg #'acos -1 1 :inf 0 :sup pi :decreasing t)
    client))
 
 (define-deriver (sinh domain:type) (client (arg))
