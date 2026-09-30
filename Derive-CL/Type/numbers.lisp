@@ -1012,3 +1012,103 @@
            (multiple-value-bind (low high) (range-lognot plow phigh)
              (ctype:range 'integer low high client))))))
    client))
+
+;;; Get inclusive integer bounds from a type. NIL for unbounded.
+;;; FIXME: For integer types we should just normalize away exclusivity at parse
+;;; time, really.
+(defun normalize-integer-bounds (client ranget)
+  (let ((kind (ctype:range-kind ranget client)))
+    (multiple-value-bind (low lxp high hxp) (range-bounds client ranget)
+      (ecase kind
+        ((integer) (values (if (and low lxp) (1+ low) low)
+                           (if (and high hxp) (1- high) high)))
+        ((rational real)
+         (values (if low
+                     (multiple-value-bind (clow crem) (ceiling low)
+                       (if (and (zerop crem) lxp) (1+ clow) clow))
+                     low)
+                 (if high
+                     (multiple-value-bind (fhigh frem) (floor high)
+                       (if (and (zerop frem) hxp) (1- fhigh) fhigh))
+                     high)))))))
+
+(define-deriver (logcount domain:type) (client (arg))
+  ;; not optimal, but should be fine.
+  ;; example non optimality: (logcount (integer 10 15)) could be (integer 2 4)
+  (ctype:single-value
+   (if (and (ctype:rangep arg client)
+            (member (ctype:range-kind arg client) '(integer rational real)))
+       (multiple-value-bind (low high) (normalize-integer-bounds client arg)
+         (if (and low high)
+             (ctype:range 'integer
+                          (if (or (> low 0) (< high -1)) 1 0)
+                          (max (integer-length low) (integer-length high))
+                          client)
+             (ctype:range 'integer '* '* client)))
+         (ctype:range 'integer '* '* client))
+   client))
+
+(define-deriver (integer-length domain:type) (client (arg))
+  (ctype:single-value
+   (if (and (ctype:rangep arg client)
+            (member (ctype:range-kind arg client) '(integer rational real)))
+       (multiple-value-bind (low high) (normalize-integer-bounds client arg)
+         (multiple-value-bind (nlow nhigh)
+             ;; We compute bounds based on integer-length being nondecreasing
+             ;; from 0 on up and from -1 on down. So if we're entirely positive
+             ;; or negative we just work monotonically, otherwise min is zero
+             ;; and max is whatever's biggest.
+             (cond ((and low (> low 0))
+                    ;; entirely positive range.
+                    (values (integer-length low)
+                            (if high (integer-length high) '*)))
+                   ((and high (< high 0))
+                    ;; entirely negative
+                    (values (integer-length high)
+                            (if low (integer-length low) '*)))
+                   (t
+                    ;; zero-crossing
+                    (values 0 (if (and low high)
+                                  (max (integer-length low) (integer-length high))
+                                  '*))))
+           (ctype:range 'integer nlow nhigh client)))
+       (ctype:range 'integer 0 '* client))
+   client))
+
+(define-deriver (ash domain:type) (client (integer count))
+  (ctype:single-value
+   (cond
+     ((or (not (ctype:rangep integer client)) (not (ctype:rangep count client)))
+      (ctype:range 'integer '* '* client))
+     (;; We could end up with rational/real range inputs, in which case only the
+      ;; integers are valid, so we can use ceiling/floor on the bounds.
+      (and (member (ctype:range-kind integer client) '(integer rational real))
+           (member (ctype:range-kind count client) '(integer rational real)))
+      (flet ((pash (integer count default)
+               ;; "protected ASH": Avoid huge numbers when they don't really help.
+               ;; Otherwise we end up computing
+               ;; (ash most-positive-fixnum most-positive-fixnum) and such.
+               (if (< count (* 2 (integer-length most-positive-fixnum))) ; arbitrary
+                   (ash integer count)
+                   default)))
+        (multiple-value-bind (ilow ihigh) (normalize-integer-bounds client integer)
+          (multiple-value-bind (clow chigh) (normalize-integer-bounds client count)
+            ;; ASH with a positive count increases magnitude while a negative
+            ;; count decreases it. Therefore: If the integer can be negative,
+            ;; the low point of the range must be (ASH ILOW CHIGH). Even if
+            ;; CHIGH is negative, this can at worst result in 0, which is <=
+            ;; any lower bound from IHIGH. If the integer can't be negative,
+            ;; low bound must be (ASH ILOW CLOW). Vice versa for the upper bound.
+            (ctype:range 'integer
+                         (cond ((not ilow) '*)
+                               ((< ilow 0)  (if chigh (pash ilow chigh  '*) '*))
+                               ((> ilow 0)  (if clow  (pash ilow clow    0)  0))
+                             (t 0))
+                         (cond ((not ihigh) '*)
+                               ((< ihigh 0) (if clow  (pash ihigh clow  -1) -1))
+                               ((> ihigh 0) (if chigh (pash ihigh chigh '*) '*))
+                               (t 0))
+                         client)))))
+     ;; ranges but they don't include integers
+     (t (ctype:bottom client)))
+   client))
