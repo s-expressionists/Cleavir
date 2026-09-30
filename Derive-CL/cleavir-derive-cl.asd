@@ -7,6 +7,7 @@
    (:module "Type"
     :depends-on ("aux" "derive" "packages")
     :components ((:file "data")
+                 (:file "type-predicates")
                  (:file "conditions")
                  (:file "interval")
                  (:file "numbers" :depends-on ("interval"))

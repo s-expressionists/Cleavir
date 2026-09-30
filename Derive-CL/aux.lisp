@@ -34,6 +34,11 @@
     (declare (ignore operator))
     (ctype:negate (ctype:member client nil) client)))
 
+(defgeneric generalized-boolean (client operator)
+  (:method (client operator)
+    (ctype:disjoin client
+                   (ctype:member client nil) (generalized-true client operator))))
+
 (defun derive-type-predicate (client operator objtype ctype)
   (ctype:single-value
    (cond ((ctype:subtypep objtype ctype client) (generalized-true client operator))
