@@ -85,9 +85,8 @@
                (coerce-bound (interval-high interval) kind) client))
 
 (defun range->interval (client range)
-  (multiple-value-bind (low lxp) (ctype:range-low range client)
-    (multiple-value-bind (high hxp) (ctype:range-high range client)
-      (make-interval (if lxp (list low) low) (if hxp (list high) high)))))
+  (multiple-value-bind (low lxp high hxp) (range-bounds client range)
+    (make-interval (if lxp (list low) low) (if hxp (list high) high))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -227,9 +226,8 @@
   (ctype:single-value
    (cond ((and (ctype:rangep power client)
                (eq 'integer (ctype:range-kind power client))
-               (multiple-value-bind (low lxp) (ctype:range-low power client)
-                 (multiple-value-bind (high hxp) (ctype:range-high power client)
-                   (and (not lxp) (not hxp) (= low high) (> low 0)))))
+               (multiple-value-bind (low lxp high hxp) (range-bounds client power)
+                 (and (not lxp) (not hxp) (= low high) (> low 0))))
           ;; constant power
           (type-expt client base (ctype:range-low power client)))
          ;; otherwise we give up. TODO!
@@ -244,49 +242,48 @@
 ;;; Split into two intervals, one wholly less than zero and one greater.
 ;;; If either range is empty, NIL is returned for it instead.
 (defun range->intervals-for-reciprocal (client range)
-  (multiple-value-bind (low lxp) (ctype:range-low range client)
-    (multiple-value-bind (high hxp) (ctype:range-high range client)
-      (if (eq (ctype:range-kind range client) 'integer)
-          ;; Integer ranges we treat specially when they include 0,
-          ;; because the interval arithmetic doesn't understand discreteness.
-          ;; For example, the reciprocal of an (integer -7 7) is a rational
-          ;; between -1 and 1, but the reciprocal of a
-          ;; (rational -7 7) is unbounded as it approaches zero.
-          ;; We also normalize exclusive bounds while we're at it.
-          (values
-           (if (and low (>= low (if lxp -1 0)))
-               nil
-               (make-interval (cond ((not low) low)
-                                    (lxp (1+ low))
-                                    (t low))
-                              (cond ((or (not high) (>= high 0)) -1)
-                                    (hxp (1- high))
-                                    (t high))))
-           (if (and high (<= high (if hxp 1 0)))
-               nil
-               (make-interval (cond ((or (not low) (<= low 0)) 1)
-                                    (lxp (1+ low))
-                                    (t low))
-                              (cond ((not high) high)
-                                    (hxp (1- high))
-                                    (t high)))))
-          (values
-           (if (and low (>= low 0))
-               nil
-               (make-interval (cond ((not low) low)
-                                    (lxp (list low))
-                                    (t low))
-                              (cond ((or (not high) (>= high 0)) '(0))
-                                    (hxp (list high))
-                                    (t high))))
-           (if (and high (<= high 0))
-               nil
-               (make-interval (cond ((or (not low) (<= low 0)) '(0))
-                                    (lxp (list low))
-                                    (t low))
-                              (cond ((not high) high)
-                                    (hxp (list high))
-                                    (t high)))))))))
+  (multiple-value-bind (low lxp high hxp) (range-bounds client range)
+    (if (eq (ctype:range-kind range client) 'integer)
+        ;; Integer ranges we treat specially when they include 0,
+        ;; because the interval arithmetic doesn't understand discreteness.
+        ;; For example, the reciprocal of an (integer -7 7) is a rational
+        ;; between -1 and 1, but the reciprocal of a
+        ;; (rational -7 7) is unbounded as it approaches zero.
+        ;; We also normalize exclusive bounds while we're at it.
+        (values
+         (if (and low (>= low (if lxp -1 0)))
+             nil
+             (make-interval (cond ((not low) low)
+                                  (lxp (1+ low))
+                                  (t low))
+                            (cond ((or (not high) (>= high 0)) -1)
+                                  (hxp (1- high))
+                                  (t high))))
+         (if (and high (<= high (if hxp 1 0)))
+             nil
+             (make-interval (cond ((or (not low) (<= low 0)) 1)
+                                  (lxp (1+ low))
+                                  (t low))
+                            (cond ((not high) high)
+                                  (hxp (1- high))
+                                  (t high)))))
+        (values
+         (if (and low (>= low 0))
+             nil
+             (make-interval (cond ((not low) low)
+                                  (lxp (list low))
+                                  (t low))
+                            (cond ((or (not high) (>= high 0)) '(0))
+                                  (hxp (list high))
+                                  (t high))))
+         (if (and high (<= high 0))
+             nil
+             (make-interval (cond ((or (not low) (<= low 0)) '(0))
+                                  (lxp (list low))
+                                  (t low))
+                            (cond ((not high) high)
+                                  (hxp (list high))
+                                  (t high))))))))
 
 ;;; Given two range types, return an interval for the result.
 ;;; We take types rather than intervals because the divisor being an integer
@@ -485,7 +482,7 @@
                          (hxp (list (funcall function high)))
                          (t (funcall function high)))))
         (if decreasing
-            (ctype:range mking ohigh olow client)
+            (ctype:range mkind ohigh olow client)
             (ctype:range mkind olow ohigh client))))))
 
 (defun type-irrat-monotonic1 (client type function &key (inf '*) (sup '*))
@@ -512,9 +509,9 @@
                        (range-bound-irrat-monotonic1 client ty function lowb highb
                                                      :inf inf :sup sup
                                                      :decreasing decreasing))
-              ty))
+              type))
 
-(defun range-boundbelow-irrat-monotonic1 (client range lowbound
+(defun range-boundbelow-irrat-monotonic1 (client range function lowbound
                                           &key (inf '*) (sup '*))
   (let ((low (ctype:range-low range client)))
     (if (and low (>= low lowbound))
@@ -566,7 +563,7 @@
   (ctype:single-value (type-irrat-monotonic1 client arg #'exp :inf 0f0) client))
 
 (define-deriver (sqrt domain:type) (client (arg))
-  (type-boundbelow-irrat-monotonic1 arg #'sqrt 0 :inf 0f0))
+  (type-boundbelow-irrat-monotonic1 client arg #'sqrt 0 :inf 0f0))
 
 (define-deriver (sin domain:type) (client (arg))
   (ctype:single-value
@@ -603,11 +600,12 @@
 
 (define-deriver (asin domain:type) (client (arg))
   (ctype:single-value
-   (type-bound-irrat-monotonic1 arg #'asin -1 1 :inf (- (/ pi 2)) :sup (/ pi 2))
+   (type-bound-irrat-monotonic1 client arg #'asin -1 1
+                                :inf (- (/ pi 2)) :sup (/ pi 2))
    client))
 (define-deriver (acos domain:type) (client (arg))
   (ctype:single-value
-   (type-bound-irrat-monotonic1 arg #'acos -1 1 :inf 0 :sup pi :decreasing t)
+   (type-bound-irrat-monotonic1 client arg #'acos -1 1 :inf 0 :sup pi :decreasing t)
    client))
 
 (define-deriver (sinh domain:type) (client (arg))
@@ -642,6 +640,29 @@
 (define-deriver (tanh domain:type) (client (arg))
   (ctype:single-value (type-irrat-monotonic1 client arg #'tanh :inf -1f0 :sup 1f0)
                       client))
+
+(define-deriver (abs domain:type) (client (arg))
+  (ctype:single-value
+   (distribute
+    client
+    (lambda (type)
+      (if (ctype:rangep type client)
+          (let ((kind (ctype:range-kind arg client)))
+            (multiple-value-bind (low lxp high hxp) (range-bounds client arg)
+              (ctype:range kind
+                           (cond ((or (not low) (and low (minusp low)))
+                                  (coerce 0 kind))
+                                 ((or (not high) (< low (abs high)))
+                                  (if lxp (list low) low))
+                                 (t (if hxp (list (abs high)) (abs high))))
+                           (cond ((or (not high) (not low)) '*)
+                                 ((< (abs low) (abs high))
+                                  (if hxp (list (abs high)) (abs high)))
+                                 (t (if lxp (list (abs low)) (abs low))))
+                           client)))
+          (ctype:range 'real 0 '* client)))
+    arg)
+   client))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
