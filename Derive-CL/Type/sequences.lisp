@@ -136,6 +136,27 @@
 (defun sequence-length-max (client type)
   (nth-value 1 (sequence-length-bounds client type)))
 
+;;; Given the type for a result-type specifier, return the best type you can for it.
+;;; This is used when inferring the result of CONCATENATE, MAP, etc.
+(defun specified-sequence-type (client result-type-type)
+  (if (constant-type-p client result-type-type)
+      (multiple-value-bind (ctype validp)
+          (ctype:approximate-parse
+           client (constant-type-value client result-type-type))
+        (if validp
+            ;; we could check that this is a subtype of SEQUENCE, but we don't
+            ;; actually have to, since in that case an error should probably be
+            ;; signaled (not sure this is strictly required).
+            ctype
+            (sequence-type client)))
+      (sequence-type client)))
+
+;;;
+
+(define-deriver (concatenate domain:type) (client (result-type &rest seqs))
+  (declare (ignore seqs))
+  (ctype:single-value (specified-sequence-type client result-type) client))
+
 (define-deriver (copy-seq domain:type) (client (sequence))
   (ctype:single-value (sequence-type-id client sequence) client))
 
@@ -147,13 +168,27 @@
   (declare (ignore item keys))
   (ctype:single-value (sequence-type-id client sequence) client))
 
+(define-deriver (make-sequence domain:type)
+    (client (result-type length &key initial-element))
+  (declare (ignore length initial-element))
+  (ctype:single-value (specified-sequence-type client result-type) client))
+
 (define-deriver (subseq domain:type) (client (sequence start &rest end))
   (declare (ignore start end))
   (ctype:single-value (sequence-type-lengthfree client sequence) client))
 
+(define-deriver (map domain:type) (client (result-type function &rest seqs))
+  (declare (ignore function seqs))
+  (ctype:single-value (specified-sequence-type client result-type) client))
+
 (define-deriver (map-into domain:type) (client (sequence function &rest seqs))
   (declare (ignore function seqs))
   (ctype:single-value (sequence-type-id client sequence) client))
+
+(define-deriver (merge domain:type) (client (result-type seq1 seq2
+                                                         predicate &key key))
+  (declare (ignore seq1 seq2 predicate key))
+  (ctype:single-value (specified-sequence-type client result-type) client))
 
 (define-deriver (reduce domain:type) (client (function sequence &rest keys))
   (declare (ignore function sequence keys))
