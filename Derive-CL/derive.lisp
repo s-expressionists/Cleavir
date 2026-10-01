@@ -116,3 +116,45 @@
                                                  client domain req () sv-inf))))))
          (info (domain:product client product infos)))
     (funcall (deriver product operator) client product info)))
+
+;;; Like the above, but types only, and accepts constants and compound arguments
+;;; (as long as they're still just calls)
+(defun derive-type (client form bindings)
+  (typecase form
+    (symbol
+     (ctype:single-value
+      (let ((bound (assoc form bindings)))
+        (if bound
+            (multiple-value-bind (ctype validp)
+                (ctype:approximate-parse client (second bound))
+              (if validp
+                  ctype
+                  (ctype:top client)))
+            (ctype:top client)))
+      client))
+    ((cons (eql quote) (cons t null))
+     (ctype:single-value (ctype:member client (second form)) client))
+    ((cons (eql function) (cons t null))
+     (ctype:single-value (ctype:function-top client) client))
+    ((cons (member go return-from)) (ctype:values-bottom client))
+    #+(or) ; todo, but needs values parsing
+    ((cons (eql the) (cons t (cons t null)))
+     (let ((type (second form)) (subform (third form)))
+       (ctype:values-conjoin client (derive-type client subform bindings)
+                             foob)))
+    ((cons (member block catch eval-when flet if labels let let*
+                   load-time-value locally macrolet multiple-value-call
+                   multiple-value-prog1 progn progv
+                   setq symbol-macrolet tagbody the throw unwind-protect))
+     (error "Can't handle special form ~s" form))
+    ((cons symbol)
+     (loop with operator = (first form)
+           with deriver = (deriver domain:type operator)
+           for arg in (rest form)
+           for argtype = (derive-type client arg bindings)
+           collect (ctype:primary argtype client) into pargtypes
+           finally (return
+                     (funcall deriver client domain:type
+                              (ctype:values pargtypes () (ctype:bottom client) client)))))
+    (cons (error "Can't handle form ~s" form))
+    (t (ctype:single-value (ctype:member client form) client))))
