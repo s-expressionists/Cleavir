@@ -110,7 +110,7 @@
 
 (defmethod parse (client (specifier (eql 'standard-char))) (standard-char client))
 
-(defmethod parse (client (specifier (eql 'string))) (string '* 'array client))
+(defmethod parse (client (specifier (eql 'cl:string))) (string '* 'cl:array client))
 
 (defmethod parse (client (specifier (eql 't))) (top client))
 
@@ -118,7 +118,7 @@
   (range 'integer 0 '* client))
 
 (defmethod parse (client (specifier (eql 'vector)))
-  (array '* '(*) 'array client))
+  (array '* '(*) 'cl:array client))
 
 (defmethod parse (client (specifier cl:class)) (class specifier client))
 
@@ -158,17 +158,17 @@
                     et
                     (upgraded-array-element-type (parse client et) client)))
           (dims (validate-dimensions dims)))
-      (array uaet dims 'array client))))
+      (array uaet dims 'cl:array client))))
 
 (defmethod parse-compound (client (spec (eql 'base-string)) arguments)
   (destructuring-bind (&optional (dim '*)) arguments
     (array (upgraded-array-element-type (base-char client) client)
-           (list (validate-dimension dim)) 'array client)))
+           (list (validate-dimension dim)) 'cl:array client)))
 
 (defmethod parse-compound (client (spec (eql 'bit-vector)) arguments)
   (destructuring-bind (&optional (dim '*)) arguments
     (array (upgraded-array-element-type (range 'integer 0 1 client) client)
-           (list (validate-dimension dim)) 'array client)))
+           (list (validate-dimension dim)) 'cl:array client)))
 
 (defmethod parse-compound (client (spec (eql 'cl:complex)) arguments)
   (destructuring-bind (&optional (part '*)) arguments
@@ -281,7 +281,7 @@
 
 (defmethod parse-compound (client (spec (eql 'string)) arguments)
   (destructuring-bind (&optional (dim '*)) arguments
-    (string (validate-dimension dim) 'array client)))
+    (string (validate-dimension dim) 'cl:array client)))
 
 (defmethod parse-compound (client (spec (eql 'unsigned-byte)) arguments)
   (destructuring-bind (&optional (nbits '*)) arguments
@@ -300,4 +300,4 @@
                     et
                     (upgraded-array-element-type (parse client et) client)))
           (dims (list (validate-dimension dim))))
-      (array uaet dims 'array client))))
+      (array uaet dims 'cl:array client))))
