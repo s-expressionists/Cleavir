@@ -765,6 +765,13 @@
   (ctype:single-value (type-irrat-monotonic1 client arg #'tanh :inf -1f0 :sup 1f0)
                       client))
 
+(define-deriver (asinh domain:type) (client (arg))
+  (type-irrat-monotonic1 client arg #'asinh))
+(define-deriver (acosh domain:type) (client (arg))
+  (type-boundbelow-irrat-monotonic1 client arg #'acosh 1 :inf 0f0))
+(define-deriver (atanh domain:type) (client (arg))
+  (type-bound-irrat-monotonic1 client arg #'atanh -1 1))
+
 (define-deriver (abs domain:type) (client (arg))
   (ctype:single-value
    (distribute
@@ -1088,7 +1095,6 @@
            (multiple-value-bind (low high) (range-logand/2 low1 high1 low2 high2)
              (ctype:range 'integer low high client))))))
    client))
-
 (define-deriver (logandc2 domain:type) (client (a1 a2))
   (ctype:single-value
    (block nil
@@ -1118,9 +1124,20 @@
    (block nil
      (multiple-value-bind (plow1 phigh1 emptyp) (type-integer-bounds client a1)
        (when emptyp (return (ctype:bottom client)))
-       (multiple-value-bind (low1 high1) (range-lognot plow1 phigh1)
-         (multiple-value-bind (low2 high2 emptyp) (type-integer-bounds client a2)
-           (when emptyp (return (ctype:bottom client)))
+       (multiple-value-bind (low2 high2 emptyp) (type-integer-bounds client a2)
+         (when emptyp (return (ctype:bottom client)))
+         (multiple-value-bind (low1 high1) (range-lognot plow1 phigh1)
+           (multiple-value-bind (low high) (range-logior/2 low1 high1 low2 high2)
+             (ctype:range 'integer low high client))))))
+   client))
+(define-deriver (logorc2 domain:type) (client (a1 a2))
+  (ctype:single-value
+   (block nil
+     (multiple-value-bind (low1 high1 emptyp) (type-integer-bounds client a1)
+       (when emptyp (return (ctype:bottom client)))
+       (multiple-value-bind (plow2 phigh2 emptyp) (type-integer-bounds client a2)
+         (when emptyp (return (ctype:bottom client)))
+         (multiple-value-bind (low2 high2) (range-lognot plow2 phigh2)
            (multiple-value-bind (low high) (range-logior/2 low1 high1 low2 high2)
              (ctype:range 'integer low high client))))))
    client))

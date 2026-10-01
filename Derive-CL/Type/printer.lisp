@@ -10,7 +10,7 @@
 (define-deriver (princ domain:type) (client (object &optional stream))
   (declare (ignore stream))
   (ctype:single-value object client))
-(define-deriver (write domain:type) (client (object &optional stream))
+(define-deriver (print domain:type) (client (object &optional stream))
   (declare (ignore stream))
   (ctype:single-value object client))
 
