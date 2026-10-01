@@ -6,7 +6,8 @@
    (:file "aux" :depends-on ("packages"))
    (:module "Type"
     :depends-on ("aux" "derive" "packages")
-    :components ((:file "data")
+    :components ((:file "types-and-classes")
+                 (:file "data")
                  (:file "conditions")
                  (:file "interval")
                  (:file "numbers" :depends-on ("interval"))

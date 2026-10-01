@@ -51,6 +51,16 @@
                      return '*))
             (t '*)))))
 
+(defun type->uaet (client type)
+  (if (constant-type-p client type)
+      (let ((et (constant-type-value client type)))
+        (multiple-value-bind (ctype validp)
+            (ctype:approximate-parse client et)
+          (if validp
+              (ctype:upgraded-array-element-type ctype client)
+              '*)))
+      '*))
+
 (define-deriver (make-array domain:type)
     (client (dimensions &key (element-type (ctype:member client 't))
                         (adjustable (ctype:member client 'nil))
@@ -68,17 +78,7 @@
            (and (eq simplicity 'simple-array)
                 (not (simple-arrays-actually-adjustable-p client))))
          (idimensions (type->dimensions client dimensions dimensions-valid-p))
-         (uaet
-           ;; FIXME: doing it right requires type parsing and therefore
-           ;; an environment. We pick off T since it's unambiguous though.
-           ;; Technically an implementation could do
-           ;; (upgraded-array-element-type 't) => (NOT NIL) or something I guess?
-           (if (constant-type-p client element-type)
-               (let ((et (constant-type-value client element-type)))
-                 (if (eq et 't)
-                     't
-                     '*))
-               '*))
+         (uaet (type->uaet client element-type))
          (array (ctype:array uaet idimensions simplicity client)))
     (ctype:single-value array client)))
 
