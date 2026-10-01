@@ -20,6 +20,13 @@
   (let ((top (ctype:top client)))
     (ctype:single-value (ctype:cons top top client) client)))
 
+(define-deriver (rplaca domain:type) (client (cons value))
+  (declare (ignore value))
+  (ctype:single-value cons client))
+(define-deriver (rplacd domain:type) (client (cons value))
+  (declare (ignore value))
+  (ctype:single-value cons client))
+
 (defun type-car (client type)
   (distribute
    client

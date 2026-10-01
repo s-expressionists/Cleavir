@@ -26,6 +26,18 @@
                        client))
         (t (funcall function type))))
 
+(defun values-distribute (client function type)
+  (cond ((ctype:conjunctionp type client)
+         (apply #'ctype:values-conjoin client
+                (loop for ty in (ctype:conjunction-ctypes type client)
+                      collect (values-distribute client function ty))))
+        ((ctype:disjunctionp type client)
+         (apply #'ctype:values-disjoin client
+                (loop for ty in (ctype:disjunction-ctypes type client)
+                      collect (values-distribute client function ty))))
+        ;; no values-negate since it would be hard to get anything useful
+        (t (funcall function type))))
+
 (defun maybe (client type)
   (ctype:disjoin client type (ctype:member client nil)))
 

@@ -17,6 +17,27 @@
          (t (ctype:top client)))
    client))
 
+(define-deriver (fdefinition domain:type) (client (function-name))
+  (declare (ignore function-name))
+  (ctype:single-value (ctype:function-top client) client))
+(define-deriver ((setf fdefinition) domain:type) (client (new function-name))
+  (declare (ignore function-name))
+  (ctype:single-value new client))
+
+(define-deriver (funcall domain:type) (client (function &rest args))
+  (values-distribute
+   client
+   (lambda (function)
+     (if (ctype:functionp function client)
+         (ctype:apply function args client)
+         (ctype:values-top client)))
+   function))
+
+;; NOT isn't conceptually a type predicate, but it does behave exactly
+;; like one, so here we are.
+(define-deriver (not domain:type) (client (object))
+  (derive-type-predicate client 'not object (ctype:member client nil)))
+
 (define-deriver (eq domain:type) (client (a1 a2) domain:equivalence (e1 e2))
   (derive-eq/l client a1 a2 e1 e2))
 (define-deriver (eql domain:type) (client (a1 a2) domain:equivalence (e1 e2))
@@ -24,6 +45,21 @@
 
 (define-deriver (identity domain:type) (client (arg))
   (ctype:single-value arg client))
+
+(define-deriver (complement domain:type) (client (function))
+  (ctype:single-value
+   (ctype:function () () (ctype:top client) nil () nil
+                   (ctype:single-value
+                    (ctype:top client) ; could elaborate
+                    client)
+                   client)
+   client))
+
+(define-deriver (constantly domain:type) (client (arg))
+  (ctype:single-value
+   (ctype:function () () (ctype:top client) nil () nil
+                   (ctype:single-value arg client) client)
+   client))
 
 (define-deriver (values domain:type) (client (&rest args))
   ;;(declare (ignore client))

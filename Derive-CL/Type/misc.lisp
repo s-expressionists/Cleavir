@@ -32,6 +32,13 @@
   (declare (ignore symbol))
   (ctype:single-value (ctype:top client) client))
 
+(define-deriver (symbol-function domain:type) (client (symbol))
+  (declare (ignore symbol))
+  (ctype:single-value (ctype:function-top client) client))
+(define-deriver ((setf symbol-function) domain:type) (client (new symbol))
+  (declare (ignore symbol))
+  (ctype:single-value new client))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; (10) Packages
@@ -46,6 +53,34 @@
 ;; We could be more specific here, since standard-char-p of a non-character
 ;; is actually an error, but this is a valid approximation.
 (define-deriver-type-predicate standard-char-p client (ctype:standard-char client))
+
+(define-deriver (character domain:type) (client (object))
+  (declare (ignore object))
+  (ctype:single-value (ctype:character client) client))
+
+(macrolet ((defchar (name)
+             `(define-deriver (,name domain:type) (client (character))
+                (declare (ignore character))
+                (ctype:single-value (ctype:character client) client))))
+  (defchar char-upcase) (defchar char-downcase))
+
+(macrolet ((defcharcmp (name)
+             `(define-deriver (,name domain:type) (client (&rest characters))
+                (declare (ignore characters))
+                (ctype:single-value (generalized-boolean client ',name) client)))
+           (defcharcmps (&rest names)
+             `(progn ,@(loop for name in names collect `(defcharcmp ,name)))))
+  (defcharcmps char= char/= char< char> char<= char>=
+    char-equal char-not-equal char-lessp char-greaterp
+    char-not-greaterp char-not-lessp))
+
+(macrolet ((defcharpred (name)
+             `(define-deriver (,name domain:type) (client (character))
+                (declare (ignore character))
+                (ctype:single-value (generalized-boolean client ',name) client)))
+           (defcharpreds (&rest names)
+             `(progn ,@(loop for name in names collect `(defcharpred ,name)))))
+  (defcharpreds alpha-char-p graphic-char-p upper-case-p lower-case-p both-case-p))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
