@@ -132,10 +132,10 @@
         with result = (ctype:bottom client)
         for keyt = (cond (required (pop required))
                          (optional (setf reqp nil) (pop optional))
-                         (rest (setf reqp nil done t) rest))
+                         (t (setf reqp nil done t) rest))
         for valuet = (cond (required (pop required))
                            (optional (pop optional))
-                           (rest))
+                           (t rest))
         if (ctype:subtypep keyt kwtype client)
           ;; this one is DEFINITELY the keyword, so we're done
           return (if reqp ; and it's definitely provided
