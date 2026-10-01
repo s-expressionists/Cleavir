@@ -15,12 +15,7 @@
 (define-deriver-type-predicate simple-bit-vector-p client
   (ctype:array 'bit '(*) 'simple-array client))
 
-#+(or)
-(define-deriver (make-array domain:type)
-    (client (dimensions &key (element-type (ctype:member client 't))
-                        (adjustable (ctype:member client 'nil))
-                        (fill-pointer (ctype:member client 'nil))
-                        (displaced-to (ctype:member client 'nil))))
+(defun type->dimensions (client dimensions dimensions-valid-p)
   (flet ((dimension-spec (type)
            (if (and (ctype:rangep type client)
                     (eq (ctype:range-kind type client) 'integer))
@@ -32,51 +27,60 @@
                    (if (= low high) low nil)))
                nil)))
     (let* ((top (ctype:top client))
-           (null (ctype:member client 'nil))
-           (simplicity (if (and (ctype:subtypep adjustable null client)
-                                (ctype:subtypep fill-pointer null client)
-                                (ctype:subtypep displaced-to null client))
-                           'simple-array
-                           'array))
-           (dimensions-valid-p
-             ;; see above note about adjustability.
-             ;; Note that we can infer the _rank_, since that can't be adjusted.
-             (and (eq simplicity 'simple-array)
-                  (not (simple-arrays-actually-adjustable-p client))))
-           (list (ctype:disjoin client null (ctype:cons top top client)))
-           (idimensions
-             (cond ((ctype:subtypep dimensions null client) ())
-                   ((dimension-spec dimensions)
-                    (if dimensions-valid-p
-                        (list (dimension-spec dimensions))
-                        '(*)))
-                   ((ctype:subtypep dimensions (ctype:negate list client) client)
-                    ;; if the dimensions isn't a list, it must be a designator,
-                    ;; i.e. a number, so this is a vector.
-                    '(*))
-                   ((ctype:consp dimensions client)
-                    (loop for cons = dimensions then cdr
-                          for car = (ctype:cons-car cons client)
-                          for cdr = (ctype:cons-cdr cons client)
-                          collect (if dimensions-valid-p
-                                      (or (dimension-spec car) '*)
-                                      '*)
-                          until (ctype:subtypep cdr null client)
-                          when (not (ctype:consp cdr client))
-                            ;; list of unknown length (nil covered by above)
-                            return '*))
-                   (t '*)))
-           (uaet (if (constant-type-p client element-type)
-                     (handler-case
-                         (ctype:upgraded-array-element-type
-                          (parse client
-                                 (constant-type-value client element-type))
-                          client)
-                       (error () '*))
+           (null (ctype:member client nil))
+           (list (ctype:disjoin client null (ctype:cons top top client))))
+      (cond ((ctype:subtypep dimensions null client) ())
+            ((dimension-spec dimensions)
+             (if dimensions-valid-p
+                 (list (dimension-spec dimensions))
+                 '(*)))
+            ((ctype:subtypep dimensions (ctype:negate list client) client)
+             ;; if the dimensions isn't a list, it must be a designator,
+             ;; i.e. a number, so this is a vector.
+             '(*))
+            ((ctype:consp dimensions client)
+             (loop for cons = dimensions then cdr
+                   for car = (ctype:cons-car cons client)
+                   for cdr = (ctype:cons-cdr cons client)
+                   collect (if dimensions-valid-p
+                               (or (dimension-spec car) '*)
+                               '*)
+                   until (ctype:subtypep cdr null client)
+                   when (not (ctype:consp cdr client))
+                     ;; list of unknown length (nil covered by above)
+                     return '*))
+            (t '*)))))
+
+(define-deriver (make-array domain:type)
+    (client (dimensions &key (element-type (ctype:member client 't))
+                        (adjustable (ctype:member client 'nil))
+                        (fill-pointer (ctype:member client 'nil))
+                        (displaced-to (ctype:member client 'nil))))
+  (let* ((null (ctype:member client 'nil))
+         (simplicity (if (and (ctype:subtypep adjustable null client)
+                              (ctype:subtypep fill-pointer null client)
+                              (ctype:subtypep displaced-to null client))
+                         'simple-array
+                         'array))
+         (dimensions-valid-p
+           ;; see above note about adjustability.
+           ;; Note that we can infer the _rank_, since that can't be adjusted.
+           (and (eq simplicity 'simple-array)
+                (not (simple-arrays-actually-adjustable-p client))))
+         (idimensions (type->dimensions client dimensions dimensions-valid-p))
+         (uaet
+           ;; FIXME: doing it right requires type parsing and therefore
+           ;; an environment. We pick off T since it's unambiguous though.
+           ;; Technically an implementation could do
+           ;; (upgraded-array-element-type 't) => (NOT NIL) or something I guess?
+           (if (constant-type-p client element-type)
+               (let ((et (constant-type-value client element-type)))
+                 (if (eq et 't)
+                     't
                      '*))
-           (array
-             (ctype:array uaet idimensions simplicity client)))
-      (ctype:single-value array client))))
+               '*))
+         (array (ctype:array uaet idimensions simplicity client)))
+    (ctype:single-value array client)))
 
 (defun type-aet (client type)
   (if (ctype:arrayp type client)
