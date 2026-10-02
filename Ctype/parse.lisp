@@ -9,7 +9,8 @@
 
 (defgeneric parse (client specifier)
   (:method (client specifier)
-    (error 'no-parse :client client :specifier specifier)))
+    (restart-case (error 'no-parse :client client :specifier specifier)
+      (use-value (ctype) ctype))))
 
 (defun approximate-parse (client specifier)
   (handler-case (parse client specifier)
@@ -127,7 +128,9 @@
 
 (defgeneric parse-compound (client specifier arguments)
   (:method (client specifier arguments)
-    (error 'no-parse :client client :specifier (list* specifier arguments))))
+    (restart-case
+        (error 'no-parse :client client :specifier (list* specifier arguments))
+      (use-value (ctype) ctype))))
 
 (defmethod parse-compound (client (spec (eql 'and)) arguments)
   (cl:apply #'conjoin client
@@ -301,3 +304,16 @@
                     (upgraded-array-element-type (parse client et) client)))
           (dims (list (validate-dimension dim))))
       (array uaet dims 'cl:array client))))
+
+(defun parse-values (client specifier)
+  (if (and (cl:consp specifier) (eq (first specifier) 'cl:values))
+      (let* ((crest (cl:member '&rest specifier))
+             (rest (second crest))
+             (coptional (cl:member '&optional specifier))
+             (optional (ldiff (rest coptional) crest))
+             (required (ldiff (rest specifier) (or coptional crest))))
+        (values (loop for req in required collect (parse client req))
+                (loop for opt in optional collect (parse client opt))
+                (if crest (parse client rest) (top client))
+                client))
+      (values (list (parse client specifier)) () (top client) client)))

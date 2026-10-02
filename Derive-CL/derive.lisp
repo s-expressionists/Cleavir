@@ -119,7 +119,7 @@
 
 ;;; Like the above, but types only, and accepts constants and compound arguments
 ;;; (as long as they're still just calls)
-(defun derive-type (client form bindings)
+(defun derive-type (client form &optional bindings)
   (typecase form
     (symbol
      (ctype:single-value
@@ -136,16 +136,15 @@
      (ctype:single-value (ctype:member client (second form)) client))
     ((cons (eql function) (cons t null))
      (ctype:single-value (ctype:function-top client) client))
-    ((cons (member go return-from)) (ctype:values-bottom client))
-    #+(or) ; todo, but needs values parsing
+    ((cons (member go return-from throw)) (ctype:values-bottom client))
     ((cons (eql the) (cons t (cons t null)))
      (let ((type (second form)) (subform (third form)))
        (ctype:values-conjoin client (derive-type client subform bindings)
-                             foob)))
+                             (ctype:parse-values client type))))
     ((cons (member block catch eval-when flet if labels let let*
                    load-time-value locally macrolet multiple-value-call
                    multiple-value-prog1 progn progv
-                   setq symbol-macrolet tagbody the throw unwind-protect))
+                   setq symbol-macrolet tagbody unwind-protect))
      (error "Can't handle special form ~s" form))
     ((cons symbol)
      (loop with operator = (first form)
