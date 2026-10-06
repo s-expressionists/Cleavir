@@ -141,7 +141,14 @@
      (let ((type (second form)) (subform (third form)))
        (ctype:values-conjoin client (derive-type client subform bindings)
                              (ctype:parse-values client type))))
-    ((cons (member block catch eval-when flet if labels let let*
+    ((cons (eql if))
+     (destructuring-bind (condition then &optional else) (rest form)
+       (declare (ignore condition))
+       (ctype:values-disjoin client (derive-type client then bindings)
+                             (derive-type client else bindings))))
+    ((cons (eql multiple-value-prog1))
+     (derive-type client (first (rest form)) bindings))
+    ((cons (member block catch eval-when flet labels let let*
                    load-time-value locally macrolet multiple-value-call
                    multiple-value-prog1 progn progv
                    setq symbol-macrolet tagbody unwind-protect))
