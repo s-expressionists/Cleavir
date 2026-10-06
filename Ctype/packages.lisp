@@ -39,4 +39,6 @@
            #:function-values)
   (:export #:function-top)
   (:export #:values-subtypep)
-  (:export #:apply #:funcall))
+  (:export #:apply #:funcall)
+  (:export #:parse #:parse-compound #:parse-values
+           #:approximate-parse #:no-parse))

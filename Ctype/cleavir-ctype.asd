@@ -20,4 +20,5 @@
    (:file "generic-functions" :depends-on ("packages"))
    (:file "other-functions" :depends-on ("packages"))
    (:file "default" :depends-on ("generic-functions"
-                                 "packages"))))
+                                 "packages"))
+   (:file "parse" :depends-on ("generic-functions" "packages"))))

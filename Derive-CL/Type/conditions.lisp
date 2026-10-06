@@ -1,0 +1,22 @@
+(in-package #:cleavir-derive-cl)
+
+(define-deriver (error domain:type) (client (datum &rest arguments))
+  (declare (ignore datum arguments))
+  (ctype:values-bottom client))
+(define-deriver (invoke-debugger domain:type) (client (condition))
+  (declare (ignore condition))
+  (ctype:values-bottom client))
+
+(define-deriver (cerror domain:type) (client (datum &rest arguments))
+  (declare (ignore datum arguments))
+  (ctype:single-value (ctype:member client nil) client))
+(define-deriver (signal domain:type) (client (datum &rest arguments))
+  (declare (ignore datum arguments))
+  (ctype:single-value (ctype:member client nil) client))
+(define-deriver (warn domain:type) (client (datum &rest arguments))
+  (declare (ignore datum arguments))
+  (ctype:single-value (ctype:member client nil) client))
+
+(define-deriver (break domain:type) (client (datum &rest arguments))
+  (declare (ignore datum arguments))
+  (ctype:single-value (ctype:member client nil) client))
