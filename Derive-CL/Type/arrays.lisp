@@ -83,9 +83,13 @@
     (ctype:single-value array client)))
 
 (defun type-aet (client type)
-  (if (ctype:arrayp type client)
-      (ctype:array-element-type type client)
-      (ctype:top client)))
+  (distribute
+   client
+   (lambda (type)
+     (if (ctype:arrayp type client)
+         (ctype:array-element-type type client)
+         (ctype:top client)))
+   type))
 
 (define-deriver (aref domain:type) (client (array &rest indices))
   ;; TODO: return bottom if indices are invalid
