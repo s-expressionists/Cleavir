@@ -14,7 +14,7 @@
 ;;;; use them in the abstract interpreter or meta-evaluate.
 ;;;;
 
-(defvar *derivers* (make-hash-table))
+(defvar *derivers* (make-hash-table :test #'equal))
 
 (defun deriver (domain operator-name)
   (let ((table (gethash domain *derivers*)))
