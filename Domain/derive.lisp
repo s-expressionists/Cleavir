@@ -16,6 +16,7 @@
 ;;;; info. If the product doesn't have some info they want they can still
 ;;;; request it and just get the supremum (see product.lisp).
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun destructure-basic-lambda-list (lambda-list)
   (let* ((subkey (member '&key lambda-list))
          (key (rest subkey))
@@ -93,6 +94,7 @@
               (list `(,rest (values-info ,client ,domain
                                          ,vreq ,vopt ,vrest))))))
          (list ginfo vreq vopt vrest)))))
+) ; eval-when
 
 ;;; Bind info from multiple domains simultaneously within a body, the info
 ;;; being projected from a product domain.
@@ -146,6 +148,7 @@
         if done
           return (ctype:disjoin client result default)))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun type-domain-bindings (client info lambda-list default)
   (if (symbolp lambda-list)
       (values `((,lambda-list ,info)) ())
@@ -195,6 +198,7 @@
            (if (and (not rest) (not keysp))
                (list ginfo vreq vopt vrest check)
                (list ginfo vreq vopt vrest)))))))
+) ; eval-when
 
 ;;; Like WITH-INFO but the type domain is treated specially. Instead of being
 ;;; in SPECS, TYPE must be a symbol or a lambda list. The lambda list can have

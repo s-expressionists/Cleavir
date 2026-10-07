@@ -53,10 +53,11 @@
                          (make-hash-table :test #'equal)))))
     (setf (gethash operator-name table) new)))
 
-(defun function-block-name (operator)
-  (etypecase operator
-    (symbol operator)
-    ((cons (eql setf) (cons symbol null)) (second operator))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun function-block-name (operator)
+    (etypecase operator
+      (symbol operator)
+      ((cons (eql setf) (cons symbol null)) (second operator)))))
 
 (defmacro define-deriver ((operator domain) (client type &rest specs) &body body)
   `(setf (deriver ,domain ',operator)
