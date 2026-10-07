@@ -183,6 +183,61 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
+;;; Comparisons
+
+(defun derive-comparison/2 (client range1 range2 yes no)
+  (let ((i1 (range->interval client range1)) (i2 (range->interval client range2)))
+    (cond ((funcall yes i1 i2) t)
+          ((funcall no i1 i2) nil)
+          (t :maybe))))
+
+(defun derive-comparison (client fixed rest operator yes no)
+  (let* ((types (if (ctype:bottom-p rest client)
+                    fixed
+                    ;; a rest type could be treated more carefully, maybe?
+                    ;; but this should be a fine overapproximation
+                    (append fixed (list rest))))
+         (ranges
+           (loop for type in types collect (type-approximate-range client type)))
+         (intervals
+           (loop for range in ranges
+                 collect (if (ctype:rangep range client)
+                             (range->interval client range)
+                             nil))))
+    (ctype:single-value
+     (if (= (length intervals) 1) ; (< x)
+         (generalized-true client operator)
+         (loop with result = t
+               for (a b) on ranges
+               do (cond ((or (null a) (null b)) ; non-ranges, who knows
+                         (setf result :maybe))
+                        ((funcall no client a b)
+                         ;; comparison definitely fails, so we know the result
+                         (return (ctype:member client nil)))
+                        ((funcall yes client a b))
+                        (t (setf result :maybe)))
+               finally (if (eq result :maybe)
+                           (generalized-boolean client operator)
+                           (generalized-true client operator))))
+     client)))
+
+(macrolet ((define-comparison (name yes no)
+             `(define-deriver (,name domain:type) (client (arg1 &rest args))
+                (derive-comparison client
+                                   (append (list arg1)
+                                           (ctype:values-required args client)
+                                           (ctype:values-optional args client))
+                                   (ctype:values-rest args client)
+                                   ',name #',yes #',no))))
+  (define-comparison =  interval-=  interval-/=)
+  (define-comparison <  interval-<  interval->=)
+  (define-comparison <= interval-<= interval->)
+  (define-comparison >  interval->  interval-<=)
+  (define-comparison >= interval->= interval-<))
+;;; TODO: /=, but it involves quadratically many comparisons!
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 ;;; Addition and subtraction
 
 (defun range-negate (client range)

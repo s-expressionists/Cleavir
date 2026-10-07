@@ -63,6 +63,41 @@
     (make-interval (lbmin (interval-low i1) (interval-low i2))
                    (hbmax (interval-high i1) (interval-high i2)))))
 
+;;; These comparisons in general return "yes" or "maybe", e.g. interval-< is true
+;;; if the first is DEFINITELY less than the second, and false if it maybe is or
+;;; definitely is not.
+(defun interval-= (i1 i2)
+  (let ((i1l (interval-low i1)) (i2l (interval-low i2))
+        (i1h (interval-high i1)) (i2h (interval-high i2)))
+    (and (realp i1l) (realp i2l) (realp i1h) (realp i2h)
+         (= i1l i2l i1h i2h))))
+(defun interval-/= (i1 i2)
+  (let ((i1l (interval-low i1)) (i2l (interval-low i2))
+        (i1h (interval-high i1)) (i2h (interval-high i2)))
+    (or (and i1h i2l
+             (multiple-value-bind (i1high i1hxp) (bound-parts i1h)
+               (multiple-value-bind (i2low i2lxp) (bound-parts i2l)
+                 (or (< i1high i2low)
+                     (and (= i1high i2low) (or i1hxp i2lxp))))))
+        (and i2h i1l
+             (multiple-value-bind (i2high i2hxp) (bound-parts i2h)
+               (multiple-value-bind (i1low i1lxp) (bound-parts i1l)
+                 (or (< i2high i1low)
+                     (and (= i2high i1low) (or i2hxp i1lxp)))))))))
+
+(defun interval-< (i1 i2)
+  (let ((i1h (interval-high i1)) (i2l (interval-low i2)))
+    (and i1h i2l
+         (multiple-value-bind (i1high i1hxp) (bound-parts i1h)
+           (multiple-value-bind (i2low i2lxp) (bound-parts i2l)
+             (or (< i1high i2low)
+                 (and (= i1high i2low) (or i1hxp i2lxp))))))))
+(defun interval-<= (i1 i2)
+  (let ((i1h (interval-high i1)) (i2l (interval-low i2)))
+    (and i1h i2l (<= (bound-parts i1h) (bound-parts i2l)))))
+(defun interval-> (i1 i2) (interval-< i2 i1))
+(defun interval->= (i1 i2) (interval-<= i2 i1))
+
 ;;; Addition and subtraction
 
 (defun interval-negate (interval)
