@@ -58,8 +58,9 @@
                     (unless (and (eq (bir:function use) efunc)
                                  (safe-call-p use))
                       (return-from determine-closure-extent)))
-                   (t (return-from determine-closure-extent)))
-                 (setf (bir:extent enclose) :dynamic))))))))))
+                   (t (return-from determine-closure-extent)))))
+             ;; Only after every reader has been checked.
+             (setf (bir:extent enclose) :dynamic))))))))
 
 (defun determine-closure-extents (module)
   (bir:map-functions #'determine-closure-extent module))
