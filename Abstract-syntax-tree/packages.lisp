@@ -2,7 +2,7 @@
 
 (defpackage #:cleavir-ast
   (:use #:common-lisp)
-  (:shadow #:symbol #:ignore)
+  (:shadow #:symbol #:ignore #:dynamic-extent)
   (:export
    #:ast
    #:define-children #:children #:map-children
@@ -10,7 +10,7 @@
    #:origin
    #:*policy* #:policy
    #:constant-ast #:make-constant-ast #:value
-   #:lexical-bind-ast #:make-lexical-bind-ast #:ignore
+   #:lexical-bind-ast #:make-lexical-bind-ast #:ignore #:dynamic-extent
    #:lexical-ast #:make-lexical-ast
    #:constant-dynamic-bind-ast
    #:set-constant-symbol-value-ast #:make-set-constant-symbol-value-ast

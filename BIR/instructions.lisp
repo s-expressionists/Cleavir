@@ -182,8 +182,16 @@ See THROWI"))
 See CATCHI"))
 
 (defclass leti (writevar)
-  ()
+  ((%dynamic-extent :initarg :dynamic-extent :initform nil
+                    :accessor dynamic-extent))
   (:documentation "Instruction representing the initial binding of a variable.
+
+DYNAMIC-EXTENT is true when a CL:DYNAMIC-EXTENT declaration is in scope for the
+variable. Such a declaration constrains the extent of the VALUE bound rather
+than that of the variable, which is why it is carried here on the binder. It is
+permission to stack allocate, not proof of anything: an analysis must still
+establish independently that the value cannot escape, so that a declaration
+which is in fact wrong costs the optimisation rather than memory safety.
 
 See WRITEVAR"))
 
