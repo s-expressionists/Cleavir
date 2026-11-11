@@ -1062,9 +1062,9 @@
 (define-deriver (logxor domain:type) (client (&rest arguments))
   (ctype:single-value
    (multiple-value-bind (low high emptyp)
-       (let ((required (ctype:values-required client arguments))
-             (optional (ctype:values-optional client arguments))
-             (rest (ctype:values-rest client arguments)))
+       (let ((required (ctype:values-required arguments client))
+             (optional (ctype:values-optional arguments client))
+             (rest (ctype:values-rest arguments client)))
          (if (and (null optional) (ctype:bottom-p rest client))
              ;; fixed number of arguments: reduce range-logxor/2
              (loop with emptyp = t with min with max
@@ -1077,7 +1077,8 @@
                             (multiple-value-bind (low high subemptyp)
                                 (range-logxor/2 min max low high)
                               (when subemptyp (return (values nil nil t)))
-                              (setf min low max high)))))
+                              (setf min low max high))))
+                   finally (return (values min max nil)))
              ;; variable arguments, so default to maximizing integer-length
              ;; we could also do the sign thing to some extent but it's annoying:
              ;; e.g. (&rest (integer * 0)) is negative iff there are an odd number
