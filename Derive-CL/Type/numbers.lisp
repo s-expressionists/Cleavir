@@ -664,9 +664,12 @@
 (defun type-bound-irrat-monotonic1 (client type function lowb highb
                                     &key (inf '*) (sup '*) decreasing)
   (distribute client (lambda (ty)
-                       (range-bound-irrat-monotonic1 client ty function lowb highb
-                                                     :inf inf :sup sup
-                                                     :decreasing decreasing))
+                       (if (ctype:rangep ty client)
+                           (range-bound-irrat-monotonic1 client ty function
+                                                         lowb highb
+                                                         :inf inf :sup sup
+                                                         :decreasing decreasing)
+                           (type-number client)))
               type))
 
 (defun range-boundbelow-irrat-monotonic1 (client range function lowbound
@@ -679,9 +682,12 @@
 (defun type-boundbelow-irrat-monotonic1 (client type function lowbound
                                          &key (inf '*) (sup '*) strict)
   (distribute client (lambda (ty)
-                       (range-boundbelow-irrat-monotonic1 client ty function
-                                                          lowbound :strict strict
-                                                          :inf inf :sup sup))
+                       (if (ctype:rangep ty client)
+                           (range-boundbelow-irrat-monotonic1 client ty function
+                                                              lowbound
+                                                              :strict strict
+                                                              :inf inf :sup sup)
+                           (type-number client)))
               type))
 
 ;;; Does the interval contain offset + n*multiple for some integer n?
