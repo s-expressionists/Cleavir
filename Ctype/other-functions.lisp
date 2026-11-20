@@ -1,54 +1,42 @@
 (in-package #:cleavir-ctype)
 
-(defun conjoin (system &rest ctypes)
-  "Return the conjunction (i.e. CL:AND) of non-values ctypes.
+(macrolet ((defnary (name name/2 empty &optional doc)
+             `(progn
+                (defun ,name (system &rest ctypes)
+                  ,doc
+                  (cond ((null ctypes) (,empty system))
+                        ((null (cl:rest ctypes)) (first ctypes))
+                        (t
+                         (reduce (lambda (ct1 ct2) (,name/2 ct1 ct2 system))
+                                 ctypes))))
+                (define-compiler-macro ,name (system &rest ctypes)
+                  (cond ((null ctypes) '(,empty system))
+                        ;; THE to keep the argument non-toplevel
+                        ((null (cl:rest ctypes)) `(the t ,(first ctypes)))
+                        (t
+                         (let ((gsys (gensym "SYSTEM")))
+                           `(let ((,gsys ,system))
+                              ,(reduce (lambda (ct1 ct2)
+                                         `(,',name/2 ,ct1 ,ct2 ,gsys))
+                                       ctypes)))))))))
+  (defnary conjoin conjoin/2 top
+    "Return the conjunction (i.e. CL:AND) of non-values ctypes.
 
-See VALUES-CONJOIN"
-  (cond ((null ctypes) (top system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (ct1 ct2) (conjoin/2 ct1 ct2 system))
-                 ctypes))))
-(defun disjoin (system &rest ctypes)
+See VALUES-CONJOIN")
+  (defnary disjoin disjoin/2 bottom
   "Return the disjunction (i.e. CL:OR) of non-values ctypes.
 
-See VALUES-DISJOIN"
-  (cond ((null ctypes) (bottom system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (ct1 ct2) (disjoin/2 ct1 ct2 system))
-                 ctypes))))
-(defun wdisjoin (system &rest ctypes)
-  (cond ((null ctypes) (bottom system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (ct1 ct2) (wdisjoin/2 ct1 ct2 system))
-                 ctypes))))
-
-(defun values-conjoin (system &rest ctypes)
+See VALUES-DISJOIN")
+  (defnary wdisjoin wdisjoin/2 bottom)
+  (defnary values-conjoin values-conjoin/2 values-top
   "Return the conjunction of values ctypes.
 
-See CONJOIN"
-  (cond ((null ctypes) (values-top system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (vct1 vct2) (values-conjoin/2 vct1 vct2 system))
-                 ctypes))))
-(defun values-disjoin (system &rest ctypes)
+See CONJOIN")
+  (defnary values-disjoin values-disjoin/2 values-bottom
   "Return the disjunction ov values ctypes.
 
-See DISJOIN"
-  (cond ((null ctypes) (values-bottom system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (vct1 vct2) (values-disjoin/2 vct1 vct2 system))
-                 ctypes))))
-(defun values-wdisjoin (system &rest ctypes)
-  (cond ((null ctypes) (values-bottom system))
-        ((null (cl:rest ctypes)) (first ctypes))
-        (t
-         (reduce (lambda (vct1 vct2) (values-wdisjoin/2 vct1 vct2 system))
-                 ctypes))))
+See DISJOIN")
+  (defnary values-wdisjoin values-wdisjoin/2 values-bottom))
 
 (defun values-append (system &rest ctypes)
   "Append the given values ctypes together.
