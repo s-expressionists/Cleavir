@@ -48,7 +48,7 @@
 
 (defmethod parse (client (specifier (eql 'cl:complex))) (complex '* client))
 
-(defmethod parse (client (specifier (eql 'cons)))
+(defmethod parse (client (specifier (eql 'cl:cons)))
   (cons (top client) (top client) client))
 
 (defmethod parse (client (specifier (eql 'double-float)))
