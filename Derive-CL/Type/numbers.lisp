@@ -958,7 +958,7 @@
              (values (- (ash 1 bits)) (1- (ash 1 bits)))))
           (t (values nil nil)))))
 (defun range-logior/2 (low1 high1 low2 high2)
-  (let ((np1 (and high1 (<= high1 0))) (np2 (and high2 (<= high2 0))))
+  (let ((np1 (and high1 (< high1 0))) (np2 (and high2 (< high2 0))))
     (cond ((and np1 np2)
            (values (if (or (not low1) (not low2))
                        nil
@@ -976,8 +976,8 @@
           (t (values nil nil)))))
 (defun range-logxor/2 (low1 high1 low2 high2)
   ;; for logxor, the result is negative iff exactly one argument is negative.
-  (let ((nn1 (and low1 (>= low1 0))) (np1 (and high1 (<= high1 0)))
-        (nn2 (and low2 (>= low2 0))) (np2 (and high2 (<= high2 0)))
+  (let ((nn1 (and low1 (>= low1 0))) (np1 (and high1 (< high1 0)))
+        (nn2 (and low2 (>= low2 0))) (np2 (and high2 (< high2 0)))
         (nbits (if (and low1 high1 low2 high2)
                    (max (integer-length low1) (integer-length high1)
                         (integer-length low2) (integer-length high2))
