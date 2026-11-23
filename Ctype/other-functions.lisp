@@ -10,9 +10,11 @@
                          (reduce (lambda (ct1 ct2) (,name/2 ct1 ct2 system))
                                  ctypes))))
                 (define-compiler-macro ,name (system &rest ctypes)
-                  (cond ((null ctypes) '(,empty system))
-                        ;; THE to keep the argument non-toplevel
-                        ((null (cl:rest ctypes)) `(the t ,(first ctypes)))
+                  (cond ((null ctypes) `(,',empty ,system))
+                        ;; THE to keep the argument non-toplevel,
+                        ;; and make sure SYSTEM is evaluated.
+                        ((null (cl:rest ctypes))
+                         `(progn ,system (the t ,(first ctypes))))
                         (t
                          (let ((gsys (gensym "SYSTEM")))
                            `(let ((,gsys ,system))
