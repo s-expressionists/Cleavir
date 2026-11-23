@@ -416,7 +416,7 @@
       dimensions))
 (defmethod array (element dimensions simplicity sys)
   (declare (ignore sys))
-  `(,simplicity ,element ,dimensions))
+  `(,simplicity ,element ,(normalize-dimensions dimensions)))
 (defmethod arrayp (type sys)
   ;; FIXME: Doesn't work on string types.
   (declare (ignore sys))
