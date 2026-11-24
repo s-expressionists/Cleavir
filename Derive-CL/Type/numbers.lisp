@@ -377,7 +377,7 @@
    (cond ((and (ctype:rangep power client)
                (eq 'integer (ctype:range-kind power client))
                (multiple-value-bind (low lxp high hxp) (range-bounds client power)
-                 (and (not lxp) (not hxp) (= low high) (> low 0))))
+                 (and low high (not lxp) (not hxp) (= low high) (> low 0))))
           ;; constant power
           (type-expt client base (ctype:range-low power client)))
          ;; otherwise we give up. TODO!
