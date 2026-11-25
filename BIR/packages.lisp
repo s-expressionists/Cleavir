@@ -3,7 +3,7 @@
 (defpackage #:cleavir-bir
   (:use #:cl)
   (:shadow #:function #:unwind-protect #:variable
-           #:load-time-value #:case #:ignore)
+           #:load-time-value #:case #:ignore #:dynamic-extent)
   (:local-nicknames (#:primop-info #:cleavir-primop-info)
                     (#:set #:cleavir-set)
                     (#:attributes #:cleavir-attributes)
@@ -53,6 +53,7 @@
            #:abstract-local-call #:mv-call #:mv-local-call
            #:attributes
            #:leti #:dynamic-leti #:constant-bind #:progvi #:enclose #:code
+           #:dynamic-extent
            #:thei #:asserted-type #:type-check-function #:delete-thei)
   (:export #:primop #:info)
   (:export #:do-functions #:map-functions)

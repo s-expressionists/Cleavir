@@ -29,6 +29,7 @@
 		(env:identity info)
 		value-ast
                 :origin variable-cst
-                :ignore (env:ignore info))
+                :ignore (env:ignore info)
+                :dynamic-extent (env:dynamic-extent info))
 	       next-ast)
          :origin variable-cst))))
